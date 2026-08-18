@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FosterStack — self-hosted build cache, maintained after the Build Cache Node EOL</title>
+<meta name="description" content="The Develocity Build Cache Node is deprecated after December 31, 2026. FosterStack is a self-hosted, MIT-licensed drop-in replacement compatible with the Gradle remote build cache HTTP protocol — maintained, patched, and verifiable.">
+<style>
+  :root {
+    --bg: #ffffff; --fg: #16181d; --muted: #5b6472; --line: #e4e7ec;
+    --accent: #0d7a5f; --accent-fg: #ffffff; --card: #f6f8f9; --warn-bg: #fff7ed; --warn-line: #fdba74;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #101318; --fg: #e8eaf0; --muted: #98a2b3; --line: #262c36;
+      --accent: #2fbf95; --accent-fg: #08110e; --card: #171c23; --warn-bg: #241a10; --warn-line: #7c4a12;
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 44rem; margin: 0 auto; padding: 0 1.25rem 4rem; }
+  header.site { max-width: 44rem; margin: 0 auto; padding: 1.25rem; display: flex; align-items: baseline; gap: .6rem; }
+  .logo { font-weight: 700; font-size: 1.05rem; letter-spacing: -.01em; }
+  .logo span { color: var(--accent); }
+  .tag { color: var(--muted); font-size: .85rem; }
+  .notice {
+    background: var(--warn-bg); border: 1px solid var(--warn-line); border-radius: 8px;
+    padding: .7rem 1rem; font-size: .92rem; margin: 1.5rem 0 2.5rem;
+  }
+  h1 { font-size: 2rem; line-height: 1.2; letter-spacing: -.02em; margin-bottom: 1rem; }
+  .lede { font-size: 1.12rem; color: var(--muted); margin-bottom: 2rem; }
+  h2 { font-size: 1.25rem; margin: 3rem 0 .9rem; letter-spacing: -.01em; }
+  p + p { margin-top: .8rem; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: .8rem; margin-top: 1rem; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1rem 1.1rem; }
+  .card h3 { font-size: .98rem; margin-bottom: .35rem; }
+  .card p { font-size: .9rem; color: var(--muted); }
+  ul.trust { list-style: none; margin-top: .5rem; }
+  ul.trust li { padding: .45rem 0 .45rem 1.6rem; position: relative; }
+  ul.trust li::before { content: "✓"; position: absolute; left: .2rem; color: var(--accent); font-weight: 700; }
+  code, pre { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .88em; }
+  code { background: var(--card); border: 1px solid var(--line); border-radius: 5px; padding: .1em .35em; }
+  form { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1.1rem; }
+  input[type=email] {
+    flex: 1 1 16rem; padding: .7rem .9rem; font-size: 1rem; color: var(--fg);
+    background: var(--bg); border: 1px solid var(--line); border-radius: 8px;
+  }
+  input[type=email]:focus { outline: 2px solid var(--accent); outline-offset: 1px; border-color: transparent; }
+  button {
+    padding: .7rem 1.3rem; font-size: 1rem; font-weight: 600; cursor: pointer;
+    background: var(--accent); color: var(--accent-fg); border: 0; border-radius: 8px;
+  }
+  button:disabled { opacity: .6; cursor: default; }
+  .form-msg { font-size: .92rem; margin-top: .6rem; min-height: 1.4em; }
+  .form-msg.ok { color: var(--accent); }
+  .form-msg.err { color: #d92d20; }
+  .hp { position: absolute; left: -6000px; }
+  table { width: 100%; border-collapse: collapse; font-size: .92rem; margin-top: 1rem; }
+  th, td { text-align: left; padding: .55rem .6rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  footer { border-top: 1px solid var(--line); margin-top: 4rem; padding: 1.5rem 1.25rem 3rem; }
+  footer div { max-width: 44rem; margin: 0 auto; color: var(--muted); font-size: .82rem; }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<header class="site">
+  <div class="logo">foster<span>stack</span></div>
+  <div class="tag">maintained continuity for build infrastructure</div>
+</header>
+<main>
+  <div class="notice">
+    Gradle Inc. has deprecated the free Develocity Build Cache Node: it "will no longer be
+    distributed, supported or available after December&nbsp;31,&nbsp;2026." The migration path they
+    offer requires a commercial Develocity subscription.
+  </div>
+
+  <h1>Your build cache shouldn't die with its vendor.</h1>
+  <p class="lede">
+    FosterStack is a self-hosted remote build cache server, compatible with the Gradle remote
+    build cache HTTP protocol — a drop-in replacement for the retiring Build Cache Node.
+    Open source core, one-command deploy, and the thing that actually matters:
+    it stays patched, on a promise.
+  </p>
+
+  <h2 id="waitlist">Join the waitlist</h2>
+  <p>Private beta this October, free. Public launch in November — before the EOL, with a
+  migration guide that gets you off the Build Cache Node in about 30 minutes.</p>
+  <form id="wl" action="/api/waitlist" method="post">
+    <input type="email" name="email" required placeholder="you@yourcompany.com" aria-label="Work email">
+    <input class="hp" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
+    <button type="submit">Get early access</button>
+  </form>
+  <div class="form-msg" id="wl-msg" role="status"></div>
+
+  <h2>What you get that a bare HTTP endpoint doesn't give you</h2>
+  <p>Yes — Gradle's remote cache protocol is just GET and PUT, and you could point it at any
+  object store. What you'd be rebuilding yourself is everything around that:</p>
+  <div class="cards">
+    <div class="card"><h3>Cache management</h3><p>Eviction policies, size limits, and TTLs that keep a busy CI cache healthy without hand-tending.</p></div>
+    <div class="card"><h3>Access control</h3><p>Read/write credentials for CI vs. developers, so laptops consume the cache but never poison it.</p></div>
+    <div class="card"><h3>Metrics &amp; UI</h3><p>Hit rates, entry sizes, and top misses — visible, so you know the cache is earning its keep.</p></div>
+    <div class="card"><h3>Maintenance on an SLA</h3><p>Dependency CVEs remediated fast — target within 48 hours of disclosure — with a public changelog as proof.</p></div>
+    <div class="card"><h3>Day-one compatibility</h3><p>A CI matrix tests every new Gradle and JDK release the day it ships. Upgrades stop being a gamble.</p></div>
+    <div class="card"><h3>30-minute migration</h3><p>A guide and config translator for existing Build Cache Node deployments. Same protocol, same CI config shape.</p></div>
+  </div>
+
+  <h2>Built to be verified, not trusted</h2>
+  <p>We're a new vendor asking to sit in your build pipeline, so the burden of proof is on us.
+  The answer is to make everything checkable:</p>
+  <ul class="trust">
+    <li>MIT-licensed core. Read the code before you run it.</li>
+    <li>One public container image. Free and paid users pull the identical bytes — scan exactly what you deploy.</li>
+    <li>A license key unlocks enterprise features (SSO, HA, analytics, priority support). No private registry, no gated downloads.</li>
+    <li>Security patches are never withheld from the free tier. Not delayed, not embargoed — never.</li>
+    <li>Signed commits, signed releases, public changelog, public compatibility matrix.</li>
+  </ul>
+
+  <h2>Pricing at launch</h2>
+  <table>
+    <tr><th>Free</th><th>Team</th><th>Business</th></tr>
+    <tr>
+      <td>The full cache server, MIT-licensed, self-hosted. Forever free.</td>
+      <td>$49/month — access control, metrics UI, email support.</td>
+      <td>$199/month — SSO, HA/replication, analytics, priority support with the CVE-response SLA.</td>
+    </tr>
+  </table>
+  <p style="color:var(--muted); font-size:.9rem; margin-top:.6rem">
+    Self-serve, credit card, cancel anytime. Priced so an engineering manager can expense it
+    without a procurement cycle — the incumbent's median contract runs $57k/year.
+  </p>
+
+  <h2>Roadmap honesty</h2>
+  <p>Gradle protocol support ships first (v1 targeted before the EOL). An npm remote cache for
+  CI — same server, second protocol — follows. If you need that today, tell us in the waitlist
+  form reply; it moves the roadmap.</p>
+</main>
+<footer>
+  <div>
+    <p>FosterStack is not affiliated with, endorsed by, or sponsored by Gradle Inc.
+    "Gradle" and "Develocity" are trademarks of Gradle Inc., used here only to identify
+    compatibility. FosterStack contains no Gradle Inc. code; it is a clean-room implementation
+    of the documented remote build cache HTTP protocol.</p>
+    <p style="margin-top:.6rem">© 2026 FosterStack · <a href="mailto:hello@fosterstack.com">hello@fosterstack.com</a></p>
+  </div>
+</footer>
+<script>
+  const form = document.getElementById('wl');
+  const msg = document.getElementById('wl-msg');
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = form.querySelector('button');
+    btn.disabled = true; msg.className = 'form-msg'; msg.textContent = '';
+    try {
+      const res = await fetch('/api/waitlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: form.email.value.trim(),
+          website: form.website.value
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        msg.className = 'form-msg ok';
+        msg.textContent = "You're on the list. We'll email when the beta opens — nothing else.";
+        form.email.value = '';
+      } else {
+        throw new Error(data.error || 'Something went wrong.');
+      }
+    } catch (err) {
+      msg.className = 'form-msg err';
+      msg.textContent = 'Could not sign you up: ' + err.message + ' — or email hello@fosterstack.com';
+    } finally {
+      btn.disabled = false;
+    }
+  });
+</script>
+</body>
+</html>
