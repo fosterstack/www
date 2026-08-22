@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# Public-repo hygiene: fosterstack/www is public, and everything in it is
+# served verbatim by Cloudflare Pages (output directory `/`, no build
+# step) — anything committed here is one push away from being live on
+# the internet. This hook rejects staged files that don't match the
+# allowlist in bin/check-file-allowlist.sh, so a stray .env, a personal
+# note, an editor swap file, or an accidentally-staged credential can't
+# slip in on autopilot the way a secret-scanning tool would only catch
+# after the fact.
+#
+# Enable once per clone:
+#   git config core.hooksPath .githooks
+#
+# CI (.github/workflows/hygiene.yml) runs the same check as a backstop
+# for commits made without this hook enabled.
+
+set -euo pipefail
+
+repo_root=$(git rev-parse --show-toplevel)
+git diff --cached --name-only --diff-filter=ACMR | "$repo_root/bin/check-file-allowlist.sh" \
+  || { echo "pre-commit: rejected (see above). Unstage with: git restore --staged <file>" >&2; exit 1; }

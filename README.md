@@ -4,13 +4,48 @@ Static landing page for fosterstack.com with a Cloudflare Pages Function waitlis
 (`/api/waitlist`) backed by a KV namespace. No external requests, no third-party form
 service, no analytics (add privacy-respecting analytics later if wanted).
 
+**One-time setup after cloning:** `git config core.hooksPath .githooks` — enables the
+public-repo hygiene pre-commit hook (see below). CI enforces the same check as a backstop
+either way, but the hook catches it before a push, not after.
+
 ## Layout
 
 ```
-index.html                 the page (inline CSS/JS, system fonts, zero external assets)
-functions/api/waitlist.js  Pages Function: POST /api/waitlist -> KV
-_headers                   security headers incl. CSP
+index.html                    the page (inline CSS/JS, system fonts, zero external assets)
+bcn-removed/index.html        pre-positioned migration page (see below) — NOT linked from nav
+functions/api/waitlist.js     Pages Function: POST /api/waitlist -> KV
+_headers                      security headers incl. CSP
+.githooks/pre-commit          public-repo hygiene hook (see below)
+bin/check-file-allowlist.sh   the allowlist itself — shared by the hook and CI
 ```
+
+## Public-repo hygiene
+
+Everything in this repo is served verbatim by Cloudflare Pages (output directory `/`, no
+build step) — anything committed here is one push away from being live on the internet.
+`bin/check-file-allowlist.sh` rejects any file that isn't on an explicit allowlist (fails
+closed on anything unrecognized, rather than trying to enumerate bad patterns), run both as
+a local pre-commit hook and as a CI backstop (`.github/workflows/hygiene.yml`) for commits
+made without the hook enabled. Legitimately adding a new file type is a one-line change to
+the `ALLOW_PATTERNS` array in that script.
+
+## Pre-positioned page: `bcn-removed/`
+
+Addendum §2 (DECIDED): built ahead of any trigger so FosterStack is in front of
+panic-searches within hours of Gradle actually removing `gradle/build-cache-node` from
+Docker Hub, not days. It deploys automatically like any other file here (Cloudflare Pages
+has no concept of "build but don't ship") but is deliberately **not linked from `index.html`**
+and carries `<meta name="robots" content="noindex">`, so it sits at a real, working URL
+that isn't discoverable until someone links to it.
+
+The trigger source is `fosterstack/ops`'s daily Docker Hub watcher
+(`bin/docker-hub-watch.sh`, private repo) — it files a tracking issue when it detects the
+repo being deleted or its tag count dropping. **Publishing this page for real is an owner
+action, not automatic**: verify the finding directly at
+[hub.docker.com/r/gradle/build-cache-node](https://hub.docker.com/r/gradle/build-cache-node)
+first (the watcher is tuned to alert fast, which means it can also alert on a transient API
+hiccup), then remove the `noindex` tag and add a prominent, dated link from `index.html`.
+Full instructions are in an HTML comment at the top of `bcn-removed/index.html`.
 
 ## Deploy checklist (owner, ~15 min, one-time)
 

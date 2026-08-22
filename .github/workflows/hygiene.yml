@@ -1,0 +1,21 @@
+name: Public-repo hygiene
+
+# Backstop for .githooks/pre-commit — catches anything committed without
+# that hook installed/enabled (git hooks are opt-in per clone; CI is not).
+# See bin/check-file-allowlist.sh for the one allowlist both share.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  allowlist:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: check every tracked file against the allowlist
+        run: git ls-files | ./bin/check-file-allowlist.sh

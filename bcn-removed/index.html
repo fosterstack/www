@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Build Cache Node is gone — migrate to FosterStack in 30 minutes</title>
+<meta name="description" content="Gradle's Build Cache Node image has been removed from Docker Hub. FosterStack is a self-hosted, MIT-licensed drop-in replacement — here's how to move in about 30 minutes.">
+<meta name="robots" content="noindex">
+<!--
+  PRE-POSITIONED PAGE — addendum §2 (DECIDED, Aug 18). Built ahead of any
+  trigger so FosterStack is in front of panic-searches within hours of a
+  real delisting, not days. Do NOT link this from index.html's nav, do
+  NOT submit to search engines, and leave `<meta name="robots"
+  content="noindex">` in place, until ops/bin/docker-hub-watch.sh's daily
+  check (fosterstack/ops, private) actually fires a trigger — repo
+  deleted or tag count dropped, see ops/.github/workflows/bcn-watch.yml.
+
+  BEFORE PUBLISHING FOR REAL, an owner (not an automated flip) should:
+  1. Verify directly at hub.docker.com/r/gradle/build-cache-node — the
+     watcher's job is to alert fast, not to be the final word; confirm
+     this isn't a transient Docker Hub API blip.
+  2. Remove the `noindex` meta tag above.
+  3. Link this page from index.html (a prominent, dated notice) and from
+     any social/community posts.
+  4. Fill in the bracketed date below if you want to cite when it
+     happened; the copy otherwise doesn't depend on a specific date.
+-->
+<link rel="canonical" href="https://fosterstack.com/bcn-removed/">
+<style>
+  :root {
+    --bg: #ffffff; --fg: #16181d; --muted: #5b6472; --line: #e4e7ec;
+    --accent: #0d7a5f; --accent-fg: #ffffff; --card: #f6f8f9; --warn-bg: #fff7ed; --warn-line: #fdba74;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #101318; --fg: #e8eaf0; --muted: #98a2b3; --line: #262c36;
+      --accent: #2fbf95; --accent-fg: #08110e; --card: #171c23; --warn-bg: #241a10; --warn-line: #7c4a12;
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 44rem; margin: 0 auto; padding: 0 1.25rem 4rem; }
+  header.site { max-width: 44rem; margin: 0 auto; padding: 1.25rem; display: flex; align-items: baseline; gap: .6rem; }
+  .logo { font-weight: 700; font-size: 1.05rem; letter-spacing: -.01em; }
+  .logo span { color: var(--accent); }
+  .tag { color: var(--muted); font-size: .85rem; }
+  .notice {
+    background: var(--warn-bg); border: 1px solid var(--warn-line); border-radius: 8px;
+    padding: .7rem 1rem; font-size: .92rem; margin: 1.5rem 0 2.5rem;
+  }
+  h1 { font-size: 2rem; line-height: 1.2; letter-spacing: -.02em; margin-bottom: 1rem; }
+  .lede { font-size: 1.12rem; color: var(--muted); margin-bottom: 2rem; }
+  h2 { font-size: 1.25rem; margin: 3rem 0 .9rem; letter-spacing: -.01em; }
+  p + p { margin-top: .8rem; }
+  ol.steps { margin: 1rem 0 0 1.3rem; }
+  ol.steps li { margin-bottom: 1rem; }
+  code, pre { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .88em; }
+  code { background: var(--card); border: 1px solid var(--line); border-radius: 5px; padding: .1em .35em; }
+  pre { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: .9rem 1rem; overflow-x: auto; margin-top: .6rem; }
+  form { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1.1rem; }
+  input[type=email] {
+    flex: 1 1 16rem; padding: .7rem .9rem; font-size: 1rem; color: var(--fg);
+    background: var(--bg); border: 1px solid var(--line); border-radius: 8px;
+  }
+  input[type=email]:focus { outline: 2px solid var(--accent); outline-offset: 1px; border-color: transparent; }
+  button {
+    padding: .7rem 1.3rem; font-size: 1rem; font-weight: 600; cursor: pointer;
+    background: var(--accent); color: var(--accent-fg); border: 0; border-radius: 8px;
+  }
+  button:disabled { opacity: .6; cursor: default; }
+  .form-msg { font-size: .92rem; margin-top: .6rem; min-height: 1.4em; }
+  .form-msg.ok { color: var(--accent); }
+  .form-msg.err { color: #d92d20; }
+  .hp { position: absolute; left: -6000px; }
+  footer { border-top: 1px solid var(--line); margin-top: 4rem; padding: 1.5rem 1.25rem 3rem; }
+  footer div { max-width: 44rem; margin: 0 auto; color: var(--muted); font-size: .82rem; }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<header class="site">
+  <a href="/" style="text-decoration:none; color:inherit"><div class="logo">foster<span>stack</span></div></a>
+  <div class="tag">maintained continuity for build infrastructure</div>
+</header>
+<main>
+  <div class="notice">
+    The <code>gradle/build-cache-node</code> image has been removed from Docker Hub<!-- [DATE, optional] -->.
+    If your CI build just failed pulling it, this page gets you running again in about
+    30 minutes.
+  </div>
+
+  <h1>Your build cache is gone. Here's the fastest way back.</h1>
+  <p class="lede">
+    FosterStack is a self-hosted remote build cache, compatible with Gradle's documented
+    <code>HttpBuildCache</code> protocol — the same protocol the Build Cache Node spoke.
+    No data migration needed: a build cache is disposable by design, so an empty cache on
+    day one just means your next build repopulates it, same as any cold cache.
+  </p>
+
+  <h2>Migrate now</h2>
+  <ol class="steps">
+    <li>
+      <strong>Stand up FosterStack Cache</strong> in place of the Build Cache Node container:
+      <pre>docker run -d -p 8080:8080 -v fscache-data:/data ghcr.io/fosterstack/cache:latest</pre>
+    </li>
+    <li>
+      <strong>Update your Gradle config</strong> — only the URL changes, the protocol is identical:
+      <pre>buildCache {
+    remote&lt;HttpBuildCache&gt; {
+        url = uri("https://your-new-fosterstack-cache-url/")
+        isPush = true
+    }
+}</pre>
+    </li>
+    <li>
+      <strong>Confirm it's working:</strong> <code>./gradlew clean build --build-cache</code> and
+      look for <code>FROM-CACHE</code> in the task summary on your second build.
+    </li>
+  </ol>
+  <p style="margin-top:1.2rem">
+    Full walkthrough, systemd/bare-binary option, and verification commands:
+    <a href="https://github.com/fosterstack/cache/blob/main/docs/migrate-from-bcn.md">github.com/fosterstack/cache/docs/migrate-from-bcn.md</a>.
+  </p>
+
+  <h2>Why this is happening now, not a surprise</h2>
+  <p>
+    Gradle Inc. announced the Build Cache Node's deprecation with an EOL date of
+    December&nbsp;31,&nbsp;2026, pushing users toward a commercial Develocity subscription.
+    Removing the image early converts a soft deadline into a hard break — which is what
+    you're seeing if you landed here from a failed build.
+  </p>
+
+  <h2>Verify what you're running</h2>
+  <p>
+    Every FosterStack Cache release is signed keylessly and carries a SLSA provenance
+    attestation — see
+    <a href="https://github.com/fosterstack/cache/blob/main/docs/verify-images.md">verify our images</a>
+    for the exact commands, copy-pasteable.
+  </p>
+
+  <h2 id="waitlist">Questions, or need help migrating a larger fleet?</h2>
+  <form id="wl" action="/api/waitlist" method="post">
+    <input type="email" name="email" required placeholder="you@yourcompany.com" aria-label="Work email">
+    <input class="hp" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
+    <button type="submit">Get in touch</button>
+  </form>
+  <div class="form-msg" id="wl-msg" role="status"></div>
+</main>
+<footer>
+  <div>
+    <p>FosterStack is not affiliated with, endorsed by, or sponsored by Gradle Inc.
+    "Gradle" and "Develocity" are trademarks of Gradle Inc., used here only to identify
+    compatibility. FosterStack contains no Gradle Inc. code; it is a clean-room implementation
+    of the documented remote build cache HTTP protocol.</p>
+    <p style="margin-top:.6rem">© 2026 FosterStack · <a href="mailto:hello@fosterstack.com">hello@fosterstack.com</a></p>
+  </div>
+</footer>
+<script>
+  const form = document.getElementById('wl');
+  const msg = document.getElementById('wl-msg');
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = form.querySelector('button');
+    btn.disabled = true; msg.className = 'form-msg'; msg.textContent = '';
+    try {
+      const res = await fetch('/api/waitlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: form.email.value.trim(),
+          website: form.website.value
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        msg.className = 'form-msg ok';
+        msg.textContent = "Got it — we'll follow up.";
+        form.email.value = '';
+      } else {
+        throw new Error(data.error || 'Something went wrong.');
+      }
+    } catch (err) {
+      msg.className = 'form-msg err';
+      msg.textContent = 'Could not submit: ' + err.message + ' — or email hello@fosterstack.com';
+    } finally {
+      btn.disabled = false;
+    }
+  });
+</script>
+</body>
+</html>
