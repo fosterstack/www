@@ -1,0 +1,12 @@
+# fosterstack.com
+# Everything published here is meant to be found. The one unlisted page
+# (/bcn-removed/) is deliberately NOT disallowed below: it carries a
+# <meta name="robots" content="noindex"> tag, and a crawler has to be able
+# to fetch the page to see that tag. Disallowing it here would block the
+# crawl, leave the noindex unread, and make the page *more* likely to be
+# indexed from a stray inbound link, not less.
+
+User-agent: *
+Allow: /
+
+Sitemap: https://fosterstack.com/sitemap.xml
