@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>FosterStack — self-hosted build cache, maintained after the Build Cache Node EOL</title>
-<meta name="description" content="The Develocity Build Cache Node is deprecated after December 31, 2026. FosterStack is a self-hosted, MIT-licensed drop-in replacement compatible with the Gradle remote build cache HTTP protocol — maintained, patched, and verifiable.">
+<title>FosterStack — self-hosted build cache for Gradle and Maven, maintained after the Build Cache Node EOL</title>
+<meta name="description" content="The Develocity Build Cache Node is deprecated after December 31, 2026. FosterStack is a self-hosted, MIT-licensed replacement — one remote build cache server for both Gradle and Maven, maintained, patched, and verifiable.">
 <link rel="canonical" href="https://fosterstack.com/">
 <style>
   :root {
@@ -82,10 +82,12 @@
 
   <h1>Your build cache shouldn't die with its vendor.</h1>
   <p class="lede">
-    FosterStack is a self-hosted remote build cache server, compatible with the Gradle remote
-    build cache HTTP protocol — a drop-in replacement for the retiring Build Cache Node.
-    Open source core, one-command deploy, and the thing that actually matters:
-    it stays patched, on a promise.
+    FosterStack is a self-hosted remote build cache server — a Develocity Build Cache Node
+    replacement that speaks the same Gradle remote build cache HTTP protocol, so migrating is
+    mostly a URL change. The same server doubles as a Maven build cache through the Apache
+    Maven Build Cache Extension's remote HTTP mode, so a mixed Gradle and Maven shop runs one
+    deploy instead of two. Open source core, one-command deploy, and the thing that actually
+    matters: it stays patched, on a promise.
   </p>
 
   <h2 id="waitlist">Join the waitlist</h2>
@@ -136,17 +138,20 @@
   </p>
 
   <h2>Roadmap honesty</h2>
-  <p>Gradle protocol support ships first (v1 targeted before the EOL). An npm remote cache for
-  CI — same server, second protocol — follows. If you need that today, tell us in the waitlist
-  form reply; it moves the roadmap.</p>
+  <p>Gradle and Maven both run against the same server today (v1 targeted before the EOL);
+  we maintain the cache server, while the Maven client side is Apache's own Build Cache
+  Extension. An npm remote cache for CI — same core, a third protocol — follows. If you need
+  that today, tell us in the waitlist form reply; it moves the roadmap.</p>
 </main>
 <footer>
   <div>
     <p>FosterStack is not affiliated with, endorsed by, or sponsored by Gradle Inc.
     "Gradle" and "Develocity" are trademarks of Gradle Inc., used here only to identify
     compatibility. FosterStack contains no Gradle Inc. code; it is a clean-room implementation
-    of the documented remote build cache HTTP protocol.</p>
-    <p style="margin-top:.6rem">© 2026 FosterStack · <a href="mailto:hello@fosterstack.com">hello@fosterstack.com</a></p>
+    of the documented remote build cache HTTP protocol. Apache Maven is a trademark of the
+    Apache Software Foundation; the Maven Build Cache Extension is Apache's project, not
+    ours.</p>
+    <p style="margin-top:.6rem">© 2026 FosterStack · <a href="https://github.com/fosterstack/cache">github.com/fosterstack/cache</a> · <a href="mailto:hello@fosterstack.com">hello@fosterstack.com</a></p>
   </div>
 </footer>
 <script>
