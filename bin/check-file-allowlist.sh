@@ -18,6 +18,7 @@ ALLOW_PATTERNS=(
   '^_redirects$'
   '^robots\.txt$'
   '^sitemap\.xml$'
+  '^llms\.txt$'
   '^\.gitignore$'
   '^\.githooks/pre-commit$'
   '^bin/check-file-allowlist\.sh$'
