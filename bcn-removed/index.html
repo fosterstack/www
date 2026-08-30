@@ -26,15 +26,20 @@
      happened; the copy otherwise doesn't depend on a specific date.
 -->
 <link rel="canonical" href="https://fosterstack.com/bcn-removed/">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <style>
   :root {
     --bg: #ffffff; --fg: #16181d; --muted: #5b6472; --line: #e4e7ec;
     --accent: #0d7a5f; --accent-fg: #ffffff; --card: #f6f8f9; --warn-bg: #fff7ed; --warn-line: #fdba74;
+    --mark: #0f4d66;
   }
   @media (prefers-color-scheme: dark) {
     :root {
       --bg: #101318; --fg: #e8eaf0; --muted: #98a2b3; --line: #262c36;
       --accent: #2fbf95; --accent-fg: #08110e; --card: #171c23; --warn-bg: #241a10; --warn-line: #7c4a12;
+      --mark: #e8eaf0;
     }
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -47,6 +52,7 @@
   header.site { max-width: 44rem; margin: 0 auto; padding: 1.25rem; display: flex; align-items: baseline; gap: .6rem; }
   .logo { font-weight: 700; font-size: 1.05rem; letter-spacing: -.01em; }
   .logo span { color: var(--accent); }
+  .logo .mark { width: 1.2em; height: 1.2em; vertical-align: -.24em; margin-right: .4em; }
   .tag { color: var(--muted); font-size: .85rem; }
   .notice {
     background: var(--warn-bg); border: 1px solid var(--warn-line); border-radius: 8px;
@@ -83,7 +89,7 @@
 </head>
 <body>
 <header class="site">
-  <a href="/" style="text-decoration:none; color:inherit"><div class="logo">foster<span>stack</span></div></a>
+  <a href="/" style="text-decoration:none; color:inherit"><div class="logo"><svg class="mark" viewBox="0 0 96 96" aria-hidden="true" focusable="false"><rect x="12" y="14" width="72" height="18" rx="5" fill="var(--mark)"/><rect x="12" y="39" width="48" height="18" rx="5" fill="var(--mark)"/><rect x="12" y="64" width="26" height="18" rx="5" fill="var(--accent)"/></svg>foster<span>stack</span></div></a>
   <div class="tag">maintained continuity for build infrastructure</div>
 </header>
 <main>
