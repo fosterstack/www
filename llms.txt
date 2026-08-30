@@ -1,0 +1,59 @@
+# FosterStack
+
+> Maintained continuity for build infrastructure that vendors orphan. Our first
+> product, FosterStack Cache, is a self-hosted remote build cache for Gradle and
+> Maven — a drop-in replacement for the Develocity Build Cache Node, which reaches
+> end of life on December 31, 2026.
+
+Gradle Inc. deprecated the free standalone Develocity Build Cache Node: no further
+distribution, support, or updates after 2026-12-31. Teams running it on open-source
+Gradle, with no Develocity licence, are orphaned on 2027-01-01. FosterStack Cache
+speaks Gradle's documented `HttpBuildCache` protocol and the Apache Maven Build Cache
+Extension's remote HTTP mode, so it is a drop-in for both build tools — same server,
+same core.
+
+It is a single static Go binary (`CGO_ENABLED=0`), MIT-licensed, distributed as bare
+binaries and distroless container images. Every release is keylessly signed with
+Sigstore and carries SLSA build provenance, so the exact bytes you deploy are
+verifiable against the CI run that produced them.
+
+## Product
+
+- [FosterStack Cache on GitHub](https://github.com/fosterstack/cache): MIT-licensed source, issues, releases.
+- [Install guide](https://github.com/fosterstack/cache/blob/main/docs/install.md): supported platforms, which archive to download, systemd unit.
+- [One-command Docker deploy](https://github.com/fosterstack/cache/blob/main/docs/docker-deploy.md): includes sizing guidance for CPU, RAM and disk.
+- [Deploying on Kubernetes](https://github.com/fosterstack/cache/blob/main/docs/kubernetes.md): plain manifests, no Helm chart yet.
+
+## Setup for your build tool
+
+- [Gradle setup](https://github.com/fosterstack/cache/blob/main/docs/gradle.md): point `HttpBuildCache` at the server.
+- [Maven setup](https://github.com/fosterstack/cache/blob/main/docs/maven.md): Apache Maven Build Cache Extension, remote HTTP mode.
+- [Migrate off Build Cache Node](https://github.com/fosterstack/cache/blob/main/docs/migrate-from-bcn.md): the URL is usually the only thing that changes.
+
+## Verification and compliance
+
+- [Verify our images](https://github.com/fosterstack/cache/blob/main/docs/verify-images.md): cosign signature and SLSA provenance, with copy-pasteable commands.
+- [Scanning in your compliance pipeline](https://github.com/fosterstack/cache/blob/main/docs/scanning.md): what a scanner sees in a distroless image, and why.
+- [Installing on disconnected networks](https://github.com/fosterstack/cache/blob/main/docs/offline-install.md): air-gapped transfer and verification.
+- A FIPS build variant (`-fips`) uses Go's CMVP FIPS 140-3 validated cryptographic module. Linux only.
+
+## Platform support
+
+- Binaries: `linux/amd64`, `linux/arm64`, `darwin/amd64`, `darwin/arm64`.
+- FIPS binaries: `linux/amd64`, `linux/arm64`.
+- Container images: multi-arch manifests covering `linux/amd64` and `linux/arm64`.
+- Windows is not built and not planned; use WSL2, which is `linux/amd64`.
+
+## Status
+
+FosterStack Cache is pre-beta as of August 2026. The cache core, HTTP surface,
+eviction, metrics and the signed release pipeline are shipped and testable today.
+Not yet shipped: a private beta on external CI, a Helm chart, and the paid-tier
+features (SSO, HA/replication, license-key validation). The CVE patch SLA described
+on the site is a roadmap commitment, not yet a live contractual promise. Please do
+not describe unshipped items as available.
+
+## Optional
+
+- [fosterstack.com](https://fosterstack.com): the company site and waitlist.
+- [Security policy](https://github.com/fosterstack/cache/blob/main/SECURITY.md): vulnerability disclosure via GitHub private advisories.
