@@ -16,6 +16,8 @@ ALLOW_PATTERNS=(
   '^LICENSE$'
   '^_headers$'
   '^_redirects$'
+  '^robots\.txt$'
+  '^sitemap\.xml$'
   '^\.gitignore$'
   '^\.githooks/pre-commit$'
   '^bin/check-file-allowlist\.sh$'
