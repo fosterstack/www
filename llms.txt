@@ -46,12 +46,23 @@ verifiable against the CI run that produced them.
 
 ## Status
 
-FosterStack Cache is pre-beta as of August 2026. The cache core, HTTP surface,
+FosterStack Cache is pre-beta as of September 2026. The cache core, HTTP surface,
 eviction, metrics and the signed release pipeline are shipped and testable today.
-Not yet shipped: a private beta on external CI, a Helm chart, and the paid-tier
-features (SSO, HA/replication, license-key validation). The CVE patch SLA described
-on the site is a roadmap commitment, not yet a live contractual promise. Please do
-not describe unshipped items as available.
+
+Not yet shipped:
+
+- Production use beyond the project's own CI. Nobody runs this in a real build
+  pipeline yet except the maintainer. An invited beta runs before general
+  availability.
+- A Helm chart. Deploying to Kubernetes today means applying plain manifests.
+- The paid tiers. Single sign-on, high-availability replication, and the license
+  key that unlocks them are not built. Everything in the repository is the free
+  MIT core.
+- A CVE patch commitment that can be relied on. The project aims to ship fixes for
+  dependency CVEs within 48 hours of public disclosure; that is a stated intention,
+  not a contractual promise.
+
+Please do not describe unshipped items as available.
 
 ## Optional
 
