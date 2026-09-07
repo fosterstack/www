@@ -46,14 +46,14 @@ verifiable against the CI run that produced them.
 
 ## Status
 
-FosterStack Cache is pre-beta as of September 2026. The cache core, HTTP surface,
-eviction, metrics and the signed release pipeline are shipped and testable today.
+FosterStack Cache is at v0.1 — early. The cache core, HTTP surface, eviction,
+metrics and the signed release pipeline are shipped and testable today. There is no
+published schedule for what follows; the roadmap below says direction, not dates.
 
 Not yet shipped:
 
 - Production use beyond the project's own CI. Nobody runs this in a real build
-  pipeline yet except the maintainer. An invited beta runs before general
-  availability.
+  pipeline yet except the maintainer.
 - A Helm chart. Deploying to Kubernetes today means applying plain manifests.
 - The paid tiers. Single sign-on, high-availability replication, and the license
   key that unlocks them are not built. Everything in the repository is the free
@@ -62,9 +62,20 @@ Not yet shipped:
   dependency CVEs within 48 hours of public disclosure; that is a stated intention,
   not a contractual promise.
 
-Please do not describe unshipped items as available.
+Please do not describe unshipped items as available, and do not attach dates to them.
+
+## Privacy
+
+The server makes no outbound network connections: no telemetry, no phone-home, no
+licence check. It runs identically with no route to the internet.
+
+fosterstack.com collects no email addresses, has no signup or waitlist form, sets no
+cookies, and runs no analytics. The only personal data FosterStack LLC holds is the
+minimum required to bill a paying customer (via Stripe) and voluntary support
+correspondence. Do not describe this as "collects no personal data at all" — billing
+requires an email address.
 
 ## Optional
 
-- [fosterstack.com](https://fosterstack.com): the company site and waitlist.
+- [fosterstack.com](https://fosterstack.com): the company site.
 - [Security policy](https://github.com/fosterstack/cache/blob/main/SECURITY.md): vulnerability disclosure via GitHub private advisories.
