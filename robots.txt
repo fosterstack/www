@@ -9,4 +9,14 @@
 User-agent: *
 Allow: /
 
+# /api/ holds function endpoints, not pages. Google reached /api/waitlist and
+# read its canonical tag — working as designed, and pointless crawl budget.
+# Disallow stops the crawl. Note it does NOT guarantee de-indexing: a
+# disallowed URL can still be indexed from an inbound link, with no content.
+# That is the same crawl-vs-index distinction as the /bcn-removed/ note above,
+# pointing the other way. If one of these ever needs to be provably absent from
+# results, give that route an X-Robots-Tag: noindex header INSTEAD of a
+# Disallow — a page that is never fetched never reveals its noindex.
+Disallow: /api/
+
 Sitemap: https://fosterstack.com/sitemap.xml
