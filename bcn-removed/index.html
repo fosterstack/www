@@ -67,21 +67,11 @@
   code, pre { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .88em; }
   code { background: var(--card); border: 1px solid var(--line); border-radius: 5px; padding: .1em .35em; }
   pre { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: .9rem 1rem; overflow-x: auto; margin-top: .6rem; }
-  form { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1.1rem; }
-  input[type=email] {
-    flex: 1 1 16rem; padding: .7rem .9rem; font-size: 1rem; color: var(--fg);
-    background: var(--bg); border: 1px solid var(--line); border-radius: 8px;
-  }
-  input[type=email]:focus { outline: 2px solid var(--accent); outline-offset: 1px; border-color: transparent; }
   button {
     padding: .7rem 1.3rem; font-size: 1rem; font-weight: 600; cursor: pointer;
     background: var(--accent); color: var(--accent-fg); border: 0; border-radius: 8px;
   }
   button:disabled { opacity: .6; cursor: default; }
-  .form-msg { font-size: .92rem; margin-top: .6rem; min-height: 1.4em; }
-  .form-msg.ok { color: var(--accent); }
-  .form-msg.err { color: #d92d20; }
-  .hp { position: absolute; left: -6000px; }
   footer { border-top: 1px solid var(--line); margin-top: 4rem; padding: 1.5rem 1.25rem 3rem; }
   footer div { max-width: 44rem; margin: 0 auto; color: var(--muted); font-size: .82rem; }
   a { color: var(--accent); }
@@ -148,13 +138,14 @@
     for the exact commands, copy-pasteable.
   </p>
 
-  <h2 id="waitlist">Questions, or need help migrating a larger fleet?</h2>
-  <form id="wl" action="/api/waitlist" method="post">
-    <input type="email" name="email" required placeholder="you@yourcompany.com" aria-label="Work email">
-    <input class="hp" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
-    <button type="submit">Get in touch</button>
-  </form>
-  <div class="form-msg" id="wl-msg" role="status"></div>
+  <h2 id="help">Questions, or migrating a larger fleet?</h2>
+  <p>Open an issue at
+  <a href="https://github.com/fosterstack/cache/issues">github.com/fosterstack/cache/issues</a>
+  — public, searchable, and it helps the next person with the same question. For anything
+  you would rather not discuss in public, email
+  <a href="mailto:hello@fosterstack.com">hello@fosterstack.com</a>.</p>
+  <p>There is no signup and no waitlist. We do not collect email addresses, and this site
+  sets no cookies and runs no analytics.</p>
 </main>
 <footer>
   <div>
@@ -165,37 +156,6 @@
     <p style="margin-top:.6rem">© 2026 FosterStack · <a href="mailto:hello@fosterstack.com">hello@fosterstack.com</a></p>
   </div>
 </footer>
-<script>
-  const form = document.getElementById('wl');
-  const msg = document.getElementById('wl-msg');
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const btn = form.querySelector('button');
-    btn.disabled = true; msg.className = 'form-msg'; msg.textContent = '';
-    try {
-      const res = await fetch('/api/waitlist', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: form.email.value.trim(),
-          website: form.website.value
-        })
-      });
-      const data = await res.json();
-      if (res.ok && data.ok) {
-        msg.className = 'form-msg ok';
-        msg.textContent = "Got it — we'll follow up.";
-        form.email.value = '';
-      } else {
-        throw new Error(data.error || 'Something went wrong.');
-      }
-    } catch (err) {
-      msg.className = 'form-msg err';
-      msg.textContent = 'Could not submit: ' + err.message + ' — or email hello@fosterstack.com';
-    } finally {
-      btn.disabled = false;
-    }
-  });
-</script>
+
 </body>
 </html>

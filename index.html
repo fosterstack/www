@@ -51,24 +51,21 @@
   ul.trust li::before { content: "✓"; position: absolute; left: .2rem; color: var(--accent); font-weight: 700; }
   code, pre { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .88em; }
   code { background: var(--card); border: 1px solid var(--line); border-radius: 5px; padding: .1em .35em; }
-  form { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1.1rem; }
-  input[type=email] {
-    flex: 1 1 16rem; padding: .7rem .9rem; font-size: 1rem; color: var(--fg);
-    background: var(--bg); border: 1px solid var(--line); border-radius: 8px;
-  }
-  input[type=email]:focus { outline: 2px solid var(--accent); outline-offset: 1px; border-color: transparent; }
   button {
     padding: .7rem 1.3rem; font-size: 1rem; font-weight: 600; cursor: pointer;
     background: var(--accent); color: var(--accent-fg); border: 0; border-radius: 8px;
   }
   button:disabled { opacity: .6; cursor: default; }
-  .form-msg { font-size: .92rem; margin-top: .6rem; min-height: 1.4em; }
-  .form-msg.ok { color: var(--accent); }
-  .form-msg.err { color: #d92d20; }
-  .hp { position: absolute; left: -6000px; }
   table { width: 100%; border-collapse: collapse; font-size: .92rem; margin-top: 1rem; }
   th, td { text-align: left; padding: .55rem .6rem; border-bottom: 1px solid var(--line); vertical-align: top; }
   th { font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  pre { background: #0f172a; color: #e2e8f0; padding: .9rem 1rem; border-radius: 8px;
+        overflow-x: auto; font-size: .9rem; line-height: 1.5; }
+  .cta-row { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1.1rem; }
+  .btn { display: inline-block; padding: .55rem 1rem; border-radius: 8px; font-weight: 600;
+         text-decoration: none; background: var(--accent); color: #fff; }
+  .btn-secondary { background: transparent; color: inherit; border: 1px solid #cbd5e1; }
+  .muted-note { color: var(--muted); font-size: .93rem; margin-top: 1.1rem; }
   footer { border-top: 1px solid var(--line); margin-top: 4rem; padding: 1.5rem 1.25rem 3rem; }
   footer div { max-width: 44rem; margin: 0 auto; color: var(--muted); font-size: .82rem; }
   a { color: var(--accent); }
@@ -96,15 +93,28 @@
     matters: it stays patched, on a promise.
   </p>
 
-  <h2 id="waitlist">Join the waitlist</h2>
-  <p>Private beta this October, free. Public launch in November — before the EOL, with a
-  migration guide that gets you off the Build Cache Node in about 30 minutes.</p>
-  <form id="wl" action="/api/waitlist" method="post">
-    <input type="email" name="email" required placeholder="you@yourcompany.com" aria-label="Work email">
-    <input class="hp" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
-    <button type="submit">Get early access</button>
-  </form>
-  <div class="form-msg" id="wl-msg" role="status"></div>
+  <h2 id="try">Try it now</h2>
+  <p>There is no signup, no waitlist, and no license key for the free tier. Pull the
+  image and point your build at it:</p>
+  <pre><code>docker run -d -p 8080:8080 ghcr.io/fosterstack/cache:latest
+curl localhost:8080/healthz   # -&gt; ok</code></pre>
+  <p class="cta-row">
+    <a class="btn" href="https://github.com/fosterstack/cache#quickstart-docker">Quickstart</a>
+    <a class="btn btn-secondary" href="https://github.com/fosterstack/cache/blob/main/docs/migrate-from-bcn.md">Migrate off Build Cache Node</a>
+    <a class="btn btn-secondary" href="https://github.com/fosterstack/cache">Read the source</a>
+  </p>
+  <p class="muted-note"><strong>Where it stands:</strong> v0.1 — early. The cache core,
+  HTTP surface, and release pipeline work and are tested; nobody is running it in a
+  production build pipeline yet except us. Bugs and questions go to
+  <a href="https://github.com/fosterstack/cache/issues">GitHub issues</a>, which is also
+  where the roadmap gets argued with.</p>
+
+  <h2>Stay in touch</h2>
+  <p>We do not collect email addresses. To follow the project,
+  <a href="https://github.com/fosterstack/cache">star the repository</a> or use
+  <strong>Watch → Custom → Releases</strong> on GitHub — that notifies you on a new
+  release and nothing else, and it is a subscription you control and can revoke without
+  asking us.</p>
 
   <h2>What you get that a bare HTTP endpoint doesn't give you</h2>
   <p>Yes — Gradle's remote cache protocol is just GET and PUT, and you could point it at any
@@ -129,7 +139,25 @@
     <li>Signed commits, signed releases, public changelog, public compatibility matrix.</li>
   </ul>
 
-  <h2>Pricing at launch</h2>
+  <h2>What we do not collect</h2>
+  <ul class="trust">
+    <li><strong>The product does not phone home.</strong> The server makes no outbound
+    network connections — no telemetry, no license check, no update ping. It is
+    self-hosted, and it works identically on a machine with no route to the internet.
+    Verified rather than asserted: the binary opens exactly one socket, its own listener,
+    at rest and under load.</li>
+    <li><strong>This website collects no email addresses.</strong> There is no signup
+    form, no waitlist, and no newsletter. It sets no cookies, runs no analytics, and
+    loads nothing from a third party.</li>
+    <li><strong>The only personal data FosterStack LLC holds</strong> is the irreducible
+    minimum required to bill a paying customer — handled by Stripe — and whatever you
+    voluntarily put in an email to support. See §2 of the terms of service.</li>
+  </ul>
+  <p class="muted-note">Deliberately not claiming "we never collect any personal data":
+  billing a customer requires an email address, and a privacy claim that is convenient
+  but false is worse than none.</p>
+
+  <h2>Pricing</h2>
   <table>
     <tr><th>Free</th><th>Team</th><th>Business</th></tr>
     <tr>
@@ -144,10 +172,13 @@
   </p>
 
   <h2>Roadmap honesty</h2>
-  <p>Gradle and Maven both run against the same server today (v1 targeted before the EOL);
-  we maintain the cache server, while the Maven client side is Apache's own Build Cache
-  Extension. An npm remote cache for CI — same core, a third protocol — follows. If you need
-  that today, tell us in the waitlist form reply; it moves the roadmap.</p>
+  <p>Gradle and Maven both run against the same server today; we maintain the cache
+  server, while the Maven client side is Apache's own Build Cache Extension. An npm remote
+  cache for CI — same core, a third protocol — is the next protocol on the list. What is
+  not on the list yet is a Helm chart and the paid tiers below; those are described so you
+  know where this is going, not sold as available. If you need something sooner,
+  <a href="https://github.com/fosterstack/cache/issues">open an issue</a> — that is what
+  moves the roadmap.</p>
 </main>
 <footer>
   <div>
@@ -160,37 +191,5 @@
     <p style="margin-top:.6rem">© 2026 FosterStack · <a href="https://github.com/fosterstack/cache">github.com/fosterstack/cache</a> · <a href="mailto:hello@fosterstack.com">hello@fosterstack.com</a></p>
   </div>
 </footer>
-<script>
-  const form = document.getElementById('wl');
-  const msg = document.getElementById('wl-msg');
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const btn = form.querySelector('button');
-    btn.disabled = true; msg.className = 'form-msg'; msg.textContent = '';
-    try {
-      const res = await fetch('/api/waitlist', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: form.email.value.trim(),
-          website: form.website.value
-        })
-      });
-      const data = await res.json();
-      if (res.ok && data.ok) {
-        msg.className = 'form-msg ok';
-        msg.textContent = "You're on the list. We'll email when the beta opens — nothing else.";
-        form.email.value = '';
-      } else {
-        throw new Error(data.error || 'Something went wrong.');
-      }
-    } catch (err) {
-      msg.className = 'form-msg err';
-      msg.textContent = 'Could not sign you up: ' + err.message + ' — or email hello@fosterstack.com';
-    } finally {
-      btn.disabled = false;
-    }
-  });
-</script>
 </body>
 </html>

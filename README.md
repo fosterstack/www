@@ -1,7 +1,7 @@
-# fosterstack/www — marketing site + waitlist
+# fosterstack/www — marketing site
 
-Static landing page for fosterstack.com with a Cloudflare Pages Function waitlist
-(`/api/waitlist`) backed by a KV namespace. No external requests, no third-party form
+Static landing page for fosterstack.com. No forms, no email capture, no cookies, no
+analytics, and no third-party requests of any kind
 service, no analytics (add privacy-respecting analytics later if wanted).
 
 **One-time setup after cloning:** `git config core.hooksPath .githooks` — enables the
@@ -13,7 +13,6 @@ either way, but the hook catches it before a push, not after.
 ```
 index.html                    the page (inline CSS/JS, system fonts, zero external assets)
 bcn-removed/index.html        pre-positioned migration page (see below) — NOT linked from nav
-functions/api/waitlist.js     Pages Function: POST /api/waitlist -> KV
 _headers                      security headers incl. CSP
 .githooks/pre-commit          public-repo hygiene hook (see below)
 bin/check-file-allowlist.sh   the allowlist itself — shared by the hook and CI
@@ -56,20 +55,22 @@ Full instructions are in an HTML comment at the top of `bcn-removed/index.html`.
 2. Cloudflare dashboard → Workers & Pages → Create → Pages → connect to git →
    select `fosterstack/www`. Framework preset: None. Build command: (empty).
    Output directory: `/`. Deploy.
-3. KV: Workers & Pages → KV → Create namespace `waitlist`. Then in the Pages project →
-   Settings → Bindings → add KV binding, variable name `WAITLIST` (exact, uppercase),
-   pointing at that namespace. Redeploy so the binding takes effect.
-4. Custom domain: Pages project → Custom domains → add `fosterstack.com` and
+3. Custom domain: Pages project → Custom domains → add `fosterstack.com` and
    `www.fosterstack.com`. (Requires fosterstack.com DNS on Cloudflare; if the domain is
    registered elsewhere, add the site to Cloudflare DNS first.)
-5. Test: submit a real email on the live page, then check KV entries in the dashboard,
-   or `wrangler kv key list --namespace-id=<id>`.
+4. Test: load the page and confirm the links resolve. There is nothing to submit.
 
-## Reading the waitlist
+## No data collection
 
-Each signup is a KV entry: key `email:<address>`, value JSON `{email, ts, country}`.
-Idempotent — duplicate signups don't error and don't overwrite the original timestamp.
-Honeypot field (`website`) silently drops bots.
+This site has no forms, no inputs, and no server-side functions. It collects no email
+addresses, sets no cookies, loads no third-party scripts, and makes no external
+requests. The CSP in `_headers` enforces that: `connect-src 'self'` and no `form-action`
+target, so a form or a beacon added by accident fails in the browser rather than
+shipping quietly.
+
+Do not reintroduce an email field. "Stay in touch" is GitHub star and
+Watch → Releases, which is a subscription the reader controls and can revoke without
+asking us.
 
 ## Copy constraints (do not undo)
 
@@ -79,3 +80,7 @@ Honeypot field (`website`) silently drops bots.
   unlock, security patches never withheld from free tier) is brief §0.2 policy, not
   marketing filler. Changes to it are an owner decision.
 - No fabricated testimonials, logos, or usage numbers — FTC posture per brief §4.
+- No calendar commitments. No launch dates, no "beta in <month>", no phase language.
+  The dateless roadmap and the honest maturity label (v0.1, early) stay; a schedule
+  we might miss does not go on a public page.
+- No email capture, ever. See "No data collection" above.
