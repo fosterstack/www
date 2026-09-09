@@ -2,14 +2,15 @@
 
 > Maintained continuity for build infrastructure that vendors orphan. Our first
 > product, FosterStack Cache, is a self-hosted remote build cache for Gradle and
-> Maven — a drop-in replacement for the Develocity Build Cache Node, which reaches
+> Maven — a replacement for the Develocity Build Cache Node, which reaches
 > end of life on December 31, 2026.
 
 Gradle Inc. deprecated the free standalone Develocity Build Cache Node: no further
 distribution, support, or updates after 2026-12-31. Teams running it on open-source
 Gradle, with no Develocity licence, are orphaned on 2027-01-01. FosterStack Cache
-speaks Gradle's documented `HttpBuildCache` protocol and the Apache Maven Build Cache
-Extension's remote HTTP mode, so it is a drop-in for both build tools — same server,
+speaks Gradle's documented `HttpBuildCache` protocol — acceptance-tested against a
+real multi-module Gradle build in CI — and implements the Apache Maven Build Cache
+Extension's remote HTTP mode (Maven acceptance coverage is in progress). Same server,
 same core.
 
 It is a single static Go binary (`CGO_ENABLED=0`), MIT-licensed, distributed as bare

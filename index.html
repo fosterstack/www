@@ -87,10 +87,10 @@
   <p class="lede">
     FosterStack is a self-hosted remote build cache server — a Develocity Build Cache Node
     replacement that speaks the same Gradle remote build cache HTTP protocol, so migrating is
-    mostly a URL change. The same server doubles as a Maven build cache through the Apache
-    Maven Build Cache Extension's remote HTTP mode, so a mixed Gradle and Maven shop runs one
-    deploy instead of two. Open source core, one-command deploy, and the thing that actually
-    matters: it stays patched, on a promise.
+    mostly a URL change. The same server implements the Apache Maven Build Cache Extension's
+    remote HTTP mode (Maven acceptance coverage is in progress), so a mixed Gradle and Maven
+    shop runs one deploy instead of two. Open source core, one-command deploy, and the thing
+    that matters: it stays patched, on a promise.
   </p>
 
   <h2 id="try">Try it now</h2>
@@ -103,9 +103,11 @@ curl localhost:8080/healthz   # -&gt; ok</code></pre>
     <a class="btn btn-secondary" href="https://github.com/fosterstack/cache/blob/main/docs/migrate-from-bcn.md">Migrate off Build Cache Node</a>
     <a class="btn btn-secondary" href="https://github.com/fosterstack/cache">Read the source</a>
   </p>
-  <p class="muted-note"><strong>Where it stands:</strong> v0.1 — early. The cache core,
-  HTTP surface, and release pipeline work and are tested; nobody is running it in a
-  production build pipeline yet except us. Bugs and questions go to
+  <p class="muted-note"><strong>Where it stands:</strong> v0.1 — early. The cache core and
+  HTTP surface are tested, and the Gradle path is acceptance-tested against a real
+  multi-module build in CI; the release pipeline works and its evidence chain is being
+  rebuilt — the repository's SECURITY.md states exactly what is and is not proven today.
+  Nobody is running it in a production build pipeline yet except us. Bugs and questions go to
   <a href="https://github.com/fosterstack/cache/issues">GitHub issues</a>, which is also
   where the roadmap gets argued with.</p>
 
@@ -120,12 +122,12 @@ curl localhost:8080/healthz   # -&gt; ok</code></pre>
   <p>Yes — Gradle's remote cache protocol is just GET and PUT, and you could point it at any
   object store. What you'd be rebuilding yourself is everything around that:</p>
   <div class="cards">
-    <div class="card"><h3>Cache management</h3><p>Eviction policies, size limits, and TTLs that keep a busy CI cache healthy without hand-tending.</p></div>
-    <div class="card"><h3>Access control</h3><p>Read/write credentials for CI vs. developers, so laptops consume the cache but never poison it.</p></div>
-    <div class="card"><h3>Metrics &amp; UI</h3><p>Hit rates, entry sizes, and top misses — visible, so you know the cache is earning its keep.</p></div>
-    <div class="card"><h3>Maintenance on an SLA</h3><p>Dependency CVEs remediated fast — target within 48 hours of disclosure — with a public changelog as proof.</p></div>
-    <div class="card"><h3>Day-one compatibility</h3><p>A CI matrix tests every new Gradle and JDK release the day it ships. Upgrades stop being a gamble.</p></div>
-    <div class="card"><h3>30-minute migration</h3><p>A guide and config translator for existing Build Cache Node deployments. Same protocol, same CI config shape.</p></div>
+    <div class="card"><h3>Cache management</h3><p>Size-capped LRU eviction that keeps a busy CI cache healthy without hand-tending — set the cap, and the oldest-unused entries make room.</p></div>
+    <div class="card"><h3>Authentication</h3><p>HTTP Basic Auth over TLS, wired the way Gradle and Maven already expect credentials. Constant-time comparison, no credential ever logged.</p></div>
+    <div class="card"><h3>Metrics &amp; status</h3><p>Prometheus metrics, a read-only status page with hit rates and size-vs-cap, and a Grafana dashboard in the repo — so you know the cache is earning its keep.</p></div>
+    <div class="card"><h3>Maintenance target</h3><p>Dependency CVEs remediated fast — target within 48 hours of disclosure. A stated intention until the paid tiers exist, and the release history is the track record either way.</p></div>
+    <div class="card"><h3>Acceptance-tested</h3><p>Every change runs against a real multi-module Gradle build in CI: a from-scratch second build must produce real remote-cache hits, or the change does not merge.</p></div>
+    <div class="card"><h3>30-minute migration</h3><p>A step-by-step guide for existing Build Cache Node deployments. Same protocol, same CI config shape — migrating is mostly a URL change.</p></div>
   </div>
 
   <h2>Built to be verified, not trusted</h2>
@@ -134,9 +136,9 @@ curl localhost:8080/healthz   # -&gt; ok</code></pre>
   <ul class="trust">
     <li>MIT-licensed core. Read the code before you run it.</li>
     <li>One public container image. Free and paid users pull the identical bytes — scan exactly what you deploy.</li>
-    <li>A license key unlocks enterprise features (SSO, HA, analytics, priority support). No private registry, no gated downloads.</li>
+    <li>When the paid tiers ship, a license key will unlock them in the same public image — no private registry, no gated downloads. (They are not built yet; the pricing below is direction, not a shelf.)</li>
     <li>Security patches are never withheld from the free tier. Not delayed, not embargoed — never.</li>
-    <li>Signed commits, signed releases, public changelog, public compatibility matrix.</li>
+    <li>Signed commits, signed releases, public release notes. The repository's SECURITY.md states exactly what the release evidence does and does not prove today.</li>
   </ul>
 
   <h2>What we do not collect</h2>
