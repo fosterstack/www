@@ -58,9 +58,14 @@ Not yet shipped:
 - Production use beyond the project's own CI. Nobody runs this in a real build
   pipeline yet except the maintainer.
 - A Helm chart. Deploying to Kubernetes today means applying plain manifests.
-- The paid tiers. Single sign-on, high-availability replication, and the license
-  key that unlocks them are not built. Everything in the repository is the free
-  MIT core.
+- The paid tiers. Team ($49/mo: multi-user access control, SSO, per-project
+  analytics, email support), Business ($199/mo: adds HA/replication, priority
+  support with the CVE-response target), and Compliance ($499/mo billed
+  annually: adds the FIPS applicability statement, signed per-release
+  attestation letters, questionnaire hours, named-version LTS) are described,
+  not yet purchasable; the license key that unlocks them is not built.
+  Everything in the repository is the free MIT core, including the -fips image
+  and all release evidence.
 - A CVE patch commitment that can be relied on. The project aims to ship fixes for
   dependency CVEs within 48 hours of public disclosure; that is a stated intention,
   not a contractual promise.
