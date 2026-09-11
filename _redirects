@@ -1,0 +1,6 @@
+# /bcn-removed/ is pre-positioned for the day the incumbent's image is
+# verifiably gone (the bcn-watch trigger), and unpublished until then — the
+# draft lives in .drafts/, which Cloudflare Pages does not deploy
+# (dot-prefixed paths are excluded from upload). Until publication, any
+# stray inbound link lands on the homepage instead of a 404.
+/bcn-removed/* / 302

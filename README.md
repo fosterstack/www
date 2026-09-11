@@ -12,7 +12,8 @@ either way, but the hook catches it before a push, not after.
 
 ```
 index.html                    the page (inline CSS/JS, system fonts, zero external assets)
-bcn-removed/index.html        pre-positioned migration page (see below) — NOT linked from nav
+.drafts/bcn-removed/index.html  pre-positioned migration page (see below) — UNPUBLISHED draft
+_redirects                    /bcn-removed/* -> / until the draft publishes
 _headers                      security headers incl. CSP
 .githooks/pre-commit          public-repo hygiene hook (see below)
 bin/check-file-allowlist.sh   the allowlist itself — shared by the hook and CI
@@ -32,10 +33,11 @@ the `ALLOW_PATTERNS` array in that script.
 
 Addendum §2 (DECIDED): built ahead of any trigger so FosterStack is in front of
 panic-searches within hours of Gradle actually removing `gradle/build-cache-node` from
-Docker Hub, not days. It deploys automatically like any other file here (Cloudflare Pages
-has no concept of "build but don't ship") but is deliberately **not linked from `index.html`**
-and carries `<meta name="robots" content="noindex">`, so it sits at a real, working URL
-that isn't discoverable until someone links to it.
+Docker Hub, not days. REVISED Sep 11, 2026: it used to deploy at an unlisted URL behind
+a `noindex` tag; the Sep 10 review pointed out that noindex is a request, not a gate —
+the page claimed a removal that had not happened, at a live URL. It now lives in
+`.drafts/` (dot-prefixed paths are excluded from the Pages upload, so it does not
+deploy), and `/bcn-removed/*` 302s to the homepage in the meantime.
 
 The trigger source is `fosterstack/ops`'s daily Docker Hub watcher
 (`bin/docker-hub-watch.sh`, private repo) — it files a tracking issue when it detects the

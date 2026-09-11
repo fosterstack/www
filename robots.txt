@@ -1,10 +1,10 @@
 # fosterstack.com
-# Everything published here is meant to be found. The one unlisted page
-# (/bcn-removed/) is deliberately NOT disallowed below: it carries a
-# <meta name="robots" content="noindex"> tag, and a crawler has to be able
-# to fetch the page to see that tag. Disallowing it here would block the
-# crawl, leave the noindex unread, and make the page *more* likely to be
-# indexed from a stray inbound link, not less.
+# Everything published here is meant to be found. (Historical note: an
+# unlisted /bcn-removed/ page used to live here behind a noindex tag; as of
+# Sep 11, 2026 it is unpublished entirely — moved to an undeployed draft
+# path until the incumbent image's removal is verified by the watcher —
+# because noindex is a request to search engines, not a gate. The old URL
+# 302s to the homepage meanwhile; see _redirects.)
 
 User-agent: *
 Allow: /
@@ -14,8 +14,7 @@ Allow: /
 # function endpoint is excluded from crawling by default rather than by memory.
 # Note Disallow stops the CRAWL and does not guarantee de-indexing: a disallowed
 # URL can still be indexed from an inbound link, with no content. Same
-# crawl-vs-index distinction as the /bcn-removed/ note above, pointing the other
-# way. If a route ever needs to be provably absent from results, give it an
+# crawl-vs-index distinction noted above, pointing the other way. If a route ever needs to be provably absent from results, give it an
 # X-Robots-Tag: noindex header INSTEAD of a Disallow — a page that is never
 # fetched never reveals its noindex.
 Disallow: /api/

@@ -13,6 +13,10 @@ set -euo pipefail
 ALLOW_PATTERNS=(
   '^CONTRIBUTING\.md$'
   '^\.github/PULL_REQUEST_TEMPLATE\.md$'
+  # Unpublished drafts: dot-prefixed, excluded from the Pages upload, so
+  # nothing under .drafts/ ever serves. The bcn-removed page waits here
+  # until the watcher verifies the removal.
+  '^\.drafts/([A-Za-z0-9._-]+/)*[A-Za-z0-9._-]+\.html$'
   '^index\.html$'
   '^README\.md$'
   '^LICENSE$'
