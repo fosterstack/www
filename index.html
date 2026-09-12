@@ -147,11 +147,12 @@ curl localhost:8080/healthz   # -&gt; ok</code></pre>
 
   <h2>What we do not collect</h2>
   <ul class="trust">
-    <li><strong>The product does not phone home.</strong> The server makes no outbound
-    network connections — no telemetry, no license check, no update ping. It is
-    self-hosted, and it works identically on a machine with no route to the internet.
-    Verified rather than asserted: the binary opens exactly one socket, its own listener,
-    at rest and under load.</li>
+    <li><strong>No telemetry, and no required FosterStack connection.</strong> The server
+    reports nothing to us — no usage data, no license check, no update ping — and today's
+    free core makes no outbound connections at all: it works identically on a machine with
+    no route to the internet. When the paid features ship, the only outbound traffic will
+    be what you configure (your identity provider for SSO, your peer replicas for HA) —
+    endpoints you choose, never FosterStack.</li>
     <li><strong>This website collects no email addresses.</strong> There is no signup
     form, no waitlist, and no newsletter. It sets no cookies, runs no analytics, and
     loads nothing from a third party.</li>
@@ -174,7 +175,10 @@ curl localhost:8080/healthz   # -&gt; ok</code></pre>
   </table>
   <p style="color:var(--muted); font-size:.9rem; margin-top:.6rem">
     Self-serve, credit card, cancel anytime. Priced so an engineering manager can expense it
-    without a procurement cycle — the incumbent's median contract runs $57k/year.
+    without a procurement cycle. (For scale: the incumbent's median <em>platform</em>
+    contract — Develocity, the full product suite, of which the cache node is one
+    component — runs about $57k/year. That is not the price of a cache, and we are not
+    claiming it is; it is the procurement class this pricing deliberately avoids.)
   </p>
 
   <h2>Roadmap honesty</h2>
