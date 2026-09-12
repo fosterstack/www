@@ -7,6 +7,10 @@
 -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
+    <loc>https://fosterstack.com/regulated/</loc>
+    <lastmod>2026-09-11</lastmod>
+  </url>
+  <url>
     <loc>https://fosterstack.com/</loc>
     <lastmod>2026-08-18</lastmod>
     <changefreq>weekly</changefreq>

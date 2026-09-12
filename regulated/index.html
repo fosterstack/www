@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FosterStack for teams entering regulated markets</title>
+<meta name="description" content="Infrastructure worth keeping. Evidence and validated crypto for your compliance program — a FIPS 140-3 validated build cache whose release evidence is public, free, and verifiable before you spend a dollar.">
+<link rel="canonical" href="https://fosterstack.com/regulated/">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<style>
+  :root {
+    --bg: #ffffff; --fg: #16181d; --muted: #5b6472; --line: #e4e7ec;
+    --accent: #0d7a5f; --accent-fg: #ffffff; --card: #f6f8f9; --warn-bg: #fff7ed; --warn-line: #fdba74;
+    --mark: #0f4d66;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #101318; --fg: #e8eaf0; --muted: #98a2b3; --line: #262c36;
+      --accent: #2fbf95; --accent-fg: #08110e; --card: #171c23; --warn-bg: #241a10; --warn-line: #7c4a12;
+      --mark: #e8eaf0;
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 44rem; margin: 0 auto; padding: 0 1.25rem 4rem; }
+  header.site { max-width: 44rem; margin: 0 auto; padding: 1.25rem; display: flex; align-items: baseline; gap: .6rem; }
+  .logo { font-weight: 700; font-size: 1.05rem; letter-spacing: -.01em; }
+  .logo span { color: var(--accent); }
+  .logo .mark { width: 1.2em; height: 1.2em; vertical-align: -.24em; margin-right: .4em; }
+  .tag { color: var(--muted); font-size: .85rem; }
+  .notice {
+    background: var(--warn-bg); border: 1px solid var(--warn-line); border-radius: 8px;
+    padding: .7rem 1rem; font-size: .92rem; margin: 1.5rem 0 2.5rem;
+  }
+  h1 { font-size: 2rem; line-height: 1.2; letter-spacing: -.02em; margin-bottom: 1rem; }
+  .lede { font-size: 1.12rem; color: var(--muted); margin-bottom: 2rem; }
+  h2 { font-size: 1.25rem; margin: 3rem 0 .9rem; letter-spacing: -.01em; }
+  p + p { margin-top: .8rem; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: .8rem; margin-top: 1rem; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1rem 1.1rem; }
+  .card h3 { font-size: .98rem; margin-bottom: .35rem; }
+  .card p { font-size: .9rem; color: var(--muted); }
+  ul.trust { list-style: none; margin-top: .5rem; }
+  ul.trust li { padding: .45rem 0 .45rem 1.6rem; position: relative; }
+  ul.trust li::before { content: "✓"; position: absolute; left: .2rem; color: var(--accent); font-weight: 700; }
+  code, pre { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .88em; }
+  code { background: var(--card); border: 1px solid var(--line); border-radius: 5px; padding: .1em .35em; }
+  button {
+    padding: .7rem 1.3rem; font-size: 1rem; font-weight: 600; cursor: pointer;
+    background: var(--accent); color: var(--accent-fg); border: 0; border-radius: 8px;
+  }
+  button:disabled { opacity: .6; cursor: default; }
+  table { width: 100%; border-collapse: collapse; font-size: .92rem; margin-top: 1rem; }
+  th, td { text-align: left; padding: .55rem .6rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  pre { background: #0f172a; color: #e2e8f0; padding: .9rem 1rem; border-radius: 8px;
+        overflow-x: auto; font-size: .9rem; line-height: 1.5; }
+  .cta-row { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1.1rem; }
+  .btn { display: inline-block; padding: .55rem 1rem; border-radius: 8px; font-weight: 600;
+         text-decoration: none; background: var(--accent); color: #fff; }
+  .btn-secondary { background: transparent; color: inherit; border: 1px solid #cbd5e1; }
+  .muted-note { color: var(--muted); font-size: .93rem; margin-top: 1.1rem; }
+  footer { border-top: 1px solid var(--line); margin-top: 4rem; padding: 1.5rem 1.25rem 3rem; }
+  footer div { max-width: 44rem; margin: 0 auto; color: var(--muted); font-size: .82rem; }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<header class="site">
+  <div class="logo"><svg class="mark" viewBox="0 0 96 96" aria-hidden="true" focusable="false"><rect x="12" y="14" width="72" height="18" rx="5" fill="var(--mark)"/><rect x="12" y="39" width="48" height="18" rx="5" fill="var(--mark)"/><rect x="12" y="64" width="26" height="18" rx="5" fill="var(--accent)"/></svg>foster<span>stack</span></div>
+  <div class="tag">Infrastructure worth keeping.</div>
+</header>
+<main>
+  <h1>For teams entering regulated markets</h1>
+
+  <p class="lede">
+    It usually starts with one customer. A contract lands on the table with
+    federal or compliance requirements attached — FIPS-validated cryptography,
+    SBOMs, provenance, a security questionnaire with two hundred rows — and
+    suddenly every tool in your build pipeline needs paperwork it has never
+    had. Big vendors sell their way through that pile with compliance teams
+    and six-figure contracts. Small teams mostly just lose the deal.
+  </p>
+
+  <p><strong>The cost of compliance shouldn't determine who gets to
+  compete.</strong></p>
+
+  <h2>What our piece does — and does not do</h2>
+  <p>
+    FosterStack Cache is one component in your pipeline: a self-hosted remote
+    build cache. For that component, we do the evidence work a compliance
+    program needs: the <code>-fips</code> build links Go's FIPS 140-3
+    validated cryptographic module (CMVP certificate #5247), and every
+    release ships with an SBOM, SLSA provenance, keyless signatures, and
+    published VEX statements. Our requirements and their evidence are public
+    in the repository, criterion by criterion.
+  </p>
+  <p>
+    What it does not do: make you compliant. FedRAMP and CMMC attach to your
+    service and your organization, never to a component you deploy. What a
+    component can be is <em>evidence and validated crypto for your
+    program</em> — one row of that questionnaire where the answer is written,
+    signed, and checkable instead of a shrug.
+  </p>
+
+  <h2>The Compliance tier</h2>
+  <p>
+    The evidence underneath is public and free — SBOMs, SLSA provenance,
+    signatures, VEX statements, the FIPS 140-3 validated module and its
+    certificate number — verifiable by anyone, no account, no purchase. What
+    the <a href="/#pricing">Compliance tier</a> sells is the authored work on
+    top: a FIPS applicability statement mapping the validated module boundary
+    onto this product, per-release attestation letters addressed to you and
+    signed by FosterStack LLC, security-questionnaire support up to 8 hours
+    per year (async), and named-version LTS.
+  </p>
+
+  <h2>Verify everything for free first</h2>
+  <p>
+    Before spending anything: pull the <code>-fips</code> image (public, no
+    login), run the signature and provenance verification commands in
+    <a href="https://github.com/fosterstack/cache/blob/main/RELEASING.md">RELEASING.md</a>,
+    read the scan posture in
+    <a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md">SECURITY.md</a>
+    — including what it says is not yet proven — and check the
+    <a href="https://github.com/fosterstack/cache/blob/main/docs/quality/traceability.md">requirements
+    matrix</a> that maps every product promise to its evidence. If the free
+    evidence doesn't hold up under your audit, the paid tier wouldn't either.
+    That's the test we invite.
+  </p>
+</main>
+<footer>
+  <div>
+    <p>FosterStack is not affiliated with, endorsed by, or sponsored by Gradle Inc. or the
+    Apache Software Foundation; trademarks are used only to identify compatibility.</p>
+    <p style="margin-top:.6rem">© 2026 FosterStack · <a href="/">fosterstack.com</a> · <a href="https://github.com/fosterstack/cache">github.com/fosterstack/cache</a> · <a href="mailto:hello@fosterstack.com">hello@fosterstack.com</a></p>
+  </div>
+</footer>
+</body>
+</html>
