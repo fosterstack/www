@@ -164,27 +164,50 @@ curl localhost:8080/healthz   # -&gt; ok</code></pre>
   billing a customer requires an email address, and a privacy claim that is convenient
   but false is worse than none.</p>
 
-  <h2>Pricing</h2>
+  <h2 id="pricing">Pricing</h2>
+  <p>Per product. Free is the full product.</p>
   <table>
-    <tr><th>Free</th><th>Team</th><th>Business</th></tr>
+    <tr><th>Free</th><th>Team</th><th>Business</th><th>Compliance</th></tr>
     <tr>
-      <td>The full cache server, MIT-licensed, self-hosted. Forever free.</td>
-      <td>$49/month — access control, metrics UI, email support.</td>
-      <td>$199/month — SSO, HA/replication, analytics, priority support with the CVE-response SLA.</td>
+      <td>The full cache server, MIT-licensed, self-hosted. Every security patch, the
+      <code>-fips</code> image, and all release evidence, free.</td>
+      <td>$49/month — multi-user access control, SSO (OIDC), per-project usage analytics,
+      email support (1-business-day target).</td>
+      <td>$199/month — everything in Team, plus HA/replication and priority support with
+      the CVE-response target.</td>
+      <td>$499/month, billed annually — everything in Business, plus the FIPS 140-3
+      applicability statement, signed per-release attestation letters addressed to you,
+      security-questionnaire support up to 8 hours per year (async), and named-version
+      LTS. <a href="/regulated/">Who this is for.</a></td>
     </tr>
   </table>
+  <p><strong>No sales call. No per-seat tax. No enterprise pricing mystery.</strong></p>
+  <p style="color:var(--muted); font-size:.95rem">
+    The Compliance tier, plainly: the security evidence underneath — SBOMs, SLSA
+    provenance, signatures, VEX statements, and the FIPS 140-3 validated module
+    (CMVP certificate #5247) — is public and free, verifiable by anyone. What the tier
+    sells is the authored analysis — a FIPS applicability statement mapping the
+    validated module boundary onto this product — plus per-release attestation letters
+    signed by FosterStack LLC, and time on your security questionnaires. FosterStack
+    Cache is not "FedRAMP compliant" or "CMMC compliant"; those attach to your service
+    and your organization, never to a component you deploy. It is validated crypto and
+    publishable evidence <em>for</em> your compliance program.
+  </p>
   <p style="color:var(--muted); font-size:.9rem; margin-top:.6rem">
-    Self-serve, credit card, cancel anytime. Priced so an engineering manager can expense it
+    Self-serve, credit card. Monthly tiers cancel anytime; Compliance is an annual
+    term. Priced so an engineering manager can expense it
     without a procurement cycle.
   </p>
 
   <h2>Roadmap honesty</h2>
   <p>Gradle and Maven both run against the same server today; we maintain the cache
-  server, while the Maven client side is Apache's own Build Cache Extension. A dependency cache — the same server restoring <code>node_modules</code>,
-  <code>~/.m2</code>, and <code>~/.gradle/caches</code> by lockfile key, so ephemeral CI
-  agents stop re-downloading the world — is next on the list, npm first. What is
-  not on the list yet is a Helm chart and the paid tiers below; those are described so you
-  know where this is going, not sold as available. If you need something sooner,
+  server, while the Maven client side is Apache's own Build Cache Extension. A dependency cache —
+  the same server restoring <code>node_modules</code>, <code>~/.m2</code>, and
+  <code>~/.gradle/caches</code> by lockfile key, so ephemeral CI agents stop
+  re-downloading the world — is next on the list, npm first. What is
+  not on the list yet is a Helm chart and the paid tiers above — Team, Business, and
+  Compliance are described so you know where this is going, not sold as available; Free
+  is real and complete today. If you need something sooner,
   <a href="https://github.com/fosterstack/cache/issues">open an issue</a> — that is what
   moves the roadmap.</p>
 </main>
@@ -196,7 +219,7 @@ curl localhost:8080/healthz   # -&gt; ok</code></pre>
     of the documented remote build cache HTTP protocol. Apache Maven is a trademark of the
     Apache Software Foundation; the Maven Build Cache Extension is Apache's project, not
     ours.</p>
-    <p style="margin-top:.6rem">© 2026 FosterStack · <a href="https://github.com/fosterstack/cache">github.com/fosterstack/cache</a> · <a href="mailto:hello@fosterstack.com">hello@fosterstack.com</a></p>
+    <p style="margin-top:.6rem">© 2026 FosterStack · <a href="/regulated/">For regulated markets</a> · <a href="https://github.com/fosterstack/cache">github.com/fosterstack/cache</a> · <a href="mailto:hello@fosterstack.com">hello@fosterstack.com</a></p>
   </div>
 </footer>
 </body>
