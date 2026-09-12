@@ -1,5 +1,7 @@
 # FosterStack
 
+Infrastructure worth keeping.
+
 > Maintained continuity for build infrastructure that vendors orphan. Our first
 > product, FosterStack Cache, is a self-hosted remote build cache for Gradle and
 > Maven — a replacement for the Develocity Build Cache Node, which reaches
