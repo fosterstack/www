@@ -175,16 +175,14 @@ curl localhost:8080/healthz   # -&gt; ok</code></pre>
   </table>
   <p style="color:var(--muted); font-size:.9rem; margin-top:.6rem">
     Self-serve, credit card, cancel anytime. Priced so an engineering manager can expense it
-    without a procurement cycle. (For scale: the incumbent's median <em>platform</em>
-    contract — Develocity, the full product suite, of which the cache node is one
-    component — runs about $57k/year. That is not the price of a cache, and we are not
-    claiming it is; it is the procurement class this pricing deliberately avoids.)
+    without a procurement cycle.
   </p>
 
   <h2>Roadmap honesty</h2>
   <p>Gradle and Maven both run against the same server today; we maintain the cache
-  server, while the Maven client side is Apache's own Build Cache Extension. An npm remote
-  cache for CI — same core, a third protocol — is the next protocol on the list. What is
+  server, while the Maven client side is Apache's own Build Cache Extension. A dependency cache — the same server restoring <code>node_modules</code>,
+  <code>~/.m2</code>, and <code>~/.gradle/caches</code> by lockfile key, so ephemeral CI
+  agents stop re-downloading the world — is next on the list, npm first. What is
   not on the list yet is a Helm chart and the paid tiers below; those are described so you
   know where this is going, not sold as available. If you need something sooner,
   <a href="https://github.com/fosterstack/cache/issues">open an issue</a> — that is what
