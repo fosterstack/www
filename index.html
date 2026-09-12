@@ -204,8 +204,10 @@ curl localhost:8080/healthz   # -&gt; ok</code></pre>
 
   <h2>Roadmap honesty</h2>
   <p>Gradle and Maven both run against the same server today; we maintain the cache
-  server, while the Maven client side is Apache's own Build Cache Extension. An npm remote
-  cache for CI — same core, a third protocol — is the next protocol on the list. What is
+  server, while the Maven client side is Apache's own Build Cache Extension. A Node
+  cache for CI — the same server caching <code>node_modules</code>, test caches, and
+  build outputs by lockfile key, so Jenkins and GitLab jobs stop reinstalling the
+  world on every run — is next on the list. What is
   not on the list yet is a Helm chart and the paid tiers above — Team, Business, and
   Compliance are described so you know where this is going, not sold as available; Free
   is real and complete today. If you need something sooner,
