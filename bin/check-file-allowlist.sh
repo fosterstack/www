@@ -11,6 +11,8 @@
 set -euo pipefail
 
 ALLOW_PATTERNS=(
+  '^CONTRIBUTING\.md$'
+  '^\.github/PULL_REQUEST_TEMPLATE\.md$'
   '^index\.html$'
   '^README\.md$'
   '^LICENSE$'
