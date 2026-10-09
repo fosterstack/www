@@ -101,8 +101,8 @@
   <h2>The short answer for Android</h2>
   <ul class="trust">
     <li><strong>A repeat build restored 35 of 78 tasks.</strong> That included the Kotlin compile of both modules, the Java compile of the library, dexing, and most resource and manifest tasks.</li>
-    <li><strong>31 tasks ran again in the repeat build.</strong> They include packaging the APK, bundling the library and merging assets, which ran in every build.</li>
-    <li><strong>After a change inside a method in the library,</strong> its Kotlin compile ran again, and so did a dex merge task and two small library tasks. 31 tasks were restored. The app's own Kotlin compile was still restored.</li>
+    <li><strong>31 of the 78 tasks still ran in the repeat build.</strong> They include packaging the APK, bundling the library and merging assets, which ran in every build.</li>
+    <li><strong>After a change inside a method in the library,</strong> its Kotlin compile ran again, and so did a dex merge task and two small library tasks. That left 31 of 78 restored. The app's own Kotlin compile was still restored.</li>
     <li><strong>After a new public function in the library,</strong> the library's Kotlin and Java compiles ran again, and so did the app's Kotlin compile. 29 tasks were restored.</li>
   </ul>
   <h2>What to do</h2>
