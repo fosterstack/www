@@ -90,7 +90,7 @@
   <p class="lede">A short checklist for moving builds from the free Develocity Build Cache Node to FosterStack Cache, with a real run to back it: the same project built against an old node, then against FosterStack Cache 0.2.1, then back. Read why the node is going away in <a href="/build-cache-node-end-of-life/">Build Cache Node end of life</a>.</p>
 
   <h2>What I tested</h2>
-  <p>Gradle 9.8.0 and a small Java project, built twice against each server. The old side was the final Build Cache Node image (version 21.2), run locally and set up to allow anonymous reads and writes for the test. The new side was a FosterStack Cache 0.2.1 server with no password. I did not test Maven in this run; for Maven see the <a href="/migrate-build-cache-node/">setup page</a>.</p>
+  <p>Gradle 9.8.0 and a small Java project, built twice against each server. The old side was the latest published Build Cache Node image (version 21.2, built June 2025), run locally and set up to allow anonymous reads and writes for the test. The new side was a FosterStack Cache 0.2.1 server with no password. I did not test Maven in this run; for Maven see the <a href="/migrate-build-cache-node/">setup page</a>.</p>
 
   <h2>The checklist</h2>
   <h3>1. Find every place your builds point at the old node</h3>
