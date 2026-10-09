@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Does the Build Cache Work With Kotlin and Android Builds?</title>
+<meta name="description" content="Does Gradle's remote build cache restore Kotlin compile tasks? Real runs on FosterStack Cache 0.2.1 show which tasks come from the cache and which rerun.">
+<meta property="og:title" content="Does the Build Cache Work With Kotlin and Android Builds?">
+<meta property="og:description" content="Does Gradle&#x27;s remote build cache restore Kotlin compile tasks? Real runs on FosterStack Cache 0.2.1 show which tasks come from the cache and which rerun.">
+<meta property="og:url" content="https://fosterstack.com/kotlin-android-gradle-build-cache/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="FosterStack">
+<link rel="canonical" href="https://fosterstack.com/kotlin-android-gradle-build-cache/">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<style>
+  :root {
+    --bg: #ffffff; --fg: #16181d; --muted: #5b6472; --line: #e4e7ec;
+    --accent: #0d7a5f; --accent-fg: #ffffff; --card: #f6f8f9; --warn-bg: #fff7ed; --warn-line: #fdba74;
+    --mark: #0f4d66;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #101318; --fg: #e8eaf0; --muted: #98a2b3; --line: #262c36;
+      --accent: #2fbf95; --accent-fg: #08110e; --card: #171c23; --warn-bg: #241a10; --warn-line: #7c4a12;
+      --mark: #e8eaf0;
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 44rem; margin: 0 auto; padding: 0 1.25rem 4rem; }
+  header.site { max-width: 44rem; margin: 0 auto; padding: 1.25rem; display: flex; align-items: baseline; gap: .6rem; }
+  .logo { font-weight: 700; font-size: 1.05rem; letter-spacing: -.01em; }
+  .logo span { color: var(--accent); }
+  .logo .mark { width: 1.2em; height: 1.2em; vertical-align: -.24em; margin-right: .4em; }
+  .tag { color: var(--muted); font-size: .85rem; }
+  .notice {
+    background: var(--warn-bg); border: 1px solid var(--warn-line); border-radius: 8px;
+    padding: .7rem 1rem; font-size: .92rem; margin: 1.5rem 0 2.5rem;
+  }
+  h1 { font-size: 2rem; line-height: 1.2; letter-spacing: -.02em; margin-bottom: 1rem; }
+  .lede { font-size: 1.12rem; color: var(--muted); margin-bottom: 2rem; }
+  h2 { font-size: 1.25rem; margin: 3rem 0 .9rem; letter-spacing: -.01em; }
+  p + p { margin-top: .8rem; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: .8rem; margin-top: 1rem; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1rem 1.1rem; }
+  .card h3 { font-size: .98rem; margin-bottom: .35rem; }
+  .card p { font-size: .9rem; color: var(--muted); }
+  ul.trust { list-style: none; margin-top: .5rem; }
+  ul.trust li { padding: .45rem 0 .45rem 1.6rem; position: relative; }
+  ul.trust li::before { content: "✓"; position: absolute; left: .2rem; color: var(--accent); font-weight: 700; }
+  code, pre { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .88em; }
+  code { background: var(--card); border: 1px solid var(--line); border-radius: 5px; padding: .1em .35em; }
+  pre code { background: none; border: 0; padding: 0; color: inherit; font-size: 1em; }
+  button {
+    padding: .7rem 1.3rem; font-size: 1rem; font-weight: 600; cursor: pointer;
+    background: var(--accent); color: var(--accent-fg); border: 0; border-radius: 8px;
+  }
+  button:disabled { opacity: .6; cursor: default; }
+  table { width: 100%; border-collapse: collapse; font-size: .92rem; margin-top: 1rem; }
+  th, td { text-align: left; padding: .55rem .6rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  pre { background: #0f172a; color: #e2e8f0; padding: .9rem 1rem; border-radius: 8px;
+        overflow-x: auto; font-size: .9rem; line-height: 1.5; }
+  .cta-row { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1.1rem; }
+  .btn { display: inline-block; padding: .55rem 1rem; border-radius: 8px; font-weight: 600;
+         text-decoration: none; background: var(--accent); color: var(--accent-fg); }
+  .btn-secondary { background: transparent; color: inherit; border: 1px solid var(--muted); }
+  .muted-note { color: var(--muted); font-size: .93rem; margin-top: 1.1rem; }
+  footer { border-top: 1px solid var(--line); margin-top: 4rem; padding: 1.5rem 1.25rem 3rem; }
+  footer div { max-width: 44rem; margin: 0 auto; color: var(--muted); font-size: .82rem; }
+  a { color: var(--accent); }
+  code { overflow-wrap: anywhere; }
+  pre code { overflow-wrap: normal; }
+  .table-scroll { max-width: 100%; overflow-x: auto; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+</style>
+</head>
+<body>
+<header class="site">
+  <div class="logo"><svg class="mark" viewBox="0 0 96 96" aria-hidden="true" focusable="false"><rect x="12" y="14" width="72" height="18" rx="5" fill="var(--mark)"/><rect x="12" y="39" width="48" height="18" rx="5" fill="var(--mark)"/><rect x="12" y="64" width="26" height="18" rx="5" fill="var(--accent)"/></svg>foster<span>stack</span></div>
+  <div class="tag">Infrastructure worth keeping — and kept patched.</div>
+</header>
+<main>
+  <h1>Does the build cache work with Kotlin and Android builds?</h1>
+  <p class="lede">For Kotlin on the JVM, yes. In our runs Gradle took the Kotlin compile tasks and the test task from FosterStack Cache instead of running them again. We are still measuring Android.</p>
+
+  <h2>The short answer for Kotlin</h2>
+  <ul class="trust">
+    <li><strong>Kotlin compiles came from the cache.</strong> In a repeat build, <code>compileKotlin</code> and <code>compileTestKotlin</code> were restored, and so were <code>compileJava</code> for the Java file in the same module and the <code>test</code> task.</li>
+    <li><strong>The jar tasks ran every time.</strong> They were not restored in any of our builds.</li>
+    <li><strong>After a change inside a method,</strong> only that module's Kotlin compile ran again. The module above it still restored its Kotlin compile, but its test ran again.</li>
+    <li><strong>After a new public function,</strong> the Kotlin compile ran again in both modules. The Java compile in the changed module ran too, and so did the test.</li>
+  </ul>
+
+  <p id="android-pending"><strong>ANDROID-PENDING</strong>: what Gradle restores in an Android build, measured on a GitHub-hosted machine, goes here.</p>
+  <!-- ANDROID-PENDING: replace the paragraph above with the Android result, then update the lede, the description and the "Not tested" line, before this page is merged. -->
+
+  <h2>What to do</h2>
+  <p>Our advice, not a test result:</p>
+  <ul class="trust">
+    <li><strong>Look for FROM-CACHE on the compile and test lines.</strong> That is where a Kotlin build shows its hits. See <a href="/build-cache-hit-rate-how-to-measure/">how to measure your hit rate</a>.</li>
+    <li><strong>Do not count the jar tasks as misses.</strong> They ran every time in our builds, even when everything else was restored.</li>
+    <li><strong>Keep the Kotlin plugin version and the Java version the same</strong> on laptops and CI, so entries can be shared. If the hit rate is low, see <a href="/gradle-build-cache-hit-rate-low/">why the Gradle hit rate is low</a>.</li>
+  </ul>
+
+  <h2>How we checked</h2>
+  <p>We built a small Kotlin project twice in each of three cases, always on a new empty FosterStack Cache server. Build 1 stored the results. Build 2 used a fresh copy of the project. This table shows build 2.</p>
+  <div class="table-scroll" role="region" aria-label="Task results in build 2 of each case" tabindex="0"><table>
+    <thead><tr><th>Task</th><th>Nothing changed</th><th>Body change in core</th><th>New public function in core</th></tr></thead>
+    <tbody>
+      <tr><td><code>:core:compileKotlin</code></td><td>from cache</td><td>ran</td><td>ran</td></tr>
+      <tr><td><code>:core:compileJava</code></td><td>from cache</td><td>from cache</td><td>ran</td></tr>
+      <tr><td><code>:app:compileKotlin</code></td><td>from cache</td><td>from cache</td><td>ran</td></tr>
+      <tr><td><code>:app:compileTestKotlin</code></td><td>from cache</td><td>from cache</td><td>ran</td></tr>
+      <tr><td><code>:app:test</code></td><td>from cache</td><td>ran</td><td>ran</td></tr>
+      <tr><td><code>:core:jar</code> and <code>:app:jar</code></td><td>ran</td><td>ran</td><td>ran</td></tr>
+    </tbody>
+  </table></div>
+  <p class="muted-note">What: Gradle 9.8.0, the Kotlin Gradle plugin 2.4.21, Temurin 21.0.12.1, FosterStack Cache 0.2.1, on a Mac (arm64). Two modules: <code>core</code> has a Kotlin class and one Java file, <code>app</code> has a Kotlin class and one test and uses <code>core</code>. The command was <code>gradle build</code>.</p>
+  <p class="muted-note">How: every build used a fresh copy of the project and Gradle's local cache was off. One Gradle home was shared for downloads (the plugin and the test libraries), and it was filled first by a build with the cache off. The tasks without a test source (<code>:core:test</code> and the empty Java compile in <code>app</code>) had nothing to run and are left out.</p>
+  <p class="muted-note">Not tested: Android, Kotlin Multiplatform, kapt or KSP, Compose, Maven, Linux. We make no claim about build times.</p>
+</main>
+<footer>
+  <div>
+    <p>FosterStack is not affiliated with, endorsed by, or sponsored by Gradle Inc.
+    "Gradle" and "Develocity" are trademarks of Gradle Inc., used here only to identify
+    compatibility. FosterStack contains no Gradle Inc. code; it is a clean-room implementation
+    of the documented remote build cache HTTP protocol. Apache Maven is a trademark of the
+    Apache Software Foundation; the Maven Build Cache Extension is Apache's project, not
+    ours.</p>
+    <p style="margin-top:.6rem">© 2026 FosterStack · <a href="/build-cache-node-end-of-life/">Build Cache Node end of life</a> · <a href="/migrate-build-cache-node/">Migrate</a> · <a href="/build-cache-node-faq/">FAQ</a> · <a href="/jenkins-ci-build-cache/">CI setup</a> · <a href="/how-we-build/">How we build</a> · <a href="/regulated/">For regulated markets</a> · <a href="https://github.com/fosterstack/cache">github.com/fosterstack/cache</a> · <a href="mailto:hello@fosterstack.com">hello@fosterstack.com</a></p>
+  </div>
+</footer>
+</body>
+</html>
