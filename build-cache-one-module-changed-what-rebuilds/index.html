@@ -88,21 +88,22 @@
 </header>
 <main>
   <h1>Why did my whole build rerun after a small change?</h1>
-  <p class="lede">You changed one small thing, and the whole build ran again. FosterStack Cache restores every module whose inputs did not change, and how many modules that is depends on your build tool.</p>
+  <p class="lede">You changed one small thing, and the whole build ran again. FosterStack Cache keeps each module's result so your build can reuse it. In our runs Gradle reused most results, and Maven rebuilt every module above the one we edited.</p>
 
   <h2>The short answer</h2>
+  <p>Picture three modules in a chain: <code>core</code> at the bottom, <code>service</code> on top of it, and <code>app</code> on top of that.</p>
   <ul class="trust">
-    <li><strong>Gradle:</strong> in our runs, an edit inside a method or a comment recompiled only the module you edited. Adding a public method also recompiled the module above it.</li>
+    <li><strong>Gradle:</strong> in our runs, an edit inside a method or a comment recompiled only the module you edited. Adding a public method also recompiled the module directly above it.</li>
     <li><strong>Maven:</strong> in our runs, each of our three changes to the bottom module rebuilt all three modules, even a comment.</li>
-    <li><strong>Both:</strong> a change in the top module rebuilt only the top module. The modules below it came from the cache.</li>
-    <li><strong>A dependency bump:</strong> only the module that uses the library rebuilt. Going back to the old version restored both modules.</li>
+    <li><strong>Both:</strong> a change in the top module recompiled (Gradle) or rebuilt (Maven) only the top module. The two below it came from the cache.</li>
+    <li><strong>A dependency bump:</strong> only the module that uses the library recompiled (Gradle) or rebuilt (Maven). Going back to the old version restored both modules.</li>
   </ul>
 
   <h2>What to do about it</h2>
   <p>Our advice, not a test result:</p>
   <ul class="trust">
     <li><strong>In Maven, batch edits to widely shared modules.</strong> Expect an edit there to rebuild everything above it.</li>
-    <li><strong>In Gradle, keep a shared module's public API steady.</strong> Edits inside it stayed inside it in our runs.</li>
+    <li><strong>In Gradle, keep a shared module's public API steady.</strong> In our runs, an edit inside a method recompiled only that module.</li>
     <li><strong>Bump a dependency in one change.</strong> Let one build fill the cache. Later builds restore it.</li>
     <li><strong>Keep Gradle, Maven and Java versions the same</strong> on laptops and CI, so entries can be shared.</li>
   </ul>
@@ -110,7 +111,7 @@
 
   <h2>Why Maven rebuilt more than Gradle</h2>
   <p>The Maven log shows that while it works out the cache key for <code>service</code>, it also works out the key for <code>core</code>. In the comment run, <code>core</code> had a new key and so did <code>service</code> (<code>efd19a4c19b933af</code> before, <code>3d90eee1e1f99534</code> after), though no file in <code>service</code> changed. That is consistent with a module's key including the keys of the modules it depends on.</p>
-  <p>Gradle's documentation describes the cache key for compiling a module as looking only at the public API of the compiled classes it uses. Our results are consistent with that. We checked results, not Gradle's internals.</p>
+  <p>Gradle's documentation describes the cache key for compiling a module as looking only at the public API of the modules it depends on. Our results are consistent with that. We checked results, not Gradle's internals.</p>
 
   <h2>How we checked</h2>
   <p>A chain of three modules: <code>core</code>, then <code>service</code> (uses <code>core</code>), then <code>app</code> (uses <code>service</code>). For each change, build 1 was the unchanged project and build 2 had the one change. This table shows build 2.</p>
@@ -123,8 +124,8 @@
       <tr><td>A number in <code>app</code></td><td>from cache / from cache / recompiled</td><td>restored / restored / built</td></tr>
     </tbody>
   </table></div>
-  <p>For the dependency bump we used two modules: <code>lib</code> with no dependencies and <code>app</code> using Gson. Five builds ran on one server: Gson 2.10.1, 2.10.1 again, 2.11.0, 2.11.0 again, then back to 2.10.1. After the bump, <code>lib</code> came from the cache and <code>app</code> rebuilt. The builds after that restored both modules. The result was the same in Gradle and in Maven.</p>
-  <p class="muted-note">Every scenario started on a new, empty cache server, with a fresh project copy for every build. Gradle 9.8.0 ran only the compile tasks, with its local cache off. Maven 3.9.9 with Build Cache Extension 1.2.3 ran <code>mvn verify</code> with all eight default plugin versions pinned. Both used Temurin 21.0.12.1 and FosterStack Cache 0.2.1 on one Mac (arm64). Not tested: Gradle <code>api</code> dependencies, test and jar tasks in Gradle, annotation processors, Kotlin, a change to a public constant, a change in the middle module, a library used by both modules, other versions, bigger projects, Linux, build times.</p>
+  <p>For the dependency bump we used two modules: <code>lib</code> with no dependencies and <code>app</code> using Gson. Five builds ran on one server: Gson 2.10.1, 2.10.1 again, 2.11.0, 2.11.0 again, then back to 2.10.1. After the bump, <code>lib</code> came from the cache and <code>app</code> was recompiled (Gradle) or rebuilt (Maven). The builds after that restored both modules. The result was the same in Gradle and in Maven.</p>
+  <p class="muted-note">Every scenario started on a new, empty cache server, with a fresh project copy for every build. Downloads (the Gradle home for the Gson runs, the Maven repository) were shared across builds and held no cache entries. Gradle 9.8.0 ran only the compile tasks, with its local cache off. Maven 3.9.9 with Build Cache Extension 1.2.3 ran <code>mvn verify</code> with all eight default plugin versions pinned and compiled with Java release 17. Both used Temurin 21.0.12.1 and FosterStack Cache 0.2.1 on one Mac (arm64). Not tested: Gradle <code>api</code> dependencies, test and jar tasks in Gradle, annotation processors, Kotlin, a change to a public constant, a change in the middle module, a library used by both modules, other versions, bigger projects, Linux, build times.</p>
 </main>
 <footer>
   <div>
