@@ -29,6 +29,11 @@ verifiable against the CI run that produced them.
 - [We Upgraded Gradle or Maven and Builds Got Slow](https://fosterstack.com/build-cache-cold-after-gradle-or-maven-upgrade/): what to expect after an upgrade and which Maven plugin versions to pin.
 - [Why Did My Whole Build Rerun After a Small Change?](https://fosterstack.com/build-cache-one-module-changed-what-rebuilds/): what stays cached after an edit or a dependency bump, in Gradle and in Maven.
 - [Does a Remote Cache Slow Your Build When It Misses?](https://fosterstack.com/remote-build-cache-miss-cost/): timed runs on a GitHub-hosted CI machine: what a cache miss costs and what a hit saves.
+- [Maven Build Cache: Let CI Write, Developers Only Read](https://fosterstack.com/maven-build-cache-let-ci-write-developers-read/): lets only CI write to the Maven build cache while developers only read.
+- [How Do I Know My Build Cache Hit Rate?](https://fosterstack.com/build-cache-hit-rate-how-to-measure/): how to read your hit rate from the build log and from the server, and why the two differ.
+- [Can Someone Poison Our Shared Build Cache?](https://fosterstack.com/can-someone-poison-our-build-cache/): a hands-on test of what the write login and the read-only login can and cannot change.
+- [What Happens to My Build When the Cache Server Is Down?](https://fosterstack.com/build-cache-server-down-what-happens/): what Gradle and Maven do when the cache server is down or does not answer, with timings.
+- [Can I Run the Build Cache on a Small VM or Laptop?](https://fosterstack.com/run-build-cache-on-a-small-vm-or-laptop/): measured memory, CPU and disk of the server, and a run inside a 64 MiB container.
 - [Jenkins and CI build cache](https://fosterstack.com/jenkins-ci-build-cache/): one shared cache for CI runners.
 - [Gradle remote build cache not working](https://fosterstack.com/gradle-remote-cache-not-working/): six checks when nothing comes from the cache.
 - [Maven remote build cache setup](https://fosterstack.com/maven-remote-build-cache-setup/): extension, config, credentials, checking hits.
