@@ -69,15 +69,15 @@
         overflow-x: auto; font-size: .9rem; line-height: 1.5; }
   .cta-row { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1.1rem; }
   .btn { display: inline-block; padding: .55rem 1rem; border-radius: 8px; font-weight: 600;
-         text-decoration: none; background: var(--accent); color: #fff; }
-  .btn-secondary { background: transparent; color: inherit; border: 1px solid #cbd5e1; }
+         text-decoration: none; background: var(--accent); color: var(--accent-fg); }
+  .btn-secondary { background: transparent; color: inherit; border: 1px solid var(--muted); }
   .muted-note { color: var(--muted); font-size: .93rem; margin-top: 1.1rem; }
   footer { border-top: 1px solid var(--line); margin-top: 4rem; padding: 1.5rem 1.25rem 3rem; }
   footer div { max-width: 44rem; margin: 0 auto; color: var(--muted); font-size: .82rem; }
   a { color: var(--accent); }
-  table { display: block; max-width: 100%; overflow-x: auto; }
   code { overflow-wrap: anywhere; }
   pre code { overflow-wrap: normal; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 </style>
 </head>
 <body>
@@ -91,12 +91,12 @@
 
   <h2>How to find the cause</h2>
   <p>Run the build with <code>--info</code>. For every cacheable task Gradle prints its key:</p>
-  <pre><code>Build cache key for task &#x27;:greetStable&#x27; is 932183de90ed643c9e448f23bd169d87</code></pre>
+  <pre tabindex="0"><code>Build cache key for task &#x27;:greetStable&#x27; is 932183de90ed643c9e448f23bd169d87</code></pre>
   <p>If the same task has a different key on two machines or two runs, something in its inputs differs. Compare the keys first, then look for what changed. If the key is the same and the task still ran, look at the server (the last section).</p>
 
   <h2>The test project</h2>
   <p>Java sources plus three small cacheable tasks in <code>build.gradle.kts</code>. They differ only in the value they take as input:</p>
-  <pre><code>@CacheableTask
+  <pre tabindex="0"><code>@CacheableTask
 abstract class Greet : DefaultTask() {
     @get:Input abstract val label: Property&lt;String&gt;
     @get:OutputFile abstract val out: RegularFileProperty
@@ -119,12 +119,12 @@ tasks.register&lt;Greet&gt;(&quot;greetTime&quot;) {            // input changes
 
   <h2>Cause 1: a path that is only true on one machine</h2>
   <p>I copied the project to a different directory and built the same tasks from a clean checkout:</p>
-  <pre><code>&gt; Task :compileJava FROM-CACHE
+  <pre tabindex="0"><code>&gt; Task :compileJava FROM-CACHE
 &gt; Task :greetStable FROM-CACHE
 &gt; Task :greetAbsPath
 &gt; Task :greetTime</code></pre>
   <p>Moving the checkout did not matter for <code>compileJava</code> or for the task with a stable input. The task whose input holds the project's absolute path ran again. The keys show why:</p>
-  <pre><code>$ gradle greetAbsPath --info        (in the first directory)
+  <pre tabindex="0"><code>$ gradle greetAbsPath --info        (in the first directory)
 Build cache key for task &#x27;:greetAbsPath&#x27; is 24c324403b9dacb75e78e128fbf76848
 $ gradle greetAbsPath --info        (in the copy)
 Build cache key for task &#x27;:greetAbsPath&#x27; is b7b4f69d180d1dc577a36f2869d0806e</code></pre>
@@ -135,7 +135,7 @@ Build cache key for task &#x27;:greetAbsPath&#x27; is b7b4f69d180d1dc577a36f2869
 
   <h2>Cause 3: a different Java</h2>
   <p>The cache had been filled by Gradle running on JDK 27. I ran the same project, in the same directory, with Gradle on JDK 21:</p>
-  <pre><code>&gt; Task :compileJava
+  <pre tabindex="0"><code>&gt; Task :compileJava
 &gt; Task :greetStable</code></pre>
   <p>Both ran again. A second run on JDK 21 hit, and going back to JDK 27 hit its own entries. So two Java versions on your CI agents and laptops means two separate sets of entries and a lower hit rate. <strong>Fix:</strong> use the same Java version everywhere builds share a cache.</p>
 

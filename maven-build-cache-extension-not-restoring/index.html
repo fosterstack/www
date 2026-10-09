@@ -69,15 +69,15 @@
         overflow-x: auto; font-size: .9rem; line-height: 1.5; }
   .cta-row { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1.1rem; }
   .btn { display: inline-block; padding: .55rem 1rem; border-radius: 8px; font-weight: 600;
-         text-decoration: none; background: var(--accent); color: #fff; }
-  .btn-secondary { background: transparent; color: inherit; border: 1px solid #cbd5e1; }
+         text-decoration: none; background: var(--accent); color: var(--accent-fg); }
+  .btn-secondary { background: transparent; color: inherit; border: 1px solid var(--muted); }
   .muted-note { color: var(--muted); font-size: .93rem; margin-top: 1.1rem; }
   footer { border-top: 1px solid var(--line); margin-top: 4rem; padding: 1.5rem 1.25rem 3rem; }
   footer div { max-width: 44rem; margin: 0 auto; color: var(--muted); font-size: .82rem; }
   a { color: var(--accent); }
-  table { display: block; max-width: 100%; overflow-x: auto; }
   code { overflow-wrap: anywhere; }
   pre code { overflow-wrap: normal; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 </style>
 </head>
 <body>
@@ -91,19 +91,19 @@
 
   <h2>First, what a healthy build looks like</h2>
   <p>The first build stores its result, and it looks alarming because a miss is logged as an error:</p>
-  <pre><code>[INFO] Attempting to restore project demo:demo from build cache
+  <pre tabindex="0"><code>[INFO] Attempting to restore project demo:demo from build cache
 [ERROR] Error downloading cache item: https://cache.example.com//v1.1/demo/demo/ebb9bceba2f7a6bc/buildinfo.xml
 [INFO] Saved to remote cache https://cache.example.com//v1.1/demo/demo/ebb9bceba2f7a6bc/demo.jar
 [INFO] Saved to remote cache https://cache.example.com//v1.1/demo/demo/ebb9bceba2f7a6bc/buildinfo.xml
 [INFO] BUILD SUCCESS</code></pre>
   <p>That <code>[ERROR]</code> line is only the server saying it does not have the entry yet. What matters is the <code>Saved to remote cache</code> lines after it. After deleting <code>target</code> and the extension's local cache folder, the second build:</p>
-  <pre><code>[INFO] Attempting to restore project demo:demo from build cache
+  <pre tabindex="0"><code>[INFO] Attempting to restore project demo:demo from build cache
 [INFO] Found cached build, restoring demo:demo from cache by checksum ebb9bceba2f7a6bc
 [INFO] BUILD SUCCESS</code></pre>
   <p>You must delete the local folder to prove the remote works, because the extension keeps its own local cache and will use it first.</p>
 
   <h2>Symptom 1: Maven stops with "Unrecognised tag: 'remote'"</h2>
-  <pre><code>Cannot initialize cache because xml config is not valid or not available
+  <pre tabindex="0"><code>Cannot initialize cache because xml config is not valid or not available
 Unable to parse cache xml element: Unrecognised tag: &#x27;remote&#x27; ...</code></pre>
   <p><strong>Cause:</strong> the <code>remote</code> element is outside <code>configuration</code>. <strong>Fix:</strong> move it inside, as in the working file below. Nothing built, and the server saw nothing.</p>
 
@@ -112,7 +112,7 @@ Unable to parse cache xml element: Unrecognised tag: &#x27;remote&#x27; ...</cod
   <p><strong>Cause:</strong> without <code>saveToRemote="true"</code> the extension reads from the server and never uploads. <strong>Fix:</strong> add it on the machines that should upload, usually CI.</p>
 
   <h2>Symptom 3: "HTTP Status: 401" in the log, and still no uploads</h2>
-  <pre><code>org.eclipse.aether.spi.connector.transport.http.HttpTransporterException: HTTP Status: 401</code></pre>
+  <pre tabindex="0"><code>org.eclipse.aether.spi.connector.transport.http.HttpTransporterException: HTTP Status: 401</code></pre>
   <p>The build still ends in <code>BUILD SUCCESS</code>, the server stays empty, and the lines <code>Saved to remote cache</code> are missing. I got exactly this from two different mistakes:</p>
   <ul class="trust">
     <li>the <code>id</code> of the <code>&lt;server&gt;</code> in <code>settings.xml</code> did not match the <code>id</code> on the <code>remote</code> element, and</li>
@@ -121,7 +121,7 @@ Unable to parse cache xml element: Unrecognised tag: &#x27;remote&#x27; ...</cod
   <p><strong>Fix:</strong> make the two ids identical and check the password. Maven 3.10 may also print a warning about the credentials being used for an address without a matching repository entry. In my working setup the build behaved the same either way.</p>
 
   <h2>The working configuration</h2>
-  <pre><code>&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;
+  <pre tabindex="0"><code>&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;
 &lt;cache xmlns=&quot;http://maven.apache.org/BUILD-CACHE-CONFIG/1.2.0&quot;
        xmlns:xsi=&quot;http://www.w3.org/2001/XMLSchema-instance&quot;
        xsi:schemaLocation=&quot;http://maven.apache.org/BUILD-CACHE-CONFIG/1.2.0 https://maven.apache.org/xsd/build-cache-config-1.2.0.xsd&quot;&gt;

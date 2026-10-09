@@ -69,15 +69,16 @@
         overflow-x: auto; font-size: .9rem; line-height: 1.5; }
   .cta-row { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1.1rem; }
   .btn { display: inline-block; padding: .55rem 1rem; border-radius: 8px; font-weight: 600;
-         text-decoration: none; background: var(--accent); color: #fff; }
-  .btn-secondary { background: transparent; color: inherit; border: 1px solid #cbd5e1; }
+         text-decoration: none; background: var(--accent); color: var(--accent-fg); }
+  .btn-secondary { background: transparent; color: inherit; border: 1px solid var(--muted); }
   .muted-note { color: var(--muted); font-size: .93rem; margin-top: 1.1rem; }
   footer { border-top: 1px solid var(--line); margin-top: 4rem; padding: 1.5rem 1.25rem 3rem; }
   footer div { max-width: 44rem; margin: 0 auto; color: var(--muted); font-size: .82rem; }
   a { color: var(--accent); }
-  table { display: block; max-width: 100%; overflow-x: auto; }
   code { overflow-wrap: anywhere; }
   pre code { overflow-wrap: normal; }
+  .table-scroll { max-width: 100%; overflow-x: auto; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 </style>
 </head>
 <body>
@@ -98,7 +99,7 @@
 
   <h2>What we ran</h2>
   <p>A small Maven project, Maven 3.10.0, extension 1.2.3, macOS (arm64). Every build used a fresh copy of the project and an empty local build cache, so the only thing shared was the cache server. All five builds ended with <code>BUILD SUCCESS</code>.</p>
-  <table>
+  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <thead><tr><th>Build</th><th>Server it used</th><th>Result</th></tr></thead>
     <tbody>
       <tr><td>1</td><td>Old server, empty</td><td>Built the project and saved the result to the server</td></tr>
@@ -107,25 +108,25 @@
       <tr><td>4</td><td>New server, from another machine</td><td>Restored from the cache, no compile</td></tr>
       <tr><td>5</td><td>New server started on a copy of the old data folder</td><td>Restored from the cache, no compile</td></tr>
     </tbody>
-  </table>
+  </table></div>
 
   <h2>Option 1: change the address only</h2>
   <p>Start the new server, then edit the <code>url</code> in the cache config and commit it. We changed this one line and nothing else:</p>
-<pre><code>&lt;remote enabled="true" saveToRemote="true" id="fosterstack-cache"&gt;
+<pre tabindex="0"><code>&lt;remote enabled="true" saveToRemote="true" id="fosterstack-cache"&gt;
   &lt;url&gt;http://127.0.0.1:18151/&lt;/url&gt;
 &lt;/remote&gt;</code></pre>
   <p>Build 3 had no cached result to find, so Maven compiled the project and saved it:</p>
-<pre><code>[INFO] Attempting to restore project demo:demo from build cache
+<pre tabindex="0"><code>[INFO] Attempting to restore project demo:demo from build cache
 [INFO] Compiling 1 source file with javac [debug release 17] to target/classes
 [INFO] Saved to remote cache http://127.0.0.1:18151//v1.1/demo/demo/ebb9bceba2f7a6bc/demo.jar</code></pre>
   <p>From then on, every other machine pointing at the new address gets the result from the new server, as build 4 did. Anyone who still has the old address in their config keeps using the old server until they update.</p>
 
   <h2>Option 2: copy the data folder first</h2>
   <p>This keeps the new server warm from the first build. Stop the old server, copy its data folder, and start the new server with its data folder set to the copy. See <a href="/back-up-and-restore-build-cache/">back up and restore</a> for why the old server should be stopped first.</p>
-<pre><code>cp -R data-old data-new-copied
+<pre tabindex="0"><code>cp -R data-old data-new-copied
 FSCACHE_ADDR=127.0.0.1:18152 FSCACHE_DATA_DIR=$PWD/data-new-copied fscache</code></pre>
   <p>Build 5 found the result straight away, with no compile:</p>
-<pre><code>[INFO] Attempting to restore project demo:demo from build cache
+<pre tabindex="0"><code>[INFO] Attempting to restore project demo:demo from build cache
 [INFO] Found cached build, restoring demo:demo from cache by checksum ebb9bceba2f7a6bc</code></pre>
   <p>The new server's status page agreed: 2 hits and 0 misses at that point.</p>
 

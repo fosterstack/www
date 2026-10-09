@@ -69,15 +69,16 @@
         overflow-x: auto; font-size: .9rem; line-height: 1.5; }
   .cta-row { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1.1rem; }
   .btn { display: inline-block; padding: .55rem 1rem; border-radius: 8px; font-weight: 600;
-         text-decoration: none; background: var(--accent); color: #fff; }
-  .btn-secondary { background: transparent; color: inherit; border: 1px solid #cbd5e1; }
+         text-decoration: none; background: var(--accent); color: var(--accent-fg); }
+  .btn-secondary { background: transparent; color: inherit; border: 1px solid var(--muted); }
   .muted-note { color: var(--muted); font-size: .93rem; margin-top: 1.1rem; }
   footer { border-top: 1px solid var(--line); margin-top: 4rem; padding: 1.5rem 1.25rem 3rem; }
   footer div { max-width: 44rem; margin: 0 auto; color: var(--muted); font-size: .82rem; }
   a { color: var(--accent); }
-  table { display: block; max-width: 100%; overflow-x: auto; }
   code { overflow-wrap: anywhere; }
   pre code { overflow-wrap: normal; }
+  .table-scroll { max-width: 100%; overflow-x: auto; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 </style>
 </head>
 <body>
@@ -93,7 +94,7 @@
   <p>The <code>/metrics</code> and <code>/healthz</code> paths stay open even when Basic Auth is on, so a Prometheus scraper needs no credentials. The status page, <code>/statusz</code>, sits behind Basic Auth when it is enabled.</p>
 
   <h2>A scrape setting</h2>
-  <pre><code>scrape_configs:
+  <pre tabindex="0"><code>scrape_configs:
   - job_name: fscache
     static_configs:
       - targets: [&#x27;cache.example.com:8080&#x27;]</code></pre>
@@ -101,7 +102,7 @@
 
   <h2>The metrics</h2>
   <p>These are the names a running 0.2.1 server reports:</p>
-  <table>
+  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <tr><th>Metric</th><th>Type</th><th>What it tells you</th></tr>
     <tr><td><code>fscache_cache_hits_total</code></td><td>counter</td><td>Requests answered from the cache</td></tr>
     <tr><td><code>fscache_cache_misses_total</code></td><td>counter</td><td>Requests for something not stored</td></tr>
@@ -112,10 +113,10 @@
     <tr><td><code>fscache_http_request_duration_seconds</code></td><td>histogram</td><td>How long requests take</td></tr>
     <tr><td><code>fscache_bytes_read_total</code></td><td>counter</td><td>Bytes sent to clients</td></tr>
     <tr><td><code>fscache_bytes_written_total</code></td><td>counter</td><td>Bytes received from clients</td></tr>
-  </table>
+  </table></div>
 
   <h2>Queries worth having</h2>
-  <pre><code># hit rate over the last 5 minutes
+  <pre tabindex="0"><code># hit rate over the last 5 minutes
 sum(rate(fscache_cache_hits_total[5m]))
   / clamp_min(sum(rate(fscache_cache_hits_total[5m])) + sum(rate(fscache_cache_misses_total[5m])), 0.0001)
 
@@ -131,7 +132,7 @@ histogram_quantile(0.95, sum by (le, method) (rate(fscache_http_request_duration
 
   <h2>The status page</h2>
   <p>For a quick look without Prometheus, <code>/statusz</code> returns the same numbers in one place, in a browser or as JSON. This is what a freshly started 0.2.1 server returned after one stored entry and two requests:</p>
-  <pre><code>$ curl -s localhost:8080/statusz
+  <pre tabindex="0"><code>$ curl -s localhost:8080/statusz
 {
   &quot;version&quot;: &quot;v0.2.1&quot;,
   &quot;revision&quot;: &quot;0bfc498ecfca3e38cb4a456acda44359a1620c5a&quot;,

@@ -69,16 +69,16 @@
         overflow-x: auto; font-size: .9rem; line-height: 1.5; }
   .cta-row { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1.1rem; }
   .btn { display: inline-block; padding: .55rem 1rem; border-radius: 8px; font-weight: 600;
-         text-decoration: none; background: var(--accent); color: #fff; }
-  .btn-secondary { background: transparent; color: inherit; border: 1px solid #cbd5e1; }
+         text-decoration: none; background: var(--accent); color: var(--accent-fg); }
+  .btn-secondary { background: transparent; color: inherit; border: 1px solid var(--muted); }
   .muted-note { color: var(--muted); font-size: .93rem; margin-top: 1.1rem; }
   footer { border-top: 1px solid var(--line); margin-top: 4rem; padding: 1.5rem 1.25rem 3rem; }
   footer div { max-width: 44rem; margin: 0 auto; color: var(--muted); font-size: .82rem; }
   a { color: var(--accent); }
   blockquote { border-left: 3px solid var(--line); padding: .2rem 0 .2rem 1rem; margin: .8rem 0; color: var(--muted); }
-  table { display: block; max-width: 100%; overflow-x: auto; }
   code { overflow-wrap: anywhere; }
   pre code { overflow-wrap: normal; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 </style>
 </head>
 <body>

@@ -69,15 +69,16 @@
         overflow-x: auto; font-size: .9rem; line-height: 1.5; }
   .cta-row { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1.1rem; }
   .btn { display: inline-block; padding: .55rem 1rem; border-radius: 8px; font-weight: 600;
-         text-decoration: none; background: var(--accent); color: #fff; }
-  .btn-secondary { background: transparent; color: inherit; border: 1px solid #cbd5e1; }
+         text-decoration: none; background: var(--accent); color: var(--accent-fg); }
+  .btn-secondary { background: transparent; color: inherit; border: 1px solid var(--muted); }
   .muted-note { color: var(--muted); font-size: .93rem; margin-top: 1.1rem; }
   footer { border-top: 1px solid var(--line); margin-top: 4rem; padding: 1.5rem 1.25rem 3rem; }
   footer div { max-width: 44rem; margin: 0 auto; color: var(--muted); font-size: .82rem; }
   a { color: var(--accent); }
-  table { display: block; max-width: 100%; overflow-x: auto; }
   code { overflow-wrap: anywhere; }
   pre code { overflow-wrap: normal; }
+  .table-scroll { max-width: 100%; overflow-x: auto; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 </style>
 </head>
 <body>
@@ -90,7 +91,7 @@
   <p class="lede">Gradle talks to the cache with plain web requests, and it does not fail the build when the cache says no. So the status code is often the only clue. This is what each one means for a FosterStack Cache server.</p>
 
   <h2>The short table</h2>
-  <table>
+  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <tr><th>Status</th><th>When you get it</th><th>What to do</th></tr>
     <tr><td><strong>200</strong></td><td>A stored entry was found and sent.</td><td>Nothing. This is a cache hit.</td></tr>
     <tr><td><strong>201</strong></td><td>An upload was stored.</td><td>Nothing.</td></tr>
@@ -98,11 +99,11 @@
     <tr><td><strong>401</strong></td><td>No password, or the wrong one.</td><td>Fix the credentials block. See below.</td></tr>
     <tr><td><strong>403</strong></td><td>A write sent with the read-only login.</td><td>Use the read-write login for machines that upload, or set the client not to upload.</td></tr>
     <tr><td><strong>413</strong></td><td>An upload bigger than the server's size limit for one entry.</td><td>Raise <code>FSCACHE_MAX_BODY_BYTES</code> if the entry is meant to be cached.</td></tr>
-  </table>
+  </table></div>
 
   <h2>Tested on a real server</h2>
   <p>These were all run against a 0.2.1 server started with a read-write login, a read-only login, and the body limit set to 1024 bytes. Your numbers for the limit will differ, since the default is 1 GiB.</p>
-  <pre><code>GET /healthz (no credentials)                                  200
+  <pre tabindex="0"><code>GET /healthz (no credentials)                                  200
 GET /metrics (no credentials)                                  200
 GET key, no credentials                                        401
 GET key, wrong password                                        401
@@ -120,9 +121,9 @@ GET the too-large key afterwards                               404
 
   <h2>401 does not break the build</h2>
   <p>Gradle treats a remote cache failure as non-fatal, so a 401 does not fail the build. The build just runs without the cache. In our test with Gradle 9.8.0 on macOS it printed this at the default log level:</p>
-  <pre><code>Could not load entry d4f2de693b561fd2c5d60b17a9232d6f from remote build cache: Loading entry from 'http://127.0.0.1:18099/d4f2de693b561fd2c5d60b17a9232d6f' response status 401: Unauthorized</code></pre>
+  <pre tabindex="0"><code>Could not load entry d4f2de693b561fd2c5d60b17a9232d6f from remote build cache: Loading entry from 'http://127.0.0.1:18099/d4f2de693b561fd2c5d60b17a9232d6f' response status 401: Unauthorized</code></pre>
   <p>The usual causes are no <code>credentials</code> block, a wrong password, or a typo. Run with <code>-i</code> for more detail. To test the server directly:</p>
-  <pre><code>curl -s -o /dev/null -w &#x27;%{http_code}\n&#x27; -u gradle:wrong-password https://cache.example.com/some-key</code></pre>
+  <pre tabindex="0"><code>curl -s -o /dev/null -w &#x27;%{http_code}\n&#x27; -u gradle:wrong-password https://cache.example.com/some-key</code></pre>
   <p>A 401 here means the credentials are wrong. A 404 means they are right and the key simply is not stored. More steps are in <a href="/gradle-remote-cache-not-working/">Gradle remote build cache not working</a>.</p>
 
   <h2>403 means the login worked but may not write</h2>

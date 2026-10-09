@@ -69,15 +69,15 @@
         overflow-x: auto; font-size: .9rem; line-height: 1.5; }
   .cta-row { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1.1rem; }
   .btn { display: inline-block; padding: .55rem 1rem; border-radius: 8px; font-weight: 600;
-         text-decoration: none; background: var(--accent); color: #fff; }
-  .btn-secondary { background: transparent; color: inherit; border: 1px solid #cbd5e1; }
+         text-decoration: none; background: var(--accent); color: var(--accent-fg); }
+  .btn-secondary { background: transparent; color: inherit; border: 1px solid var(--muted); }
   .muted-note { color: var(--muted); font-size: .93rem; margin-top: 1.1rem; }
   footer { border-top: 1px solid var(--line); margin-top: 4rem; padding: 1.5rem 1.25rem 3rem; }
   footer div { max-width: 44rem; margin: 0 auto; color: var(--muted); font-size: .82rem; }
   a { color: var(--accent); }
-  table { display: block; max-width: 100%; overflow-x: auto; }
   code { overflow-wrap: anywhere; }
   pre code { overflow-wrap: normal; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 </style>
 </head>
 <body>
@@ -97,24 +97,24 @@
 
   <h2>1. Stop the server, then back up the volume</h2>
   <p>I stopped the container first. I did not test copying the files while the server is running, so I cannot say that is safe. The container image has no shell, so a second small container does the copying:</p>
-  <pre><code>docker stop fscache
+  <pre tabindex="0"><code>docker stop fscache
 docker run --rm -v fscache-data:/data:ro -v &quot;$PWD&quot;:/backup ubuntu:24.04 \
   tar czf /backup/fscache-data.tgz -C /data .</code></pre>
   <p>In my test, with three small entries, the archive held a <code>data/blobs/</code> folder with one folder per entry prefix, and was 578 bytes.</p>
 
   <h2>2. Restore it into a new volume</h2>
   <p>To check it, I deleted the container and the volume, then restored into a new, empty one:</p>
-  <pre><code>docker volume create fscache-data-restored
+  <pre tabindex="0"><code>docker volume create fscache-data-restored
 docker run --rm -v fscache-data-restored:/data -v &quot;$PWD&quot;:/backup:ro ubuntu:24.04 \
   sh -c &#x27;tar xzf /backup/fscache-data.tgz -C /data&#x27;
 ls -ln /data   # inside the helper: the files are owned by 65532</code></pre>
   <p>Listing the restored volume showed the <code>data</code> folder still owned by user and group 65532, which is what the server runs as. If you restore as a different user, the server will not be able to write.</p>
 
   <h2>3. Start the server on the restored volume</h2>
-  <pre><code>docker run -d --name fscache -p 127.0.0.1:8080:8080 \
+  <pre tabindex="0"><code>docker run -d --name fscache -p 127.0.0.1:8080:8080 \
   -v fscache-data-restored:/home/nonroot ghcr.io/fosterstack/cache:0.2.1</code></pre>
   <p>The status page and the entries were all back:</p>
-  <pre><code>$ curl -s localhost:8080/statusz | grep -E &#x27;&quot;store_entries&quot;|&quot;store_bytes&quot;&#x27;
+  <pre tabindex="0"><code>$ curl -s localhost:8080/statusz | grep -E &#x27;&quot;store_entries&quot;|&quot;store_bytes&quot;&#x27;
   &quot;store_bytes&quot;: 32,
   &quot;store_entries&quot;: 3,
 $ curl -s localhost:8080/alpha

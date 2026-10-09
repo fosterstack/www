@@ -69,15 +69,16 @@
         overflow-x: auto; font-size: .9rem; line-height: 1.5; }
   .cta-row { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1.1rem; }
   .btn { display: inline-block; padding: .55rem 1rem; border-radius: 8px; font-weight: 600;
-         text-decoration: none; background: var(--accent); color: #fff; }
-  .btn-secondary { background: transparent; color: inherit; border: 1px solid #cbd5e1; }
+         text-decoration: none; background: var(--accent); color: var(--accent-fg); }
+  .btn-secondary { background: transparent; color: inherit; border: 1px solid var(--muted); }
   .muted-note { color: var(--muted); font-size: .93rem; margin-top: 1.1rem; }
   footer { border-top: 1px solid var(--line); margin-top: 4rem; padding: 1.5rem 1.25rem 3rem; }
   footer div { max-width: 44rem; margin: 0 auto; color: var(--muted); font-size: .82rem; }
   a { color: var(--accent); }
-  table { display: block; max-width: 100%; overflow-x: auto; }
   code { overflow-wrap: anywhere; }
   pre code { overflow-wrap: normal; }
+  .table-scroll { max-width: 100%; overflow-x: auto; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 </style>
 </head>
 <body>
@@ -96,7 +97,7 @@
   </ul>
 
   <h2>The upgrade</h2>
-  <pre><code>docker pull ghcr.io/fosterstack/cache:0.2.1
+  <pre tabindex="0"><code>docker pull ghcr.io/fosterstack/cache:0.2.1
 docker stop fscache &amp;&amp; docker rm fscache
 docker run -d --name fscache -p 127.0.0.1:8080:8080 \
   -v fscache-data:/home/nonroot \
@@ -104,13 +105,13 @@ docker run -d --name fscache -p 127.0.0.1:8080:8080 \
   <p>Use the same volume and the same settings (environment variables for the password and size cap) as the old container. Pin the exact tag you want, as above, rather than <code>latest</code>.</p>
 
   <h2>What I saw</h2>
-  <table>
+  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <tr><th>Step</th><th>Result</th></tr>
     <tr><td>0.1.0: store three entries on a fresh volume</td><td>201 each; its metrics show 3 entries, 29 bytes</td></tr>
     <tr><td>Stop 0.1.0, start 0.2.1 on the same volume</td><td>starts normally; the status page shows <code>"version": "v0.2.1"</code>, 3 entries, 29 bytes; all three values read back</td></tr>
     <tr><td>0.2.1: store two more</td><td>201 each; 5 entries</td></tr>
     <tr><td>Stop 0.2.1, start 0.1.0 on the same volume again</td><td>starts normally; all values read back, including the two written by 0.2.1</td></tr>
-  </table>
+  </table></div>
   <p>So in my test an upgrade lost nothing, and a rollback to the old release could still read what the new one had written.</p>
 
   <h2>Two differences between the releases</h2>

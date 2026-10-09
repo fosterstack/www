@@ -69,15 +69,15 @@
         overflow-x: auto; font-size: .9rem; line-height: 1.5; }
   .cta-row { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1.1rem; }
   .btn { display: inline-block; padding: .55rem 1rem; border-radius: 8px; font-weight: 600;
-         text-decoration: none; background: var(--accent); color: #fff; }
-  .btn-secondary { background: transparent; color: inherit; border: 1px solid #cbd5e1; }
+         text-decoration: none; background: var(--accent); color: var(--accent-fg); }
+  .btn-secondary { background: transparent; color: inherit; border: 1px solid var(--muted); }
   .muted-note { color: var(--muted); font-size: .93rem; margin-top: 1.1rem; }
   footer { border-top: 1px solid var(--line); margin-top: 4rem; padding: 1.5rem 1.25rem 3rem; }
   footer div { max-width: 44rem; margin: 0 auto; color: var(--muted); font-size: .82rem; }
   a { color: var(--accent); }
-  table { display: block; max-width: 100%; overflow-x: auto; }
   code { overflow-wrap: anywhere; }
   pre code { overflow-wrap: normal; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 </style>
 </head>
 <body>
@@ -93,21 +93,21 @@
   <p>It is the same source as the standard build, compiled so that it uses Go's validated FIPS 140-3 module (CMVP certificate #5247). It is available as a container image tag ending in <code>-fips</code>, and as Linux binaries for amd64 and arm64. There is no macOS FIPS build.</p>
 
   <h2>Run it</h2>
-  <pre><code>docker run -d -p 127.0.0.1:8080:8080 -v fscache-data:/home/nonroot \
+  <pre tabindex="0"><code>docker run -d -p 127.0.0.1:8080:8080 -v fscache-data:/home/nonroot \
   ghcr.io/fosterstack/cache:0.2.1-fips</code></pre>
   <p>Pin an exact version, as here, rather than a floating tag. To check you pulled the real image, use the steps in <a href="/verify-a-release/">Verify a release yourself</a>. The FIPS image's digest in the release manifest for 0.2.1 is <code>sha256:e125fe3f6ed2c18c478453300ba2b787a42999edf66a39403877efb39865ab1b</code>, and that is what the pull returned.</p>
 
   <h2>Confirm it is in FIPS mode</h2>
   <p>The build says so when it starts, so the property can be seen and not just trusted:</p>
-  <pre><code>$ docker logs &lt;container&gt;
+  <pre tabindex="0"><code>$ docker logs &lt;container&gt;
 {&quot;time&quot;:&quot;2026-10-09T01:00:54.861529344Z&quot;,&quot;level&quot;:&quot;INFO&quot;,&quot;msg&quot;:&quot;fscache: starting&quot;,&quot;version&quot;:&quot;v0.2.1&quot;,&quot;addr&quot;:&quot;:8080&quot;,&quot;data_dir&quot;:&quot;./data&quot;,&quot;max_bytes&quot;:0,&quot;auth&quot;:&quot;disabled&quot;,&quot;fips140&quot;:&quot;active (Go validated module v1.0.0, CMVP cert #5247)&quot;}</code></pre>
   <p>The status page reports the same:</p>
-  <pre><code>$ curl -s localhost:8080/statusz | grep -E &#x27;version|fips140&#x27;
+  <pre tabindex="0"><code>$ curl -s localhost:8080/statusz | grep -E &#x27;version|fips140&#x27;
   &quot;version&quot;: &quot;v0.2.1&quot;,
   &quot;fips140&quot;: true,
   &quot;fips140_note&quot;: &quot;active (Go validated module v1.0.0, CMVP cert #5247)&quot;,</code></pre>
   <p>The standard image, for comparison, reports it as off:</p>
-  <pre><code>$ curl -s localhost:8080/statusz | grep -E &#x27;version|fips140&#x27;
+  <pre tabindex="0"><code>$ curl -s localhost:8080/statusz | grep -E &#x27;version|fips140&#x27;
   &quot;version&quot;: &quot;v0.2.1&quot;,
   &quot;fips140&quot;: false,
   &quot;fips140_note&quot;: &quot;off&quot;,</code></pre>

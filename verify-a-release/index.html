@@ -69,15 +69,15 @@
         overflow-x: auto; font-size: .9rem; line-height: 1.5; }
   .cta-row { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1.1rem; }
   .btn { display: inline-block; padding: .55rem 1rem; border-radius: 8px; font-weight: 600;
-         text-decoration: none; background: var(--accent); color: #fff; }
-  .btn-secondary { background: transparent; color: inherit; border: 1px solid #cbd5e1; }
+         text-decoration: none; background: var(--accent); color: var(--accent-fg); }
+  .btn-secondary { background: transparent; color: inherit; border: 1px solid var(--muted); }
   .muted-note { color: var(--muted); font-size: .93rem; margin-top: 1.1rem; }
   footer { border-top: 1px solid var(--line); margin-top: 4rem; padding: 1.5rem 1.25rem 3rem; }
   footer div { max-width: 44rem; margin: 0 auto; color: var(--muted); font-size: .82rem; }
   a { color: var(--accent); }
-  table { display: block; max-width: 100%; overflow-x: auto; }
   code { overflow-wrap: anywhere; }
   pre code { overflow-wrap: normal; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 </style>
 </head>
 <body>
@@ -91,11 +91,11 @@
 
   <h2>What you need</h2>
   <p><code>cosign</code>, the <code>gh</code> tool (for the build-provenance steps), and <code>jq</code>. Set the version and your platform once:</p>
-  <pre><code>$ VER=0.2.1
+  <pre tabindex="0"><code>$ VER=0.2.1
 PLATFORM=linux_arm64   # or linux_amd64, darwin_arm64, darwin_amd64</code></pre>
 
   <h2>1. Download the release files</h2>
-  <pre><code>$ gh release download v${VER} --repo fosterstack/cache \
+  <pre tabindex="0"><code>$ gh release download v${VER} --repo fosterstack/cache \
   -p checksums.txt -p checksums.txt.bundle \
   -p &quot;fscache_${VER}_${PLATFORM}.tar.gz&quot; \
   -p &quot;fscache_${VER}_${PLATFORM}.tar.gz.sbom.json&quot; \
@@ -104,7 +104,7 @@ PLATFORM=linux_arm64   # or linux_amd64, darwin_arm64, darwin_amd64</code></pre>
 
   <h2>2. Is the checksums file ours?</h2>
   <p>This checks the signature on <code>checksums.txt</code>. It needs no GitHub account.</p>
-  <pre><code>$ cosign verify-blob \
+  <pre tabindex="0"><code>$ cosign verify-blob \
   --bundle checksums.txt.bundle \
   --certificate-identity-regexp=&#x27;^https://github.com/fosterstack/cache/&#x27; \
   --certificate-oidc-issuer=&#x27;https://token.actions.githubusercontent.com&#x27; \
@@ -112,13 +112,13 @@ PLATFORM=linux_arm64   # or linux_amd64, darwin_arm64, darwin_amd64</code></pre>
 Verified OK</code></pre>
 
   <h2>3. Does your download match it?</h2>
-  <pre><code>$ sha256sum -c &lt;(grep &quot;fscache_${VER}_${PLATFORM}.tar.gz&quot; checksums.txt | grep -v sbom)
+  <pre tabindex="0"><code>$ sha256sum -c &lt;(grep &quot;fscache_${VER}_${PLATFORM}.tar.gz&quot; checksums.txt | grep -v sbom)
 fscache_0.2.1_linux_arm64.tar.gz: OK</code></pre>
   <p>Steps 2 and 3 together are the important pair. The checksum alone only shows the archive matches a file you downloaded beside it. The signature is what ties that file to us.</p>
 
   <h2>4. Is the container image signed by our release workflow?</h2>
   <p>Pin the workflow and the release tag, not "any workflow in the repository". No account is needed.</p>
-  <pre><code>$ cosign verify ghcr.io/fosterstack/cache:${VER} \
+  <pre tabindex="0"><code>$ cosign verify ghcr.io/fosterstack/cache:${VER} \
   --certificate-identity-regexp=&quot;^https://github.com/fosterstack/cache/.github/workflows/stage-promote.yml@refs/tags/v${VER}$&quot; \
   --certificate-oidc-issuer=&#x27;https://token.actions.githubusercontent.com&#x27;
 Verification for ghcr.io/fosterstack/cache:0.2.1 --
@@ -132,7 +132,7 @@ The following checks were performed on each of these signatures:
 
   <h2>5. Where was the image built?</h2>
   <p>A signature says who signed. Build provenance says what produced the bytes. This step reads GitHub's attestation store, so it needs a token (<code>GH_TOKEN</code> or <code>gh auth login</code>), even though the repository is public.</p>
-  <pre><code>$ gh attestation verify oci://ghcr.io/fosterstack/cache:${VER} \
+  <pre tabindex="0"><code>$ gh attestation verify oci://ghcr.io/fosterstack/cache:${VER} \
   --repo fosterstack/cache \
   --signer-workflow fosterstack/cache/.github/workflows/stage-image.yml \
   --source-ref &quot;refs/tags/v${VER}&quot; \
@@ -148,7 +148,7 @@ The following checks were performed on each of these signatures:
   <p>The command exits with status 0 on success. The image digest is the one from step 4, and the run link is the public build that produced it.</p>
 
   <h2>6. Where was your download built?</h2>
-  <pre><code>$ gh attestation verify &quot;fscache_${VER}_${PLATFORM}.tar.gz&quot; --repo fosterstack/cache \
+  <pre tabindex="0"><code>$ gh attestation verify &quot;fscache_${VER}_${PLATFORM}.tar.gz&quot; --repo fosterstack/cache \
   --format json | jq -r &#x27;.[0].verificationResult.statement.subject[].name, .[0].verificationResult.signature.certificate.subjectAlternativeName&#x27;
 fscache-fips_0.2.1_linux_amd64.tar.gz
 fscache-fips_0.2.1_linux_amd64.tar.gz.sbom.json
@@ -168,7 +168,7 @@ https://github.com/fosterstack/cache/.github/workflows/stage-build.yml@refs/tags
 
   <h2>7. Did the whole release chain pass?</h2>
   <p>Each stage of the release signs its own statement about the exact image. One of them exists only if the final authorization stage checked all the others for this image: the source check, the build, the image assembly, the reproducibility check, each scanner's verdict, and the acceptance tests.</p>
-  <pre><code>$ gh attestation verify oci://ghcr.io/fosterstack/cache:${VER} \
+  <pre tabindex="0"><code>$ gh attestation verify oci://ghcr.io/fosterstack/cache:${VER} \
   --repo fosterstack/cache \
   --signer-workflow fosterstack/cache/.github/workflows/stage-authorize.yml \
   --predicate-type https://fosterstack.com/attestations/release-authorization/v1 \
@@ -180,13 +180,13 @@ https://github.com/fosterstack/cache/.github/workflows/stage-build.yml@refs/tags
 
   <h2>8. What is inside? The SBOM</h2>
   <p>Each binary archive has a software bill of materials in SPDX format.</p>
-  <pre><code>$ jq &#x27;{spdxVersion, name, packages: (.packages | length)}&#x27; &quot;fscache_${VER}_${PLATFORM}.tar.gz.sbom.json&quot;
+  <pre tabindex="0"><code>$ jq &#x27;{spdxVersion, name, packages: (.packages | length)}&#x27; &quot;fscache_${VER}_${PLATFORM}.tar.gz.sbom.json&quot;
 {
   &quot;spdxVersion&quot;: &quot;SPDX-2.3&quot;,
   &quot;name&quot;: &quot;fscache_0.2.1_linux_arm64.tar.gz&quot;,
   &quot;packages&quot;: 13
 }</code></pre>
-  <pre><code>$ jq -r &#x27;.packages[0:4][] | &quot;\(.name) \(.versionInfo)&quot;&#x27; &quot;fscache_${VER}_${PLATFORM}.tar.gz.sbom.json&quot;
+  <pre tabindex="0"><code>$ jq -r &#x27;.packages[0:4][] | &quot;\(.name) \(.versionInfo)&quot;&#x27; &quot;fscache_${VER}_${PLATFORM}.tar.gz.sbom.json&quot;
 github.com/beorn7/perks v1.0.1
 github.com/cespare/xxhash/v2 v2.3.0
 github.com/fosterstack/cache v0.2.1
@@ -194,7 +194,7 @@ github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822</code></pre>
 
   <h2>9. Which known vulnerabilities do not apply? The VEX file</h2>
   <p>The VEX (OpenVEX) file lists vulnerabilities that scanners may report and says why each does not affect this release.</p>
-  <pre><code>$ jq -r &#x27;.statements[] | &quot;\(.vulnerability.name) \(.status) \(.justification)&quot;&#x27; fosterstack-cache.openvex.json
+  <pre tabindex="0"><code>$ jq -r &#x27;.statements[] | &quot;\(.vulnerability.name) \(.status) \(.justification)&quot;&#x27; fosterstack-cache.openvex.json
 CVE-2024-51744 not_affected component_not_present
 CVE-2025-60876 not_affected vulnerable_code_not_in_execute_path
 CVE-2025-46394 not_affected vulnerable_code_not_in_execute_path
@@ -203,13 +203,13 @@ CVE-2024-58251 not_affected vulnerable_code_not_in_execute_path</code></pre>
 
   <h2>10. The release manifest</h2>
   <p><code>release-manifest.json</code> lists the evidence for the whole release. It names three image variants (the standard one, <code>debug</code> and <code>fips</code>), each with its digest. The standard one is the digest you verified in steps 4 and 5, at both registries:</p>
-  <pre><code>$ jq -r &#x27;.images[] | &quot;\(.variant) \(.digest)&quot;&#x27; release-manifest.json
+  <pre tabindex="0"><code>$ jq -r &#x27;.images[] | &quot;\(.variant) \(.digest)&quot;&#x27; release-manifest.json
 production sha256:8df991b5febdf5b4a177325b8af95b6bb6c321059e1715c06cb659c659f5a4f0
 debug sha256:e2e502f44d8bd9e6967cb160aabeb012e8520ebba0faa88e130143fe534f282e
 fips sha256:e125fe3f6ed2c18c478453300ba2b787a42999edf66a39403877efb39865ab1b</code></pre>
-  <pre><code>$ jq -c &#x27;.images[0].refs&#x27; release-manifest.json
+  <pre tabindex="0"><code>$ jq -c &#x27;.images[0].refs&#x27; release-manifest.json
 [&quot;ghcr.io/fosterstack/cache@sha256:8df991b5febdf5b4a177325b8af95b6bb6c321059e1715c06cb659c659f5a4f0&quot;,&quot;docker.io/fosterstack/cache@sha256:8df991b5febdf5b4a177325b8af95b6bb6c321059e1715c06cb659c659f5a4f0&quot;]</code></pre>
-  <pre><code>$ jq &#x27;.verified_statements | length&#x27; release-manifest.json
+  <pre tabindex="0"><code>$ jq &#x27;.verified_statements | length&#x27; release-manifest.json
 43</code></pre>
   <p>That last number is the statements the authorization stage checked, each with its entry in the public transparency log.</p>
 

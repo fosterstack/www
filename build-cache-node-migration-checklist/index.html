@@ -69,15 +69,16 @@
         overflow-x: auto; font-size: .9rem; line-height: 1.5; }
   .cta-row { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1.1rem; }
   .btn { display: inline-block; padding: .55rem 1rem; border-radius: 8px; font-weight: 600;
-         text-decoration: none; background: var(--accent); color: #fff; }
-  .btn-secondary { background: transparent; color: inherit; border: 1px solid #cbd5e1; }
+         text-decoration: none; background: var(--accent); color: var(--accent-fg); }
+  .btn-secondary { background: transparent; color: inherit; border: 1px solid var(--muted); }
   .muted-note { color: var(--muted); font-size: .93rem; margin-top: 1.1rem; }
   footer { border-top: 1px solid var(--line); margin-top: 4rem; padding: 1.5rem 1.25rem 3rem; }
   footer div { max-width: 44rem; margin: 0 auto; color: var(--muted); font-size: .82rem; }
   a { color: var(--accent); }
-  table { display: block; max-width: 100%; overflow-x: auto; }
   code { overflow-wrap: anywhere; }
   pre code { overflow-wrap: normal; }
+  .table-scroll { max-width: 100%; overflow-x: auto; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 </style>
 </head>
 <body>
@@ -100,7 +101,7 @@
   <p>Follow <a href="/first-15-minutes-build-cache/">your first 15 minutes</a>. Turn on a password before other machines can reach it.</p>
 
   <h3>3. Change one line</h3>
-  <pre><code>buildCache {
+  <pre tabindex="0"><code>buildCache {
     remote&lt;HttpBuildCache&gt; {
 -       url = uri(&quot;http://old-node.example.com:5071/cache/&quot;)
 +       url = uri(&quot;https://cache.example.com/&quot;)
@@ -123,13 +124,13 @@
 
   <h2>What happened in the run</h2>
   <p>Each row is two builds of the same project with <code>gradle clean</code> in between and Gradle's own local cache turned off, so a hit can only come from the server:</p>
-  <table>
+  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <tr><th>Pointed at</th><th>First build</th><th>Second build</th></tr>
     <tr><td>The old node, URL ending in <code>/cache/</code></td><td><code>:compileJava</code> ran</td><td><code>:compileJava FROM-CACHE</code></td></tr>
     <tr><td>FosterStack Cache, only the URL changed (no <code>/cache/</code>)</td><td><code>:compileJava</code> ran: the new server was empty</td><td><code>:compileJava FROM-CACHE</code></td></tr>
     <tr><td>FosterStack Cache, URL kept with <code>/cache/</code></td><td><code>:compileJava</code> ran: separate entries</td><td><code>:compileJava FROM-CACHE</code></td></tr>
     <tr><td>Back to the old node (rollback)</td><td><code>:compileJava FROM-CACHE</code>: its entries were still there</td><td>not run</td></tr>
-  </table>
+  </table></div>
   <p>The new server's status page agreed: two entries stored, two hits, two misses. One small difference you may notice: a successful upload returns 200 from the old node and 201 from FosterStack Cache. Gradle accepted both.</p>
 
   <p class="muted-note">Related: <a href="/build-cache-node-faq/">questions and answers</a> and <a href="/verify-replacement-build-cache/">what to check in a replacement build cache</a>.</p>

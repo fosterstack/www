@@ -69,15 +69,16 @@
         overflow-x: auto; font-size: .9rem; line-height: 1.5; }
   .cta-row { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1.1rem; }
   .btn { display: inline-block; padding: .55rem 1rem; border-radius: 8px; font-weight: 600;
-         text-decoration: none; background: var(--accent); color: #fff; }
-  .btn-secondary { background: transparent; color: inherit; border: 1px solid #cbd5e1; }
+         text-decoration: none; background: var(--accent); color: var(--accent-fg); }
+  .btn-secondary { background: transparent; color: inherit; border: 1px solid var(--muted); }
   .muted-note { color: var(--muted); font-size: .93rem; margin-top: 1.1rem; }
   footer { border-top: 1px solid var(--line); margin-top: 4rem; padding: 1.5rem 1.25rem 3rem; }
   footer div { max-width: 44rem; margin: 0 auto; color: var(--muted); font-size: .82rem; }
   a { color: var(--accent); }
-  table { display: block; max-width: 100%; overflow-x: auto; }
   code { overflow-wrap: anywhere; }
   pre code { overflow-wrap: normal; }
+  .table-scroll { max-width: 100%; overflow-x: auto; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 </style>
 </head>
 <body>
@@ -90,37 +91,37 @@
   <p class="lede">They sound alike and they are not the same thing. One saves Gradle from working out your build again. The other saves your tasks from running again. You can use both, and only the second one uses a cache server. This is a real run of both together, on Gradle 9.8.0 and a 0.2.1 server.</p>
 
   <h2>The short answer</h2>
-  <table>
+  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <tr><th></th><th>Configuration cache</th><th>Build cache</th></tr>
     <tr><td>What it saves</td><td>The work of reading your build files and planning the tasks</td><td>The work of running a task, by reusing its saved output</td></tr>
     <tr><td>Where it lives</td><td>A folder in your project, on your machine</td><td>On your machine, and optionally on a server shared with a team</td></tr>
     <tr><td>Turned on with</td><td><code>--configuration-cache</code></td><td><code>--build-cache</code> (and a server URL for a shared one)</td></tr>
     <tr><td>Thrown away when</td><td>A build file it depends on changes</td><td>A task's inputs change, so it gets a different key</td></tr>
     <tr><td>Shows up as</td><td>"Reusing configuration cache."</td><td><code>FROM-CACHE</code> next to a task</td></tr>
-  </table>
+  </table></div>
   <p>A remote cache server such as FosterStack Cache is for the build cache only. If Gradle suggests enabling the configuration cache, that is a separate local feature and has nothing to do with the server.</p>
 
   <h2>Both together, in a real run</h2>
   <p>The same small project, both flags on, the build cache pointed at a server:</p>
-  <pre><code>gradle build --configuration-cache --build-cache</code></pre>
+  <pre tabindex="0"><code>gradle build --configuration-cache --build-cache</code></pre>
   <p><strong>1. The first build.</strong> Nothing is cached anywhere yet:</p>
-  <pre><code>Calculating task graph as no cached configuration is available for tasks: build
+  <pre tabindex="0"><code>Calculating task graph as no cached configuration is available for tasks: build
 &gt; Task :compileJava
 BUILD SUCCESSFUL in 5s
 Configuration cache entry stored.</code></pre>
   <p><strong>2. The same build again.</strong> Both caches work, in different ways. The plan is reused, and the task is simply up to date on disk:</p>
-  <pre><code>Reusing configuration cache.
+  <pre tabindex="0"><code>Reusing configuration cache.
 &gt; Task :compileJava UP-TO-DATE
 BUILD SUCCESSFUL in 1s
 Configuration cache entry reused.</code></pre>
   <p><strong>3. After <code>gradle clean</code>.</strong> The build outputs are gone, so the task would have to run again. The plan is still reused, and the output now comes from the server:</p>
-  <pre><code>Reusing configuration cache.
+  <pre tabindex="0"><code>Reusing configuration cache.
 &gt; Task :compileJava FROM-CACHE
 BUILD SUCCESSFUL in 1s
 Configuration cache entry reused.</code></pre>
   <p>The server's status page counted one hit for that, and it holds the compiled output only.</p>
   <p><strong>4. After editing <code>build.gradle.kts</code>, then <code>gradle clean</code>.</strong> Now the configuration cache is thrown away, because a build file changed, but the build cache still works, because the task's inputs did not change:</p>
-  <pre><code>Calculating task graph as configuration cache cannot be reused because file &#x27;build.gradle.kts&#x27; has changed.
+  <pre tabindex="0"><code>Calculating task graph as configuration cache cannot be reused because file &#x27;build.gradle.kts&#x27; has changed.
 &gt; Task :compileJava FROM-CACHE
 BUILD SUCCESSFUL in 2s
 Configuration cache entry stored.</code></pre>

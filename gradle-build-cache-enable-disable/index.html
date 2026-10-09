@@ -69,15 +69,16 @@
         overflow-x: auto; font-size: .9rem; line-height: 1.5; }
   .cta-row { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1.1rem; }
   .btn { display: inline-block; padding: .55rem 1rem; border-radius: 8px; font-weight: 600;
-         text-decoration: none; background: var(--accent); color: #fff; }
-  .btn-secondary { background: transparent; color: inherit; border: 1px solid #cbd5e1; }
+         text-decoration: none; background: var(--accent); color: var(--accent-fg); }
+  .btn-secondary { background: transparent; color: inherit; border: 1px solid var(--muted); }
   .muted-note { color: var(--muted); font-size: .93rem; margin-top: 1.1rem; }
   footer { border-top: 1px solid var(--line); margin-top: 4rem; padding: 1.5rem 1.25rem 3rem; }
   footer div { max-width: 44rem; margin: 0 auto; color: var(--muted); font-size: .82rem; }
   a { color: var(--accent); }
-  table { display: block; max-width: 100%; overflow-x: auto; }
   code { overflow-wrap: anywhere; }
   pre code { overflow-wrap: normal; }
+  .table-scroll { max-width: 100%; overflow-x: auto; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 </style>
 </head>
 <body>
@@ -99,7 +100,7 @@
 
   <h2>What we ran</h2>
   <p>A four-module project with the cache address set in <code>settings.gradle.kts</code> (shown below). Each run used a fresh copy of the project and an empty Gradle home, so the only shared thing was the cache server. We ran only <code>:core:compileJava</code> and looked at what Gradle printed next to it. Every build ended with <code>BUILD SUCCESSFUL</code>.</p>
-  <table>
+  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <thead><tr><th>How it was switched</th><th>Command</th><th>Result</th></tr></thead>
     <tbody>
       <tr><td>Flag (first build)</td><td><code>gradle :core:compileJava --build-cache</code></td><td>Ran, and saved the result to the server</td></tr>
@@ -110,7 +111,7 @@
       <tr><td>System property</td><td><code>gradle :core:compileJava -Dorg.gradle.caching=true</code></td><td><code>FROM-CACHE</code></td></tr>
       <tr><td>Flag, and rerun everything</td><td><code>--build-cache --rerun-tasks</code></td><td>Ran, even though a result was stored</td></tr>
     </tbody>
-  </table>
+  </table></div>
 
   <h2>Which one to use</h2>
   <ul class="trust">
@@ -122,7 +123,7 @@
 
   <h2>The address still has to be set</h2>
   <p>This is the <code>settings.gradle.kts</code> we ran. Replace the address with your server's. We used <code>127.0.0.1</code> over plain HTTP because the test ran on one machine; use HTTPS across a network.</p>
-<pre><code>buildCache {
+<pre tabindex="0"><code>buildCache {
     local { isEnabled = false }
     remote&lt;HttpBuildCache&gt; {
         url = uri("http://127.0.0.1:18141/")

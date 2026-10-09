@@ -69,15 +69,16 @@
         overflow-x: auto; font-size: .9rem; line-height: 1.5; }
   .cta-row { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1.1rem; }
   .btn { display: inline-block; padding: .55rem 1rem; border-radius: 8px; font-weight: 600;
-         text-decoration: none; background: var(--accent); color: #fff; }
-  .btn-secondary { background: transparent; color: inherit; border: 1px solid #cbd5e1; }
+         text-decoration: none; background: var(--accent); color: var(--accent-fg); }
+  .btn-secondary { background: transparent; color: inherit; border: 1px solid var(--muted); }
   .muted-note { color: var(--muted); font-size: .93rem; margin-top: 1.1rem; }
   footer { border-top: 1px solid var(--line); margin-top: 4rem; padding: 1.5rem 1.25rem 3rem; }
   footer div { max-width: 44rem; margin: 0 auto; color: var(--muted); font-size: .82rem; }
   a { color: var(--accent); }
-  table { display: block; max-width: 100%; overflow-x: auto; }
   code { overflow-wrap: anywhere; }
   pre code { overflow-wrap: normal; }
+  .table-scroll { max-width: 100%; overflow-x: auto; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 </style>
 </head>
 <body>
@@ -90,13 +91,13 @@
   <p class="lede">A checklist from nothing to your first <code>FROM-CACHE</code>. I timed the commands on a real 0.2.1 release: ten seconds in all, on a laptop that already had Gradle and Java and a fast network. The 15 minutes is for you: reading, choosing values, and pointing your own project at the server.</p>
 
   <h2>What I timed</h2>
-  <table>
+  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <tr><th>Step</th><th>Took</th></tr>
     <tr><td>Download the release and verify its signature and checksum</td><td>1 second</td></tr>
     <tr><td>Unpack it and start the server, with a password and a size cap</td><td>1 second</td></tr>
     <tr><td>Write the project files</td><td>under 1 second</td></tr>
     <tr><td>Build, clean, build again, and see <code>FROM-CACHE</code></td><td>8 seconds</td></tr>
-  </table>
+  </table></div>
 
   <h2>The checklist</h2>
   <h3>1. Decide where it will run</h3>
@@ -106,7 +107,7 @@
   </ul>
 
   <h3>2. Download it and check it is ours</h3>
-  <pre><code>VER=0.2.1
+  <pre tabindex="0"><code>VER=0.2.1
 PLATFORM=darwin_arm64    # or linux_amd64, linux_arm64, darwin_amd64
 gh release download v${VER} --repo fosterstack/cache \
   -p checksums.txt -p checksums.txt.bundle -p &quot;fscache_${VER}_${PLATFORM}.tar.gz&quot;
@@ -117,7 +118,7 @@ sha256sum -c &lt;(grep &quot;fscache_${VER}_${PLATFORM}.tar.gz&quot; checksums.t
   <p>You should see <code>Verified OK</code> and then <code>...tar.gz: OK</code>. More checks are in <a href="/verify-a-release/">Verify a release yourself</a>. Prefer a container? See <a href="/gradle-build-cache-docker-compose/">Gradle build cache with Docker Compose</a>.</p>
 
   <h3>3. Start it with a password and a size cap</h3>
-  <pre><code>tar xzf fscache_${VER}_${PLATFORM}.tar.gz
+  <pre tabindex="0"><code>tar xzf fscache_${VER}_${PLATFORM}.tar.gz
 FSCACHE_USERNAME=gradle FSCACHE_PASSWORD=&lt;a long secret&gt; \
 FSCACHE_MAX_BYTES=1073741824 ./fscache</code></pre>
   <p>That cap is 1 GiB, in bytes. Real caches are bigger; copy values from <a href="/build-cache-server-sizing/">the sizing page</a>.</p>
@@ -130,7 +131,7 @@ FSCACHE_MAX_BYTES=1073741824 ./fscache</code></pre>
 
   <h3>5. Point Gradle at it</h3>
   <p>In <code>settings.gradle.kts</code>, and turn caching on with <code>org.gradle.caching=true</code> in <code>gradle.properties</code>:</p>
-  <pre><code>// FosterStack Cache — remote Gradle build cache.
+  <pre tabindex="0"><code>// FosterStack Cache — remote Gradle build cache.
 // https://github.com/fosterstack/cache
 buildCache {
     remote&lt;HttpBuildCache&gt; {
@@ -145,7 +146,7 @@ buildCache {
   <p>Use <code>127.0.0.1</code> for a first try on the same machine. On Gradle 9.8.0 the name <code>localhost</code> was refused without an opt-in. Maven instead? See <a href="/maven-remote-build-cache-setup/">the Maven setup</a>.</p>
 
   <h3>6. Build twice and look for FROM-CACHE</h3>
-  <pre><code>export FSCACHE_PASSWORD=&lt;a long secret&gt;
+  <pre tabindex="0"><code>export FSCACHE_PASSWORD=&lt;a long secret&gt;
 gradle build --build-cache
 gradle clean
 gradle build --build-cache

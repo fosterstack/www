@@ -69,15 +69,15 @@
         overflow-x: auto; font-size: .9rem; line-height: 1.5; }
   .cta-row { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1.1rem; }
   .btn { display: inline-block; padding: .55rem 1rem; border-radius: 8px; font-weight: 600;
-         text-decoration: none; background: var(--accent); color: #fff; }
-  .btn-secondary { background: transparent; color: inherit; border: 1px solid #cbd5e1; }
+         text-decoration: none; background: var(--accent); color: var(--accent-fg); }
+  .btn-secondary { background: transparent; color: inherit; border: 1px solid var(--muted); }
   .muted-note { color: var(--muted); font-size: .93rem; margin-top: 1.1rem; }
   footer { border-top: 1px solid var(--line); margin-top: 4rem; padding: 1.5rem 1.25rem 3rem; }
   footer div { max-width: 44rem; margin: 0 auto; color: var(--muted); font-size: .82rem; }
   a { color: var(--accent); }
-  table { display: block; max-width: 100%; overflow-x: auto; }
   code { overflow-wrap: anywhere; }
   pre code { overflow-wrap: normal; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 </style>
 </head>
 <body>
@@ -93,15 +93,15 @@
   <p>A build cache holds copies of things your builds can always rebuild, so there is nothing to export from the old node. Your first build on the new server just fills it. If you have not read why the node is going away, see <a href="/build-cache-node-end-of-life/">Build Cache Node end of life</a>.</p>
 
   <h2>Step 1: Run the new cache server</h2>
-  <pre><code>docker run -d -p 127.0.0.1:8080:8080 -v fscache-data:/home/nonroot ghcr.io/fosterstack/cache:latest</code></pre>
+  <pre tabindex="0"><code>docker run -d -p 127.0.0.1:8080:8080 -v fscache-data:/home/nonroot ghcr.io/fosterstack/cache:latest</code></pre>
   <p>For anything beyond a first look, pin a specific version instead of <code>latest</code>. This command listens on this machine only. For other machines to use it, put an HTTPS proxy in front. Other ways to run it: <a href="https://github.com/fosterstack/cache/blob/main/docs/install.md">bare binary with systemd</a>, <a href="https://github.com/fosterstack/cache/blob/main/docs/kubernetes.md">Kubernetes</a>, or a <a href="https://github.com/fosterstack/cache/blob/main/docs/offline-install.md">disconnected network</a>.</p>
   <p>If the server can be reached by anyone you do not trust, turn on Basic Auth. Anyone who can write to the cache can change what your later builds use.</p>
 
   <h2>Step 2: Gradle build cache setup</h2>
   <p>Turn the cache on, in <code>gradle.properties</code>:</p>
-  <pre><code>org.gradle.caching=true</code></pre>
+  <pre tabindex="0"><code>org.gradle.caching=true</code></pre>
   <p>Then point Gradle at the new server in <code>settings.gradle.kts</code>. If you used the old node, you only change the URL:</p>
-  <pre><code>// FosterStack Cache — remote Gradle build cache.
+  <pre tabindex="0"><code>// FosterStack Cache — remote Gradle build cache.
 // https://github.com/fosterstack/cache
 buildCache {
     remote&lt;HttpBuildCache&gt; {
@@ -114,7 +114,7 @@ buildCache {
     }
 }</code></pre>
   <p>Or in <code>settings.gradle</code> (Groovy):</p>
-  <pre><code>// FosterStack Cache — remote Gradle build cache.
+  <pre tabindex="0"><code>// FosterStack Cache — remote Gradle build cache.
 // https://github.com/fosterstack/cache
 buildCache {
     remote(HttpBuildCache) {
@@ -131,7 +131,7 @@ buildCache {
   <h2>Step 3: Maven build cache setup</h2>
   <p>Maven uses Apache's Build Cache Extension. FosterStack Cache implements the server side of it.</p>
   <p>Add the extension in <code>.mvn/extensions.xml</code> (check Maven Central for the current version):</p>
-  <pre><code>&lt;extensions&gt;
+  <pre tabindex="0"><code>&lt;extensions&gt;
   &lt;extension&gt;
     &lt;groupId&gt;org.apache.maven.extensions&lt;/groupId&gt;
     &lt;artifactId&gt;maven-build-cache-extension&lt;/artifactId&gt;
@@ -139,7 +139,7 @@ buildCache {
   &lt;/extension&gt;
 &lt;/extensions&gt;</code></pre>
   <p>Point it at the server in <code>.mvn/maven-build-cache-config.xml</code>:</p>
-  <pre><code>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+  <pre tabindex="0"><code>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
 &lt;cache xmlns="http://maven.apache.org/BUILD-CACHE-CONFIG/1.2.0"
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
        xsi:schemaLocation="http://maven.apache.org/BUILD-CACHE-CONFIG/1.2.0 https://maven.apache.org/xsd/build-cache-config-1.2.0.xsd"&gt;
@@ -157,13 +157,13 @@ buildCache {
 
   <h2>Step 4: Check that it works</h2>
   <p>For Gradle, run the build twice:</p>
-  <pre><code>./gradlew build --build-cache</code></pre>
+  <pre tabindex="0"><code>./gradlew build --build-cache</code></pre>
   <p>On the second run, look for <code>FROM-CACHE</code> next to tasks. Gradle also has a local cache that gives hits even when the remote is broken, so to test the remote itself, clear the local one and run with <code>-i</code>:</p>
-  <pre><code>rm -rf ~/.gradle/caches/build-cache-1
+  <pre tabindex="0"><code>rm -rf ~/.gradle/caches/build-cache-1
 ./gradlew --stop
 ./gradlew build --build-cache -i</code></pre>
   <p>On the server, the hit and miss counters should move:</p>
-  <pre><code>curl -s https://cache.example.com/metrics | grep -E 'fscache_cache_(hits|misses)_total'</code></pre>
+  <pre tabindex="0"><code>curl -s https://cache.example.com/metrics | grep -E 'fscache_cache_(hits|misses)_total'</code></pre>
   <p>For Maven, build twice from a clean checkout and look for cache hits in the log for unchanged modules.</p>
 
   <h2>Step 5: Retire the old node</h2>

@@ -69,15 +69,16 @@
         overflow-x: auto; font-size: .9rem; line-height: 1.5; }
   .cta-row { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1.1rem; }
   .btn { display: inline-block; padding: .55rem 1rem; border-radius: 8px; font-weight: 600;
-         text-decoration: none; background: var(--accent); color: #fff; }
-  .btn-secondary { background: transparent; color: inherit; border: 1px solid #cbd5e1; }
+         text-decoration: none; background: var(--accent); color: var(--accent-fg); }
+  .btn-secondary { background: transparent; color: inherit; border: 1px solid var(--muted); }
   .muted-note { color: var(--muted); font-size: .93rem; margin-top: 1.1rem; }
   footer { border-top: 1px solid var(--line); margin-top: 4rem; padding: 1.5rem 1.25rem 3rem; }
   footer div { max-width: 44rem; margin: 0 auto; color: var(--muted); font-size: .82rem; }
   a { color: var(--accent); }
-  table { display: block; max-width: 100%; overflow-x: auto; }
   code { overflow-wrap: anywhere; }
   pre code { overflow-wrap: normal; }
+  .table-scroll { max-width: 100%; overflow-x: auto; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 </style>
 </head>
 <body>
@@ -99,7 +100,7 @@
 
   <h2>What we ran</h2>
   <p>A small Maven project with the extension set up as described in <a href="/maven-remote-build-cache-setup/">Maven remote build cache setup</a>. Every build used a fresh copy of the project and an empty local build cache, so the only shared thing was the server. All seven builds ended with <code>BUILD SUCCESS</code>.</p>
-  <table>
+  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <thead><tr><th>Build</th><th>Added to the command</th><th>Result</th></tr></thead>
     <tbody>
       <tr><td>1</td><td>nothing (empty server)</td><td>Compiled, and saved the result to the server</td></tr>
@@ -110,10 +111,10 @@
       <tr><td>6</td><td><code>-Dmaven.build.cache.remote.save.enabled=false</code> (empty server)</td><td>Compiled. The server still had 0 entries</td></tr>
       <tr><td>7</td><td>same as 6, again</td><td>Compiled again, because nothing was ever stored</td></tr>
     </tbody>
-  </table>
+  </table></div>
 
   <h2>What Maven prints for each switch</h2>
-<pre><code>enabled=false:
+<pre tabindex="0"><code>enabled=false:
 [INFO] Cache disabled by command line flag, project will be built fully and not cached
 
 skipCache=true:
@@ -122,7 +123,7 @@ skipCache=true:
 
   <h2>"Error downloading cache item" on a normal miss</h2>
   <p>The first build against an empty server printed this line, and it still succeeded:</p>
-<pre><code>[ERROR] Error downloading cache item: http://127.0.0.1:18160//v1.1/demo/demo/ebb9bceba2f7a6bc/buildinfo.xml
+<pre tabindex="0"><code>[ERROR] Error downloading cache item: http://127.0.0.1:18160//v1.1/demo/demo/ebb9bceba2f7a6bc/buildinfo.xml
 [INFO] Remote cache is incomplete or missing, trying local build for demo:demo</code></pre>
   <p>In our run this was an ordinary miss: nothing was stored under that key yet, so Maven built the project itself. The next line says so. If you see this line on a cache that you know holds the result, check the address, the login and the proxy: see <a href="/maven-build-cache-extension-not-restoring/">Maven build cache not restoring</a>.</p>
 

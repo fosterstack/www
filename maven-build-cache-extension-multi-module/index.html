@@ -69,15 +69,16 @@
         overflow-x: auto; font-size: .9rem; line-height: 1.5; }
   .cta-row { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1.1rem; }
   .btn { display: inline-block; padding: .55rem 1rem; border-radius: 8px; font-weight: 600;
-         text-decoration: none; background: var(--accent); color: #fff; }
-  .btn-secondary { background: transparent; color: inherit; border: 1px solid #cbd5e1; }
+         text-decoration: none; background: var(--accent); color: var(--accent-fg); }
+  .btn-secondary { background: transparent; color: inherit; border: 1px solid var(--muted); }
   .muted-note { color: var(--muted); font-size: .93rem; margin-top: 1.1rem; }
   footer { border-top: 1px solid var(--line); margin-top: 4rem; padding: 1.5rem 1.25rem 3rem; }
   footer div { max-width: 44rem; margin: 0 auto; color: var(--muted); font-size: .82rem; }
   a { color: var(--accent); }
-  table { display: block; max-width: 100%; overflow-x: auto; }
   code { overflow-wrap: anywhere; }
   pre code { overflow-wrap: normal; }
+  .table-scroll { max-width: 100%; overflow-x: auto; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 </style>
 </head>
 <body>
@@ -99,7 +100,7 @@
 
   <h2>What we ran</h2>
   <p>Three modules: <code>core</code> has no dependencies, <code>util</code> uses <code>core</code>, and <code>app</code> uses <code>util</code>. Each has six small Java classes. Every build used a fresh copy of the project and an empty local build cache, so the only shared thing was the cache server. All six builds ended with <code>BUILD SUCCESS</code>.</p>
-  <table>
+  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <thead><tr><th>Build</th><th>core</th><th>util</th><th>app</th></tr></thead>
     <tbody>
       <tr><td>1. First build, as CI would do it</td><td>built</td><td>built</td><td>built</td></tr>
@@ -109,7 +110,7 @@
       <tr><td>5. Edit only <code>app</code></td><td>restored</td><td>restored</td><td>built</td></tr>
       <tr><td>6. Edit only <code>util</code></td><td>restored</td><td>built</td><td>built</td></tr>
     </tbody>
-  </table>
+  </table></div>
   <p>"Restored" is the log line <code>Found cached build, restoring demo:core from cache</code> for that module. "Built" means Maven compiled it, then saved the result.</p>
 
   <h2>What this means for your project</h2>
@@ -122,7 +123,7 @@
 
   <h2>Set it up once, in the parent</h2>
   <p>Two files in the <code>.mvn</code> folder at the root of the project, the same as for a single module:</p>
-<pre><code>&lt;!-- .mvn/extensions.xml --&gt;
+<pre tabindex="0"><code>&lt;!-- .mvn/extensions.xml --&gt;
 &lt;extensions&gt;
   &lt;extension&gt;
     &lt;groupId&gt;org.apache.maven.extensions&lt;/groupId&gt;
@@ -130,7 +131,7 @@
     &lt;version&gt;1.2.3&lt;/version&gt;
   &lt;/extension&gt;
 &lt;/extensions&gt;</code></pre>
-<pre><code>&lt;!-- .mvn/maven-build-cache-config.xml --&gt;
+<pre tabindex="0"><code>&lt;!-- .mvn/maven-build-cache-config.xml --&gt;
 &lt;cache xmlns="http://maven.apache.org/BUILD-CACHE-CONFIG/1.2.0"
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
        xsi:schemaLocation="http://maven.apache.org/BUILD-CACHE-CONFIG/1.2.0 https://maven.apache.org/xsd/build-cache-config-1.2.0.xsd"&gt;

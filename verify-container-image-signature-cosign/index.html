@@ -69,15 +69,15 @@
         overflow-x: auto; font-size: .9rem; line-height: 1.5; }
   .cta-row { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1.1rem; }
   .btn { display: inline-block; padding: .55rem 1rem; border-radius: 8px; font-weight: 600;
-         text-decoration: none; background: var(--accent); color: #fff; }
-  .btn-secondary { background: transparent; color: inherit; border: 1px solid #cbd5e1; }
+         text-decoration: none; background: var(--accent); color: var(--accent-fg); }
+  .btn-secondary { background: transparent; color: inherit; border: 1px solid var(--muted); }
   .muted-note { color: var(--muted); font-size: .93rem; margin-top: 1.1rem; }
   footer { border-top: 1px solid var(--line); margin-top: 4rem; padding: 1.5rem 1.25rem 3rem; }
   footer div { max-width: 44rem; margin: 0 auto; color: var(--muted); font-size: .82rem; }
   a { color: var(--accent); }
-  table { display: block; max-width: 100%; overflow-x: auto; }
   code { overflow-wrap: anywhere; }
   pre code { overflow-wrap: normal; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 </style>
 </head>
 <body>
@@ -90,19 +90,19 @@
   <p class="lede">How to check that a FosterStack Cache image was signed by our release workflow and built by GitHub's CI, using <code>cosign</code> and the <code>gh</code> tool. It takes under a minute.</p>
 
   <h2>Find the current version</h2>
-  <pre><code>VER=$(curl -fsSL https://api.github.com/repos/fosterstack/cache/releases/latest \
+  <pre tabindex="0"><code>VER=$(curl -fsSL https://api.github.com/repos/fosterstack/cache/releases/latest \
         | sed -n 's/.*"tag_name": *"v\([^"]*\)".*/\1/p')</code></pre>
 
   <h2>1. Check the signature</h2>
   <p>This answers one question: did our release workflow sign these exact bytes? Pin the workflow and the release tag, not "any workflow in the repository".</p>
-  <pre><code>cosign verify ghcr.io/fosterstack/cache:${VER} \
+  <pre tabindex="0"><code>cosign verify ghcr.io/fosterstack/cache:${VER} \
   --certificate-identity-regexp="^https://github.com/fosterstack/cache/.github/workflows/stage-promote.yml@refs/tags/v${VER}$" \
   --certificate-oidc-issuer='https://token.actions.githubusercontent.com'</code></pre>
   <p>There is no signing key to steal or rotate. The certificate is short-lived and issued at the moment the workflow ran, and the signature is recorded in a public transparency log. No account is needed for this step.</p>
 
   <h2>2. Check where it was built</h2>
   <p>This answers a different question: what produced these bytes? It reads a signed statement about the build, naming the repository, workflow and run. It needs a GitHub token (<code>GH_TOKEN</code> or <code>gh auth login</code>), even though the repository is public.</p>
-  <pre><code>gh attestation verify oci://ghcr.io/fosterstack/cache:${VER} \
+  <pre tabindex="0"><code>gh attestation verify oci://ghcr.io/fosterstack/cache:${VER} \
   --repo fosterstack/cache \
   --signer-workflow fosterstack/cache/.github/workflows/stage-image.yml \
   --source-ref "refs/tags/v${VER}"</code></pre>

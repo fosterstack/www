@@ -69,15 +69,15 @@
         overflow-x: auto; font-size: .9rem; line-height: 1.5; }
   .cta-row { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1.1rem; }
   .btn { display: inline-block; padding: .55rem 1rem; border-radius: 8px; font-weight: 600;
-         text-decoration: none; background: var(--accent); color: #fff; }
-  .btn-secondary { background: transparent; color: inherit; border: 1px solid #cbd5e1; }
+         text-decoration: none; background: var(--accent); color: var(--accent-fg); }
+  .btn-secondary { background: transparent; color: inherit; border: 1px solid var(--muted); }
   .muted-note { color: var(--muted); font-size: .93rem; margin-top: 1.1rem; }
   footer { border-top: 1px solid var(--line); margin-top: 4rem; padding: 1.5rem 1.25rem 3rem; }
   footer div { max-width: 44rem; margin: 0 auto; color: var(--muted); font-size: .82rem; }
   a { color: var(--accent); }
-  table { display: block; max-width: 100%; overflow-x: auto; }
   code { overflow-wrap: anywhere; }
   pre code { overflow-wrap: normal; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 </style>
 </head>
 <body>
@@ -91,17 +91,17 @@
 
   <h2>What you see</h2>
   <p>The container exits with status 1 within a few seconds, and its log says:</p>
-  <pre><code>{&quot;level&quot;:&quot;ERROR&quot;,&quot;msg&quot;:&quot;fscache: fatal&quot;,&quot;error&quot;:&quot;write shutdown marker: open data/.unclean-shutdown: permission denied&quot;}</code></pre>
+  <pre tabindex="0"><code>{&quot;level&quot;:&quot;ERROR&quot;,&quot;msg&quot;:&quot;fscache: fatal&quot;,&quot;error&quot;:&quot;write shutdown marker: open data/.unclean-shutdown: permission denied&quot;}</code></pre>
 
   <h2>Why it happens</h2>
   <p>The server does not run as root. It runs as user 65532, and it keeps its files in a <code>data</code> folder inside <code>/home/nonroot</code>. If that folder already exists and belongs to someone else, the server cannot write to it and stops.</p>
   <p>I reproduced it with a volume that already held data owned by root, which is what you get after restoring a backup as root:</p>
-  <pre><code>/d       0:0   drwxr-xr-x      (owner:group, mode)
+  <pre tabindex="0"><code>/d       0:0   drwxr-xr-x      (owner:group, mode)
 /d/data  0:0   drwxr-xr-x</code></pre>
 
   <h2>The fix</h2>
   <p>Give the whole tree to user 65532. The image has no shell, so use a throwaway container to do it:</p>
-  <pre><code>docker run --rm -v fscache-data:/d ubuntu:24.04 chown -R 65532:65532 /d</code></pre>
+  <pre tabindex="0"><code>docker run --rm -v fscache-data:/d ubuntu:24.04 chown -R 65532:65532 /d</code></pre>
   <p>After that the same image started normally: <code>/healthz</code> answered <code>ok</code> and an upload returned 201.</p>
 
   <h2>What does not cause it</h2>

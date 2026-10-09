@@ -69,15 +69,16 @@
         overflow-x: auto; font-size: .9rem; line-height: 1.5; }
   .cta-row { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1.1rem; }
   .btn { display: inline-block; padding: .55rem 1rem; border-radius: 8px; font-weight: 600;
-         text-decoration: none; background: var(--accent); color: #fff; }
-  .btn-secondary { background: transparent; color: inherit; border: 1px solid #cbd5e1; }
+         text-decoration: none; background: var(--accent); color: var(--accent-fg); }
+  .btn-secondary { background: transparent; color: inherit; border: 1px solid var(--muted); }
   .muted-note { color: var(--muted); font-size: .93rem; margin-top: 1.1rem; }
   footer { border-top: 1px solid var(--line); margin-top: 4rem; padding: 1.5rem 1.25rem 3rem; }
   footer div { max-width: 44rem; margin: 0 auto; color: var(--muted); font-size: .82rem; }
   a { color: var(--accent); }
-  table { display: block; max-width: 100%; overflow-x: auto; }
   code { overflow-wrap: anywhere; }
   pre code { overflow-wrap: normal; }
+  .table-scroll { max-width: 100%; overflow-x: auto; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 </style>
 </head>
 <body>
@@ -91,14 +92,14 @@
 
   <h2>1. Give the server two logins</h2>
   <p>The server takes one read-write login and, optionally, a second read-only login. A client using the read-only one can read cache entries, and any write is refused with a 403.</p>
-  <pre><code>FSCACHE_USERNAME=ci   FSCACHE_PASSWORD=&lt;a long secret&gt; \
+  <pre tabindex="0"><code>FSCACHE_USERNAME=ci   FSCACHE_PASSWORD=&lt;a long secret&gt; \
 FSCACHE_RO_USERNAME=dev FSCACHE_RO_PASSWORD=&lt;another secret&gt; \
 ./fscache</code></pre>
   <p>The two usernames must differ, and the read-only pair only works alongside the read-write pair. Both are in the <a href="https://github.com/fosterstack/cache">configuration table</a>.</p>
 
   <h2>2. One Gradle setting for everyone</h2>
   <p>Developers and CI use the same <code>settings.gradle.kts</code>. Only the environment differs:</p>
-  <pre><code>rootProject.name = &quot;demo&quot;
+  <pre tabindex="0"><code>rootProject.name = &quot;demo&quot;
 
 // FosterStack Cache — remote Gradle build cache.
 // https://github.com/fosterstack/cache
@@ -117,17 +118,17 @@ buildCache {
 
   <h2>3. What happened when I ran it</h2>
   <p>The server counts what it stores. Each line below is a build of the same small project. (In my test I turned Gradle's local cache off, with <code>local { isEnabled = false }</code> in the same block, so that a hit could only have come from the server. You do not need that line.)</p>
-  <table>
+  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <tr><th>Who builds</th><th>Result</th><th>Server after</th></tr>
     <tr><td>A developer first, read-only login, <code>CI</code> unset</td><td><code>:compileJava</code> runs. Nothing to read yet, and nothing uploaded.</td><td>0 entries</td></tr>
     <tr><td>CI, read-write login, <code>CI=true</code></td><td><code>:compileJava</code> runs, and the result is uploaded.</td><td>1 entry</td></tr>
     <tr><td>The developer again, read-only login</td><td><code>&gt; Task :compileJava FROM-CACHE</code>, "1 from cache"</td><td>1 entry, 1 hit</td></tr>
-  </table>
+  </table></div>
   <p>The laptop never wrote to the cache, and still got the benefit of CI's work.</p>
 
   <h2>If a laptop is set up to push anyway</h2>
   <p>I then made a code change, so there was something new to upload, and built with <code>CI=true</code> but only the read-only login. The build still succeeded. With <code>-i</code> Gradle logged:</p>
-  <pre><code>Could not store entry d4f2de693b561fd2c5d60b17a9232d6f in remote build cache: Storing entry at &#x27;http://127.0.0.1:18098/d4f2de693b561fd2c5d60b17a9232d6f&#x27; response status 403: Forbidden
+  <pre tabindex="0"><code>Could not store entry d4f2de693b561fd2c5d60b17a9232d6f in remote build cache: Storing entry at &#x27;http://127.0.0.1:18098/d4f2de693b561fd2c5d60b17a9232d6f&#x27; response status 403: Forbidden
 The remote build cache was disabled during the build due to errors.</code></pre>
   <p>The server stored nothing: it stayed at 1 entry. The same change built by CI with the read-write login was stored (2 entries). So a misconfigured laptop cannot add to the cache, and its build is not broken by that. Note that Gradle switches the remote cache off for the rest of that build once a store fails, so a laptop in this state also stops reading from it for that build.</p>
 

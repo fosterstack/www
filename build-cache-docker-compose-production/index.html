@@ -69,15 +69,16 @@
         overflow-x: auto; font-size: .9rem; line-height: 1.5; }
   .cta-row { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1.1rem; }
   .btn { display: inline-block; padding: .55rem 1rem; border-radius: 8px; font-weight: 600;
-         text-decoration: none; background: var(--accent); color: #fff; }
-  .btn-secondary { background: transparent; color: inherit; border: 1px solid #cbd5e1; }
+         text-decoration: none; background: var(--accent); color: var(--accent-fg); }
+  .btn-secondary { background: transparent; color: inherit; border: 1px solid var(--muted); }
   .muted-note { color: var(--muted); font-size: .93rem; margin-top: 1.1rem; }
   footer { border-top: 1px solid var(--line); margin-top: 4rem; padding: 1.5rem 1.25rem 3rem; }
   footer div { max-width: 44rem; margin: 0 auto; color: var(--muted); font-size: .82rem; }
   a { color: var(--accent); }
-  table { display: block; max-width: 100%; overflow-x: auto; }
   code { overflow-wrap: anywhere; }
   pre code { overflow-wrap: normal; }
+  .table-scroll { max-width: 100%; overflow-x: auto; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 </style>
 </head>
 <body>
@@ -96,7 +97,7 @@
   </ul>
 
   <h2>compose.yaml</h2>
-  <pre><code>services:
+  <pre tabindex="0"><code>services:
   fscache:
     image: ghcr.io/fosterstack/cache:0.2.1
     restart: unless-stopped
@@ -124,7 +125,7 @@ volumes:
   <p>The cache has no <code>ports</code> entry on purpose. Only the proxy is reachable from outside. Generate a real password, for example with <code>openssl rand -base64 24</code>, and never keep <code>change-me</code>.</p>
 
   <h2>nginx.conf</h2>
-  <pre><code>server {
+  <pre tabindex="0"><code>server {
     listen 443 ssl;
     server_name localhost;
     ssl_certificate     /etc/nginx/certs/cert.pem;
@@ -141,7 +142,7 @@ volumes:
   <p>The <code>client_max_body_size</code> line matters. See the tests below.</p>
 
   <h2>What I checked, and what I saw</h2>
-  <table>
+  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <tr><th>Check</th><th>Result</th></tr>
     <tr><td><code>https://localhost:8443/healthz</code> with the certificate trusted</td><td><code>ok</code></td></tr>
     <tr><td>The same without trusting the certificate</td><td>curl refuses (exit 60)</td></tr>
@@ -151,14 +152,14 @@ volumes:
     <tr><td>Upload with the password, through the proxy</td><td>201, and the value reads back</td></tr>
     <tr><td>Uploads of about 1 MB and 2 MB with nginx's default settings</td><td><strong>413</strong> from nginx, not from the cache</td></tr>
     <tr><td>The same uploads, and 20 MB, after <code>client_max_body_size 1g;</code></td><td>201 each</td></tr>
-  </table>
+  </table></div>
   <p>The size limit is the one to watch. nginx rejects bodies over 1 MB by default, and Gradle's cache entries are often bigger, so uploads of larger entries would be refused. The cache itself accepts up to 1 GiB per entry by default, which is why the example uses <code>1g</code>. See <a href="/gradle-build-cache-http-status-codes/">the status codes page</a>.</p>
 
   <h2>Gradle over HTTPS</h2>
   <p>With a certificate Gradle does not trust, the build still succeeds, but without the cache, and prints:</p>
-  <pre><code>Could not load entry d4f2de693b561fd2c5d60b17a9232d6f from remote build cache: (certificate_unknown) PKIX path building failed: sun.security.provider.certpath.SunCertPathBuilderException: unable to find valid certification path to requested target</code></pre>
+  <pre tabindex="0"><code>Could not load entry d4f2de693b561fd2c5d60b17a9232d6f from remote build cache: (certificate_unknown) PKIX path building failed: sun.security.provider.certpath.SunCertPathBuilderException: unable to find valid certification path to requested target</code></pre>
   <p>For my self-signed test certificate I made Java trust it:</p>
-  <pre><code>keytool -importcert -alias fsprod -file certs/cert.pem -keystore trust.jks -storepass changeit -noprompt
+  <pre tabindex="0"><code>keytool -importcert -alias fsprod -file certs/cert.pem -keystore trust.jks -storepass changeit -noprompt
 
 # gradle.properties
 systemProp.javax.net.ssl.trustStore=/path/to/trust.jks

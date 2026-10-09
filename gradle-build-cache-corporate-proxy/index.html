@@ -69,15 +69,16 @@
         overflow-x: auto; font-size: .9rem; line-height: 1.5; }
   .cta-row { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1.1rem; }
   .btn { display: inline-block; padding: .55rem 1rem; border-radius: 8px; font-weight: 600;
-         text-decoration: none; background: var(--accent); color: #fff; }
-  .btn-secondary { background: transparent; color: inherit; border: 1px solid #cbd5e1; }
+         text-decoration: none; background: var(--accent); color: var(--accent-fg); }
+  .btn-secondary { background: transparent; color: inherit; border: 1px solid var(--muted); }
   .muted-note { color: var(--muted); font-size: .93rem; margin-top: 1.1rem; }
   footer { border-top: 1px solid var(--line); margin-top: 4rem; padding: 1.5rem 1.25rem 3rem; }
   footer div { max-width: 44rem; margin: 0 auto; color: var(--muted); font-size: .82rem; }
   a { color: var(--accent); }
-  table { display: block; max-width: 100%; overflow-x: auto; }
   code { overflow-wrap: anywhere; }
   pre code { overflow-wrap: normal; }
+  .table-scroll { max-width: 100%; overflow-x: auto; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 </style>
 </head>
 <body>
@@ -97,7 +98,7 @@
 
   <h2>The settings</h2>
   <p>Gradle takes proxy settings from Java system properties. Put them in <code>~/.gradle/gradle.properties</code> or the project's <code>gradle.properties</code>, with the <code>systemProp.</code> prefix:</p>
-  <pre><code>systemProp.http.proxyHost=proxy.example.com
+  <pre tabindex="0"><code>systemProp.http.proxyHost=proxy.example.com
 systemProp.http.proxyPort=3128
 systemProp.https.proxyHost=proxy.example.com
 systemProp.https.proxyPort=3128
@@ -106,7 +107,7 @@ systemProp.http.nonProxyHosts=cache.internal.example.com|localhost|127.*</code><
 
   <h2>What I saw</h2>
   <p>For the plain-HTTP rows I set <code>isAllowInsecureProtocol = true</code>, which Gradle requires for non-loopback <code>http://</code>. That is for the test rig only; use HTTPS for real.</p>
-  <table>
+  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <tr><th>Setup</th><th>Result</th><th>What the proxy logged</th></tr>
     <tr><td>No proxy settings, cache at <code>&lt;cache-ip&gt;</code></td><td>second build <code>FROM-CACHE</code></td><td>nothing (not used)</td></tr>
     <tr><td>Proxy settings, same plain-HTTP URL</td><td><code>FROM-CACHE</code></td><td><code>GET http://&lt;cache-ip&gt;:18130/&lt;key&gt;</code>, one per build</td></tr>
@@ -114,14 +115,14 @@ systemProp.http.nonProxyHosts=cache.internal.example.com|localhost|127.*</code><
     <tr><td>Proxy settings, with the cache's address in <code>nonProxyHosts</code></td><td><code>FROM-CACHE</code></td><td><strong>nothing</strong></td></tr>
     <tr><td>Proxy settings, HTTPS cache, tunnel allowed</td><td><code>FROM-CACHE</code></td><td><code>CONNECT &lt;cache-ip&gt;:18443</code>, one per build</td></tr>
     <tr><td>Proxy settings, proxy refuses the cache host</td><td>the build succeeds but without the cache (log below)</td><td>the request, answered 403</td></tr>
-  </table>
+  </table></div>
 
   <h2>Three things that catch people</h2>
   <p><strong>1. Testing against localhost skips the proxy.</strong> With the cache at <code>127.0.0.1</code>, Gradle never used the proxy even though it was configured. A setup that works on your laptop against a local cache proves nothing about the proxy path. Test against the real address.</p>
   <p><strong>2. A refusing proxy looks like a cache error.</strong> When the proxy answered 403 to the tunnel, Gradle printed:</p>
-  <pre><code>Could not load entry d4f2de693b561fd2c5d60b17a9232d6f from remote build cache: Loading entry from &#x27;https://&lt;cache-ip&gt;:18443/d4f2de693b561fd2c5d60b17a9232d6f&#x27; response status 403: Forbidden</code></pre>
+  <pre tabindex="0"><code>Could not load entry d4f2de693b561fd2c5d60b17a9232d6f from remote build cache: Loading entry from &#x27;https://&lt;cache-ip&gt;:18443/d4f2de693b561fd2c5d60b17a9232d6f&#x27; response status 403: Forbidden</code></pre>
   <p>That is the same text you would get from the cache refusing a write with the read-only login (see <a href="/gradle-build-cache-http-status-codes/">the status codes</a>). To tell them apart, take Gradle out of it and try the same route with curl:</p>
-  <pre><code>$ curl -sS -x http://proxy.example.com:3128 https://cache.example.com/healthz
+  <pre tabindex="0"><code>$ curl -sS -x http://proxy.example.com:3128 https://cache.example.com/healthz
 curl: (56) CONNECT tunnel failed, response 403      # the proxy said no
 $ curl -sS --noproxy &#x27;*&#x27; https://cache.example.com/healthz
 ok                                                   # the cache is fine</code></pre>

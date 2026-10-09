@@ -69,15 +69,15 @@
         overflow-x: auto; font-size: .9rem; line-height: 1.5; }
   .cta-row { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1.1rem; }
   .btn { display: inline-block; padding: .55rem 1rem; border-radius: 8px; font-weight: 600;
-         text-decoration: none; background: var(--accent); color: #fff; }
-  .btn-secondary { background: transparent; color: inherit; border: 1px solid #cbd5e1; }
+         text-decoration: none; background: var(--accent); color: var(--accent-fg); }
+  .btn-secondary { background: transparent; color: inherit; border: 1px solid var(--muted); }
   .muted-note { color: var(--muted); font-size: .93rem; margin-top: 1.1rem; }
   footer { border-top: 1px solid var(--line); margin-top: 4rem; padding: 1.5rem 1.25rem 3rem; }
   footer div { max-width: 44rem; margin: 0 auto; color: var(--muted); font-size: .82rem; }
   a { color: var(--accent); }
-  table { display: block; max-width: 100%; overflow-x: auto; }
   code { overflow-wrap: anywhere; }
   pre code { overflow-wrap: normal; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 </style>
 </head>
 <body>
@@ -90,12 +90,12 @@
   <p class="lede">Run a shared Gradle build cache for your team in one Compose file, with a password and a size limit. This is the shape we suggest once you go past a first trial.</p>
 
   <h2>Try it first, on one machine</h2>
-  <pre><code>docker run -d -p 127.0.0.1:8080:8080 -v fscache-data:/home/nonroot ghcr.io/fosterstack/cache:latest</code></pre>
+  <pre tabindex="0"><code>docker run -d -p 127.0.0.1:8080:8080 -v fscache-data:/home/nonroot ghcr.io/fosterstack/cache:latest</code></pre>
   <p>The <code>127.0.0.1:</code> keeps it reachable from this machine only. A bare <code>-p 8080:8080</code> opens the port to every network interface, and on a cloud host that is a cache anyone can write to the moment the command returns. Pin a version tag instead of <code>latest</code> for anything real.</p>
 
   <h2>The Compose file</h2>
   <p>This one is open to your CI runners, so it has a password on purpose. A cache that untrusted people can write to can feed files into your builds.</p>
-  <pre><code>services:
+  <pre tabindex="0"><code>services:
   fscache:
     image: ghcr.io/fosterstack/cache:latest   # pin a version tag
     restart: unless-stopped
@@ -117,7 +117,7 @@ volumes:
   </ul>
 
   <h2>Check it works, with no Gradle project</h2>
-  <pre><code>curl -s localhost:8080/healthz                                   # ok
+  <pre tabindex="0"><code>curl -s localhost:8080/healthz                                   # ok
 curl -s -X PUT --data-binary 'hello' localhost:8080/testkey123   # 201
 curl -s localhost:8080/testkey123                                # hello</code></pre>
   <p>Add <code>-u gradle:your-password</code> to those calls once you have set a password.</p>

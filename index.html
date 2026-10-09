@@ -69,15 +69,16 @@
         overflow-x: auto; font-size: .9rem; line-height: 1.5; }
   .cta-row { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1.1rem; }
   .btn { display: inline-block; padding: .55rem 1rem; border-radius: 8px; font-weight: 600;
-         text-decoration: none; background: var(--accent); color: #fff; }
-  .btn-secondary { background: transparent; color: inherit; border: 1px solid #cbd5e1; }
+         text-decoration: none; background: var(--accent); color: var(--accent-fg); }
+  .btn-secondary { background: transparent; color: inherit; border: 1px solid var(--muted); }
   .muted-note { color: var(--muted); font-size: .93rem; margin-top: 1.1rem; }
   footer { border-top: 1px solid var(--line); margin-top: 4rem; padding: 1.5rem 1.25rem 3rem; }
   footer div { max-width: 44rem; margin: 0 auto; color: var(--muted); font-size: .82rem; }
   a { color: var(--accent); }
-  table { display: block; max-width: 100%; overflow-x: auto; }
   code { overflow-wrap: anywhere; }
   pre code { overflow-wrap: normal; }
+  .table-scroll { max-width: 100%; overflow-x: auto; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 </style>
 </head>
 <body>
@@ -106,7 +107,7 @@
   <h2 id="try">Try it now</h2>
   <p>There is no signup, no waitlist, and no license key for the free tier. Pull the
   image and point your build at it:</p>
-  <pre><code>docker run -d -p 8080:8080 ghcr.io/fosterstack/cache:latest
+  <pre tabindex="0"><code>docker run -d -p 8080:8080 ghcr.io/fosterstack/cache:latest
 curl localhost:8080/healthz   # -&gt; ok</code></pre>
   <p class="cta-row">
     <a class="btn" href="https://github.com/fosterstack/cache#quickstart-docker">Quickstart</a>
@@ -183,7 +184,7 @@ curl localhost:8080/healthz   # -&gt; ok</code></pre>
 
   <h2 id="pricing">Pricing</h2>
   <p>Per product. Free is the full product.</p>
-  <table>
+  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <tr><th>Free</th><th>Team</th><th>Business</th><th>Compliance</th></tr>
     <tr>
       <td>The full cache server, MIT-licensed, self-hosted. Every security patch, the
@@ -197,7 +198,7 @@ curl localhost:8080/healthz   # -&gt; ok</code></pre>
       security-questionnaire support up to 8 hours per year (async), and named-version
       LTS. <a href="/regulated/">Who this is for.</a></td>
     </tr>
-  </table>
+  </table></div>
   <p><strong>No sales call. No per-seat tax. No enterprise pricing mystery.</strong></p>
   <p style="color:var(--muted); font-size:.95rem">
     The Compliance tier, plainly: the security evidence underneath — SBOMs, SLSA

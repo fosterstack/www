@@ -69,15 +69,15 @@
         overflow-x: auto; font-size: .9rem; line-height: 1.5; }
   .cta-row { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1.1rem; }
   .btn { display: inline-block; padding: .55rem 1rem; border-radius: 8px; font-weight: 600;
-         text-decoration: none; background: var(--accent); color: #fff; }
-  .btn-secondary { background: transparent; color: inherit; border: 1px solid #cbd5e1; }
+         text-decoration: none; background: var(--accent); color: var(--accent-fg); }
+  .btn-secondary { background: transparent; color: inherit; border: 1px solid var(--muted); }
   .muted-note { color: var(--muted); font-size: .93rem; margin-top: 1.1rem; }
   footer { border-top: 1px solid var(--line); margin-top: 4rem; padding: 1.5rem 1.25rem 3rem; }
   footer div { max-width: 44rem; margin: 0 auto; color: var(--muted); font-size: .82rem; }
   a { color: var(--accent); }
-  table { display: block; max-width: 100%; overflow-x: auto; }
   code { overflow-wrap: anywhere; }
   pre code { overflow-wrap: normal; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 </style>
 </head>
 <body>
@@ -91,14 +91,14 @@
 
   <h2>1. Start the server</h2>
   <p>Download and verify the release as shown in <a href="/verify-a-release/">Verify a release yourself</a>, unpack it, and run it with a password and a size cap:</p>
-  <pre><code>FSCACHE_ADDR=127.0.0.1:8080 FSCACHE_DATA_DIR=./data \
+  <pre tabindex="0"><code>FSCACHE_ADDR=127.0.0.1:8080 FSCACHE_DATA_DIR=./data \
   FSCACHE_USERNAME=gradle FSCACHE_PASSWORD=demo-pass \
   FSCACHE_MAX_BYTES=1073741824 ./fscache</code></pre>
   <p>Prefer a container? <a href="/gradle-build-cache-docker-compose/">Gradle build cache with Docker Compose</a> has the same settings. (My test run used port 18090 instead of 8080; the outputs below do not show the port.)</p>
 
   <h2>2. A small project</h2>
   <p>Four files. <code>settings.gradle.kts</code> says where the cache is:</p>
-  <pre><code>rootProject.name = &quot;demo&quot;
+  <pre tabindex="0"><code>rootProject.name = &quot;demo&quot;
 
 // FosterStack Cache — remote Gradle build cache.
 // https://github.com/fosterstack/cache
@@ -114,11 +114,11 @@ buildCache {
     }
 }</code></pre>
   <p>Turning the local cache off is only for this test. It means a hit can only have come from the remote. <code>build.gradle.kts</code> is one line, <code>plugins { java }</code>. <code>gradle.properties</code> switches caching on, which the <code>buildCache</code> block does not do by itself:</p>
-  <pre><code>org.gradle.caching=true</code></pre>
+  <pre tabindex="0"><code>org.gradle.caching=true</code></pre>
   <p>And <code>src/main/java/demo/App.java</code> is any small class.</p>
 
   <h2>3. Build once</h2>
-  <pre><code>export FSCACHE_PASSWORD=demo-pass
+  <pre tabindex="0"><code>export FSCACHE_PASSWORD=demo-pass
 gradle build --build-cache
 
 &gt; Task :compileJava
@@ -135,13 +135,13 @@ gradle build --build-cache
 BUILD SUCCESSFUL in 5s
 2 actionable tasks: 2 executed</code></pre>
   <p>Nothing came from the cache, and every cacheable task ran. Gradle stored the compile result on the server. The status page agrees:</p>
-  <pre><code>$ curl -s -u gradle:demo-pass localhost:8080/statusz | grep -E &#x27;&quot;store_entries&quot;|&quot;cache_hits&quot;|&quot;cache_misses&quot;&#x27;
+  <pre tabindex="0"><code>$ curl -s -u gradle:demo-pass localhost:8080/statusz | grep -E &#x27;&quot;store_entries&quot;|&quot;cache_hits&quot;|&quot;cache_misses&quot;&#x27;
   &quot;store_entries&quot;: 1,
   &quot;cache_hits&quot;: 0,
   &quot;cache_misses&quot;: 1,</code></pre>
 
   <h2>4. Clean, and build again</h2>
-  <pre><code>gradle clean
+  <pre tabindex="0"><code>gradle clean
 gradle build --build-cache
 
 &gt; Task :compileJava FROM-CACHE
@@ -158,14 +158,14 @@ gradle build --build-cache
 BUILD SUCCESSFUL in 5s
 2 actionable tasks: 1 executed, 1 from cache</code></pre>
   <p>There it is: <code>:compileJava FROM-CACHE</code> and "1 from cache". The server counted the hit:</p>
-  <pre><code>$ curl -s -u gradle:demo-pass localhost:8080/statusz | grep -E &#x27;&quot;store_entries&quot;|&quot;cache_hits&quot;|&quot;cache_misses&quot;&#x27;
+  <pre tabindex="0"><code>$ curl -s -u gradle:demo-pass localhost:8080/statusz | grep -E &#x27;&quot;store_entries&quot;|&quot;cache_hits&quot;|&quot;cache_misses&quot;&#x27;
   &quot;store_entries&quot;: 1,
   &quot;cache_hits&quot;: 1,
   &quot;cache_misses&quot;: 1,</code></pre>
 
   <h2>The one thing that tripped me up</h2>
   <p>My first attempt failed before any build ran, because I used <code>http://localhost:...</code>:</p>
-  <pre><code>FAILURE: Build failed with an exception.
+  <pre tabindex="0"><code>FAILURE: Build failed with an exception.
 
 * What went wrong:
 Using insecure protocols with remote build cache, without explicit opt-in, is unsupported.</code></pre>
