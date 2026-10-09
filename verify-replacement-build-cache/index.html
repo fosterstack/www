@@ -82,7 +82,7 @@
   <p class="lede">A build cache sits inside your supply chain: what it stores ends up in your builds. Before you move to a replacement, ask these eight questions of any candidate. We answer each one for FosterStack Cache, including where the answer is not good yet.</p>
 
   <h2>1. Does it speak your build tool's protocol?</h2>
-  <p>It should work with the tool's own remote cache setting, with nothing extra to install on developer machines. <strong>How to test:</strong> build twice with the local cache turned off and look for <code>FROM-CACHE</code> on the second run. <strong>FosterStack Cache:</strong> Gradle through its <code>HttpBuildCache</code> setting; Maven through Apache's Build Cache Extension, where the server side is built and its acceptance testing is still in progress.</p>
+  <p>It should work with the tool's own remote cache setting, with nothing extra to install on developer machines. <strong>How to test:</strong> build twice with the local cache turned off and look for <code>FROM-CACHE</code> on the second run. <strong>FosterStack Cache:</strong> Gradle through its <code>HttpBuildCache</code> setting; Maven through Apache's Build Cache Extension.</p>
 
   <h2>2. Who can write to it?</h2>
   <p>Anything that can write to the cache can change what later builds use. Ask for authentication, and ask what permission levels exist. <strong>FosterStack Cache:</strong> Basic Auth with a read-write login and an optional read-only login, where any write from the read-only one is refused. Per-person identity is not built yet.</p>
