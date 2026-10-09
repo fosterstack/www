@@ -37,8 +37,8 @@ a `noindex` tag; the Sep 10 review pointed out that noindex is a request, not a 
 the page claimed a removal that had not happened, at a live URL. It was then moved to
 `.drafts/`, on the belief that dot-prefixed paths are excluded from the Pages upload.
 CORRECTED Oct 9, 2026: they are NOT; Cloudflare Pages served `/.drafts/bcn-removed/`
-until that folder was removed from the repository. The draft now lives only in the
-private ops repository, `/bcn-removed/*` 302s to the homepage in the meantime, and
+until that folder was removed from the repository. The draft is now kept privately,
+outside this repository (the ops handoffs outbox), `/bcn-removed/*` 302s to the homepage in the meantime, and
 `bin/check-file-allowlist.sh` refuses any dot-prefixed path that is not on its short
 list. Nothing private can be kept in this repository: it is public and all of it is served.
 
@@ -49,8 +49,8 @@ action, not automatic**: verify the finding directly at
 [hub.docker.com/r/gradle/build-cache-node](https://hub.docker.com/r/gradle/build-cache-node)
 first (the watcher is tuned to alert fast, which means it can also alert on a transient API
 hiccup), then remove the `noindex` tag and add a prominent, dated link from `index.html`.
-Full instructions are in an HTML comment at the top of the draft page, which is kept in
-the private ops repository (see its handoffs outbox).
+Full instructions are in an HTML comment at the top of the draft page, which is kept
+privately outside this repository (the ops handoffs outbox).
 
 ## Deploy checklist (owner, ~15 min, one-time)
 

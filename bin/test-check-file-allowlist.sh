@@ -24,6 +24,9 @@ must_fail "a dot folder nested in a page"   "some-page/.hidden/index.html"
 must_fail "another file in .well-known/"    ".well-known/drafts.html"
 must_fail "an unknown dot file at the root" ".env"
 must_fail "a file that is not on the list"  "notes.md"
-must_pass "the whole real tracked tree"     $(git ls-files)
+tracked=$(git ls-files)
+if [ -z "$tracked" ]; then echo "FAIL no tracked files found (run inside the repository)"; fail=1
+elif printf '%s\n' "$tracked" | bash bin/check-file-allowlist.sh >/dev/null 2>&1; then echo "ok   the whole real tracked tree"; else echo "FAIL the real tracked tree is blocked"; fail=1; fi
+must_fail "a workflow hidden behind a leading dot" ".github/workflows/.hidden.yml"
 
 [ "$fail" -eq 0 ] && echo "all allowlist self-tests passed" || { echo "allowlist self-test FAILED"; exit 1; }
