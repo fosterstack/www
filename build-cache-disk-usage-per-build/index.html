@@ -88,33 +88,33 @@
 </header>
 <main>
   <h1>How much disk does your Gradle build cache use?</h1>
-  <p class="lede">Know before you size the disk: in our runs the cache grew with the number of modules that had to be recompiled, not with the number of builds, and ten identical builds added nothing. At FosterStack we prove everything, so here is how we proved it to ourselves: three series of eleven real builds on a four-module project, with the cache server's data folder measured after every build.</p>
+  <p class="lede">Know before you size the disk: in these runs the cache grew only when modules had to be recompiled, by about one entry per recompiled module, and builds that changed nothing added nothing. At FosterStack we prove everything, so here is how we proved it to ourselves: three series of eleven real builds on a four-module project, with the cache server's data folder measured after every build.</p>
 
   <h2>The short answer</h2>
   <ul class="trust">
-    <li><strong>Identical builds:</strong> eleven builds of the same code left the data folder exactly the same size, 13 stored files.</li>
+    <li><strong>Identical builds:</strong> after the first build, ten more builds of the same code added nothing: still 13 stored files, 36,090 bytes.</li>
     <li><strong>A change inside a method body in one module:</strong> each such build added one stored file, about 2.5 KB.</li>
     <li><strong>A new public method in that module:</strong> each such build added four stored files, about 11.5 KB, because all four modules were recompiled.</li>
   </ul>
-  <p>These are small numbers because the project is small (four modules of twelve tiny classes). Sizes follow the size of your compiled code, so expect larger entries in a real project. What carries over from our runs is the pattern.</p>
+  <p>These are small numbers because the project is small (four modules of twelve tiny classes). The entries hold your compiled classes, so expect larger ones in a real project. What carries over from our runs is the pattern.</p>
 
   <h2>What we ran</h2>
   <p>The four-module project from <a href="/gradle-build-cache-monorepo/">Gradle build cache for a monorepo</a>, with Gradle 9.8.0, Temurin 21.0.12.1 and FosterStack Cache 0.2.1 on one Mac (arm64). The task was <code>gradle assemble</code>. There were three series. Each series started on a new, empty cache server and ran eleven builds. Every build used a fresh copy of the project and a new empty Gradle home, with Gradle's local build cache switched off, so only the server could supply results. Every build ended with <code>BUILD SUCCESSFUL</code>. After each build we added up the size of every file in the server's data folder.</p>
   <ul class="trust">
     <li><strong>A:</strong> no change. Eleven identical builds.</li>
-    <li><strong>B:</strong> before each build, a different edit to the inside of one method in <code>core</code>.</li>
-    <li><strong>C:</strong> before each build, a different new public method added to a class in <code>core</code>.</li>
+    <li><strong>B:</strong> before each build, a different edit to the inside of one method in <code>core</code> (each edit made to a clean copy, not added on top of the last).</li>
+    <li><strong>C:</strong> before each build, a different new public method added to a class in <code>core</code> (also to a clean copy).</li>
   </ul>
   <div class="table-scroll" role="region" aria-label="Stored files and bytes after each build" tabindex="0"><table>
     <thead><tr><th>After build</th><th>A: stored files / bytes</th><th>B: stored files / bytes</th><th>C: stored files / bytes</th></tr></thead>
     <tbody>
-      <tr><td>1 (the first)</td><td>13 / 36,090</td><td>13 / 36,101</td><td>13 / 36,174</td></tr>
+      <tr><td>1 (first build; B and C include their first edit)</td><td>13 / 36,090</td><td>13 / 36,101</td><td>13 / 36,174</td></tr>
       <tr><td>2</td><td>13 / 36,090</td><td>14 / 38,636</td><td>17 / 47,725</td></tr>
       <tr><td>6</td><td>13 / 36,090</td><td>18 / 48,768</td><td>33 / 93,901</td></tr>
       <tr><td>11</td><td>13 / 36,090</td><td>23 / 61,434</td><td>53 / 151,657</td></tr>
     </tbody>
   </table></div>
-  <p>"Stored files" are the entries the server keeps. The data folder also holds an index file of 131,072 bytes. Together with a few more bytes it came to 131,143 bytes in every measurement, so it did not grow in these runs, and it is not counted in the table.</p>
+  <p>"Stored files" are the entries the server keeps. The server's data folder also holds an index file (128 KB). It did not grow in these runs and is not counted in the table.</p>
 
   <h2>What was stored</h2>
   <ul class="trust">
@@ -124,7 +124,7 @@
   </ul>
 
   <h2>How to size your own</h2>
-  <p>Our advice, not a test result: run your normal builds for a day, then check the size of the server's data folder (<code>du -sk</code> on the <code>FSCACHE_DATA_DIR</code> folder). Growth per build is roughly the size of the entries for the tasks that were not restored, so a change that touches a module everyone depends on costs the most. If you want a hard limit, <code>FSCACHE_MAX_BYTES</code> caps the size and the oldest-unused entries go first; see <a href="/build-cache-eviction-size-limit/">build cache eviction and the size limit</a>.</p>
+  <p>Our advice, not a test result: run your normal builds for a day, then check the size of the server's data folder (<code>du -sk</code> on the <code>FSCACHE_DATA_DIR</code> folder). Growth per build is roughly the size of the entries for the tasks that were not restored, so a change that touches a module everyone depends on costs the most. For sizing the server itself, see <a href="/build-cache-server-sizing/">How big a server does a build cache need? CPU, RAM and disk</a>. If you want a hard limit, <code>FSCACHE_MAX_BYTES</code> caps the size and the oldest-unused entries go first; see <a href="/build-cache-eviction-size-limit/">build cache eviction and the size limit</a>.</p>
   <p>We did not test: a real-sized project, test tasks, other task types, Maven, Linux, or a week of use (these are eleven builds per series). We did not run with the size cap on in these runs.</p>
 
   <p class="muted-note">Run on Gradle 9.8.0, Temurin 21.0.12.1 and FosterStack Cache 0.2.1, macOS (arm64).</p>
