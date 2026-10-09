@@ -94,7 +94,7 @@
     FosterStack is a self-hosted remote build cache server — a Develocity Build Cache Node
     replacement that speaks the same Gradle remote build cache HTTP protocol, so migrating is
     mostly a URL change. The same server implements the Apache Maven Build Cache Extension's
-    remote HTTP mode (Maven acceptance coverage is in progress), so a mixed Gradle and Maven
+    remote HTTP mode, so a mixed Gradle and Maven
     shop runs one deploy instead of two. Open source core, one-command deploy, and the thing
     that matters: it stays patched, on a promise.
   </p>
@@ -135,6 +135,33 @@ curl localhost:8080/healthz   # -&gt; ok</code></pre>
     <div class="card"><h3>Acceptance-tested</h3><p>Every change runs against a real multi-module Gradle build in CI: a from-scratch second build must produce real remote-cache hits, or the change does not merge.</p></div>
     <div class="card"><h3>30-minute migration</h3><p>A step-by-step guide for existing Build Cache Node deployments. Same protocol, same CI config shape — migrating is mostly a URL change.</p></div>
   </div>
+
+  <h2>Security is the difference</h2>
+  <p>Security is what sets this product apart. The release items below ship in the current release. The supply-chain items describe how we work today, in our own build and CI. You can check each one yourself.</p>
+  <h3>Signed and verifiable</h3>
+  <ul class="trust">
+    <li><strong>Signed releases.</strong> Images and the checksums file are signed with Sigstore, with no signing key stored anywhere. <a href="https://github.com/fosterstack/cache/blob/main/docs/verify-images.md">How to verify</a>.</li>
+    <li><strong>Build provenance.</strong> Every image and binary archive carries a signed statement naming the CI run that built it.</li>
+    <li><strong>A bill of materials.</strong> Every binary archive ships with an SBOM.</li>
+    <li><strong>Published vulnerability statements.</strong> A VEX file with each release says which known vulnerabilities do and do not affect it.</li>
+    <li><strong>Reproducible.</strong> Each image is assembled a second time on a separate machine, and the digests must match or the release fails.</li>
+  </ul>
+  <h3>Supply chain</h3>
+  <ul class="trust">
+    <li><strong>Pinned build steps.</strong> Every GitHub Action our releases use is pinned to an exact commit, and a check in CI enforces it on every change. The container base image is pinned by digest.</li>
+    <li><strong>Hash-checked installs.</strong> Python tooling in our CI is installed with hash checking, so a swapped package is refused.</li>
+    <li><strong>A 7-day wait.</strong> Our CI holds new dependency versions for 7 days before adopting them, and Dependabot has the same cooling-off period.</li>
+    <li><strong>A daily supply-chain check.</strong> Once a day, everything our build and CI pull in (actions, tools, packages) is checked against public advisory databases and malicious-package reports. Any hit opens an issue.</li>
+    <li><strong>Scanned before release.</strong> Two independent scanners with different databases check every release candidate, and any finding blocks the release unless a published VEX statement explains it. <a href="https://github.com/fosterstack/cache/blob/main/RELEASING.md">RELEASING.md</a>.</li>
+    <li><strong>Rescanned every day.</strong> Every published image is scanned again daily, so a new vulnerability in something we shipped raises an issue.</li>
+  </ul>
+  <h3>Small, quiet and patched</h3>
+  <ul class="trust">
+    <li><strong>Tiny and quiet.</strong> A distroless image with one static program and no shell. It sends no telemetry and makes no outbound connections.</li>
+    <li><strong>A FIPS build.</strong> A FIPS variant uses Go's validated FIPS 140-3 cryptographic module.</li>
+    <li><strong>Patched for everyone.</strong> We aim to ship dependency fixes within 48 hours of disclosure. That is a target, not a promise. Security patches are never withheld from the free tier.</li>
+    <li><strong>Report a problem privately.</strong> See the <a href="/security/">security policy</a>.</li>
+  </ul>
 
   <h2>Built to be verified, not trusted</h2>
   <p>We're a new vendor asking to sit in your build pipeline, so the burden of proof is on us.

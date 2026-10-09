@@ -12,7 +12,7 @@ distribution, support, or updates after 2026-12-31. Teams running it on open-sou
 Gradle, with no Develocity licence, are orphaned on 2027-01-01. FosterStack Cache
 speaks Gradle's documented `HttpBuildCache` protocol — acceptance-tested against a
 real multi-module Gradle build in CI — and implements the Apache Maven Build Cache
-Extension's remote HTTP mode (Maven acceptance coverage is in progress). Same server,
+Extension's remote HTTP mode. Same server,
 same core.
 
 It is a single static Go binary (`CGO_ENABLED=0`), MIT-licensed, distributed as bare
@@ -79,8 +79,7 @@ published schedule for what follows; the roadmap below says direction, not dates
 
 Not yet shipped:
 
-- Production use beyond the project's own CI. Nobody runs this in a real build
-  pipeline yet except the maintainer.
+- Production use beyond the project's own CI.
 - A Helm chart. Deploying to Kubernetes today means applying plain manifests.
 - The paid tiers. Team ($49/mo: multi-user access control, SSO, per-project
   analytics, email support), Business ($199/mo: adds HA/replication, priority
