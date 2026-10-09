@@ -132,17 +132,19 @@ buildCache {
 &lt;/extensions&gt;</code></pre>
   <p>Point it at the server in <code>.mvn/maven-build-cache-config.xml</code>:</p>
   <pre><code>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
-&lt;cache xmlns="http://maven.apache.org/BUILD-CACHE-CONFIG/1.2.0"&gt;
+&lt;cache xmlns="http://maven.apache.org/BUILD-CACHE-CONFIG/1.2.0"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://maven.apache.org/BUILD-CACHE-CONFIG/1.2.0 https://maven.apache.org/xsd/build-cache-config-1.2.0.xsd"&gt;
   &lt;configuration&gt;
     &lt;enabled&gt;true&lt;/enabled&gt;
+    &lt;!-- FosterStack Cache — remote Maven build cache.
+         https://github.com/fosterstack/cache --&gt;
+    &lt;remote enabled="true" saveToRemote="true" id="fosterstack-cache"&gt;
+      &lt;url&gt;https://cache.example.com/&lt;/url&gt;
+    &lt;/remote&gt;
   &lt;/configuration&gt;
-  &lt;!-- FosterStack Cache — remote Maven build cache.
-       https://github.com/fosterstack/cache --&gt;
-  &lt;remote enabled="true" id="fosterstack-cache"&gt;
-    &lt;url&gt;https://cache.example.com/&lt;/url&gt;
-  &lt;/remote&gt;
 &lt;/cache&gt;</code></pre>
-  <p>If the server uses Basic Auth, add a matching <code>&lt;server&gt;</code> with the same <code>id</code> (<code>fosterstack-cache</code>) in <code>~/.m2/settings.xml</code>. Then run <code>mvn install</code>.</p>
+  <p>The <code>remote</code> element must be inside <code>configuration</code>, and <code>saveToRemote="true"</code> is what makes the machine upload; without it the server stays empty. If the server uses Basic Auth, add a matching <code>&lt;server&gt;</code> with the same <code>id</code> (<code>fosterstack-cache</code>) in <code>~/.m2/settings.xml</code>. Then run <code>mvn install</code>.</p>
   <p>The extension itself is Apache's project. If your hit rate looks low, start with the extension's own configuration guide.</p>
 
   <h2>Step 4: Check that it works</h2>
