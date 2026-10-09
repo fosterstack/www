@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Build Cache Node end of life: what happens and your options</title>
-<meta name="description" content="The free Develocity Build Cache Node stops getting updates after December 31, 2026. What stops, what keeps working, and the three options a team has.">
+<meta name="description" content="The free Develocity Build Cache Node will no longer be distributed or supported after December 31, 2026. What stops, what keeps working, and the three options a team has.">
 <link rel="canonical" href="https://fosterstack.com/build-cache-node-end-of-life/">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/favicon.ico" sizes="any">
@@ -79,24 +79,24 @@
 </header>
 <main>
   <h1>Build Cache Node end of life: what happens and your options</h1>
-  <p class="lede">The free Develocity Build Cache Node stops getting updates after December&nbsp;31, 2026. Here is what that means for your builds, and the three things a team can do.</p>
+  <p class="lede">The free Develocity Build Cache Node will no longer be distributed or supported after December&nbsp;31, 2026. Here is what that means for your builds, and the three things a team can do.</p>
 
   <h2>What stops on December 31</h2>
   <p>Gradle Inc. says the free standalone Build Cache Node "will no longer be distributed, supported or available after December&nbsp;31,&nbsp;2026." In plain words:</p>
   <ul class="trust">
-    <li>No more updates, so no more security fixes.</li>
-    <li>No more support from the vendor.</li>
-    <li>No more distribution of the container image.</li>
+    <li>It will no longer be distributed.</li>
+    <li>It will no longer be supported.</li>
+    <li>It will no longer be available.</li>
   </ul>
   <p class="muted-note">Source: the vendor's <a href="https://docs.develocity.ai/bcn/21.2/">official notice</a>.</p>
 
   <h2>What keeps working</h2>
-  <p>A Build Cache Node you already run does not switch itself off. Your Gradle builds keep talking to it. A build cache only speeds builds up, so if it is slow, empty or down, the worst case is a slower build, not a wrong one.</p>
-  <p>What changes is that the server is frozen. Anything found in it after that date stays unfixed.</p>
+  <p>What happens to a node you already run is for the vendor to say, so read their notice. What holds for any build cache: it only speeds builds up, so if it is slow, empty or down, the worst case is a slower build, not a wrong one.</p>
+  <p>What changes is that the vendor says it will no longer support it.</p>
 
   <h2>Your three options</h2>
   <div class="cards">
-    <div class="card"><h3>1. Stay on the old node</h3><p>Costs nothing today. After the date it gets no updates, so you carry every future vulnerability yourself.</p></div>
+    <div class="card"><h3>1. Stay on the old node</h3><p>Costs nothing today. After the date the vendor will no longer support it, so keeping it safe is on you.</p></div>
     <div class="card"><h3>2. Move to the vendor's paid platform</h3><p>Check the vendor's own notice, linked above, for what it offers and what it costs.</p></div>
     <div class="card"><h3>3. Self-host a replacement</h3><p>Same protocol, your servers, no subscription. FosterStack Cache is one such replacement.</p></div>
   </div>
