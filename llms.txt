@@ -20,6 +20,14 @@ binaries and distroless container images. Every release is keylessly signed with
 Sigstore and carries SLSA build provenance, so the exact bytes you deploy are
 verifiable against the CI run that produced them.
 
+## Guides on this site
+
+- [Build Cache Node end of life](https://fosterstack.com/build-cache-node-end-of-life/): what happens and your options.
+- [Migrate from Build Cache Node](https://fosterstack.com/migrate-build-cache-node/): Gradle and Maven setup and how to check it works.
+- [Questions and answers](https://fosterstack.com/build-cache-node-faq/): cost, readiness, security, what is not built.
+- [Jenkins and CI build cache](https://fosterstack.com/jenkins-ci-build-cache/): one shared cache for CI runners.
+- [How FosterStack Cache is built and signed](https://fosterstack.com/how-we-build/): the release steps and what you can verify.
+
 ## Product
 
 - [FosterStack Cache on GitHub](https://github.com/fosterstack/cache): MIT-licensed source, issues, releases.
@@ -49,7 +57,7 @@ verifiable against the CI run that produced them.
 
 ## Status
 
-FosterStack Cache is at v0.1 — early. The cache core, HTTP surface, eviction,
+FosterStack Cache is at v0.2 — early. The cache core, HTTP surface, eviction,
 metrics and the signed release pipeline are shipped and testable today. There is no
 published schedule for what follows; the roadmap below says direction, not dates.
 
