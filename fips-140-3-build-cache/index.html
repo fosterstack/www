@@ -115,7 +115,7 @@
   <h2>What this tells you, and what it does not</h2>
   <ul class="trust">
     <li>It shows the running program is using Go's validated module. The validation is of that cryptographic module.</li>
-    <li>Our own tests run the whole suite against the FIPS build with the module set to refuse any algorithm it does not approve. That proves the code paths the tests reach. It does not exercise the released FIPS image itself, which no test currently runs.</li>
+    <li>Our own tests run the whole suite against the FIPS build with the module set to refuse any algorithm it does not approve. That proves the code paths the tests reach. Before publishing, the release runs the released FIPS binary (Linux, amd64) and requires its status page to show the <code>active (Go validated module ...)</code> line. It also starts the FIPS image and stores and fetches a test entry through it. No test yet reads the status page of the running FIPS image, so checking it yourself, as shown above, is still worth doing.</li>
     <li>FosterStack Cache is not "FedRAMP compliant" or "CMMC compliant". Those attach to your service and your organisation, never to a component you deploy. The FIPS build is validated crypto for your compliance program, not a substitute for it.</li>
   </ul>
 
