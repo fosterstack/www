@@ -88,14 +88,14 @@
 </header>
 <main>
   <h1>Can feature branches share the build cache with main?</h1>
-  <p class="lede">Your feature-branch builds do reuse what main already built. In our runs only the module a branch changed was rebuilt, and a read-only login kept the branch's result out of the cache.</p>
+  <p class="lede">Your feature-branch builds do reuse what main already built. Give them the read-only login and turn pushing off, so a branch reads main's results without adding its own.</p>
 
   <h2>The short answer</h2>
   <ul class="trust">
-    <li><strong>A branch restores what main built.</strong> After a method-body change in one module, that module ran and the other three came from the cache.</li>
-    <li><strong>The branch name does not matter, only the code.</strong> A second branch with the same change restored the first branch's result, and so did main after the merge.</li>
-    <li><strong>With the write login, a branch adds its own entries and leaves main's alone.</strong> The body change added one entry, and a new public method added four. Main's entries stayed, and main still restored everything.</li>
-    <li><strong>With the read-only login, the branch added nothing.</strong> But with pushing on, the first refused upload switched the remote cache off for the rest of that build, and the other three modules ran instead of being restored.</li>
+    <li><strong>A branch restores what main built.</strong> After a method-body change in one module, that module ran and the other three came from the cache. After a new public method in that module, all four ran.</li>
+    <li><strong>In our runs the branch name did not matter, only the code.</strong> A second branch with the identical change restored the first branch's result, and so did main after a fast-forward merge.</li>
+    <li><strong>With the write login, a branch adds its own entries.</strong> The body change added one entry, and a new public method added four. All of main's entries were still there, and main still restored everything.</li>
+    <li><strong>With the read-only login, the branch added nothing.</strong> But with pushing on, the first refused upload switched the remote cache off for the rest of that build. On feature-a, the three unchanged modules then ran instead of being restored.</li>
   </ul>
 
   <h2>What to do</h2>
@@ -103,7 +103,7 @@
   <ul class="trust">
     <li><strong>Let main, or CI you trust, write to the cache.</strong> It gives branches something to restore. See <a href="/gradle-build-cache-ci-writes-developers-read/">let CI write, developers only read</a>.</li>
     <li><strong>Give branch and pull-request builds the read-only login.</strong> Whoever can write can change what every build restores. See <a href="/can-someone-poison-our-build-cache/">can someone poison our shared build cache</a>.</li>
-    <li><strong>For those builds, also turn pushing off.</strong> In Gradle that is <code>isPush = false</code>. In our runs a read-only build with pushing on lost its restores after the first refused upload.</li>
+    <li><strong>For those builds, also turn pushing off.</strong> In Gradle that is <code>isPush = false</code>. Pushing off keeps the restores working; it is not a lock. In one run (feature-a) a read-only build with pushing on lost its restores after the first refused upload.</li>
   </ul>
   <p>To see why a laptop restores what CI built, see <a href="/laptop-builds-reuse-ci-build-cache/">your laptop builds reuse what CI already built</a>.</p>
 
@@ -121,12 +121,12 @@
       <tr><td>feature-b</td><td>write, on</td><td>ran</td><td>ran</td><td>ran</td><td>ran</td><td>14 to 18</td></tr>
       <tr><td>main afterwards</td><td>read-only, off</td><td>from cache</td><td>from cache</td><td>from cache</td><td>from cache</td><td>18 to 18</td></tr>
       <tr><td>feature-a2</td><td>read-only, off</td><td>from cache</td><td>from cache</td><td>from cache</td><td>from cache</td><td>18 to 18</td></tr>
-      <tr><td>main after merging feature-a</td><td>write, on</td><td>from cache</td><td>from cache</td><td>from cache</td><td>from cache</td><td>18 to 18</td></tr>
+      <tr><td>main after merging feature-a (a fast-forward)</td><td>write, on</td><td>from cache</td><td>from cache</td><td>from cache</td><td>from cache</td><td>18 to 18</td></tr>
     </tbody>
   </table></div>
-  <p class="muted-note">Each cell is the compile task of that module. Each build used a clean checkout of the branch, a new empty Gradle home, no Gradle daemon and no local build cache. The first build stored 13 entries: four compile outputs and nine compiled build scripts. After the read-only builds with pushing on, the entry names on the server were the same as before. After the write builds, every entry that main had stored was still there. The two refused-upload builds each printed one line saying the entry could not be stored, with response status 403, and ended with a line saying the remote cache was disabled during the build due to errors.</p>
+  <p class="muted-note">Each cell is the compile task of that module. Each build used a clean checkout of the branch, a new empty Gradle home, no Gradle daemon and no local build cache. The first build stored 13 entries: four compile outputs and nine other entries, the compiled build scripts. After the read-only builds with pushing on, the entry names on the server were the same as before. After the write builds, every entry that main had stored was still there. The two refused-upload builds each printed one line saying the entry could not be stored, with response status 403, and ended with a line saying the remote cache was disabled during the build due to errors.</p>
   <p class="muted-note">Setup: FosterStack Cache 0.2.1, Gradle 9.8.0, Temurin 21.0.12.1, a Mac (arm64), over plain HTTP on the same machine, with test passwords. The project is the four-module project from <a href="/gradle-build-cache-monorepo/">Gradle build cache for a monorepo</a>. We make no claim about build times.</p>
-  <p class="muted-note">Not tested: Maven, a branch that changes a build script or a dependency, a merge that is not a fast-forward, other Gradle versions, TLS, and many branches building at once.</p>
+  <p class="muted-note">Not tested: Maven, tasks other than compile, a branch that changes a build script or a dependency, a branch from a fork, pull requests as such, branches with more than one commit, a merge that is not a fast-forward (ours was a fast-forward), other Gradle versions, TLS, and many branches building at once.</p>
 </main>
 <footer>
   <div>
