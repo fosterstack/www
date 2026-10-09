@@ -92,14 +92,14 @@
 
   <h2>The short answer</h2>
   <ul class="trust">
-    <li>Compile tasks store an entry each.</li>
-    <li>The compiled build scripts store entries too, which is why the count is higher than your task count.</li>
+    <li>Each <code>compileJava</code> task stored one entry.</li>
+    <li>The compiled build scripts stored entries too, which is why there are more entries than compile tasks. On a Gradle home that had already compiled them, they were not stored again.</li>
     <li>The jar, classes, assemble and build tasks stored nothing in our run.</li>
-    <li>The 13 entries from a four-module build took about 35 KB.</li>
+    <li>The 13 entries from a four-module build took about 36 KB.</li>
   </ul>
 
   <h2>What we ran</h2>
-  <p>The four-module build from <a href="/gradle-build-cache-monorepo/">Gradle build cache for a monorepo</a>: <code>core</code>, <code>util</code>, <code>api</code> and <code>app</code>, each with 12 small Java classes and a Kotlin build file. We started a new, empty server and ran <code>gradle build -i</code> once, with the local cache off. The <code>-i</code> flag makes Gradle print a line each time it stores something. The build ended with <code>BUILD SUCCESSFUL</code>.</p>
+  <p>The four-module build from <a href="/gradle-build-cache-monorepo/">Gradle build cache for a monorepo</a>: <code>core</code>, <code>util</code>, <code>api</code> and <code>app</code>, each with 12 small Java classes and a Kotlin build file. We started a new, empty server and ran <code>gradle build --console=plain --no-daemon -i</code> once, with the local cache off and a new, empty Gradle home. The <code>-i</code> flag makes Gradle print a line each time it stores something. The build ended with <code>BUILD SUCCESSFUL</code>. The project has no tests, so there are no test entries here; for those, see <a href="/gradle-test-task-from-cache/">Gradle test task FROM-CACHE</a>.</p>
   <p>The server's status page then said: 13 entries, 36,054 bytes.</p>
 
   <h2>What the 13 entries were</h2>
@@ -120,15 +120,15 @@ Stored cache entry for Kotlin DSL script compilation (Project/TopLevel/stage1) w
 Stored cache entry for Kotlin DSL script compilation (Project/TopLevel/stage2) with cache key ...</code></pre>
 
   <h2>What was not stored</h2>
-  <p>These tasks ran and stored nothing: <code>classes</code>, <code>jar</code>, <code>assemble</code> and <code>build</code> for each of the four modules. In our other runs the jar tasks never printed <code>FROM-CACHE</code> either. You will see them run on every fresh checkout, and that is normal.</p>
+  <p>These tasks ran and stored nothing: <code>classes</code>, <code>jar</code>, <code>assemble</code> and <code>build</code> for each of the four modules. In our other runs the jar tasks never printed <code>FROM-CACHE</code> either. In our builds you will see them run on every fresh checkout.</p>
 
   <h2>See it for your own build</h2>
-  <p>Start from an empty cache, run your build once with <code>-i</code>, and count:</p>
+  <p>Start from an empty cache, run your build once with <code>-i</code>, and count. We ran exactly this command and it printed the same entries:</p>
 <pre tabindex="0"><code>gradle build -i | grep "Stored cache entry"</code></pre>
-  <p>The server's status page (<code>/statusz</code>) shows the entry count and the size in bytes. To see how it changes as you build, see <a href="/monitor-build-cache-prometheus-grafana/">monitor the cache with Prometheus and Grafana</a>. To pick a size limit from real numbers, see <a href="/build-cache-server-sizing/">how big a server does a build cache need</a> and <a href="/build-cache-eviction-size-limit/">how the size limit works</a>.</p>
+  <p>If your Gradle home has already compiled your build scripts, you will not see the script entries again: in a second test with the same Gradle home, only the 4 <code>compileJava</code> entries were stored, and the server held 4 entries and 11,409 bytes. The server's status page (<code>/statusz</code>) shows the entry count and the size in bytes. To see how it changes as you build, see <a href="/monitor-build-cache-prometheus-grafana/">monitor the cache with Prometheus and Grafana</a>. To pick a size limit from real numbers, see <a href="/build-cache-server-sizing/">how big a server does a build cache need</a> and <a href="/build-cache-eviction-size-limit/">how the size limit works</a>.</p>
 
   <h2>If an entry you expect is missing</h2>
-  <p>Look at <a href="/gradle-build-cache-hit-rate-low/">why the hit rate is low</a> and <a href="/gradle-build-cache-enable-disable/">enable or disable the Gradle build cache</a>. A task that never stores anything, such as the jar tasks above, cannot come from the cache.</p>
+  <p>Look at <a href="/gradle-build-cache-hit-rate-low/">why the hit rate is low</a> and <a href="/gradle-build-cache-enable-disable/">enable or disable the Gradle build cache</a>. A task that stored nothing in your build, such as the jar tasks in ours, could not come from the cache.</p>
 
   <p class="muted-note">Run on Gradle 9.8.0 with FosterStack Cache 0.2.1, macOS (arm64), Java 27.</p>
 </main>

@@ -88,31 +88,33 @@
 </header>
 <main>
   <h1>Maven build cache: are tests skipped when a build is restored?</h1>
-  <p class="lede">With the Apache Maven Build Cache Extension, a restored module is not built at all, so its tests do not run. Here is what a real run showed against a self-hosted cache (FosterStack Cache 0.2.1, Maven 3.10.0, extension 1.2.3, JUnit 5.11.0), including what happens when a test fails.</p>
+  <p class="lede">With the Apache Maven Build Cache Extension, a restored module was not built at all in our one-module run, so its tests did not run. Here is what a real run showed against a self-hosted cache (FosterStack Cache 0.2.1, Maven 3.10.0, extension 1.2.3, JUnit 5.11.0), including what happens when a test fails.</p>
 
   <h2>The short answer</h2>
   <ul class="trust">
-    <li>Another machine with the same code restored the whole build. No compile, no tests.</li>
+    <li>A fresh copy with the same code restored the whole build. No compile, no tests.</li>
     <li>Change the main code or the tests and Maven built the module and ran the tests again.</li>
-    <li>A failing test ran again every time. A failing build was never restored.</li>
+    <li>In our runs, a failing test ran again each time, and a failing build was not restored.</li>
   </ul>
 
   <h2>What we ran</h2>
-  <p>A one-module Maven project with one class and two JUnit tests, run with the Surefire plugin (3.5.2). Every build used a fresh copy of the project and an empty local build cache, so the only shared thing was the cache server. All runs used <code>mvn verify</code>. We counted the <code>Tests run:</code> line that Maven prints.</p>
+  <p>A one-module Maven project with one class and two JUnit tests, run with the Surefire plugin (3.5.2). Every build used a fresh copy of the project on the same Mac and an empty local build cache. The builds shared the cache server, and one Maven repository folder so the test libraries were downloaded once. All runs used <code>mvn verify</code>, with extra options for the cache location and the shared repository. The cache setup is the one on <a href="/maven-remote-build-cache-setup/">Maven remote build cache setup</a>. We counted the <code>Tests run:</code> line that Maven prints.</p>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <thead><tr><th>Run</th><th>Result</th><th>Tests run</th></tr></thead>
     <tbody>
       <tr><td>1. First build, as CI would do it</td><td>Built, <code>BUILD SUCCESS</code></td><td>2</td></tr>
-      <tr><td>2. Another machine, same code</td><td>Restored from the cache, <code>BUILD SUCCESS</code></td><td>none</td></tr>
+      <tr><td>2. Fresh copy, same code</td><td>Restored from the cache, <code>BUILD SUCCESS</code></td><td>none</td></tr>
       <tr><td>3. Change the main code</td><td>Built, <code>BUILD SUCCESS</code></td><td>2</td></tr>
       <tr><td>4. Add a test</td><td>Built, <code>BUILD SUCCESS</code></td><td>3</td></tr>
       <tr><td>5. A test that fails</td><td>Built, <code>BUILD FAILURE</code></td><td>2, with 1 failure</td></tr>
       <tr><td>6. The same failing test, fresh copy</td><td>Built again, <code>BUILD FAILURE</code></td><td>2, with 1 failure</td></tr>
     </tbody>
   </table></div>
-  <p>In run 2 Maven restored the module and then listed every step it skipped, the tests included:</p>
+  <p>In run 2 Maven restored the module and then listed the steps it skipped, the tests included:</p>
 <pre tabindex="0"><code>[INFO] Found cached build, restoring demo:mtest from cache by checksum ...
+[INFO] Skipping plugin execution (cached): resources:resources
 [INFO] Skipping plugin execution (cached): compiler:compile
+[INFO] Skipping plugin execution (cached): resources:testResources
 [INFO] Skipping plugin execution (cached): compiler:testCompile
 [INFO] Skipping plugin execution (cached): surefire:test
 [INFO] Skipping plugin execution (cached): jar:jar</code></pre>
@@ -120,8 +122,8 @@
   <h2>What this means for your builds</h2>
   <ul class="trust">
     <li><strong>The tests are skipped as part of restoring the whole module.</strong> Maven restores the module's result and then skips each step, <code>surefire:test</code> among them. In Gradle the test task is taken from the cache as an entry of its own; see <a href="/gradle-test-task-from-cache/">Gradle test task FROM-CACHE</a>.</li>
-    <li><strong>A passing build is reusable, a failing one is not.</strong> In runs 5 and 6 the tests ran and failed each time. A fresh copy of the same broken code did not get a restored result.</li>
-    <li><strong>Any change to the module rebuilds it and runs all its tests.</strong> Run 3 changed one line of main code and both tests ran again. Run 4 added a test and all three ran.</li>
+    <li><strong>A passing build was reusable, a failing one was not.</strong> In runs 5 and 6 the tests ran and failed each time. A fresh copy of the same broken code did not get a restored result.</li>
+    <li><strong>Each change we made rebuilt the module and ran all its tests.</strong> Run 3 changed one line of main code and both tests ran again. Run 4 added a test and all three ran. We did not try a comment-only edit or a change to a non-source file.</li>
   </ul>
   <p>We did not test a project with several modules here. For that, see <a href="/maven-build-cache-extension-multi-module/">Maven build cache extension in a multi-module project</a>. We also did not test tests that read the clock, the network or files outside the project: if a test result depends on something Maven does not see, a restored pass could stand when it should not. That is a decision about your tests, not about the cache.</p>
 

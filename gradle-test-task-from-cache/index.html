@@ -94,22 +94,22 @@
 
   <h2>The short answer</h2>
   <ul class="trust">
-    <li>Another machine with the same code gets <code>:test FROM-CACHE</code>. The tests are not run.</li>
+    <li>A fresh copy of the project with the same code got <code>:test FROM-CACHE</code>. The tests were not run.</li>
     <li>Change the main code or the test code and the tests run again.</li>
-    <li>A comment-only edit recompiled the main code, but the tests still came from the cache.</li>
-    <li>A failing test ran again every time. It was not taken from the cache.</li>
+    <li>A comment added on the same line recompiled the main code, but the tests still came from the cache.</li>
+    <li>In our two runs, a failing test ran again each time. It was not taken from the cache.</li>
   </ul>
 
   <h2>What we ran</h2>
-  <p>A small Java project with one class and two JUnit tests. Every run used a fresh copy of the project, the local build cache was switched off, and the only thing the runs shared was the cache server. All the runs used <code>gradle test --console=plain --no-daemon</code>. (The runs shared one Gradle home folder only so the test libraries were downloaded once.)</p>
+  <p>A small Java project with one class and two JUnit tests. Every run used a fresh copy of the project on the same Mac, with the same Java and Gradle, and the local build cache was switched off. The runs shared the cache server, and one Gradle home folder so the test libraries were downloaded once. A different machine or Java version was not tested. All the runs used <code>gradle test --console=plain --no-daemon</code>.</p>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <thead><tr><th>Run</th><th>compileJava</th><th>compileTestJava</th><th>test</th></tr></thead>
     <tbody>
       <tr><td>1. First build, as CI would do it</td><td>ran</td><td>ran</td><td>ran</td></tr>
-      <tr><td>2. Another machine, same code</td><td>FROM-CACHE</td><td>FROM-CACHE</td><td>FROM-CACHE</td></tr>
+      <tr><td>2. Fresh copy, same code</td><td>FROM-CACHE</td><td>FROM-CACHE</td><td>FROM-CACHE</td></tr>
       <tr><td>3. Change the main code</td><td>ran</td><td>FROM-CACHE</td><td>ran</td></tr>
       <tr><td>4. Add a test</td><td>FROM-CACHE</td><td>ran</td><td>ran</td></tr>
-      <tr><td>5. Add a comment to the main code</td><td>ran</td><td>FROM-CACHE</td><td>FROM-CACHE</td></tr>
+      <tr><td>5. Add a comment on the same line in the main code</td><td>ran</td><td>FROM-CACHE</td><td>FROM-CACHE</td></tr>
       <tr><td>6. A test that fails</td><td>FROM-CACHE</td><td>ran</td><td>FAILED</td></tr>
       <tr><td>7. The same failing test, fresh copy</td><td>FROM-CACHE</td><td>FROM-CACHE</td><td>FAILED</td></tr>
     </tbody>
@@ -119,10 +119,10 @@
 
   <h2>What this means for your builds</h2>
   <ul class="trust">
-    <li><strong>CI pays once, everyone else skips.</strong> After CI has run the tests for a change, a laptop with the same code does not run them again (run 2).</li>
-    <li><strong>Only the tests that could change are rerun.</strong> Changing test code left the main code's compile step in the cache (run 4). Changing the main code left the test code's compile step in the cache (run 3).</li>
-    <li><strong>An edit that changes no compiled output can still skip the tests (run 5).</strong> The comment made Gradle compile the main code again, but the result was the same classes, so the test task found its stored result.</li>
-    <li><strong>A failing test is never skipped.</strong> In runs 6 and 7 the test task ran and failed each time. In run 7, a fresh copy of the same broken code ran the tests again and reported <code>2 tests completed, 1 failed</code>.</li>
+    <li><strong>The first run pays, the next skips.</strong> After the tests have run once for a change, a fresh copy with the same code did not run them again (run 2). With CI and laptops that is the idea, though we ran everything on one Mac.</li>
+    <li><strong>In our runs, only the steps whose inputs changed ran again.</strong> Changing test code left the main code's compile step in the cache (run 4). Changing the main code left the test code's compile step in the cache (run 3).</li>
+    <li><strong>An edit that does not change the compiled output can still skip the tests (run 5).</strong> The comment made Gradle compile the main code again, but the compiled output evidently did not change, because the test task found its stored result. We only tried a comment on the same line; a comment that adds lines can change the compiled output, and we did not test that.</li>
+    <li><strong>A failing test was not skipped.</strong> In runs 6 and 7 the test task ran and failed each time. In run 7, a fresh copy of the same broken code ran the tests again and reported <code>2 tests completed, 1 failed</code>.</li>
   </ul>
   <p>We did not test tests that read the clock, the network or files outside the project. If a test result depends on something Gradle does not see, a stored pass could be reused when it should not be. That is a decision about your tests, not about the cache.</p>
 
@@ -139,7 +139,7 @@ dependencies {
 }
 
 tasks.test { useJUnitPlatform() }</code></pre>
-  <p><code>gradle.properties</code> has one line, <code>org.gradle.caching=true</code>. <code>settings.gradle.kts</code> is the same cache setup as on <a href="/gradle-build-cache-enable-disable/">enable or disable the Gradle build cache</a>. We used <code>127.0.0.1</code> over plain HTTP because the test ran on one machine; use HTTPS across a network.</p>
+  <p><code>gradle.properties</code> has one line, <code>org.gradle.caching=true</code>. <code>settings.gradle.kts</code> is the same cache setup as on <a href="/gradle-build-cache-enable-disable/">enable or disable the Gradle build cache</a>, with a different port. We used <code>127.0.0.1</code> over plain HTTP because the test ran on one machine; use HTTPS across a network.</p>
 
   <h2>If the test task does not come from the cache</h2>
   <p>Work through <a href="/gradle-build-cache-hit-rate-low/">why the hit rate is low</a>. For a multi-module build, see <a href="/gradle-build-cache-monorepo/">Gradle build cache for a monorepo</a>.</p>
