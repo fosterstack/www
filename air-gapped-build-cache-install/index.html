@@ -87,7 +87,7 @@
     <li>The archive for your platform, for example <code>fscache_X.Y.Z_linux_amd64.tar.gz</code>.</li>
     <li><code>checksums.txt</code> and <code>checksums.txt.bundle</code>, which is the signature over the checksums.</li>
     <li><code>cosign</code>, the signature checker. It is one static binary and will not be on a fresh isolated machine.</li>
-    <li>If you run containers: the image as a tar file, for example <code>crane pull ghcr.io/fosterstack/cache:X.Y.Z fscache-X.Y.Z.tar</code>. Images are published for both <code>linux/amd64</code> and <code>linux/arm64</code>. Across a gap you pick one by hand, so pull on a machine of the destination type, or add <code>--platform</code>.</li>
+    <li>If you run containers: the image as a tar file, for example <code>crane pull ghcr.io/fosterstack/cache:X.Y.Z fscache-X.Y.Z.tar</code>. Verify the image with <code>cosign verify</code> before you export it, while you still have registry access (the <a href="https://github.com/fosterstack/cache/blob/main/docs/verify-images.md">image verification guide</a> has the command). Images are published for both <code>linux/amd64</code> and <code>linux/arm64</code>. Across a gap you pick one by hand, so pull on a machine of the destination type, or add <code>--platform</code>.</li>
   </ul>
 
   <h2>Verify before you cross the gap</h2>
@@ -108,7 +108,7 @@ sha256sum -c &lt;(grep "fscache_X.Y.Z_linux_amd64.tar.gz" checksums.txt)</code><
   <p>For containers:</p>
   <pre><code>docker load -i fscache-X.Y.Z.tar
 docker run -d -p 127.0.0.1:8080:8080 -v fscache-data:/home/nonroot ghcr.io/fosterstack/cache:X.Y.Z</code></pre>
-  <p>Put an HTTPS proxy in front of it before other machines use it. The <a href="https://github.com/fosterstack/cache/blob/main/docs/offline-install.md">offline install guide</a> has the full detail, including what to do for later upgrades.</p>
+  <p>Real deployments terminate HTTPS at a proxy in front of the server, because Gradle sends the password with every request. The <a href="https://github.com/fosterstack/cache/blob/main/docs/offline-install.md">offline install guide</a> has the full detail, including what to do for later upgrades.</p>
 
   <h2>It does not call out</h2>
   <p>The server sends no telemetry and has no update or licence check, so it behaves the same with no route to the internet.</p>
