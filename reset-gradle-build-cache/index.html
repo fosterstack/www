@@ -101,10 +101,12 @@ $ curl -s localhost:8080/testkey -o /dev/null -w &#x27;GET testkey %{http_code}\
 GET testkey 404</code></pre>
 
   <h2>Kubernetes</h2>
-  <p>Delete the volume claim. The cleanest way is to scale to zero, delete the claim, and scale back up:</p>
-  <pre><code>kubectl scale deploy/fscache --replicas=0
-kubectl delete pvc fscache-data
-kubectl scale deploy/fscache --replicas=1</code></pre>
+  <p>Delete the volume claim, then create it again. The Deployment cannot start without its claim, so the new claim is a required step. Tested on a throwaway cluster:</p>
+  <pre><code>kubectl -n fscache-ns scale deploy/fscache --replicas=0
+kubectl -n fscache-ns delete pvc fscache-data
+kubectl -n fscache-ns apply -f fscache-pvc.yaml   # your claim manifest, the same one you first applied
+kubectl -n fscache-ns scale deploy/fscache --replicas=1</code></pre>
+  <p>Without the third line, the pod stays <code>Pending</code> with the event <code>persistentvolumeclaim "fscache-data" not found</code>. With it, the pod starts on an empty volume: <code>/statusz</code> showed <code>"store_entries": 0</code> and a key stored before the reset returned 404.</p>
   <p>Keep it at one replica. See <a href="/gradle-build-cache-kubernetes/">Gradle build cache on Kubernetes</a>.</p>
 
   <h2>A plain binary</h2>
