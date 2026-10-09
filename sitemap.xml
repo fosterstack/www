@@ -191,4 +191,8 @@
     <loc>https://fosterstack.com/maven-build-cache-extension-multi-module/</loc>
     <lastmod>2026-10-08</lastmod>
   </url>
+  <url>
+    <loc>https://fosterstack.com/gradle-test-task-from-cache/</loc>
+    <lastmod>2026-10-09</lastmod>
+  </url>
 </urlset>
