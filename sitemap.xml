@@ -231,4 +231,8 @@
     <loc>https://fosterstack.com/laptop-builds-reuse-ci-build-cache/</loc>
     <lastmod>2026-10-09</lastmod>
   </url>
+  <url>
+    <loc>https://fosterstack.com/build-cache-cold-after-gradle-or-maven-upgrade/</loc>
+    <lastmod>2026-10-09</lastmod>
+  </url>
 </urlset>
