@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Can I Run the Build Cache on a Small VM or Laptop?</title>
-<meta name="description" content="Yes. In our runs the FosterStack Cache server stayed under 19 MB of memory and used under half a second of CPU across 30 builds, and worked in a 64 MB container.">
+<meta name="description" content="Can a small VM or laptop run the build cache? Measured on FosterStack Cache 0.2.1: under 19 MiB of memory, under half a second of CPU in total, and a 64 MiB container worked.">
 <meta property="og:title" content="Can I Run the Build Cache on a Small VM or Laptop?">
-<meta property="og:description" content="Yes. In our runs the FosterStack Cache server stayed under 19 MB of memory and used under half a second of CPU across 30 builds, and worked in a 64 MB container.">
+<meta property="og:description" content="Can a small VM or laptop run the build cache? Measured on FosterStack Cache 0.2.1: under 19 MiB of memory, under half a second of CPU in total, and a 64 MiB container worked.">
 <meta property="og:url" content="https://fosterstack.com/run-build-cache-on-a-small-vm-or-laptop/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="FosterStack">
@@ -88,43 +88,35 @@
 </header>
 <main>
   <h1>Can I run the build cache on a small VM or laptop?</h1>
-  <p class="lede">Yes. In our runs the FosterStack Cache server never used more than 19 MB of memory, and it used under half a second of CPU across more than 30 builds. It also kept working inside a container limited to 64 MB.</p>
+  <p class="lede">In our runs the FosterStack Cache server, which you run yourself, stayed under 19 MiB of memory and used under half a second of CPU in total across 31 builds. It also kept working inside a container limited to 64 MiB.</p>
 
   <h2>What to do</h2>
   <p>Our advice, not a test result:</p>
   <ul class="trust">
-    <li><strong>Memory is not the constraint.</strong> A 1 GB machine is far more than the server needs. The server is a small program that mostly reads and writes files.</li>
-    <li><strong>Disk is.</strong> Plan the disk for how much cache you want to keep, and set a size cap. See <a href="/build-cache-server-sizing/">how big a server a build cache needs</a>.</li>
+    <li><strong>Memory was not the constraint in our tests.</strong> A 1 GB machine, the minimum in <a href="/build-cache-server-sizing/">our sizing guide</a>, leaves plenty of room for loads like these. Plan RAM for the whole machine, not just the server.</li>
+    <li><strong>Disk is the one to plan.</strong> Decide how much cache you want to keep, and set a size cap. See <a href="/build-cache-server-sizing/">how big a server a build cache needs</a>.</li>
     <li><strong>A laptop is fine for a trial.</strong> For a team, use a machine that stays on and that CI and everyone can reach. See <a href="/first-15-minutes-build-cache/">your first 15 minutes with a self-hosted build cache</a>.</li>
   </ul>
 
-  <h2>What we measured</h2>
-  <ul class="trust">
-    <li><strong>Memory:</strong> 9 to 16 MB while idle, and a peak of 18.7 MB under the heaviest load.</li>
-    <li><strong>CPU:</strong> 0.46 seconds in total for one cold build, 20 builds restoring everything and 10 builds at once, on the small project.</li>
-    <li><strong>Disk:</strong> 13 stored entries, 36 KB, for the small project, and 17 entries, 531 KB, for the larger one. Builds that all stored at once on a fresh server left 49 entries, 147 KB.</li>
-    <li><strong>Ten builds at once:</strong> all succeeded, both when they restored and when they stored.</li>
-    <li><strong>A hard memory limit:</strong> in containers limited to 128 MB and to 64 MB, every build succeeded. The container was never killed for memory and never restarted. Its peak use was 16.0 MiB and 13.9 MiB.</li>
-  </ul>
-
   <h2>How we checked</h2>
+  <p>We ran the real server and measured the server process only, under Gradle builds of a small and a larger project. Memory was 9 to 16 MiB while idle at startup, and the highest we saw was 18.2 MiB. CPU was 0.46 seconds in total for one cold build, 20 builds restoring everything and 10 builds at once, on the small project. Ten builds at once all succeeded, both restoring and storing. In containers limited to 128 MiB and to 64 MiB, every build succeeded, and the container was never killed for memory or restarted. Their peaks were 16.0 MiB and 13.9 MiB.</p>
   <div class="table-scroll" role="region" aria-label="Server memory, CPU and stored data per load" tabindex="0"><table>
-    <thead><tr><th>Load on the server</th><th>Peak memory (RSS)</th><th>Server CPU</th><th>Entries / bytes stored after</th></tr></thead>
+    <thead><tr><th>Load on the server</th><th>Peak memory (MiB)</th><th>Server CPU</th><th>Entries / bytes stored after</th></tr></thead>
     <tbody>
-      <tr><td>Small project: idle for 15 s</td><td>15.2 MB</td><td>0.00 s</td><td>0 / 0</td></tr>
-      <tr><td>Small: one cold build (stores)</td><td>12.8 MB</td><td>0.03 s</td><td>13 / 36,100</td></tr>
-      <tr><td>Small: 20 builds, all restored</td><td>14.5 MB</td><td>0.28 s</td><td>13 / 36,100</td></tr>
-      <tr><td>Small: 10 builds at once, all restored</td><td>14.6 MB</td><td>0.14 s</td><td>13 / 36,100</td></tr>
-      <tr><td>Small: 10 builds at once, all stored (new server)</td><td>15.5 MB</td><td>0.22 s</td><td>49 / 146,944</td></tr>
-      <tr><td>Large project: idle for 15 s</td><td>15.9 MB</td><td>0.00 s</td><td>0 / 0</td></tr>
-      <tr><td>Large: one cold build (stores)</td><td>16.1 MB</td><td>0.03 s</td><td>17 / 531,057</td></tr>
-      <tr><td>Large: 10 builds, all restored</td><td>18.7 MB</td><td>0.17 s</td><td>17 / 531,057</td></tr>
-      <tr><td>Large: 10 builds at once, all restored</td><td>18.1 MB</td><td>0.17 s</td><td>17 / 531,057</td></tr>
+      <tr><td>Small project: idle for 15 s</td><td>14.9</td><td>0.00 s</td><td>0 / 0</td></tr>
+      <tr><td>Small: one cold build (stores)</td><td>12.5</td><td>0.03 s</td><td>13 / 36,100</td></tr>
+      <tr><td>Small: 20 builds, all restored</td><td>14.1</td><td>0.28 s</td><td>13 / 36,100</td></tr>
+      <tr><td>Small: 10 builds at once, all restored</td><td>14.3</td><td>0.14 s</td><td>13 / 36,100</td></tr>
+      <tr><td>Small: 10 builds at once, all stored (new server)</td><td>15.1</td><td>0.22 s</td><td>49 / 146,944</td></tr>
+      <tr><td>Large project: idle for 15 s</td><td>15.5</td><td>0.00 s</td><td>0 / 0</td></tr>
+      <tr><td>Large: one cold build (stores)</td><td>15.7</td><td>0.03 s</td><td>17 / 531,057</td></tr>
+      <tr><td>Large: 10 builds, all restored</td><td>18.2</td><td>0.17 s</td><td>17 / 531,057</td></tr>
+      <tr><td>Large: 10 builds at once, all restored</td><td>17.7</td><td>0.17 s</td><td>17 / 531,057</td></tr>
     </tbody>
   </table></div>
-  <p class="muted-note">What ran: FosterStack Cache 0.2.1 on a Mac (arm64), Gradle 9.8.0, Java 21.0.12.1, compile tasks only. Every build used a fresh copy of the project, a new empty Gradle home and no Gradle daemon, with Gradle's local cache off. Server memory is the resident size (RSS) read with <code>ps</code> once a second. CPU is the server process's own CPU time, which does not depend on how busy the machine is. We make no claim about build times.</p>
+  <p class="muted-note">What ran: FosterStack Cache 0.2.1 on a Mac (arm64), Gradle 9.8.0, Java 21.0.12.1, compile tasks only. Every build used a fresh copy of the project, a new empty Gradle home and no long-lived Gradle daemon, with Gradle's local cache off. Server memory is the resident size (RSS) read with <code>ps</code> once a second. CPU is the server process's own CPU time, not wall-clock time. We make no claim about build times.</p>
   <p class="muted-note">Projects: the small one has 4 modules of 12 small classes. The large one is generated: 8 modules of 300 classes each, and its 17 entries are about 531 KB. Both are small next to a real codebase, so the disk numbers will be bigger for you. The memory and CPU figures are for these loads only.</p>
-  <p class="muted-note">Containers: the 0.2.1 image with a hard limit of 128 MB and then 64 MB, no swap, on Docker Desktop. Each ran a cold build and a few warm builds, then 10 builds at once, for the small and the large project. The container reported no memory kill and no restart, and answered its health check afterwards. Peak memory is from <code>docker stats</code> every 2 seconds. Not tested: a real-sized project, a long-running server, a smaller limit than 64 MB, Maven, or a slow disk.</p>
+  <p class="muted-note">Containers: the 0.2.1 image with a hard limit of 128 MiB and then 64 MiB, no swap, with Docker on the same Mac. Each ran a cold build and a few warm builds, then 10 builds at once, for the small and the large project. The container reported no memory kill and no restart, and answered its health check afterwards. Peak memory is from <code>docker stats</code> about every 3 seconds. Not tested: a real-sized project, a long-running server, a smaller limit than 64 MiB, Maven, or a slow disk.</p>
 </main>
 <footer>
   <div>
