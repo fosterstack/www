@@ -55,8 +55,7 @@ published schedule for what follows; the roadmap below says direction, not dates
 
 Not yet shipped:
 
-- Production use beyond the project's own CI. Nobody runs this in a real build
-  pipeline yet except the maintainer.
+- Production use beyond the project's own CI.
 - A Helm chart. Deploying to Kubernetes today means applying plain manifests.
 - The paid tiers. Team ($49/mo: multi-user access control, SSO, per-project
   analytics, email support), Business ($199/mo: adds HA/replication, priority
