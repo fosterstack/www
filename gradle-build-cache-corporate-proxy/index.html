@@ -92,7 +92,7 @@
   <h2>What was tested, and what was not</h2>
   <ul class="trust">
     <li><strong>Tested:</strong> a small proxy I wrote for the test (it forwards plain HTTP, tunnels HTTPS with <code>CONNECT</code>, can refuse a host, and logs every request), the cache on a non-loopback address, once over plain HTTP and once over HTTPS through nginx with a self-signed certificate that Java was told to trust.</li>
-    <li><strong>Not tested:</strong> a real corporate proxy product, a proxy that asks for a password (407), a proxy that inspects and re-signs TLS, automatic proxy configuration files, the <code>HTTP_PROXY</code> variables, and Maven's proxy settings.</li>
+    <li><strong>Not tested:</strong> a real corporate proxy product, a proxy that asks for a password (407), a proxy that inspects and re-signs TLS, automatic proxy configuration files, and the <code>HTTP_PROXY</code> variables. Maven is covered on <a href="/maven-build-cache-corporate-proxy/">its own page</a>, where it behaves differently: for example it does not skip the proxy for loopback addresses.</li>
   </ul>
 
   <h2>The settings</h2>
