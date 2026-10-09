@@ -108,7 +108,7 @@ buildCache {
   <p>Replace <code>fscache-ns</code> with your namespace. Plain HTTP is acceptable here only because the traffic never leaves the cluster network. The manifests are in the <a href="https://github.com/fosterstack/cache/blob/main/docs/kubernetes.md">Kubernetes guide</a>.</p>
 
   <h2>Runners outside the cluster, or on plain servers</h2>
-  <p>Run the server on a host the runners can reach and put HTTPS in front of it. Gradle sends the password with every request, so over plain HTTP it travels in the clear. Gradle refuses plain HTTP to anything but localhost unless you opt in, which is a useful warning, not a nuisance. Setup is in the <a href="https://github.com/fosterstack/cache/blob/main/docs/install.md">install guide</a>.</p>
+  <p>Run the server on a host the runners can reach and put HTTPS in front of it. Gradle sends the password with every request, so over plain HTTP it travels in the clear. Gradle refuses plain HTTP unless you opt in with <code>isAllowInsecureProtocol</code>, which is a useful warning, not a nuisance. (In our test with Gradle 9.8.0, the address <code>127.0.0.1</code> was allowed without it, but the name <code>localhost</code> was refused.) Setup is in the <a href="https://github.com/fosterstack/cache/blob/main/docs/install.md">install guide</a>.</p>
 
   <h2>Give the runner the password</h2>
   <p>Store it in your CI system's secret store and expose it as the <code>FSCACHE_PASSWORD</code> environment variable. On a long-lived agent, Gradle's background daemon reads its environment once, when it starts. If you change the secret and builds quietly stop using the cache, run <code>./gradlew --stop</code> so the next build starts a fresh daemon.</p>
