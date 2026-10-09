@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Can Someone Poison Our Shared Build Cache?</title>
-<meta name="description" content="Real runs against a shared Gradle build cache: what someone with the write login can change, what the read-only login stops, and what isPush false does not.">
+<meta name="description" content="Real runs against a shared Gradle build cache: what the write login can change, what the read-only login refuses, and why isPush false is no lock.">
 <meta property="og:title" content="Can Someone Poison Our Shared Build Cache?">
-<meta property="og:description" content="Real runs against a shared Gradle build cache: what someone with the write login can change, what the read-only login stops, and what isPush false does not.">
+<meta property="og:description" content="Real runs against a shared Gradle build cache: what the write login can change, what the read-only login refuses, and why isPush false is no lock.">
 <meta property="og:url" content="https://fosterstack.com/can-someone-poison-our-build-cache/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="FosterStack">
@@ -88,15 +88,15 @@
 </header>
 <main>
   <h1>Can someone poison our shared build cache?</h1>
-  <p class="lede">Anyone who can write to a shared build cache can change what every other build restores. With FosterStack Cache you give most people a read-only login, and the server refuses their writes.</p>
+  <p class="lede">Anyone who holds the write login can change what every other build restores. FosterStack Cache does not stop that holder. It lets you give everyone else a read-only login, and in our runs the server refused their writes.</p>
 
   <h2>The short answer</h2>
-  <ul class="trust">
+  <ul style="padding-left:1.25rem">
     <li><strong>With the write login, yes.</strong> In our runs one plain HTTP request replaced a real entry. A fresh build from untouched source then restored the replaced output.</li>
     <li><strong>With the read-only login, no.</strong> Its writes and deletes were refused with a 403, and the stored entry stayed the same.</li>
     <li><strong>With no login, nothing.</strong> Reads and writes were refused with a 401.</li>
-    <li><strong>The server did not check the new entry against your project.</strong> It accepted a different valid entry and a damaged one. The damaged one failed the next build.</li>
-    <li><strong><code>isPush = false</code> is not a rule.</strong> A write login still wrote when the project said not to.</li>
+    <li><strong>The server stored whatever the write login sent.</strong> That was a different valid entry and 200 random bytes. The random bytes broke the next build.</li>
+    <li><strong><code>isPush = false</code> only stops your own build.</strong> With it set, the build uploaded nothing, but the same login could still write with a direct request.</li>
   </ul>
 
   <h2>What to do</h2>
@@ -105,11 +105,11 @@
     <li><strong>Give the write login to as few machines as you can.</strong> Usually that means CI only.</li>
     <li><strong>Give everyone else the read-only login.</strong> That includes laptops. The setup is on <a href="/gradle-build-cache-ci-writes-developers-read/">let CI write, developers only read</a>.</li>
     <li><strong>Keep builds of untrusted code on the read-only login.</strong> An example is a pull request from a fork.</li>
-    <li><strong>Do not count on <code>isPush = false</code>.</strong> It only says what your project does. The login decides what the server allows.</li>
-    <li><strong>Use HTTPS.</strong> Gradle sends the password with every request. See <a href="/remote-build-cache-security/">is a remote build cache safe</a>.</li>
+    <li><strong>Do not count on <code>isPush = false</code>.</strong> It only controls whether your own build uploads. The login is what the server enforces.</li>
+    <li><strong>Use HTTPS.</strong> Gradle sends the login with its requests. See <a href="/remote-build-cache-security/">is a remote build cache safe</a>.</li>
     <li><strong>If you doubt an entry, clear the cache.</strong> See <a href="/reset-gradle-build-cache/">how to clear or reset a build cache</a>.</li>
   </ul>
-  <p>FosterStack Cache has no per-person identity yet. A shared write login cannot tell you who wrote an entry.</p>
+  <p>FosterStack Cache has one write login and one read-only login. A shared write login cannot tell you who wrote an entry.</p>
 
   <h2>How we checked</h2>
   <p>We ran a real FosterStack Cache server with a write login and a read-only login. We built a project, then tried each login against the stored entries with plain HTTP requests.</p>
@@ -118,7 +118,7 @@
     <tbody>
       <tr><td>Read-only login</td><td>Fresh build, nothing changed</td><td>All four compile tasks came from the cache</td></tr>
       <tr><td>Write login</td><td>Put a different valid entry over the core module's entry</td><td>HTTP 201, entry replaced</td></tr>
-      <tr><td>Read-only login</td><td>Fresh build from the same untouched source</td><td>Core came from the cache, and its class file held text that is not in the source</td></tr>
+      <tr><td>Read-only login</td><td>Fresh build from the same untouched source</td><td>Core came from the cache. Its class file held text that is not in the source</td></tr>
       <tr><td>Write login</td><td>Put 200 random bytes over another entry</td><td>HTTP 201. The next build failed: <code>Not in GZIP format</code></td></tr>
       <tr><td>Read-only login</td><td>Put bytes over an entry, and over a new key</td><td>HTTP 403 both times. Entry unchanged, nothing stored</td></tr>
       <tr><td>Read-only login</td><td>Delete an entry, and read one</td><td>Delete: HTTP 403, entry still there. Read: HTTP 200</td></tr>
@@ -129,7 +129,7 @@
   </table></div>
   <p class="muted-note">What the replaced entry did: the project's source says <code>core-1-</code>. The class file restored from the replaced entry contained <code>core-1-TAMPERED-</code>. Gradle did not complain.</p>
   <p class="muted-note">What the damaged entry did: Gradle stopped with <code>Failed to load cache entry ... Could not load from remote cache: Not in GZIP format</code>. It did not skip the entry and compile instead.</p>
-  <p class="muted-note">Setup: FosterStack Cache 0.2.1 and Gradle 9.8.0 on a Mac (arm64), Temurin 21.0.12.1, all on one machine over plain HTTP on the loopback address. The project had four modules of 12 small classes. Every build used a fresh copy of the project and a new empty Gradle home, with Gradle's local cache off, so only the server could supply results.</p>
+  <p class="muted-note">Setup: FosterStack Cache 0.2.1 and Gradle 9.8.0 on a Mac (arm64), Temurin 21.0.12.1, all on one machine over plain HTTP on the loopback address. The project had four modules, 12 small classes each. Every build used a fresh copy of the project and a new empty Gradle home, with Gradle's local cache off, so only the server could supply results.</p>
   <p class="muted-note">Limits: one server and one small project. Gradle only, not Maven. No HTTPS. We tested what each login can do to an entry. We did not test how anyone would get a login.</p>
 </main>
 <footer>
