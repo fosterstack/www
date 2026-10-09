@@ -95,20 +95,26 @@
 &lt;/extensions&gt;</code></pre>
   <p>Check Maven Central for the current version. Pin one rather than a range. The versions we test against are the ones in our <a href="https://github.com/fosterstack/cache/blob/main/docs/maven.md">Maven doc</a>; a version outside that list is not something we claim to have tested.</p>
 
-  <h2>2. Point it at the server</h2>
-  <p>Create <code>.mvn/maven-build-cache-config.xml</code>:</p>
-  <pre><code>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
-&lt;cache xmlns="http://maven.apache.org/BUILD-CACHE-CONFIG/1.2.0"&gt;
+  <h2>2. Point it at the server, and switch uploads on</h2>
+  <p>Create <code>.mvn/maven-build-cache-config.xml</code>. Two details matter, and both are easy to miss:</p>
+  <ul class="trust">
+    <li>The <code>remote</code> element goes <strong>inside</strong> <code>configuration</code>. Beside it, the extension fails to start with "Unrecognised tag: 'remote'".</li>
+    <li>Add <code>saveToRemote="true"</code> on the machines that should upload. Without it the extension reads from the server but never writes to it, and the server stays empty.</li>
+  </ul>
+  <pre><code>&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;
+&lt;cache xmlns=&quot;http://maven.apache.org/BUILD-CACHE-CONFIG/1.2.0&quot;
+       xmlns:xsi=&quot;http://www.w3.org/2001/XMLSchema-instance&quot;
+       xsi:schemaLocation=&quot;http://maven.apache.org/BUILD-CACHE-CONFIG/1.2.0 https://maven.apache.org/xsd/build-cache-config-1.2.0.xsd&quot;&gt;
   &lt;configuration&gt;
     &lt;enabled&gt;true&lt;/enabled&gt;
+    &lt;!-- FosterStack Cache — remote Maven build cache.
+         https://github.com/fosterstack/cache --&gt;
+    &lt;remote enabled=&quot;true&quot; saveToRemote=&quot;true&quot; id=&quot;fosterstack-cache&quot;&gt;
+      &lt;url&gt;https://cache.example.com/&lt;/url&gt;
+    &lt;/remote&gt;
   &lt;/configuration&gt;
-  &lt;!-- FosterStack Cache — remote Maven build cache.
-       https://github.com/fosterstack/cache --&gt;
-  &lt;remote enabled="true" id="fosterstack-cache"&gt;
-    &lt;url&gt;https://cache.example.com/&lt;/url&gt;
-  &lt;/remote&gt;
 &lt;/cache&gt;</code></pre>
-  <p>Keep the comment: a cache setting that points at an unfamiliar host looks like data theft to a reviewer without it. Keep the trailing slash on the URL.</p>
+  <p>Keep the comment: a cache setting that points at an unfamiliar host looks like data theft to a reviewer without it. Keep the trailing slash on the URL. Use HTTPS for a real server.</p>
 
   <h2>3. Add the password, if the server has one</h2>
   <p>In <code>~/.m2/settings.xml</code>, or your CI system's equivalent. The <code>id</code> must match the <code>id</code> in step 2:</p>
@@ -124,8 +130,31 @@
   <p>If the server has no password set, skip this step. For laptops, the server's optional read-only login lets them read the cache without being able to write to it.</p>
 
   <h2>4. Build, then build again</h2>
-  <pre><code>mvn install</code></pre>
-  <p>The first run fills the cache. A later run from a clean checkout, or after <code>mvn clean install</code>, should show cache hits in the log for modules that did not change. If not, check the id in step 3 matches, then read the extension's own settings.</p>
+  <p>This is a real run: Maven 3.10.0, extension 1.2.3, and a 0.2.1 server, on a one-file project. First build:</p>
+  <pre><code>mvn package
+
+[INFO] Attempting to restore project demo:demo from build cache
+[ERROR] Error downloading cache item: https://cache.example.com//v1.1/demo/demo/ebb9bceba2f7a6bc/buildinfo.xml
+[INFO] Remote cache is incomplete or missing, trying local build for demo:demo
+[INFO] Saved to remote cache https://cache.example.com//v1.1/demo/demo/ebb9bceba2f7a6bc/demo.jar
+[INFO] Saved to remote cache https://cache.example.com//v1.1/demo/demo/ebb9bceba2f7a6bc/buildinfo.xml
+[INFO] BUILD SUCCESS
+[INFO] Saved to remote cache https://cache.example.com//v1.1/demo/demo/9d9dcaf9-3b6b-40fb-9cb5-da97c975eab5/build-cache-report.xml</code></pre>
+  <p>The line starting <code>[ERROR] Error downloading cache item</code> is the normal first-time miss, the server saying it does not have that entry yet. The build then ran for real and saved its result to the server. The server's status page showed it:</p>
+  <pre><code>$ curl -s -u maven:demo-pass localhost:8080/statusz | grep -E &#x27;&quot;store_entries&quot;|&quot;cache_hits&quot;|&quot;cache_misses&quot;&#x27;
+  &quot;store_entries&quot;: 3,
+  &quot;cache_hits&quot;: 0,
+  &quot;cache_misses&quot;: 3,</code></pre>
+  <p>Now delete <code>target</code> and the extension's local cache folder, so the only copy left is on the server, and build again:</p>
+  <pre><code>rm -rf target build-cache   # 'build-cache' is the extension's local folder, next to your local repository
+mvn package
+
+[INFO] Attempting to restore project demo:demo from build cache
+[INFO] Found cached build, restoring demo:demo from cache by checksum ebb9bceba2f7a6bc
+[INFO] BUILD SUCCESS</code></pre>
+  <p>"Found cached build, restoring from cache" is the hit. Maven restored the result from the server instead of building it again.</p>
+  <p>Maven 3.10 also prints a warning that the credentials for <code>fosterstack-cache</code> are being used for an address with no matching repository entry. In our run the build worked regardless.</p>
+  <p>If you see no hit, check that the <code>id</code> in the password file matches, that <code>saveToRemote</code> is on for the machine that built first, and that the second run starts from a clean checkout.</p>
 
   <p class="muted-note">Mixed Gradle and Maven shop? Both can use the same server. See <a href="/migrate-build-cache-node/">Gradle and Maven setup</a>. For CI runners, see <a href="/jenkins-ci-build-cache/">Jenkins and CI build cache</a>.</p>
   <div class="cta-row">
