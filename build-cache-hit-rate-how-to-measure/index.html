@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How Do I Know My Build Cache Hit Rate?</title>
+<meta name="description" content="Two numbers describe a build cache hit rate: the build log and the server counters. Real Gradle and Maven runs show why they differ. FosterStack Cache 0.2.1.">
+<meta property="og:title" content="How Do I Know My Build Cache Hit Rate?">
+<meta property="og:description" content="Two numbers describe a build cache hit rate: the build log and the server counters. Real Gradle and Maven runs show why they differ. FosterStack Cache 0.2.1.">
+<meta property="og:url" content="https://fosterstack.com/build-cache-hit-rate-how-to-measure/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="FosterStack">
+<link rel="canonical" href="https://fosterstack.com/build-cache-hit-rate-how-to-measure/">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<style>
+  :root {
+    --bg: #ffffff; --fg: #16181d; --muted: #5b6472; --line: #e4e7ec;
+    --accent: #0d7a5f; --accent-fg: #ffffff; --card: #f6f8f9; --warn-bg: #fff7ed; --warn-line: #fdba74;
+    --mark: #0f4d66;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #101318; --fg: #e8eaf0; --muted: #98a2b3; --line: #262c36;
+      --accent: #2fbf95; --accent-fg: #08110e; --card: #171c23; --warn-bg: #241a10; --warn-line: #7c4a12;
+      --mark: #e8eaf0;
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 44rem; margin: 0 auto; padding: 0 1.25rem 4rem; }
+  header.site { max-width: 44rem; margin: 0 auto; padding: 1.25rem; display: flex; align-items: baseline; gap: .6rem; }
+  .logo { font-weight: 700; font-size: 1.05rem; letter-spacing: -.01em; }
+  .logo span { color: var(--accent); }
+  .logo .mark { width: 1.2em; height: 1.2em; vertical-align: -.24em; margin-right: .4em; }
+  .tag { color: var(--muted); font-size: .85rem; }
+  .notice {
+    background: var(--warn-bg); border: 1px solid var(--warn-line); border-radius: 8px;
+    padding: .7rem 1rem; font-size: .92rem; margin: 1.5rem 0 2.5rem;
+  }
+  h1 { font-size: 2rem; line-height: 1.2; letter-spacing: -.02em; margin-bottom: 1rem; }
+  .lede { font-size: 1.12rem; color: var(--muted); margin-bottom: 2rem; }
+  h2 { font-size: 1.25rem; margin: 3rem 0 .9rem; letter-spacing: -.01em; }
+  p + p { margin-top: .8rem; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: .8rem; margin-top: 1rem; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1rem 1.1rem; }
+  .card h3 { font-size: .98rem; margin-bottom: .35rem; }
+  .card p { font-size: .9rem; color: var(--muted); }
+  ul.trust { list-style: none; margin-top: .5rem; }
+  ul.trust li { padding: .45rem 0 .45rem 1.6rem; position: relative; }
+  ul.trust li::before { content: "✓"; position: absolute; left: .2rem; color: var(--accent); font-weight: 700; }
+  code, pre { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .88em; }
+  code { background: var(--card); border: 1px solid var(--line); border-radius: 5px; padding: .1em .35em; }
+  pre code { background: none; border: 0; padding: 0; color: inherit; font-size: 1em; }
+  button {
+    padding: .7rem 1.3rem; font-size: 1rem; font-weight: 600; cursor: pointer;
+    background: var(--accent); color: var(--accent-fg); border: 0; border-radius: 8px;
+  }
+  button:disabled { opacity: .6; cursor: default; }
+  table { width: 100%; border-collapse: collapse; font-size: .92rem; margin-top: 1rem; }
+  th, td { text-align: left; padding: .55rem .6rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  pre { background: #0f172a; color: #e2e8f0; padding: .9rem 1rem; border-radius: 8px;
+        overflow-x: auto; font-size: .9rem; line-height: 1.5; }
+  .cta-row { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1.1rem; }
+  .btn { display: inline-block; padding: .55rem 1rem; border-radius: 8px; font-weight: 600;
+         text-decoration: none; background: var(--accent); color: var(--accent-fg); }
+  .btn-secondary { background: transparent; color: inherit; border: 1px solid var(--muted); }
+  .muted-note { color: var(--muted); font-size: .93rem; margin-top: 1.1rem; }
+  footer { border-top: 1px solid var(--line); margin-top: 4rem; padding: 1.5rem 1.25rem 3rem; }
+  footer div { max-width: 44rem; margin: 0 auto; color: var(--muted); font-size: .82rem; }
+  a { color: var(--accent); }
+  code { overflow-wrap: anywhere; }
+  pre code { overflow-wrap: normal; }
+  .table-scroll { max-width: 100%; overflow-x: auto; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+</style>
+</head>
+<body>
+<header class="site">
+  <div class="logo"><svg class="mark" viewBox="0 0 96 96" aria-hidden="true" focusable="false"><rect x="12" y="14" width="72" height="18" rx="5" fill="var(--mark)"/><rect x="12" y="39" width="48" height="18" rx="5" fill="var(--mark)"/><rect x="12" y="64" width="26" height="18" rx="5" fill="var(--accent)"/></svg>foster<span>stack</span></div>
+  <div class="tag">Infrastructure worth keeping — and kept patched.</div>
+</header>
+<main>
+  <h1>How do I know my build cache hit rate?</h1>
+  <p class="lede">You want to know how much of your build comes from the cache. FosterStack Cache gives you two answers, the build's own output for one build and the server's counters for everyone, and they are not the same number.</p>
+
+  <h2>Read one build: count it in the build log</h2>
+  <p>This is the number to use for a single build. For Gradle, run with <code>--info</code> and count two kinds of line:</p>
+<pre tabindex="0"><code>gradle assemble --info --console=plain &gt; build.log
+grep -c 'Build cache key for task' build.log     # tasks that can be cached
+grep -c '^&gt; Task .* FROM-CACHE$' build.log      # of those, taken from the cache</code></pre>
+  <p>Divide the second number by the first. In our runs a cold build gave 0 of 4, a repeat build gave 4 of 4, and a build after one change gave 3 of 4.</p>
+  <p>Gradle also prints a summary line, such as <code>8 actionable tasks: 4 executed, 4 from cache</code>. Do not use it as the hit rate. It counts tasks that can never be cached, such as <code>jar</code>. For our repeat build it said 4 of 8, while all 4 cacheable tasks came from the cache.</p>
+  <p>For Maven, count the modules it restored and compare with the number of modules you have:</p>
+<pre tabindex="0"><code>grep -c 'Found cached build, restoring' build.log</code></pre>
+  <p>In our runs, with 3 modules, that printed 0 for a cold build, 3 for a repeat build, and 0 after a change in the bottom module.</p>
+
+  <h2>Read the server: hits and misses are requests</h2>
+  <p>The server counts every lookup it answers. Read the counters, or the same numbers on the status page:</p>
+<pre tabindex="0"><code>curl -s localhost:8080/metrics | grep -E 'fscache_cache_(hits|misses)_total'
+curl -s localhost:8080/statusz</code></pre>
+  <p>The hit rate is hits divided by hits plus misses. These counters run from the start of the server, so for a recent window use the query on <a href="/monitor-build-cache-prometheus-grafana/">Monitor a Gradle build cache with Prometheus and Grafana</a>.</p>
+  <p>The server counts requests, not tasks or modules, so it will not match the build log:</p>
+  <ul class="trust">
+    <li><strong>Gradle:</strong> our 4 cacheable tasks made 13 requests in a build. Gradle also caches its compiled build scripts, and those lookups count too.</li>
+    <li><strong>Maven:</strong> restoring 3 modules made 6 hits. We saw 2 hits for each restored module.</li>
+  </ul>
+  <p>Over our three Gradle builds the builds said 7 of 12, about 58%, and the server said 25 hits in 39 requests, about 64%. Over the three Maven builds the builds said 3 of 9, about 33%, and the server said 6 hits in 12 requests, 50%.</p>
+  <p>So use the build log to judge one build, and the server to watch the trend over days. Do not compare the two directly.</p>
+
+  <h2>What is a good number?</h2>
+  <p>There is no single good number. It depends on how often your code changes and how your build is split into modules. A cold build is 0% by definition, and a repeat build with no change should be close to 100%. In our runs, after one change in the bottom module, 3 of 4 Gradle tasks still came from the cache and 0 of 3 Maven modules did.</p>
+  <p>Measure a few ordinary CI builds with the recipes above, then watch the server's rate over weeks. If it stays low, see <a href="/gradle-build-cache-hit-rate-low/">why the Gradle hit rate is low</a> or <a href="/maven-build-cache-extension-not-restoring/">why the Maven cache is not restoring</a>.</p>
+
+  <h2>How we checked</h2>
+  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
+    <thead><tr><th>Build</th><th>Gradle: build log</th><th>Gradle: server</th><th>Maven: build log</th><th>Maven: server</th></tr></thead>
+    <tbody>
+      <tr><td>1 cold</td><td>0 of 4</td><td>0 hits, 13 misses</td><td>0 of 3</td><td>0 hits, 3 misses</td></tr>
+      <tr><td>2 repeat</td><td>4 of 4</td><td>13 hits, 0 misses</td><td>3 of 3</td><td>6 hits, 0 misses</td></tr>
+      <tr><td>3 one change</td><td>3 of 4</td><td>12 hits, 1 miss</td><td>0 of 3</td><td>0 hits, 3 misses</td></tr>
+    </tbody>
+  </table></div>
+  <p class="muted-note">Each tool used one new empty FosterStack Cache 0.2.1 server and three builds. Build 3 changed one method body in the bottom module. The server figures are the change in the counters since the previous build, read from <code>/metrics</code>.</p>
+  <p class="muted-note">Gradle 9.8.0 built a four-module project of 12 small classes per module with <code>assemble</code>. Maven 3.9.9 with Build Cache Extension 1.2.3 ran <code>mvn verify</code> on a three-module chain with all eight plugin versions pinned. Every build used a fresh copy of the project and an empty local build cache; for Gradle the local cache was off and the Gradle home was new. Temurin 21.0.12.1, one Mac (arm64).</p>
+  <p class="muted-note">Not tested: other task types, tests, a server shared by many builds, and the Prometheus window queries.</p>
+</main>
+<footer>
+  <div>
+    <p>FosterStack is not affiliated with, endorsed by, or sponsored by Gradle Inc.
+    "Gradle" and "Develocity" are trademarks of Gradle Inc., used here only to identify
+    compatibility. FosterStack contains no Gradle Inc. code; it is a clean-room implementation
+    of the documented remote build cache HTTP protocol. Apache Maven is a trademark of the
+    Apache Software Foundation; the Maven Build Cache Extension is Apache's project, not
+    ours.</p>
+    <p style="margin-top:.6rem">© 2026 FosterStack · <a href="/build-cache-node-end-of-life/">Build Cache Node end of life</a> · <a href="/migrate-build-cache-node/">Migrate</a> · <a href="/build-cache-node-faq/">FAQ</a> · <a href="/jenkins-ci-build-cache/">CI setup</a> · <a href="/how-we-build/">How we build</a> · <a href="/regulated/">For regulated markets</a> · <a href="https://github.com/fosterstack/cache">github.com/fosterstack/cache</a> · <a href="mailto:hello@fosterstack.com">hello@fosterstack.com</a></p>
+  </div>
+</footer>
+</body>
+</html>
