@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Gradle Build Cache in Docker CI: Fresh Container Each Build</title>
-<meta name="description" content="Does a Gradle remote build cache work when every CI build runs in a new container? Real runs on Linux with a login, including a missing password. Release 0.2.1.">
+<meta name="description" content="Does a Gradle remote build cache work when each CI build runs in a new container? Real runs in Linux containers on Docker Desktop, with a login. Release 0.2.1.">
 <meta property="og:title" content="Gradle Build Cache in Docker CI: Fresh Container Each Build">
-<meta property="og:description" content="Does a Gradle remote build cache work when every CI build runs in a new container? Real runs on Linux with a login, including a missing password. Release 0.2.1.">
+<meta property="og:description" content="Does a Gradle remote build cache work when each CI build runs in a new container? Real runs in Linux containers on Docker Desktop, with a login. Release 0.2.1.">
 <meta property="og:url" content="https://fosterstack.com/gradle-build-cache-docker-ci-fresh-container/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="FosterStack">
@@ -98,7 +98,7 @@
   </ul>
 
   <h2>What we ran</h2>
-  <p>The cache server ran on a Mac, with a username and password. Gradle ran in the <code>gradle:9.8.0-jdk21</code> image (Linux, aarch64, Java 21) under Docker Desktop on that same Mac. Every build was a new <code>docker run --rm</code> with no volumes for the Gradle home, so the container started empty and kept nothing. The project folder was mounted from the Mac. The local build cache was off, so the only thing shared between builds was the cache server.</p>
+  <p>The cache server ran on a Mac, with a username and password. Gradle ran in the <code>gradle:9.8.0-jdk21</code> image (Linux, aarch64, Java 21) under Docker Desktop on that same Mac. Every build was a new <code>docker run --rm</code> with no volumes for the Gradle home, so the container started empty and kept nothing. The project folder was mounted from the Mac. The local build cache was off. The only Gradle state shared between builds was the cache server; the image, the Docker VM and the Mac were the same for every build. Each build is one run, not an average. Each used a new copy of the project's files. Our first set of runs started from a project folder that still held build output from an earlier check on the Mac; we then repeated every run from a clean copy and got the same results.</p>
 <pre tabindex="0"><code>docker run --rm -e FSCACHE_PASSWORD=&lt;your password&gt; \
   -v "$PWD/project:/work/one" -w /work/one \
   gradle:9.8.0-jdk21 gradle :core:compileJava --console=plain --no-daemon</code></pre>
@@ -106,7 +106,7 @@
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <thead><tr><th>Run</th><th>What changed</th><th>Result</th></tr></thead>
     <tbody>
-      <tr><td>1</td><td>First container</td><td>Ran, then stored</td></tr>
+      <tr><td>1</td><td>First container</td><td>Ran</td></tr>
       <tr><td>2</td><td>New container, same code, same mount path</td><td><code>FROM-CACHE</code></td></tr>
       <tr><td>3</td><td>New container, same code, mounted at a different path</td><td><code>FROM-CACHE</code></td></tr>
       <tr><td>4</td><td>New container, a line of main code edited</td><td>Ran</td></tr>
@@ -129,15 +129,15 @@
 
   <h2>What this means for CI</h2>
   <ul class="trust">
-    <li><strong>In our runs nothing had to be kept between builds.</strong> The cache lives on the server, so an empty container is enough (runs 2 and 3).</li>
-    <li><strong>The folder path did not matter.</strong> The project was mounted at <code>/work/one</code> in run 2 and <code>/work/two</code> in run 3, and both restored.</li>
-    <li><strong>A missing secret did not fail the build.</strong> Run 5 printed this and carried on without the cache, so look for it in your CI log when builds suddenly get slow (the lines in between are left out):</li>
+    <li><strong>In our runs no Gradle home or build output had to be kept between builds.</strong> The cache lives on the server, so an empty container is enough (runs 2 and 3).</li>
+    <li><strong>In our runs the folder path did not matter for this task.</strong> The project was mounted at <code>/work/one</code> in run 2 and <code>/work/two</code> in run 3, and both restored.</li>
+    <li><strong>A missing password did not fail the build.</strong> Run 5 printed this and carried on without the cache, so look for it in your CI log when builds suddenly get slow (the lines in between are left out):</li>
   </ul>
 <pre tabindex="0"><code>Could not load entry e3c6ab11d62f857d59bb3a92b7941080 from remote build cache: Loading entry from 'http://host.docker.internal:18250/e3c6ab11d62f857d59bb3a92b7941080' response status 401: Unauthorized
 ...
 The remote build cache was disabled during the build due to errors.</code></pre>
   <p>For more on this error, see <a href="/gradle-remote-build-cache-authentication/">Gradle remote build cache authentication and 401 errors</a>.</p>
-  <p>The last test ran two builds inside one container with Gradle's background process on. The first build had no password and printed the 401 line. Then we set the password in the same shell and the second build printed <code>:core:compileJava FROM-CACHE</code>. So the background process picked up the later password; no restart was needed. We saw the same on macOS.</p>
+  <p>The last test ran two builds inside one container with Gradle's background process on. The first build had no password and printed the 401 line. Then we set the password in the same shell, deleted <code>core/build</code>, and the second build printed <code>:core:compileJava FROM-CACHE</code>. So the background process picked up the later password; no restart was needed. We saw the same in an earlier run on the Mac itself, with no container.</p>
   <p>We did not test other CI products, x86 machines, a cache on another host, HTTPS, or Windows. The Linux here is the one inside Docker Desktop on a Mac.</p>
 
   <h2>If it does not come from the cache</h2>

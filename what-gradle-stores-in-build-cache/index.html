@@ -99,8 +99,8 @@
   </ul>
 
   <h2>What we ran</h2>
-  <p>The four-module build from <a href="/gradle-build-cache-monorepo/">Gradle build cache for a monorepo</a>: <code>core</code>, <code>util</code>, <code>api</code> and <code>app</code>, each with 12 small Java classes and a Kotlin build file. We started a new, empty server and ran <code>gradle build --console=plain --no-daemon -i</code> once, with the local cache off and a new, empty Gradle home. The <code>-i</code> flag makes Gradle print a line each time it stores something. The build ended with <code>BUILD SUCCESSFUL</code>. The project has no tests, so there are no test entries here; for those, see <a href="/gradle-test-task-from-cache/">Gradle test task FROM-CACHE</a>.</p>
-  <p>The server's status page then said: 13 entries, 36,054 bytes.</p>
+  <p>The four-module build from <a href="/gradle-build-cache-monorepo/">Gradle build cache for a monorepo</a>: <code>core</code>, <code>util</code>, <code>api</code> and <code>app</code>, each with 12 small Java classes and a Kotlin build file. Our first run used a project folder that still held build output from an earlier check; we repeated it, with the same 13 entries, from a clean copy and got the same results. We started a new, empty server and ran <code>gradle build --console=plain --no-daemon -i</code> once, with the local cache off and a new, empty Gradle home. The <code>-i</code> flag makes Gradle print a line each time it stores something. The build ended with <code>BUILD SUCCESSFUL</code>. The project has no tests, so there are no test entries here; for those, see <a href="/gradle-test-task-from-cache/">Gradle test task FROM-CACHE</a>.</p>
+  <p>The server's status page then said: 13 entries, 36,054 bytes. When we repeated the run, the entry count was the same and the size varied by a few dozen bytes (36,054 to 36,103 across our runs).</p>
 
   <h2>What the 13 entries were</h2>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
