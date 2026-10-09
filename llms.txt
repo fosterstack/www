@@ -1,6 +1,6 @@
 # FosterStack
 
-Infrastructure worth keeping.
+Infrastructure worth keeping — and kept patched.
 
 > Maintained continuity for build infrastructure that vendors orphan. Our first
 > product, FosterStack Cache, is a self-hosted remote build cache for Gradle and
