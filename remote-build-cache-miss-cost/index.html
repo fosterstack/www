@@ -88,17 +88,17 @@
 </header>
 <main>
   <h1>Does a remote cache slow your build when it misses?</h1>
-  <p class="lede">You may worry that asking a remote cache first makes every build slower when nothing is cached yet. With FosterStack Cache on a hosted runner, a miss added about one second to a 17.5-second build, and a hit saved about four.</p>
+  <p class="lede">You may worry that asking a remote cache first makes every build slower when nothing is cached yet. With FosterStack Cache, a server you run yourself, a miss added about one second to a 17.5-second build on a GitHub-hosted CI machine, and a hit saved about four.</p>
 
   <h2>The short answer</h2>
   <ul class="trust">
-    <li><strong>A miss is cheap.</strong> With an empty cache the build took about one second longer than with no cache at all. That is about 6%, and the ranges of the two overlap.</li>
+    <li><strong>A miss costs little.</strong> With an empty cache the build took about one second longer than with no cache at all, about 6%. The miss build was slower in 6 of 7 rounds.</li>
     <li><strong>A hit saves time.</strong> With the cache filled, the same build took about four seconds less, about 24% less.</li>
-    <li><strong>The saving grows with the work you skip.</strong> Our test project compiles quickly, and every build in the test also paid Gradle's start-up. A project with slower compiles has more to save.</li>
+    <li><strong>We expect the saving to grow with the work you skip (not tested).</strong> Our test project compiles quickly, and every build in the test also paid Gradle's start-up, so the percentages are smaller than they would be for the compile step alone.</li>
   </ul>
 
   <h2>What to do</h2>
-  <p>Our advice, not a test result: turn the remote cache on in CI and on laptops. Cold builds cost little, and warm builds are faster. To set it up, see <a href="/first-15-minutes-build-cache/">your first 15 minutes with a self-hosted build cache</a>. To let CI fill the cache and laptops only read it, see <a href="/gradle-build-cache-ci-writes-developers-read/">let CI write, developers only read</a>.</p>
+  <p>Our advice, not a test result: turn the remote cache on in CI first. On a local server, cold builds cost little and warm builds are faster. To set it up, see <a href="/first-15-minutes-build-cache/">your first 15 minutes with a self-hosted build cache</a>. To let CI fill the cache and laptops only read it, see <a href="/gradle-build-cache-ci-writes-developers-read/">let CI write, developers only read</a>.</p>
 
   <h2>How we checked</h2>
   <p>We ran the same Gradle build three ways, seven times each, and timed the whole command.</p>
@@ -106,11 +106,14 @@
     <thead><tr><th>Setup</th><th>Fastest</th><th>Median</th><th>Slowest</th></tr></thead>
     <tbody>
       <tr><td>No remote cache</td><td>17.06 s</td><td>17.54 s</td><td>18.17 s</td></tr>
-      <tr><td>Remote cache, empty (a miss: every result stored)</td><td>16.83 s</td><td>18.54 s</td><td>18.67 s</td></tr>
-      <tr><td>Remote cache, filled (a hit: every compile restored)</td><td>12.79 s</td><td>13.41 s</td><td>13.60 s</td></tr>
+      <tr><td>Remote cache, empty (a miss)</td><td>16.83 s</td><td>18.54 s</td><td>18.67 s</td></tr>
+      <tr><td>Remote cache, filled (a hit)</td><td>12.79 s</td><td>13.41 s</td><td>13.60 s</td></tr>
     </tbody>
   </table></div>
-  <p class="muted-note">Run on a GitHub-hosted runner: Ubuntu 24 image 20261004.327.1, 4 vCPUs (AMD EPYC 7763), 16 GB. <a href="https://github.com/fosterstack/www/actions/runs/37991659900">The run and its log are public</a>, and the script is <a href="/bin/bench-miss-cost.sh">bin/bench-miss-cost.sh</a>. Gradle 9.8.0, Java 21.0.12.1, FosterStack Cache 0.2.1. The project had 4 modules of 150 generated classes each, and only the compile tasks ran. The three setups ran in turn, seven times, after one warm-up round that was dropped. Every build used a fresh copy of the project, a new empty Gradle home and no Gradle daemon, so each one includes Gradle's start-up and the compile of its build scripts. Gradle's local cache was off. The cache server ran on the same machine, so there was no network delay: over a real network every lookup also costs a round trip, and a miss would cost more than shown. Not tested: Maven, other project sizes, other machines or runners, tests and jars, a real network.</p>
+  <p class="muted-note">Where: a GitHub-hosted CI machine, Ubuntu 24 image 20261004.327.1, 4 vCPUs (AMD EPYC 7763), 16 GB. <a href="https://github.com/fosterstack/www/actions/runs/37991659900">The run and its log are public</a>, and the script is <a href="/bin/bench-miss-cost.sh">bin/bench-miss-cost.sh</a>.</p>
+  <p class="muted-note">What: Gradle 9.8.0, Java 21.0.12.1, FosterStack Cache 0.2.1. The project had 4 modules of 150 generated classes each, and only the compile tasks ran.</p>
+  <p class="muted-note">How: the three setups ran in turn, seven times, after one warm-up round that was dropped. Every build used a fresh copy of the project, a new empty Gradle home and no Gradle daemon, so each one includes Gradle's start-up and the compile of its build scripts. Gradle's local cache was off.</p>
+  <p class="muted-note">Limits: the cache server ran on the same machine, so there was no network delay. Over a real network every lookup also costs a round trip, and a miss would likely cost more than shown. Not tested: Maven, other project sizes, other machines, tests and jars, a real network.</p>
 </main>
 <footer>
   <div>
