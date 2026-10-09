@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Timed runs on a GitHub-hosted runner: what does a remote-cache MISS cost, and what does a HIT save?
-# Run by the "bench" job of .github/workflows/hygiene.yml (manual dispatch only). Prints its own
+# Run by the "bench-miss-cost" job of .github/workflows/hygiene.yml (manual dispatch only). Prints its own
 # disclosure (runner image, CPU count, tool versions, n per cell) so the numbers can be quoted honestly.
 #
 # Cells, each repeated BENCH_N times, in this order inside every repetition (so drift is spread evenly):
@@ -8,7 +8,9 @@
 #   B  remote cache on, server EMPTY                (every task misses and stores: the cost of a miss)
 #   C  remote cache on, server FILLED by B          (every compile task restored: the saving of a hit)
 # Every timed build uses a fresh copy of the generated project, a new empty Gradle home, no daemon,
-# and Gradle's local build cache switched off. One untimed warm-up repetition is run first and dropped.
+# and Gradle's local build cache switched off. Because the Gradle home is new each time, every timed build
+# also pays for Gradle's start-up and for compiling its build scripts, like a build on a fresh CI machine;
+# that fixed cost is the same in all three cells. One untimed warm-up repetition is run first and dropped.
 set -euo pipefail
 
 N="${BENCH_N:-7}"
@@ -17,13 +19,13 @@ FS_URL="https://github.com/fosterstack/cache/releases/download/v${FS_VER}/fscach
 FS_SHA=7d464d7926cdc0c10636dde754e23a37fc6518e341465c67f58fe88a617aaf6a   # checksums.txt of release v0.2.1
 GR_VER=9.8.0
 GR_URL="https://services.gradle.org/distributions/gradle-${GR_VER}-all.zip"
-GR_SHA=46ac66d47f30f3dacfdf306e0b714a91a34fb94a22ba0a744b280933f47bc0cf   # same value Homebrew pins for this file
+GR_SHA=46ac66d47f30f3dacfdf306e0b714a91a34fb94a22ba0a744b280933f47bc0cf   # services.gradle.org/distributions/gradle-9.8.0-all.zip.sha256
 MODULES="${BENCH_MODULES:-4}"
 CLASSES="${BENCH_CLASSES:-150}"
 PORT=18490
 WORK="$(mktemp -d)"
 SRV_PID=""
-trap '[ -n "$SRV_PID" ] && kill "$SRV_PID" 2>/dev/null; true' EXIT
+trap '[ -n "$SRV_PID" ] && kill "$SRV_PID" 2>/dev/null; rm -rf "$WORK"; true' EXIT
 cd "$WORK"
 
 sha_check() { # file expected
@@ -39,13 +41,14 @@ if [ -n "${BENCH_GRADLE_BIN:-}" ]; then GRADLE="$BENCH_GRADLE_BIN"; else
   curl -fsSL "$GR_URL" -o gr.zip; sha_check gr.zip "$GR_SHA"; unzip -q gr.zip; GRADLE="$WORK/gradle-${GR_VER}/bin/gradle"
 fi
 JAVA_HOME="${BENCH_JAVA_HOME:-${JAVA_HOME_21_X64:-${JAVA_HOME:-}}}"; export JAVA_HOME
+[ -x "$JAVA_HOME/bin/java" ] || { echo "no usable Java (JAVA_HOME=$JAVA_HOME)" >&2; exit 1; }
 
 # ---- disclosure
 echo "== runner"; uname -sr; echo "cpus (nproc): $(nproc 2>/dev/null || sysctl -n hw.ncpu)"
 (lscpu 2>/dev/null | grep -E 'Model name' || true); (free -m 2>/dev/null | sed -n 2p || true)
 echo "image: ${ImageOS:-?} ${ImageVersion:-?}   runner: ${RUNNER_NAME:-?} (${RUNNER_ENVIRONMENT:-?})"
 echo "java: $("$JAVA_HOME/bin/java" -version 2>&1 | head -1)"
-echo "gradle: ${GR_VER} (distribution checked against pinned sha256)   fscache: v${FS_VER} (checked against checksums.txt value)"
+if [ -n "${BENCH_FSCACHE_BIN:-}${BENCH_GRADLE_BIN:-}" ]; then echo "tools: LOCAL OVERRIDES in use, downloads not checked"; else echo "gradle: ${GR_VER} (distribution checked against pinned sha256)   fscache: v${FS_VER} (checked against checksums.txt value)"; fi
 echo "project: ${MODULES} independent modules x ${CLASSES} generated classes; n per cell: ${N} (plus 1 untimed warm-up)"
 
 # ---- project generator
@@ -109,7 +112,7 @@ for rep in 0 $(seq 1 "$N"); do
   fi
 done
 
-echo; echo "== results (seconds, wall clock of the whole gradle command incl. JVM start; n=$N per cell)"
+echo; echo "== results (seconds, wall clock of the whole gradle command; each build includes JVM start, a new Gradle home and compiling the build scripts; n=$N per cell)"
 python3 - "$CSV" <<'PY' | tee -a "${GITHUB_STEP_SUMMARY:-/dev/null}"
 import csv, statistics, sys
 rows = list(csv.DictReader(open(sys.argv[1])))

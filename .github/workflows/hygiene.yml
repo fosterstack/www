@@ -33,6 +33,8 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: timed runs (cache off, cache on and empty, cache on and filled)
         run: BENCH_N=7 bash bin/bench-miss-cost.sh
