@@ -83,7 +83,7 @@
 
   <h2>How a CI runner uses a remote build cache</h2>
   <p>The cache is a plain web server. Your build tool (Gradle, or Maven with Apache's Build Cache Extension) asks it for finished task results and uploads new ones. Any runner that can reach the server over HTTP can use it. There is no plugin to install on the CI system.</p>
-  <p>We have not tested it with any particular CI product. Our own tests run in GitHub Actions. The protocol is the same everywhere, so what matters is that the runner can reach the server and holds the password.</p>
+  <p>We have not tested it with any particular CI product. Our own tests run in GitHub Actions. The protocol is the same everywhere, so what matters is that the runner can reach the server and holds a login.</p>
 
   <h2>Let CI write, let developers read</h2>
   <p>The simplest safe setup is that only CI uploads to the cache and laptops only download. The server can enforce this: give laptops the optional read-only login (<code>FSCACHE_RO_USERNAME</code> and <code>FSCACHE_RO_PASSWORD</code>), and any write they attempt is refused. On the Gradle side you can also stop uploads from non-CI machines in <code>settings.gradle.kts</code>:</p>
