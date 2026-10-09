@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Faster Maven builds: restored modules skip their tests</title>
+<title>Skip tests that already passed with the Maven build cache</title>
 <meta name="description" content="Does the Apache Maven Build Cache Extension skip tests when a build is restored? Six real runs with JUnit against a self-hosted cache, including a failing test.">
-<meta property="og:title" content="Faster Maven builds: restored modules skip their tests">
+<meta property="og:title" content="Skip tests that already passed with the Maven build cache">
 <meta property="og:description" content="Does the Apache Maven Build Cache Extension skip tests when a build is restored? Six real runs with JUnit against a self-hosted cache, including a failing test.">
 <meta property="og:url" content="https://fosterstack.com/maven-build-cache-skip-tests/">
 <meta property="og:type" content="website">
@@ -87,7 +87,7 @@
   <div class="tag">Infrastructure worth keeping — and kept patched.</div>
 </header>
 <main>
-  <h1>Faster Maven builds: restored modules skip their tests</h1>
+  <h1>Skip tests that already passed with the Maven build cache</h1>
   <p class="lede">When nothing in a module has changed, the Maven build cache extension restores its result and skips the tests that already passed. At FosterStack we prove everything, so here is how we proved it to ourselves: real builds, the exact log lines, and the cases where the tests rightly ran again.</p>
 
   <h2>The short answer</h2>

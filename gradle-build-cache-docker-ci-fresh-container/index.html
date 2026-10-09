@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Faster Gradle builds in Docker CI, even in fresh containers</title>
+<title>Reuse Gradle results in Docker CI, even in fresh containers</title>
 <meta name="description" content="Does a Gradle remote build cache work when each CI build runs in a new container? Real runs in Linux containers on Docker Desktop, with a login. Release 0.2.1.">
-<meta property="og:title" content="Faster Gradle builds in Docker CI, even in fresh containers">
+<meta property="og:title" content="Reuse Gradle results in Docker CI, even in fresh containers">
 <meta property="og:description" content="Does a Gradle remote build cache work when each CI build runs in a new container? Real runs in Linux containers on Docker Desktop, with a login. Release 0.2.1.">
 <meta property="og:url" content="https://fosterstack.com/gradle-build-cache-docker-ci-fresh-container/">
 <meta property="og:type" content="website">
@@ -87,8 +87,8 @@
   <div class="tag">Infrastructure worth keeping — and kept patched.</div>
 </header>
 <main>
-  <h1>Faster Gradle builds in Docker CI, even in fresh containers</h1>
-  <p class="lede">A new container with an empty Gradle home can take its compile results from the cache, so containers that keep nothing still skip work. At FosterStack we prove everything, so here is how we proved it to ourselves: real Linux container runs, a different mount path, and a missing password.</p>
+  <h1>Reuse Gradle results in Docker CI, even in fresh containers</h1>
+  <p class="lede">A new container with an empty Gradle home can take its compile result from the cache, so containers that keep nothing still skip work. At FosterStack we prove everything, so here is how we proved it to ourselves: real Linux container runs, a different mount path, and a missing password.</p>
 
   <h2>The short answer</h2>
   <ul class="trust">
