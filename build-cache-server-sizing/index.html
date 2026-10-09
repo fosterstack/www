@@ -116,6 +116,24 @@
     <li>Leaving the cap at its default of 0, which means no limit, on a small disk is the one setup that will fill the disk.</li>
   </ul>
 
+  <h2>What makes the disk grow</h2>
+  <p>The cache grows only when a build has to redo work. A build that changes nothing adds nothing, and an edit inside one module adds about one small entry per build. In our test, adding a public method to one module added four entries, because all four modules had to be recompiled.</p>
+  <ul class="trust">
+    <li><strong>To size your own:</strong> run your normal builds for a day, then run <code>du -sk</code> on your <code>FSCACHE_DATA_DIR</code> folder.</li>
+    <li><strong>To stop growth:</strong> set the cap above. The oldest-unused entries go first; see <a href="/build-cache-eviction-size-limit/">build cache eviction and the size limit</a>.</li>
+  </ul>
+  <h3>How we checked</h3>
+  <div class="table-scroll" role="region" aria-label="Stored files and bytes after each build" tabindex="0"><table>
+    <thead><tr><th>After build</th><th>No change: files / bytes</th><th>Edit inside a method: files / bytes</th><th>New public method: files / bytes</th></tr></thead>
+    <tbody>
+      <tr><td>1 (first)</td><td>13 / 36,090</td><td>13 / 36,101</td><td>13 / 36,174</td></tr>
+      <tr><td>2</td><td>13 / 36,090</td><td>14 / 38,636</td><td>17 / 47,725</td></tr>
+      <tr><td>6</td><td>13 / 36,090</td><td>18 / 48,768</td><td>33 / 93,901</td></tr>
+      <tr><td>11</td><td>13 / 36,090</td><td>23 / 61,434</td><td>53 / 151,657</td></tr>
+    </tbody>
+  </table></div>
+  <p class="muted-note">Three series of eleven real Gradle builds on the four-module project from <a href="/gradle-build-cache-monorepo/">Gradle build cache for a monorepo</a>. Each series used a new empty FosterStack Cache 0.2.1 server, a fresh project copy and a new Gradle home for every build, with Gradle's local cache off. Each edit was made to a clean copy, not on top of the last. We counted the files in the server's data folder after each build. The first build's 13 files were four compile outputs (2.5 to 3 KB each) and nine compiled build scripts; the jar tasks ran every time and stored nothing. The server's index file (128 KB) did not grow. The project is tiny, so the sizes are small; the pattern is what carries over. Not tested: a real-sized project, tests, Maven, or the cap switched on.</p>
+
   <h2>Put it near the runners</h2>
   <p>On bigger setups the network matters more than the processor. A small server in the same region, ideally the same network, as your CI runners beats a large one far away.</p>
 
