@@ -125,7 +125,7 @@
       <tr><td>Read-only login</td><td>Delete an entry, and read one</td><td>Delete: HTTP 403, entry still there. Read: HTTP 200</td></tr>
       <tr><td>No login</td><td>Put, and read</td><td>HTTP 401 both times. A wrong password: HTTP 401</td></tr>
       <tr><td>Write login, <code>isPush = false</code></td><td>Build with a changed file</td><td>Nothing uploaded. Then a direct put of a new key: HTTP 201</td></tr>
-      <tr><td>Read-only login, <code>isPush = true</code></td><td>Build with a changed file</td><td>Build succeeded. The upload got a 403 and nothing was stored</td></tr>
+      <tr><td>Read-only login, <code>isPush = true</code></td><td>Build with a changed file</td><td>Build succeeded. The upload got a 403 and nothing was stored. Gradle then switched the remote cache off for the rest of that build (see <a href="/feature-branches-share-build-cache-with-main/">can feature branches share the build cache with main</a>)</td></tr>
     </tbody>
   </table></div>
   <p class="muted-note">What the replaced entry did: the project's source says <code>core-1-</code>. The class file restored from the replaced entry contained <code>core-1-TAMPERED-</code>. Gradle did not complain.</p>
