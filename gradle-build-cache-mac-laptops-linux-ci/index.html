@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Share your Gradle Build Cache Between Macs and Linux CI</title>
+<title>Share Your Gradle Build Cache Between Macs and Linux CI</title>
 <meta name="description" content="Can Mac laptops and Linux CI share a Gradle build cache? Four series of real builds across macOS, Linux arm64 and Linux amd64, with release 0.2.1.">
-<meta property="og:title" content="Share your Gradle Build Cache Between Macs and Linux CI">
+<meta property="og:title" content="Share Your Gradle Build Cache Between Macs and Linux CI">
 <meta property="og:description" content="Can Mac laptops and Linux CI share a Gradle build cache? Four series of real builds across macOS, Linux arm64 and Linux amd64, with release 0.2.1.">
 <meta property="og:url" content="https://fosterstack.com/gradle-build-cache-mac-laptops-linux-ci/">
 <meta property="og:type" content="website">
@@ -87,18 +87,18 @@
   <div class="tag">Infrastructure worth keeping — and kept patched.</div>
 </header>
 <main>
-  <h1>Share your Gradle build cache between Macs and Linux CI</h1>
-  <p class="lede">In our runs a Gradle build cached on a Mac was restored on Linux, and the other way round, on both arm64 and amd64, as long as Gradle and Java were the same. At FosterStack we prove everything, so here is how we proved it to ourselves: four series of real builds across a Mac, a Linux container and an emulated amd64 container.</p>
+  <h1>Share Your Gradle Build Cache Between Macs and Linux CI</h1>
+  <p class="lede">Mac laptops and Linux CI can share one Gradle build cache when Gradle and Java match: in our runs a build cached on any one of three platforms was restored on the other two. At FosterStack we prove everything, so here is how we proved it to ourselves: six series of real builds covering every pair of a Mac, a Linux arm64 container and an emulated Linux amd64 container, in both directions.</p>
 
   <h2>The short answer</h2>
   <ul class="trust">
-    <li>A build cached on macOS was restored in a Linux container, and a build cached in Linux was restored on macOS.</li>
+    <li>A build cached on the Mac was restored in a Linux arm64 container and in a Linux amd64 container, and the reverse.</li>
     <li>A build cached on Linux arm64 was restored on Linux amd64, and the reverse.</li>
-    <li>In every case the compile tasks we looked at came from the cache and the second platform did no compiling.</li>
+    <li>In every case the Java compile tasks of all four modules came from the cache, and no Java compile ran on the second platform.</li>
   </ul>
 
   <h2>What we ran</h2>
-  <p>The four-module project from <a href="/gradle-build-cache-monorepo/">Gradle build cache for a monorepo</a>, and its <code>:core:compileJava</code> and <code>:app:compileJava</code> tasks, against a self-hosted cache (FosterStack Cache 0.2.1) with no login. We kept Gradle and Java the same everywhere and changed only the operating system and the CPU architecture:</p>
+  <p>The four-module project from <a href="/gradle-build-cache-monorepo/">Gradle build cache for a monorepo</a>, against a self-hosted cache (FosterStack Cache 0.2.1) with no login. We kept Gradle and Java the same everywhere and changed only the operating system and the CPU architecture:</p>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <thead><tr><th>Where it ran</th><th>OS</th><th>CPU</th><th>Gradle</th><th>Java</th></tr></thead>
     <tbody>
@@ -107,22 +107,24 @@
       <tr><td>Linux container, amd64</td><td>Linux</td><td>amd64 (emulated)</td><td>9.8.0</td><td>Eclipse Adoptium 21.0.12.1+1-LTS</td></tr>
     </tbody>
   </table></div>
-  <p>The containers came from the <code>gradle:9.8.0-jdk21</code> image under Docker Desktop on the same Mac. The amd64 one ran under emulation. Every build used a fresh copy of the project with no earlier build output, a new empty Gradle home, and the local build cache off. The project sat in a different folder each time: a long folder on the Mac and <code>/work/one</code> in the containers. Each series started on a new, empty cache server, and every build ended with <code>BUILD SUCCESSFUL</code>.</p>
+  <p>The containers came from the <code>gradle:9.8.0-jdk21</code> image under Docker Desktop 4.87. The cache server and every build ran on the same Mac, and the amd64 container ran under emulation. Where we did not name a platform, the container used the Docker default, which on this Mac is arm64; we checked that right after the runs. Every build used a fresh copy of the project with no earlier build output, a new empty Gradle home, and the local build cache off. The project sat in a different folder each time: a long folder on the Mac and <code>/work/one</code> in the containers. Each series started on a new, empty cache server, and every build ended with <code>BUILD SUCCESSFUL</code>. The six series came from three script runs.</p>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <thead><tr><th>Series</th><th>Build 1</th><th>Build 2 (other platform)</th><th>Build 3 (first platform again)</th></tr></thead>
     <tbody>
-      <tr><td>Mac first, then Linux arm64</td><td>Mac: ran</td><td>Linux arm64: <code>FROM-CACHE</code></td><td>Mac: <code>FROM-CACHE</code></td></tr>
-      <tr><td>Linux arm64 first, then Mac</td><td>Linux arm64: ran</td><td>Mac: <code>FROM-CACHE</code></td><td>Linux arm64: <code>FROM-CACHE</code></td></tr>
-      <tr><td>Mac first, then Linux amd64</td><td>Mac: ran</td><td>Linux amd64: <code>FROM-CACHE</code></td><td>Mac: <code>FROM-CACHE</code></td></tr>
-      <tr><td>Linux amd64 first, then Linux arm64</td><td>Linux amd64: ran</td><td>Linux arm64: <code>FROM-CACHE</code></td><td>Linux amd64: <code>FROM-CACHE</code></td></tr>
+      <tr><td>Mac, then Linux arm64</td><td>Mac: ran</td><td>Linux arm64: <code>FROM-CACHE</code></td><td>Mac: <code>FROM-CACHE</code></td></tr>
+      <tr><td>Linux arm64, then Mac</td><td>Linux arm64: ran</td><td>Mac: <code>FROM-CACHE</code></td><td>Linux arm64: <code>FROM-CACHE</code></td></tr>
+      <tr><td>Mac, then Linux amd64</td><td>Mac: ran</td><td>Linux amd64: <code>FROM-CACHE</code></td><td>Mac: <code>FROM-CACHE</code></td></tr>
+      <tr><td>Linux amd64, then Mac</td><td>Linux amd64: ran</td><td>Mac: <code>FROM-CACHE</code></td><td>Linux amd64: <code>FROM-CACHE</code></td></tr>
+      <tr><td>Linux amd64, then Linux arm64</td><td>Linux amd64: ran</td><td>Linux arm64: <code>FROM-CACHE</code></td><td>Linux amd64: <code>FROM-CACHE</code></td></tr>
+      <tr><td>Linux arm64, then Linux amd64</td><td>Linux arm64: ran</td><td>Linux amd64: <code>FROM-CACHE</code></td><td>Linux arm64: <code>FROM-CACHE</code></td></tr>
     </tbody>
   </table></div>
-  <p>"Ran" means Gradle did the compile and stored the result. "FROM-CACHE" means Gradle printed that next to both <code>:core:compileJava</code> and <code>:app:compileJava</code>. Each cell is one build.</p>
+  <p>"Ran" means Gradle did the Java compile and stored the result. "FROM-CACHE" means Gradle printed that next to <code>:core:compileJava</code> and <code>:app:compileJava</code>, which are the two tasks the table follows. The logs show the compile tasks of all four modules came from the cache. Each cell is one build.</p>
 
   <h2>What this means for laptops and CI</h2>
   <ul class="trust">
-    <li><strong>In our runs the operating system and the CPU architecture did not matter.</strong> A cache filled on a laptop helped a Linux build, and the other way round.</li>
-    <li><strong>What did matter in our other tests:</strong> the Gradle version (<a href="/gradle-build-cache-after-gradle-upgrade/">Why Your Gradle Build Cache Goes Cold After a Gradle Upgrade</a>) and the Java version (<a href="/gradle-build-cache-hit-rate-low/">Gradle build cache hit rate low</a>, cause 3). Keep those the same across laptops and CI.</li>
+    <li><strong>For these Java compile steps, the operating system and the CPU architecture did not matter.</strong> A cache filled on a laptop helped a Linux build, and the other way round. We saw this for one project, one build per cell.</li>
+    <li><strong>What did matter in our other tests:</strong> the Gradle version (<a href="/gradle-build-cache-after-gradle-upgrade/">Why Your Gradle Build Cache Goes Cold After a Gradle Upgrade</a>) and the Java version (<a href="/gradle-build-cache-hit-rate-low/">Gradle build cache hit rate low</a>, cause 3). Here we held them the same, so we cannot say more than that. Keep them the same across laptops and CI.</li>
   </ul>
   <p>We did not test Windows, real amd64 hardware (the amd64 container was emulated on Apple silicon), other Java vendors, other tasks such as tests or jars, or source files with different line endings. The Linux here is the one inside Docker Desktop. The Mac was busy with other jobs during the runs, so we make no claim about build times.</p>
 
