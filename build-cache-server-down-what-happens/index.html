@@ -88,24 +88,24 @@
 </header>
 <main>
   <h1>What happens to my build when the cache server is down?</h1>
-  <p class="lede">A cache server that is down should not break your builds. With FosterStack Cache as the server, Gradle and Maven both finished the build locally in our runs and printed a warning.</p>
+  <p class="lede">Does a cache server that is down break your build? In our runs with FosterStack Cache as the server, no: Gradle and Maven both finished the build locally and printed a warning.</p>
 
   <h2>The short answer</h2>
   <ul class="trust">
     <li><strong>Server not running, or gone since the last build:</strong> the build succeeded in Gradle and in Maven. Everything was built locally, and a warning was printed.</li>
     <li><strong>Wrong password (401):</strong> the same. The build succeeded and warned.</li>
     <li><strong>Read-only login that tries to store a result (403):</strong> in Gradle the build succeeded and warned. We did not run this one in Maven.</li>
-    <li><strong>An address that never answers:</strong> the build still succeeded, but it first waited about 30 seconds. In our timed Gradle runs that took a 13-second build to 44 seconds. A refused connection added about half a second.</li>
+    <li><strong>An address that never answers:</strong> the build still succeeded. In our timed Gradle runs it first waited about 30 seconds, which took a 13-second build to 44 seconds. Maven also waited; we did not time it. A refused connection showed no clear extra time.</li>
   </ul>
-  <p>The warnings look different. Gradle printed one line per build. Maven printed an <code>[ERROR]</code> line, and later a Java stack trace for each upload it could not make, even though the build succeeded.</p>
+  <p>The warnings look different. Gradle printed one warning and then a line saying the remote cache was disabled. Maven printed an <code>[ERROR]</code> line, and later a Java stack trace for each upload it could not make, even though the build succeeded.</p>
   <h2>What to do</h2>
   <p>Our advice, not a test result:</p>
   <ul class="trust">
     <li><strong>Search your build logs for the warning.</strong> A build that quietly stopped using the cache looks like a slow build. In Gradle, look for <code>Could not load entry</code> or <code>Could not store entry</code>. In Maven, look for <code>Error downloading cache item</code> and <code>Unable to save to remote cache</code>.</li>
-    <li><strong>Make an unreachable server fail fast.</strong> A server that is down on a reachable machine refuses the connection at once. An address that drops packets makes the build wait for the timeout. Check that the address in your build is the right one.</li>
-    <li><strong>Shorten the timeout on CI.</strong> Gradle reads two system properties, <code>org.gradle.internal.http.connectionTimeout</code> and <code>org.gradle.internal.http.socketTimeout</code>, both 30000 milliseconds by default. Maven reads <code>aether.connector.connectTimeout</code>, 10000 milliseconds by default. In our check, setting them to 2000 shortened the wait in both tools.</li>
+    <li><strong>Check the cache address.</strong> A server that is down on a machine you can reach refuses the connection at once, and that cost almost nothing in our timed runs (we tested this on the same machine). An address that drops packets makes the build wait for the timeout. Make sure the address in your build is the right one.</li>
+    <li><strong>Shorten the timeout on CI.</strong> Gradle reads two system properties, <code>org.gradle.internal.http.connectionTimeout</code> and <code>org.gradle.internal.http.socketTimeout</code>, both 30000 milliseconds by default. Maven reads <code>aether.connector.connectTimeout</code>, 10000 milliseconds by default.</li>
   </ul>
-  <p>We set them with <code>-D</code> on the command line, for example <code>-Daether.connector.connectTimeout=2000</code>. To use the Gradle properties in <code>gradle.properties</code>, prefix them with <code>systemProp.</code>; we did not test that form.</p>
+  <p>In one local run each, setting them to 2000 made the build return sooner. Maven went from 35 seconds to 8 seconds. We saw a shorter Gradle build too, but did not time it on the hosted machine. We set them with <code>-D</code> on the command line, for example <code>-Daether.connector.connectTimeout=2000</code>. To use the Gradle properties in <code>gradle.properties</code>, prefix them with <code>systemProp.</code>; we did not test that form.</p>
   <p>If the cache is up but nothing is restored, see <a href="/gradle-remote-cache-not-working/">Gradle remote build cache not working</a> or <a href="/maven-build-cache-extension-not-restoring/">Maven build cache extension not restoring</a>. For logins and the 401 and 403 errors, see <a href="/gradle-remote-build-cache-authentication/">Gradle remote build cache authentication</a>.</p>
 
   <h2>How we checked</h2>
@@ -114,7 +114,7 @@
     <tbody>
       <tr><td>Server never started</td><td>Built locally, build succeeded. One warning: <code>Could not load entry ... from remote build cache: Connect to 127.0.0.1 ... failed: Connection refused</code></td><td>Built locally, build succeeded. <code>[ERROR] Error downloading cache item</code>, then a stack trace per failed upload (<code>Connection refused</code>)</td></tr>
       <tr><td>Server filled, then stopped, then a new build</td><td>Same as above</td><td>Same as above</td></tr>
-      <tr><td>Server stopped a few seconds after the build started (one attempt)</td><td>Same as above: the server was already gone at the first lookup</td><td>Not tested</td></tr>
+      <tr><td>Server stopped just before the build's first cache lookup (one attempt)</td><td>Same as above: refused at the first lookup</td><td>Not tested</td></tr>
       <tr><td>Wrong password (401)</td><td>Built locally, build succeeded. <code>Could not load entry ... response status 401: Unauthorized</code></td><td>Built locally, build succeeded. <code>[ERROR] Error downloading cache item</code>, then a stack trace saying <code>401</code> on upload</td></tr>
       <tr><td>Read-only login, build has something to store (403)</td><td>Build succeeded. <code>Could not store entry ... response status 403: Forbidden</code></td><td>Not tested</td></tr>
       <tr><td>Address that never answers</td><td>Built locally, build succeeded. <code>Connect timed out</code></td><td>Built locally, build succeeded. Stack trace saying <code>Connect timed out</code>. Four attempts against the same dead address</td></tr>
@@ -130,10 +130,10 @@
       <tr><td>Cache on, address that never answers</td><td>43.46 s</td><td>43.98 s</td><td>44.22 s</td><td>succeeded, 7 of 7</td></tr>
     </tbody>
   </table></div>
-  <p>At the median, a refused connection added 0.46 s, and an address that never answers added 30.61 s. That matches Gradle's 30-second default connect timeout, paid once in each of our builds.</p>
+  <p>At the median, an address that never answers added 30.61 s. That matches Gradle's 30-second default connect timeout, about one timeout's worth in every one of those builds. A refused connection was not clearly different from no cache: 13.83 s against 13.37 s at the median, and the ranges overlap.</p>
   <p class="muted-note">Timed runs: a GitHub-hosted machine, Ubuntu 24 image 20261004.327.1, 4 vCPUs (AMD EPYC 9V74), 16 GB. <a href="https://github.com/fosterstack/www/actions/runs/37997462984">The run and its log are public</a>, and the script is <a href="/bin/bench-server-down.sh">bin/bench-server-down.sh</a>. Gradle 9.8.0, Java 21.0.12.1, FosterStack Cache 0.2.1, a project of 4 modules with 150 generated classes each, compile tasks only.</p>
   <p class="muted-note">How: the four setups ran in turn, seven times, after one dropped warm-up round. Every build used a fresh copy of the project, a new empty Gradle home and no daemon, so each time includes Gradle's start-up. The "never answers" address was 10.255.255.1, which gave no answer within 5 seconds before the run. We did not time Maven.</p>
-  <p class="muted-note">In every Gradle case the last line of the build said the remote cache was disabled during the build due to errors, and the failure was printed once. In Maven the one-module project made four attempts: one download and three uploads.</p>
+  <p class="muted-note">In every Gradle case the last line of the build said the remote cache was disabled during the build due to errors, and in the builds we printed the failure appeared once. In Maven the one-module project made four attempts: one download and three uploads.</p>
   <p class="muted-note">What: Gradle 9.8.0; Maven 3.9.9 with Build Cache Extension 1.2.3 and all eight plugin versions pinned; Temurin 21.0.12.1; FosterStack Cache 0.2.1. Gradle used a four-module project and the compile tasks, with a new Gradle home and no daemon. Maven used a one-module project with two tests and <code>mvn verify</code>. Both on a Mac (arm64).</p>
   <p class="muted-note">Limits: the behaviour table above comes from a Mac; the times come only from the hosted machine. We did not test a server that dies after serving some entries in the same build, a slow server that is still up, a multi-module Maven build, TLS or DNS errors, or other versions.</p>
 </main>
