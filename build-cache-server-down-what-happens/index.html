@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>What Happens to My Build When the Cache Server Is Down?</title>
-<meta name="description" content="If the remote cache server is down, does a Gradle or Maven build fail? Real runs on FosterStack Cache 0.2.1: both finish locally; a dead address cost 30 s.">
+<meta name="description" content="If the remote cache server is down, does a Gradle or Maven build fail? Real runs on FosterStack Cache 0.2.1: both finish locally; a dead address cost Gradle 30 s.">
 <meta property="og:title" content="What Happens to My Build When the Cache Server Is Down?">
-<meta property="og:description" content="If the remote cache server is down, does a Gradle or Maven build fail? Real runs on FosterStack Cache 0.2.1: both finish locally; a dead address cost 30 s.">
+<meta property="og:description" content="If the remote cache server is down, does a Gradle or Maven build fail? Real runs on FosterStack Cache 0.2.1: both finish locally; a dead address cost Gradle 30 s.">
 <meta property="og:url" content="https://fosterstack.com/build-cache-server-down-what-happens/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="FosterStack">
@@ -102,7 +102,7 @@
   <p>Our advice, not a test result:</p>
   <ul class="trust">
     <li><strong>Search your build logs for the warning.</strong> A build that quietly stopped using the cache looks like a slow build. In Gradle, look for <code>Could not load entry</code> or <code>Could not store entry</code>. In Maven, look for <code>Error downloading cache item</code> and <code>Unable to save to remote cache</code>.</li>
-    <li><strong>Check the cache address.</strong> A server that is down on a machine you can reach refuses the connection at once, and that cost almost nothing in our timed runs (we tested this on the same machine). An address that drops packets makes the build wait for the timeout. Make sure the address in your build is the right one.</li>
+    <li><strong>Check the cache address.</strong> A server that is down on a machine you can reach refuses the connection at once, and that showed no clear extra time in our timed runs (we tested this on the same machine). An address that drops packets makes the build wait for the timeout. Make sure the address in your build is the right one.</li>
     <li><strong>Shorten the timeout on CI.</strong> Gradle reads two system properties, <code>org.gradle.internal.http.connectionTimeout</code> and <code>org.gradle.internal.http.socketTimeout</code>, both 30000 milliseconds by default. Maven reads <code>aether.connector.connectTimeout</code>, 10000 milliseconds by default.</li>
   </ul>
   <p>In one local run each, setting them to 2000 made the build return sooner. Maven went from 35 seconds to 8 seconds. We saw a shorter Gradle build too, but did not time it on the hosted machine. We set them with <code>-D</code> on the command line, for example <code>-Daether.connector.connectTimeout=2000</code>. To use the Gradle properties in <code>gradle.properties</code>, prefix them with <code>systemProp.</code>; we did not test that form.</p>
@@ -130,7 +130,7 @@
       <tr><td>Cache on, address that never answers</td><td>43.46 s</td><td>43.98 s</td><td>44.22 s</td><td>succeeded, 7 of 7</td></tr>
     </tbody>
   </table></div>
-  <p>At the median, an address that never answers added 30.61 s. That matches Gradle's 30-second default connect timeout, about one timeout's worth in every one of those builds. A refused connection was not clearly different from no cache: 13.83 s against 13.37 s at the median, and the ranges overlap.</p>
+  <p>At the median, an address that never answers added 30.61 s. That matches Gradle's 30-second default connect timeout, so each of those builds waited about one timeout. A refused connection was not clearly different from no cache: 13.83 s against 13.37 s at the median, and the ranges overlap.</p>
   <p class="muted-note">Timed runs: a GitHub-hosted machine, Ubuntu 24 image 20261004.327.1, 4 vCPUs (AMD EPYC 9V74), 16 GB. <a href="https://github.com/fosterstack/www/actions/runs/37997462984">The run and its log are public</a>, and the script is <a href="/bin/bench-server-down.sh">bin/bench-server-down.sh</a>. Gradle 9.8.0, Java 21.0.12.1, FosterStack Cache 0.2.1, a project of 4 modules with 150 generated classes each, compile tasks only.</p>
   <p class="muted-note">How: the four setups ran in turn, seven times, after one dropped warm-up round. Every build used a fresh copy of the project, a new empty Gradle home and no daemon, so each time includes Gradle's start-up. The "never answers" address was 10.255.255.1, which gave no answer within 5 seconds before the run. We did not time Maven.</p>
   <p class="muted-note">In every Gradle case the last line of the build said the remote cache was disabled during the build due to errors, and in the builds we printed the failure appeared once. In Maven the one-module project made four attempts: one download and three uploads.</p>
