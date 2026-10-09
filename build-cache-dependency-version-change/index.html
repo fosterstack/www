@@ -95,13 +95,13 @@
     <li>After the bump, the module that uses the dependency rebuilt. The module that does not use it came from the cache.</li>
     <li>Building the new version a second time restored both modules.</li>
     <li>Going back to the old version restored both modules, so the old entries were still there.</li>
-    <li>Gradle and Maven gave the same pattern in our runs.</li>
+    <li>In our runs, Gradle and Maven gave the same pattern.</li>
   </ul>
 
   <h2>What we ran</h2>
   <p>A project with two modules. <code>lib</code> has no dependencies. <code>app</code> depends on one library, Gson (<code>com.google.code.gson:gson</code>), and calls it. We changed only the Gson version, from 2.10.1 to 2.11.0, and nothing else. The two builds below used a self-hosted cache (FosterStack Cache 0.2.1, release 0.2.1).</p>
   <p>Gradle was 9.8.0, with the compile tasks <code>:lib:compileJava</code> and <code>:app:compileJava</code>. Maven was 3.9.9 with the Apache Maven Build Cache Extension 1.2.3 and <code>mvn verify</code>; all eight default plugin versions were pinned in the POM, because an unpinned plugin version changes the Maven cache key (see <a href="/maven-build-cache-different-maven-versions/">Maven build cache across Maven versions</a>). Both used Java 21 (Temurin 21.0.12.1) on one Mac (arm64).</p>
-  <p>Each tool had one series of five builds. The series started on a new, empty cache server. Every build used a fresh copy of the project with no earlier build output and an empty local build cache. The Gson file was downloaded once into a shared download folder before the series, so no build waited on the network. Every build ended with <code>BUILD SUCCESSFUL</code> (Gradle) or <code>BUILD SUCCESS</code> (Maven).</p>
+  <p>Each tool had one series of five builds. The series started on a new, empty cache server. Every build used a fresh copy of the project with no earlier build output. In Maven each build started with an empty local build cache; in Gradle the local build cache was switched off, so only the server could supply results. Gson and what it needs were downloaded once into a shared download folder before the series, so no build waited on the network. Every build ended with <code>BUILD SUCCESSFUL</code> (Gradle) or <code>BUILD SUCCESS</code> (Maven).</p>
   <div class="table-scroll"><div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <thead><tr><th>Build</th><th>Gson</th><th>Gradle <code>lib</code></th><th>Gradle <code>app</code></th><th>Maven <code>lib</code></th><th>Maven <code>app</code></th></tr></thead>
     <tbody>
@@ -117,10 +117,10 @@
   <h2>What this means when you update a dependency</h2>
   <ul class="trust">
     <li><strong>The cost is the modules that use it.</strong> In our runs a module with no use of the library was not rebuilt, in either tool.</li>
-    <li><strong>You can try a version and go back.</strong> The old entries were still on the server after the bump, and the revert restored them.</li>
-    <li><strong>A shared cache helps the next person.</strong> Once one build has run the new version, the others restore it, as build 4 did.</li>
+    <li><strong>You can try a version and go back.</strong> After the bump, going back to the old version restored both modules, so the old results were still available.</li>
+    <li><strong>The server kept the new result.</strong> Build 4 restored both modules from it. We ran one machine, one after another, so we did not test several people or CI against developers.</li>
   </ul>
-  <p>Our advice, not a test result: bump a version in one change, let one CI build fill the cache, and then expect everyone else's builds to restore.</p>
+  <p>Our advice, not a test result: bump a version in one change, let one build fill the cache, and then expect later builds to restore.</p>
   <p>We did not test a dependency that <code>lib</code> and <code>app</code> both use, a module that depends on <code>app</code> (a module downstream of the change), other libraries, other versions, Gradle's wrapper, or Linux. The Mac was busy with other jobs during the runs, so we make no claim about build times.</p>
 
   <h2>If nothing is restored</h2>
