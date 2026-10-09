@@ -28,6 +28,9 @@ verifiable against the CI run that produced them.
 - [Jenkins and CI build cache](https://fosterstack.com/jenkins-ci-build-cache/): one shared cache for CI runners.
 - [Gradle remote build cache not working](https://fosterstack.com/gradle-remote-cache-not-working/): six checks when nothing comes from the cache.
 - [Maven remote build cache setup](https://fosterstack.com/maven-remote-build-cache-setup/): extension, config, credentials, checking hits.
+- [Gradle build cache with Docker Compose](https://fosterstack.com/gradle-build-cache-docker-compose/): password, size cap, volume, health checks.
+- [Gradle build cache on Kubernetes](https://fosterstack.com/gradle-build-cache-kubernetes/): one replica, sizing, security context.
+- [Security policy](https://fosterstack.com/security/): how to report a vulnerability, what we sign and publish.
 - [Server sizing](https://fosterstack.com/build-cache-server-sizing/): CPU, RAM, disk and the size cap.
 - [Air-gapped install](https://fosterstack.com/air-gapped-build-cache-install/): download, verify, transfer, run.
 - [What to check in a replacement build cache](https://fosterstack.com/verify-replacement-build-cache/): eight questions to ask.
