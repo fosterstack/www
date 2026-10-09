@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Gradle Build Cache over HTTPS: PKIX Path Building Failed</title>
+<title>Use your Gradle build cache over HTTPS with a private CA</title>
 <meta name="description" content="Fix the PKIX path building failed error for a Gradle build cache behind HTTPS with a private CA: trust store settings and a Maven Central trap. Tested on 0.2.1.">
-<meta property="og:title" content="Gradle Build Cache over HTTPS: PKIX Path Building Failed">
+<meta property="og:title" content="Use your Gradle build cache over HTTPS with a private CA">
 <meta property="og:description" content="Fix the PKIX path building failed error for a Gradle build cache behind HTTPS with a private CA: trust store settings and a Maven Central trap. Tested on 0.2.1.">
 <meta property="og:url" content="https://fosterstack.com/gradle-remote-build-cache-private-ca-https/">
 <meta property="og:type" content="website">
@@ -87,8 +87,8 @@
   <div class="tag">Infrastructure worth keeping — and kept patched.</div>
 </header>
 <main>
-  <h1>Gradle build cache over HTTPS with a private CA: fixing "PKIX path building failed"</h1>
-  <p class="lede">Your cache server is behind HTTPS with a certificate from your own certificate authority, and Gradle says it cannot trust it. Here is the exact message, why your build still succeeds, and the two settings that fixed it in a real run. We also hit a trap: a trust store that holds only your own CA breaks downloads from Maven Central. The server was FosterStack Cache 0.2.1 and Gradle was 9.8.0.</p>
+  <h1>Use your Gradle build cache over HTTPS with a private CA</h1>
+  <p class="lede">With the right trust store, Gradle uses a cache behind HTTPS with your own certificate authority, and your builds keep their cache hits. At FosterStack we prove everything, so here is how we proved it to ourselves: real runs with a private CA, the exact error without it, and the trap that breaks Maven Central.</p>
 
   <h2>The short answer</h2>
   <ul class="trust">

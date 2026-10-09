@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Gradle Test Task FROM-CACHE: When Tests Are Skipped</title>
+<title>Faster Gradle builds: skip the tests whose code didn't change</title>
 <meta name="description" content="When Gradle takes the test task from a self-hosted build cache and when it runs the tests again, from seven real runs with JUnit on release 0.2.1.">
-<meta property="og:title" content="Gradle Test Task FROM-CACHE: When Tests Are Skipped">
+<meta property="og:title" content="Faster Gradle builds: skip the tests whose code didn&#x27;t change">
 <meta property="og:description" content="When Gradle takes the test task from a self-hosted build cache and when it runs the tests again, from seven real runs with JUnit on release 0.2.1.">
 <meta property="og:url" content="https://fosterstack.com/gradle-test-task-from-cache/">
 <meta property="og:type" content="website">
@@ -89,8 +89,8 @@
   <div class="tag">Infrastructure worth keeping — and kept patched.</div>
 </header>
 <main>
-  <h1>Gradle test task FROM-CACHE: when your tests are skipped</h1>
-  <p class="lede">Gradle can take a passing test run from the build cache instead of running the tests again. Here is when that happened in a real run against a self-hosted cache (FosterStack Cache 0.2.1, Gradle 9.8.0, JUnit 5.11.0), and when it did not.</p>
+  <h1>Faster Gradle builds: skip the tests whose code didn't change</h1>
+  <p class="lede">When nothing a test depends on has changed, Gradle takes its passing result from FosterStack Cache instead of running it again, and your build finishes sooner. At FosterStack we prove everything, so here is how we proved it to ourselves: real runs, real numbers, and the cases where the tests rightly ran again.</p>
 
   <h2>The short answer</h2>
   <ul class="trust">
@@ -116,6 +116,19 @@
   </table></div>
   <p>Runs 1 to 5 ended with <code>BUILD SUCCESSFUL</code>. Runs 6 and 7 ended with <code>BUILD FAILED</code>, as intended. This is the line run 2 printed:</p>
 <pre tabindex="0"><code>&gt; Task :test FROM-CACHE</code></pre>
+
+  <h2>How much time does it save?</h2>
+  <p>On the first project the tests are so quick that the totals were 3 seconds and 2 seconds, which tells you nothing. So we ran a second test with three tests that each wait 10 seconds, made slow on purpose so the time is visible. The Mac was busy with other jobs the whole time, so every total is slower than usual; the gap is what matters.</p>
+  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
+    <thead><tr><th>Run</th><th><code>:test</code> task</th><th>Gradle's total</th></tr></thead>
+    <tbody>
+      <tr><td>1. First build</td><td>ran</td><td>1m 23s</td></tr>
+      <tr><td>2. Fresh copy, same code</td><td><code>FROM-CACHE</code></td><td>35s</td></tr>
+      <tr><td>3. Main code changed</td><td>ran</td><td>1m 12s</td></tr>
+      <tr><td>4. Fresh copy, same code again</td><td><code>FROM-CACHE</code></td><td>32s</td></tr>
+    </tbody>
+  </table></div>
+  <p>The builds where the tests came from the cache finished about 40 to 50 seconds sooner. The three sleeping tests account for 30 seconds of that, and the rest is the extra time the test step takes on this busy machine. Your tests will differ, so measure your own build.</p>
 
   <h2>What this means for your builds</h2>
   <ul class="trust">

@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>What Gradle Stores in the Build Cache: Tasks and Entries</title>
+<title>Know what your Gradle build cache stores before you size it</title>
 <meta name="description" content="What one real Gradle build stored in a self-hosted build cache: which tasks make entries, which make none, and how to count them. Tested on release 0.2.1.">
-<meta property="og:title" content="What Gradle Stores in the Build Cache: Tasks and Entries">
+<meta property="og:title" content="Know what your Gradle build cache stores before you size it">
 <meta property="og:description" content="What one real Gradle build stored in a self-hosted build cache: which tasks make entries, which make none, and how to count them. Tested on release 0.2.1.">
 <meta property="og:url" content="https://fosterstack.com/what-gradle-stores-in-build-cache/">
 <meta property="og:type" content="website">
@@ -87,8 +87,8 @@
   <div class="tag">Infrastructure worth keeping — and kept patched.</div>
 </header>
 <main>
-  <h1>What Gradle stores in the build cache: which tasks, how many entries</h1>
-  <p class="lede">You look at your build cache server and ask why it holds what it holds. Here is what one real build stored, which tasks put nothing there, and how to see it for your own build. The server was FosterStack Cache 0.2.1 and Gradle was 9.8.0.</p>
+  <h1>Know what your Gradle build cache stores before you size it</h1>
+  <p class="lede">Knowing what Gradle puts in the cache tells you what you are paying disk for and which tasks never benefit. At FosterStack we prove everything, so here is how we proved it to ourselves: one real build, every entry counted, and the tasks that stored nothing.</p>
 
   <h2>The short answer</h2>
   <ul class="trust">

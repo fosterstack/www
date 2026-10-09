@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Gradle Build Cache with buildSrc and Included Builds</title>
+<title>Faster Gradle builds with buildSrc and included builds</title>
 <meta name="description" content="Do buildSrc and includeBuild use the Gradle build cache? Six real runs against a self-hosted cache show what is restored and what is rebuilt. Release 0.2.1.">
-<meta property="og:title" content="Gradle Build Cache with buildSrc and Included Builds">
+<meta property="og:title" content="Faster Gradle builds with buildSrc and included builds">
 <meta property="og:description" content="Do buildSrc and includeBuild use the Gradle build cache? Six real runs against a self-hosted cache show what is restored and what is rebuilt. Release 0.2.1.">
 <meta property="og:url" content="https://fosterstack.com/gradle-build-cache-buildsrc-included-builds/">
 <meta property="og:type" content="website">
@@ -87,8 +87,8 @@
   <div class="tag">Infrastructure worth keeping — and kept patched.</div>
 </header>
 <main>
-  <h1>Gradle build cache with buildSrc and included builds: a real run</h1>
-  <p class="lede">If your build has a <code>buildSrc</code> folder or pulls in another build with <code>includeBuild</code>, do those parts use the build cache too? We ran a project with both against a self-hosted cache and recorded which compile tasks came from the cache. The server was FosterStack Cache 0.2.1 and Gradle was 9.8.0.</p>
+  <h1>Faster Gradle builds with buildSrc and included builds</h1>
+  <p class="lede">Gradle can restore the compiled result of buildSrc and of an included build from the cache, so in our runs a change in one part rebuilt only that part, unless a public method changed. At FosterStack we prove everything, so here is how we proved it to ourselves: six real runs showing what was restored and what was rebuilt.</p>
 
   <h2>The short answer</h2>
   <ul class="trust">
