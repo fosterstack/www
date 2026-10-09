@@ -117,7 +117,7 @@
   </ul>
 
   <h2>What makes the disk grow</h2>
-  <p>The cache grows only when a build makes an output the cache does not have yet. A build that changes nothing adds nothing. In our test, an edit inside one method added one small entry per build, about 2.5 KB. A new public method added four entries, about 11.5 KB, because the other three modules depend on that one, so all four were recompiled.</p>
+  <p>The cache grows only when a build makes an output the cache does not have yet. A build that changes nothing adds nothing. In our test, an edit inside one method added one small entry per build, about 2.5 KB. A new public method added four entries, about 11.5 KB, because the other three modules depend on it, directly or through another module, so all four were recompiled.</p>
   <ul class="trust">
     <li><strong>To size your own:</strong> run your normal builds for a day, then run <code>du -sk</code> on your <code>FSCACHE_DATA_DIR</code> folder. It also counts a 128 KB index file and rounds each small entry up, so on a small project it reads higher than the entries alone.</li>
     <li><strong>To limit growth:</strong> set a size cap (see <em>Set a size cap</em> above). The oldest-unused entries go first; see <a href="/build-cache-eviction-size-limit/">build cache eviction and the size limit</a>.</li>
