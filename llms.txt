@@ -12,7 +12,7 @@ distribution, support, or updates after 2026-12-31. Teams running it on open-sou
 Gradle, with no Develocity licence, are orphaned on 2027-01-01. FosterStack Cache
 speaks Gradle's documented `HttpBuildCache` protocol — acceptance-tested against a
 real multi-module Gradle build in CI — and implements the Apache Maven Build Cache
-Extension's remote HTTP mode (Maven acceptance coverage is in progress). Same server,
+Extension's remote HTTP mode. Same server,
 same core.
 
 It is a single static Go binary (`CGO_ENABLED=0`), MIT-licensed, distributed as bare
