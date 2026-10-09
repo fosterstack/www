@@ -25,6 +25,9 @@ verifiable against the CI run that produced them.
 - [Build Cache Node end of life](https://fosterstack.com/build-cache-node-end-of-life/): what happens and your options.
 - [Migrate from Build Cache Node](https://fosterstack.com/migrate-build-cache-node/): Gradle and Maven setup and how to check it works.
 - [Questions and answers](https://fosterstack.com/build-cache-node-faq/): cost, readiness, security, what is not built.
+- [Your Laptop Builds Reuse What CI Already Built](https://fosterstack.com/laptop-builds-reuse-ci-build-cache/): CI stores results in one shared Gradle or Maven build cache and your laptop restores them.
+- [We Upgraded Gradle or Maven and Builds Got Slow](https://fosterstack.com/build-cache-cold-after-gradle-or-maven-upgrade/): what to expect after an upgrade and which Maven plugin versions to pin.
+- [Why Did My Whole Build Rerun After a Small Change?](https://fosterstack.com/build-cache-one-module-changed-what-rebuilds/): what stays cached after an edit or a dependency bump, in Gradle and in Maven.
 - [Jenkins and CI build cache](https://fosterstack.com/jenkins-ci-build-cache/): one shared cache for CI runners.
 - [Gradle remote build cache not working](https://fosterstack.com/gradle-remote-cache-not-working/): six checks when nothing comes from the cache.
 - [Maven remote build cache setup](https://fosterstack.com/maven-remote-build-cache-setup/): extension, config, credentials, checking hits.
