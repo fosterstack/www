@@ -118,8 +118,10 @@ GET the too-large key afterwards                               404
 /statusz, no credentials                                       401</code></pre>
   <p>The health and metrics paths stay open without a password, so monitoring works. The status page does not.</p>
 
-  <h2>401 is the quiet one</h2>
-  <p>Gradle treats a remote cache failure as non-fatal, so a 401 does not break the build and shows nothing at the default log level. The build just never uses the cache. Run with <code>-i</code> to see it. The usual causes are no <code>credentials</code> block, a password that did not reach Gradle's background daemon, or a typo. To test the server directly:</p>
+  <h2>401 does not break the build</h2>
+  <p>Gradle treats a remote cache failure as non-fatal, so a 401 does not fail the build. The build just runs without the cache. In our test with Gradle 9.8.0 on macOS it printed this at the default log level:</p>
+  <pre><code>Could not load entry d4f2de693b561fd2c5d60b17a9232d6f from remote build cache: Loading entry from 'http://127.0.0.1:18099/d4f2de693b561fd2c5d60b17a9232d6f' response status 401: Unauthorized</code></pre>
+  <p>The usual causes are no <code>credentials</code> block, a wrong password, or a typo. Run with <code>-i</code> for more detail. To test the server directly:</p>
   <pre><code>curl -s -o /dev/null -w &#x27;%{http_code}\n&#x27; -u gradle:wrong-password https://cache.example.com/some-key</code></pre>
   <p>A 401 here means the credentials are wrong. A 404 means they are right and the key simply is not stored. More steps are in <a href="/gradle-remote-cache-not-working/">Gradle remote build cache not working</a>.</p>
 

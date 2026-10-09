@@ -87,7 +87,7 @@
 </header>
 <main>
   <h1>Gradle remote build cache not working: no FROM-CACHE</h1>
-  <p class="lede">Your build runs, nothing fails, and nothing comes from the remote cache. Gradle treats a broken remote cache as non-fatal, so it fails quietly. Work down this list.</p>
+  <p class="lede">Your build runs, nothing fails, and nothing comes from the remote cache. Gradle treats a broken remote cache as non-fatal, so the build carries on without it and the only sign may be one line in the log. Work down this list.</p>
 
   <h2>1. Is the build cache switched on?</h2>
   <p>The <code>buildCache</code> block in <code>settings.gradle(.kts)</code> says where the cache is. It does not turn caching on. Without this line the block does nothing:</p>
@@ -103,10 +103,10 @@ org.gradle.caching=true</code></pre>
   <p>Run it twice. The second run is the one that tells you something.</p>
 
   <h2>3. Is the password reaching Gradle?</h2>
-  <p>If the server uses a password and Gradle sends none, every request gets a 401, silently. Two things to check:</p>
+  <p>If the server uses a password and Gradle sends none, every request gets a 401. In our test with Gradle 9.8.0 on macOS, Gradle printed <code>Could not load entry ... response status 401: Unauthorized</code> at the default log level and carried on without the cache. Two things to check:</p>
   <ul class="trust">
     <li>Keep a <code>credentials</code> block in the config. A server with no password ignores it, so one config works everywhere.</li>
-    <li>Gradle's background daemon reads its environment once, when it starts. A password you exported weeks ago can stop working after a reboot. Run <code>./gradlew --stop</code>, or put the password in <code>~/.gradle/gradle.properties</code> (never in the repo).</li>
+    <li>Check that the variable is set in the shell or CI job that runs Gradle. In our test with Gradle 9.8.0 on macOS, a password exported after the background daemon was already running was used by the very next build (same daemon, no restart), and a wrong one gave the 401 straight away. If a password still seems ignored, run <code>./gradlew --stop</code> to rule the daemon out, or put it in <code>~/.gradle/gradle.properties</code> (never in the repo).</li>
   </ul>
   <p>To test the server's password directly, a 401 means the credentials are wrong and a 404 means they are right and the key just is not there yet:</p>
   <pre><code>curl -s -o /dev/null -w '%{http_code}\n' -u gradle:wrong-password \
