@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Share Your Gradle Build Cache Between Macs and Linux CI</title>
-<meta name="description" content="Can Mac laptops and Linux CI share a Gradle build cache? Four series of real builds across macOS, Linux arm64 and Linux amd64, with release 0.2.1.">
+<meta name="description" content="Can Mac laptops and Linux CI share a Gradle build cache? Six series of real builds across macOS, Linux arm64 and Linux amd64, with release 0.2.1.">
 <meta property="og:title" content="Share Your Gradle Build Cache Between Macs and Linux CI">
-<meta property="og:description" content="Can Mac laptops and Linux CI share a Gradle build cache? Four series of real builds across macOS, Linux arm64 and Linux amd64, with release 0.2.1.">
+<meta property="og:description" content="Can Mac laptops and Linux CI share a Gradle build cache? Six series of real builds across macOS, Linux arm64 and Linux amd64, with release 0.2.1.">
 <meta property="og:url" content="https://fosterstack.com/gradle-build-cache-mac-laptops-linux-ci/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="FosterStack">
@@ -107,7 +107,7 @@
       <tr><td>Linux container, amd64</td><td>Linux</td><td>amd64 (emulated)</td><td>9.8.0</td><td>Eclipse Adoptium 21.0.12.1+1-LTS</td></tr>
     </tbody>
   </table></div>
-  <p>The containers came from the <code>gradle:9.8.0-jdk21</code> image under Docker Desktop 4.87. The cache server and every build ran on the same Mac, and the amd64 container ran under emulation. Where we did not name a platform, the container used the Docker default, which on this Mac is arm64; we checked that right after the runs. Every build used a fresh copy of the project with no earlier build output, a new empty Gradle home, and the local build cache off. The project sat in a different folder each time: a long folder on the Mac and <code>/work/one</code> in the containers. Each series started on a new, empty cache server, and every build ended with <code>BUILD SUCCESSFUL</code>. The six series came from three script runs.</p>
+  <p>The containers came from the <code>gradle:9.8.0-jdk21</code> image under Docker Desktop 4.87. The cache server and every build ran on the same Mac, and the amd64 container ran under emulation. Where we did not name a platform, the container used the Docker default, which on this Mac is arm64; we checked that after the runs that relied on it. Every build used a fresh copy of the project with no earlier build output, a new empty Gradle home, and the local build cache off. The project sat in a different folder each time: a long folder on the Mac and <code>/work/one</code> in the containers. Each series started on a new, empty cache server, and every build ended with <code>BUILD SUCCESSFUL</code>. The six series came from three script runs.</p>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <thead><tr><th>Series</th><th>Build 1</th><th>Build 2 (other platform)</th><th>Build 3 (first platform again)</th></tr></thead>
     <tbody>
