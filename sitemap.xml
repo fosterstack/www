@@ -239,4 +239,8 @@
     <loc>https://fosterstack.com/remote-build-cache-miss-cost/</loc>
     <lastmod>2026-10-09</lastmod>
   </url>
+  <url>
+    <loc>https://fosterstack.com/maven-build-cache-let-ci-write-developers-read/</loc>
+    <lastmod>2026-10-09</lastmod>
+  </url>
 </urlset>
