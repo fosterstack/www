@@ -99,51 +99,53 @@
 
   <h2>What we ran</h2>
   <p>The cache server speaks plain HTTP, so HTTPS comes from a TLS front end in front of it. For this test the front end was a small TLS proxy we wrote, a stand-in for nginx or any other TLS front end; for a real nginx setup see <a href="/build-cache-docker-compose-production/">production Docker Compose with nginx and TLS</a>. The certificate came from a private test CA. The address was <code>https://127.0.0.1:18443/</code>, and the certificate names that IP address.</p>
-  <p>All six builds ran on the same Mac, each from a fresh copy of the project and a new empty Gradle home, with Java 27 (Homebrew) and the local build cache off. The cache server and the test certificate were shared. Every build ended with <code>BUILD SUCCESSFUL</code> except run 5, which is the one that was meant to fail.</p>
+  <p>All six builds ran on the same Mac, each from a fresh copy of the project and a new empty Gradle home, with Java 27 (Homebrew) and the local build cache off. The cache server (with no login) and the test certificate were shared, so runs 3 to 6 read the entry that run 2 stored. We ran the installed <code>gradle</code> command with <code>--no-daemon</code>; Gradle still started a single-use daemon for each build. Every build ended with <code>BUILD SUCCESSFUL</code> except run 5, which is the one that was meant to fail.</p>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <thead><tr><th>Run</th><th>Trust setting</th><th>Result</th></tr></thead>
     <tbody>
       <tr><td>1</td><td>None</td><td><code>PKIX path building failed</code>. Remote cache disabled. Build succeeded, the task ran.</td></tr>
-      <tr><td>2</td><td>Trust store with our CA, in <code>gradle.properties</code></td><td>Task ran and was stored.</td></tr>
+      <tr><td>2</td><td>Trust store with our CA, in <code>gradle.properties</code></td><td>Task ran. Run 3 then took it from the cache.</td></tr>
       <tr><td>3</td><td>Same, fresh copy</td><td><code>compileJava FROM-CACHE</code></td></tr>
       <tr><td>4</td><td>Trust store with our CA, on the command line only</td><td><code>compileJava FROM-CACHE</code></td></tr>
-      <tr><td>5</td><td>Trust store with only our CA, and a project that needs Maven Central</td><td><code>BUILD FAILED</code>: could not get the JUnit file from Central, SSL handshake exception.</td></tr>
+      <tr><td>5</td><td>Trust store with only our CA, and a project that needs Maven Central</td><td><code>compileJava FROM-CACHE</code>, so the cache over HTTPS still worked, then <code>BUILD FAILED</code>: could not get the JUnit file from Central, SSL handshake exception.</td></tr>
       <tr><td>6</td><td>Trust store with Java's normal list plus our CA, same project</td><td><code>BUILD SUCCESSFUL</code>, <code>compileJava FROM-CACHE</code></td></tr>
     </tbody>
   </table></div>
 
   <h2>The error, as Gradle printed it</h2>
-<pre tabindex="0"><code>Could not load entry 4457e6cdfcbc6f3ffcc499ae66c34468 from remote build cache: (certificate_unknown) PKIX path building failed: sun.security.provider.certpath.SunCertPathBuilderException: unable to find valid certification path to requested target
+<pre tabindex="0"><code>Could not load entry a7d91d3d57397e7a7b4c0f7d07e2ba1e from remote build cache: (certificate_unknown) PKIX path building failed: sun.security.provider.certpath.SunCertPathBuilderException: unable to find valid certification path to requested target
 ...
 The remote build cache was disabled during the build due to errors.</code></pre>
   <p>Gradle treats a broken remote cache as non-fatal, so the build carried on without the cache. In a real pipeline that looks like a build that is simply slow, so look for this line in the log. A tool like curl fails on the same address too: in our test it exited with code 60 until we gave it the CA with <code>--cacert</code>.</p>
 
   <h2>Fix 1: a trust store with your CA</h2>
-  <p>Make a Java trust store that contains your CA certificate (the password here is only the test value):</p>
-<pre tabindex="0"><code>keytool -importcert -alias testca -file ca/ca.crt -keystore truststore-only.jks -storepass changeit -noprompt</code></pre>
+  <p>Make a Java trust store that contains your CA certificate (the password here is only the test value; <code>keytool</code> made a PKCS12 file, which Java reads without being told the type):</p>
+<pre tabindex="0"><code>keytool -importcert -alias testca -file ca/ca.crt -keystore truststore-only.p12 -storepass changeit -noprompt</code></pre>
   <p>Then point Gradle at it in <code>gradle.properties</code>. These two lines made run 2 and run 3 work:</p>
-<pre tabindex="0"><code>systemProp.javax.net.ssl.trustStore=/path/to/truststore-only.jks
+<pre tabindex="0"><code>systemProp.javax.net.ssl.trustStore=/path/to/truststore-only.p12
 systemProp.javax.net.ssl.trustStorePassword=changeit</code></pre>
-  <p>Passing the same two settings on the command line, as <code>-Djavax.net.ssl.trustStore=...</code> and <code>-Djavax.net.ssl.trustStorePassword=...</code>, worked in run 4. We ran with <code>--no-daemon</code> and did not test how a long-running daemon picks up the setting.</p>
+  <p>Passing the same two settings on the command line, as <code>-Djavax.net.ssl.trustStore=...</code> and <code>-Djavax.net.ssl.trustStorePassword=...</code>, worked in run 4. We did not test how a long-running daemon picks up the setting.</p>
 
   <h2>The trap: your own CA replaces the normal list</h2>
-  <p>Setting a trust store tells Java to trust <em>only</em> what is in that store. Run 5 had only our CA, and Gradle could no longer download from Maven Central:</p>
+  <p>With the standard Java settings we used, setting a trust store makes Java trust only what is in that store. Run 5 had only our CA, and Gradle could no longer download from Maven Central:</p>
 <pre tabindex="0"><code>&gt; Could not GET 'https://repo.maven.apache.org/maven2/org/junit/junit-bom/5.11.0/junit-bom-5.11.0.pom'.
-   &gt; Got SSL handshake exception during request. It might be caused by SSL misconfiguration</code></pre>
+   &gt; Got SSL handshake exception during request. It might be caused by SSL misconfiguration
+      &gt; (certificate_unknown) PKIX path building failed: sun.security.provider.certpath.SunCertPathBuilderException: unable to find valid certification path to requested target</code></pre>
+  <p>It is the same PKIX message as in run 1, this time about Maven Central.</p>
   <p>The fix is a store that holds Java's normal list as well. Copy the <code>cacerts</code> file that ships with your Java (it is under <code>lib/security</code> in the Java folder), then add your CA to the copy:</p>
-<pre tabindex="0"><code>cp /path/to/java/lib/security/cacerts truststore-combined.jks
-keytool -importcert -alias testca -file ca/ca.crt -keystore truststore-combined.jks -storepass changeit -noprompt</code></pre>
-  <p>The Java default file uses the password <code>changeit</code>, and that is what worked here. Run 6 used this combined store and passed, with both the Central download and the cache over HTTPS working. Our combined store held 112 certificates: the 111 that came with Java plus ours.</p>
+<pre tabindex="0"><code>cp /path/to/java/lib/security/cacerts truststore-combined.p12
+keytool -importcert -alias testca -file ca/ca.crt -keystore truststore-combined.p12 -storepass changeit -noprompt</code></pre>
+  <p>The Java default file uses the password <code>changeit</code>, and that is what worked here. The copy does not follow later updates to Java's list, so make the copy again when you update Java. Run 6 used this combined store and passed, with both the Central download and the cache over HTTPS working. Our combined store held 112 certificates: the 111 that came with Java plus ours.</p>
 
   <h2>How we made the test certificates</h2>
-  <p>This is what we ran. The 30-day lifetime is only for the test; choose your own.</p>
+  <p>These are the exact commands in the setup script we ran before the six builds. The 30-day lifetime is only for the test; choose your own.</p>
 <pre tabindex="0"><code>openssl genrsa -out ca.key 2048
 openssl req -x509 -new -key ca.key -sha256 -days 30 -subj "/CN=Test Private CA" -out ca.crt
 openssl genrsa -out server.key 2048
 openssl req -new -key server.key -subj "/CN=cache.test" -out server.csr
 printf "subjectAltName=IP:127.0.0.1,DNS:localhost\nbasicConstraints=CA:FALSE\nextendedKeyUsage=serverAuth\n" &gt; ext.cnf
 openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out server.crt -days 30 -sha256 -extfile ext.cnf</code></pre>
-  <p>The certificate has to name the address your builds use. We did not test a certificate that names a different host, an expired certificate, or Linux or Windows.</p>
+  <p>The certificate has to name the address your builds use. We did not test a certificate that names a different host, an expired certificate, the Gradle wrapper (<code>./gradlew</code>), or Linux or Windows.</p>
 
   <h2>If it still does not work</h2>
   <p>Work through <a href="/gradle-remote-cache-not-working/">Gradle remote build cache not working</a>. For the server side of HTTPS, see <a href="/build-cache-docker-compose-production/">production Docker Compose with nginx and TLS</a>.</p>
