@@ -140,7 +140,7 @@
   <p class="muted-note">Android run: a GitHub-hosted machine, Ubuntu 24 image 20261004.327.1, 4 vCPUs (AMD EPYC 7763), 16 GB. <a href="https://github.com/fosterstack/www/actions/runs/38004420267">The run and its log are public</a>, with every task listed, and the script is <a href="/bin/bench-android.sh">bin/bench-android.sh</a>.</p>
   <p class="muted-note">What: the Android Gradle plugin 9.4.1, which brings Kotlin support with it, and the Android SDK already on the machine (compile SDK 36, build tools 37.0.0). Gradle 9.8.0, Java 21.0.12.1, FosterStack Cache 0.2.1. The command was <code>assembleDebug</code>. The project is a library module (Kotlin and one Java file) and an app module (Kotlin) that uses it. The plugin and Kotlin compiler are downloaded at run time and are not checksum-pinned.</p>
   <p class="muted-note">How: every build used a fresh copy of the project, a new Gradle home and no local build cache. We measured no times.</p>
-  <p class="muted-note">Not tested: Android release builds, lint, Android tests, Kotlin Multiplatform, kapt or KSP, Compose, a real-sized app, other plugin versions, Maven. The Kotlin timing-free runs were on a Mac; the Android runs were on the hosted machine. We make no claim about build times.</p>
+  <p class="muted-note">Not tested: Android release builds, lint, Android tests, Kotlin Multiplatform, kapt or KSP, Compose, a real-sized app, other plugin versions, Maven. The Kotlin JVM runs were on a Mac and the Android runs on the hosted machine. We make no claim about build times.</p>
 </main>
 <footer>
   <div>
