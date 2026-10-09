@@ -102,7 +102,7 @@
 
   <h2>What to do</h2>
   <p>Our advice, not a test result:</p>
-  <ul class="trust">
+  <ul style="padding-left:1.25rem">
     <li><strong>Give the write login to as few machines as you can.</strong> Usually that means CI only.</li>
     <li><strong>Give everyone else the read-only login.</strong> That includes laptops. The setup is on <a href="/gradle-build-cache-ci-writes-developers-read/">let CI write, developers only read</a>.</li>
     <li><strong>Keep builds of untrusted code on the read-only login.</strong> An example is a pull request from a fork.</li>
@@ -110,7 +110,7 @@
     <li><strong>Use HTTPS.</strong> Gradle sends the login with its requests. See <a href="/remote-build-cache-security/">is a remote build cache safe</a>.</li>
     <li><strong>If you doubt an entry, clear the cache.</strong> See <a href="/reset-gradle-build-cache/">how to clear or reset a build cache</a>.</li>
   </ul>
-  <p>FosterStack Cache has one write login and one read-only login. A shared write login cannot tell you who wrote an entry.</p>
+  <p>FosterStack Cache has one write login and one read-only login. We did not test whether the server records who wrote an entry.</p>
 
   <h2>How we checked</h2>
   <p>We ran a real FosterStack Cache server with a write login and a read-only login. We built a project, then tried each login against the stored entries with plain HTTP requests.</p>
