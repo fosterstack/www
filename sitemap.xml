@@ -1,19 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--
-  Index page only, on purpose. The pre-positioned /bcn-removed/ page is unpublished
-  (an undeployed draft in .drafts/) until the watcher verifies the removal; it was unlisted
-  until its trigger fires (see ops/docs, addendum §2); it stays out of this
-  file and keeps its noindex tag until then.
--->
+<!-- One <url> per page with exactly one <loc>. Pages not listed on purpose: 404.html (noindex) and anything under .drafts/ (not deployed). -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url>
-    <loc>https://fosterstack.com/regulated/</loc>
-    <lastmod>2026-09-11</lastmod>
-  </url>
-  <url>
-    <loc>https://fosterstack.com/build-cache-node-end-of-life/</loc>
-    <lastmod>2026-10-08</lastmod>
-  </url>
   <url>
     <loc>https://fosterstack.com/</loc>
     <lastmod>2026-10-08</lastmod>
@@ -21,44 +8,7 @@
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://fosterstack.com/migrate-build-cache-node/</loc>
-    <loc>https://fosterstack.com/jenkins-ci-build-cache/</loc>
-    <loc>https://fosterstack.com/build-cache-node-faq/</loc>
-    <loc>https://fosterstack.com/how-we-build/</loc>
-    <loc>https://fosterstack.com/gradle-remote-cache-not-working/</loc>
-    <loc>https://fosterstack.com/verify-replacement-build-cache/</loc>
-    <loc>https://fosterstack.com/long-term-support-build-cache/</loc>
-    <loc>https://fosterstack.com/build-cache-server-sizing/</loc>
     <loc>https://fosterstack.com/air-gapped-build-cache-install/</loc>
-    <loc>https://fosterstack.com/maven-remote-build-cache-setup/</loc>
-    <loc>https://fosterstack.com/security/</loc>
-    <loc>https://fosterstack.com/gradle-build-cache-docker-compose/</loc>
-    <loc>https://fosterstack.com/gradle-build-cache-kubernetes/</loc>
-    <loc>https://fosterstack.com/changelog/</loc>
-    <loc>https://fosterstack.com/verify-container-image-signature-cosign/</loc>
-    <loc>https://fosterstack.com/remote-build-cache-security/</loc>
-    <loc>https://fosterstack.com/verify-a-release/</loc>
-    <loc>https://fosterstack.com/monitor-build-cache-prometheus-grafana/</loc>
-    <loc>https://fosterstack.com/fips-140-3-build-cache/</loc>
-    <loc>https://fosterstack.com/gradle-build-cache-http-status-codes/</loc>
-    <loc>https://fosterstack.com/reset-gradle-build-cache/</loc>
-    <loc>https://fosterstack.com/gradle-build-cache-tutorial/</loc>
-    <lastmod>2026-10-08</lastmod>
-  </url>
-  <url>
-    <loc>https://fosterstack.com/build-cache-eviction-size-limit/</loc>
-    <lastmod>2026-10-08</lastmod>
-  </url>
-  <url>
-    <loc>https://fosterstack.com/gradle-build-cache-ci-writes-developers-read/</loc>
-    <lastmod>2026-10-08</lastmod>
-  </url>
-  <url>
-    <loc>https://fosterstack.com/gradle-remote-build-cache-authentication/</loc>
-    <lastmod>2026-10-08</lastmod>
-  </url>
-  <url>
-    <loc>https://fosterstack.com/gradle-configuration-cache-vs-build-cache/</loc>
     <lastmod>2026-10-08</lastmod>
   </url>
   <url>
@@ -66,7 +16,39 @@
     <lastmod>2026-10-08</lastmod>
   </url>
   <url>
-    <loc>https://fosterstack.com/maven-build-cache-extension-not-restoring/</loc>
+    <loc>https://fosterstack.com/build-cache-eviction-size-limit/</loc>
+    <lastmod>2026-10-08</lastmod>
+  </url>
+  <url>
+    <loc>https://fosterstack.com/build-cache-node-end-of-life/</loc>
+    <lastmod>2026-10-08</lastmod>
+  </url>
+  <url>
+    <loc>https://fosterstack.com/build-cache-node-faq/</loc>
+    <lastmod>2026-10-08</lastmod>
+  </url>
+  <url>
+    <loc>https://fosterstack.com/build-cache-server-sizing/</loc>
+    <lastmod>2026-10-08</lastmod>
+  </url>
+  <url>
+    <loc>https://fosterstack.com/changelog/</loc>
+    <lastmod>2026-10-08</lastmod>
+  </url>
+  <url>
+    <loc>https://fosterstack.com/fips-140-3-build-cache/</loc>
+    <lastmod>2026-10-08</lastmod>
+  </url>
+  <url>
+    <loc>https://fosterstack.com/first-15-minutes-build-cache/</loc>
+    <lastmod>2026-10-08</lastmod>
+  </url>
+  <url>
+    <loc>https://fosterstack.com/gradle-build-cache-ci-writes-developers-read/</loc>
+    <lastmod>2026-10-08</lastmod>
+  </url>
+  <url>
+    <loc>https://fosterstack.com/gradle-build-cache-docker-compose/</loc>
     <lastmod>2026-10-08</lastmod>
   </url>
   <url>
@@ -74,11 +56,87 @@
     <lastmod>2026-10-08</lastmod>
   </url>
   <url>
+    <loc>https://fosterstack.com/gradle-build-cache-http-status-codes/</loc>
+    <lastmod>2026-10-08</lastmod>
+  </url>
+  <url>
+    <loc>https://fosterstack.com/gradle-build-cache-kubernetes/</loc>
+    <lastmod>2026-10-08</lastmod>
+  </url>
+  <url>
+    <loc>https://fosterstack.com/gradle-build-cache-tutorial/</loc>
+    <lastmod>2026-10-08</lastmod>
+  </url>
+  <url>
+    <loc>https://fosterstack.com/gradle-configuration-cache-vs-build-cache/</loc>
+    <lastmod>2026-10-08</lastmod>
+  </url>
+  <url>
+    <loc>https://fosterstack.com/gradle-remote-build-cache-authentication/</loc>
+    <lastmod>2026-10-08</lastmod>
+  </url>
+  <url>
+    <loc>https://fosterstack.com/gradle-remote-cache-not-working/</loc>
+    <lastmod>2026-10-08</lastmod>
+  </url>
+  <url>
+    <loc>https://fosterstack.com/how-we-build/</loc>
+    <lastmod>2026-10-08</lastmod>
+  </url>
+  <url>
+    <loc>https://fosterstack.com/jenkins-ci-build-cache/</loc>
+    <lastmod>2026-10-08</lastmod>
+  </url>
+  <url>
+    <loc>https://fosterstack.com/long-term-support-build-cache/</loc>
+    <lastmod>2026-10-08</lastmod>
+  </url>
+  <url>
+    <loc>https://fosterstack.com/maven-build-cache-extension-not-restoring/</loc>
+    <lastmod>2026-10-08</lastmod>
+  </url>
+  <url>
+    <loc>https://fosterstack.com/maven-remote-build-cache-setup/</loc>
+    <lastmod>2026-10-08</lastmod>
+  </url>
+  <url>
+    <loc>https://fosterstack.com/migrate-build-cache-node/</loc>
+    <lastmod>2026-10-08</lastmod>
+  </url>
+  <url>
+    <loc>https://fosterstack.com/monitor-build-cache-prometheus-grafana/</loc>
+    <lastmod>2026-10-08</lastmod>
+  </url>
+  <url>
     <loc>https://fosterstack.com/one-build-cache-server-gradle-and-maven/</loc>
     <lastmod>2026-10-08</lastmod>
   </url>
   <url>
-    <loc>https://fosterstack.com/first-15-minutes-build-cache/</loc>
+    <loc>https://fosterstack.com/regulated/</loc>
+    <lastmod>2026-10-08</lastmod>
+  </url>
+  <url>
+    <loc>https://fosterstack.com/remote-build-cache-security/</loc>
+    <lastmod>2026-10-08</lastmod>
+  </url>
+  <url>
+    <loc>https://fosterstack.com/reset-gradle-build-cache/</loc>
+    <lastmod>2026-10-08</lastmod>
+  </url>
+  <url>
+    <loc>https://fosterstack.com/security/</loc>
+    <lastmod>2026-10-08</lastmod>
+  </url>
+  <url>
+    <loc>https://fosterstack.com/verify-a-release/</loc>
+    <lastmod>2026-10-08</lastmod>
+  </url>
+  <url>
+    <loc>https://fosterstack.com/verify-container-image-signature-cosign/</loc>
+    <lastmod>2026-10-08</lastmod>
+  </url>
+  <url>
+    <loc>https://fosterstack.com/verify-replacement-build-cache/</loc>
     <lastmod>2026-10-08</lastmod>
   </url>
 </urlset>
