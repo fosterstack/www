@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Does the Build Cache Work With Kotlin and Android Builds?</title>
-<meta name="description" content="Does Gradle's remote build cache restore Kotlin compile tasks? Real runs on FosterStack Cache 0.2.1 show which tasks come from the cache and which rerun.">
+<meta name="description" content="Does Gradle's remote build cache restore Kotlin and Android tasks? Real runs on FosterStack Cache 0.2.1 show which come from the cache and which rerun.">
 <meta property="og:title" content="Does the Build Cache Work With Kotlin and Android Builds?">
 <meta property="og:description" content="Does Gradle&#x27;s remote build cache restore Kotlin compile tasks? Real runs on FosterStack Cache 0.2.1 show which tasks come from the cache and which rerun.">
 <meta property="og:url" content="https://fosterstack.com/kotlin-android-gradle-build-cache/">
@@ -88,7 +88,7 @@
 </header>
 <main>
   <h1>Does the build cache work with Kotlin and Android builds?</h1>
-  <p class="lede">For Kotlin on the JVM, yes. In our runs Gradle took the Kotlin compile tasks and the test task from FosterStack Cache instead of running them again. We are still measuring Android.</p>
+  <p class="lede">Yes, for Kotlin on the JVM and for a small Android project. In our runs Gradle took the Kotlin compile tasks, the Java compile and the dex tasks from FosterStack Cache instead of running them again.</p>
 
   <h2>The short answer for Kotlin</h2>
   <ul class="trust">
@@ -98,14 +98,18 @@
     <li><strong>After a new public function,</strong> the Kotlin compile ran again in both modules. The Java compile in the changed module ran too, and so did the test.</li>
   </ul>
 
-  <p id="android-pending"><strong>ANDROID-PENDING</strong>: what Gradle restores in an Android build, measured on a GitHub-hosted machine, goes here.</p>
-  <!-- ANDROID-PENDING: replace the paragraph above with the Android result, then update the lede, the description and the "Not tested" line, before this page is merged. -->
-
+  <h2>The short answer for Android</h2>
+  <ul class="trust">
+    <li><strong>A repeat build restored 35 of 78 tasks.</strong> That included the Kotlin compile of both modules, the Java compile of the library, dexing, and most resource and manifest tasks.</li>
+    <li><strong>Some tasks ran every time.</strong> Packaging the APK, bundling the library, and merging assets ran again in every build, even when everything else was restored.</li>
+    <li><strong>After a change inside a method in the library,</strong> its Kotlin compile ran again and 31 tasks were restored. The app's own Kotlin compile was still restored.</li>
+    <li><strong>After a new public function in the library,</strong> the library's Kotlin and Java compiles ran again, and so did the app's Kotlin compile. 29 tasks were restored.</li>
+  </ul>
   <h2>What to do</h2>
   <p>Our advice, not a test result:</p>
   <ul class="trust">
     <li><strong>Look for FROM-CACHE on the compile and test lines.</strong> That is where a Kotlin build shows its hits. See <a href="/build-cache-hit-rate-how-to-measure/">how to measure your hit rate</a>.</li>
-    <li><strong>Do not count the jar tasks as misses.</strong> They ran every time in our builds, even when everything else was restored.</li>
+    <li><strong>Do not count the jar and APK packaging tasks as misses.</strong> They ran every time in our builds, even when everything else was restored.</li>
     <li><strong>Keep the Kotlin plugin version and the Java version the same</strong> on laptops and CI, so entries can be shared. If the hit rate is low, see <a href="/gradle-build-cache-hit-rate-low/">why the Gradle hit rate is low</a>.</li>
   </ul>
 
@@ -124,7 +128,19 @@
   </table></div>
   <p class="muted-note">What: Gradle 9.8.0, the Kotlin Gradle plugin 2.4.21, Temurin 21.0.12.1, FosterStack Cache 0.2.1, on a Mac (arm64). Two modules: <code>core</code> has a Kotlin class and one Java file, <code>app</code> has a Kotlin class and one test and uses <code>core</code>. The command was <code>gradle build</code>.</p>
   <p class="muted-note">How: every build used a fresh copy of the project and Gradle's local cache was off. One Gradle home was shared for downloads (the plugin and the test libraries), and it was filled first by a build with the cache off. The tasks without a test source (<code>:core:test</code> and the empty Java compile in <code>app</code>) had nothing to run and are left out.</p>
-  <p class="muted-note">Not tested: Android, Kotlin Multiplatform, kapt or KSP, Compose, Maven, Linux. We make no claim about build times.</p>
+  <p><strong>Android, on a GitHub-hosted machine.</strong> We built a small Android project three times over, each time on a new empty cache server. Build 1 stored the results. Build 2 used a fresh copy of the project and a new Gradle home. This table shows build 2.</p>
+  <div class="table-scroll" role="region" aria-label="Android build 2: tasks restored and what ran again" tabindex="0"><table>
+    <thead><tr><th>Case</th><th>Tasks restored (of 78)</th><th>Library Kotlin compile</th><th>App Kotlin compile</th></tr></thead>
+    <tbody>
+      <tr><td>Nothing changed</td><td>35</td><td>from cache</td><td>from cache</td></tr>
+      <tr><td>Body change in the library</td><td>31</td><td>ran</td><td>from cache</td></tr>
+      <tr><td>New public function in the library</td><td>29</td><td>ran</td><td>ran</td></tr>
+    </tbody>
+  </table></div>
+  <p class="muted-note">Android run: a GitHub-hosted machine, Ubuntu 24 image 20261004.327.1, 4 vCPUs (AMD EPYC 7763), 16 GB. <a href="https://github.com/fosterstack/www/actions/runs/38004420267">The run and its log are public</a>, with every task listed, and the script is <a href="/bin/bench-android.sh">bin/bench-android.sh</a>.</p>
+  <p class="muted-note">What: the Android Gradle plugin 9.4.1, which brings Kotlin support with it, and the Android SDK already on the machine (compile SDK 36, build tools 37.0.0). Gradle 9.8.0, Java 21.0.12.1, FosterStack Cache 0.2.1. The command was <code>assembleDebug</code>. The project is a library module (Kotlin and one Java file) and an app module (Kotlin) that uses it. The plugin and Kotlin compiler are downloaded at run time and are not checksum-pinned.</p>
+  <p class="muted-note">How: every build used a fresh copy of the project, a new Gradle home and no local build cache. We measured no times.</p>
+  <p class="muted-note">Not tested: Android release builds, lint, Android tests, Kotlin Multiplatform, kapt or KSP, Compose, a real-sized app, other plugin versions, Maven. The Kotlin timing-free runs were on a Mac; the Android runs were on the hosted machine. We make no claim about build times.</p>
 </main>
 <footer>
   <div>
