@@ -105,7 +105,7 @@
   <p>Your laptop only reuses a result when its build inputs match CI's. In our tests these changed the cache key:</p>
   <ul class="trust">
     <li><strong>Gradle:</strong> a different Gradle version, or a different Java version (we tested Java 21 against 27).</li>
-    <li><strong>Maven:</strong> a different Maven version, when plugin versions are left unpinned. Pin them all.</li>
+    <li><strong>Maven:</strong> a different Maven version, when plugin versions are left unpinned. Pin every plugin version your build uses, including clean, install, deploy and site, or keep the Maven version the same.</li>
   </ul>
   <p>Keep those the same on laptops and CI. If your laptop still rebuilds, see <a href="/gradle-build-cache-hit-rate-low/">why the Gradle hit rate is low</a> or <a href="/maven-build-cache-extension-not-restoring/">why the Maven cache is not restoring</a>. To set it up, see <a href="/maven-remote-build-cache-setup/">Maven remote build cache setup</a> and the Gradle setup in the <a href="/gradle-build-cache-ci-writes-developers-read/">CI-writes page</a>.</p>
 
