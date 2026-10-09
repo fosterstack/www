@@ -70,6 +70,7 @@
   footer { border-top: 1px solid var(--line); margin-top: 4rem; padding: 1.5rem 1.25rem 3rem; }
   footer div { max-width: 44rem; margin: 0 auto; color: var(--muted); font-size: .82rem; }
   a { color: var(--accent); }
+  blockquote { border-left: 3px solid var(--line); padding: .2rem 0 .2rem 1rem; margin: .8rem 0; color: var(--muted); }
 </style>
 </head>
 <body>
@@ -92,18 +93,7 @@
   <h2>v0.1.0</h2>
   <p class="muted-note">Published 2026-08-22.</p>
   <blockquote>
-    <p><strong>Changelog</strong></p>
-    <ul>
-    <li><a href="https://github.com/fosterstack/cache/commit/4e0c371da344d56d2fbe07ad271ddb36d7813fac"><code>4e0c371</code></a> Bump all codeql-action refs to v4.37.7 together, not piecemeal</li>
-    <li><a href="https://github.com/fosterstack/cache/commit/5650c4e859259338fcf9a09fb68da32abc73ad23"><code>5650c4e</code></a> Fix CI: lower go.mod minimum from 1.27.0 to 1.25.0 (os.Root&#x27;s floor)</li>
-    <li><a href="https://github.com/fosterstack/cache/commit/0a7668028faf4de991eb9eb27127a92521e2b7b3"><code>0a76680</code></a> Fix CI: pin setup-go to latest 1.25.x, not go.mod&#x27;s literal 1.25.0</li>
-    <li><a href="https://github.com/fosterstack/cache/commit/61eec6e8f0565cd66d3f3546582e84724d7a1c4c"><code>61eec6e</code></a> Fix audit findings: eviction races, DoS bailout, dead gauges, 413 test</li>
-    <li><a href="https://github.com/fosterstack/cache/commit/d4c6770c289bf2cca5d9da9126cccaea1f27d2b5"><code>d4c6770</code></a> Fix release CI: bump built-with Go from 1.25 to 1.27 (CVE-2026-46600)</li>
-    <li><a href="https://github.com/fosterstack/cache/commit/9339562c800c030b32b7f86234aec1ca3958018f"><code>9339562</code></a> Fix release CI: cosign v3&#x27;s sign-blob needs --bundle, not --output-*</li>
-    <li><a href="https://github.com/fosterstack/cache/commit/2622b9c6b6860051e72e0a395e5cd94119d5c651"><code>2622b9c</code></a> Fix release CI: debug base was EOL Debian 12; VEX-suppress unfixable busybox CVE</li>
-    <li><a href="https://github.com/fosterstack/cache/commit/c553dfc34ffe169c20b34df1ea52526528cf9b8b"><code>c553dfc</code></a> Release pipeline: ko + goreleaser, build-&gt;scan-&gt;sign-&gt;push, GOFIPS140 variant</li>
-    <li><a href="https://github.com/fosterstack/cache/commit/dbed4cad703d5c2f309774e071f80f47f7f45b9b"><code>dbed4ca</code></a> Sprint 4: cache server core, Gradle/Maven-shared HTTP surface, CI baseline</li>
-    </ul>
+    <p>The v0.1.0 notes begin with a list of the nine commits in the release. That list is on the <a href="https://github.com/fosterstack/cache/releases/tag/v0.1.0">GitHub release page</a>. The rest of the notes follow here, unedited.</p>
     <p><strong>Note on this release's evidence (added Sep 2026).</strong> v0.1.0 was built and published by the pre-remediation release pipeline: a snapshot build was scanned, and a separate build of the same commit was published, so these published images were not scanned before publication. They have been rescanned since at every severity with the published VEX applied — see the <a href="https://github.com/fosterstack/cache/actions/workflows/rescan-v010.yml">rescan runs</a> for verdicts against the exact published digests. The signatures and provenance on this release are accurate about what they say — which CI run produced which digest — and say nothing about scanning. The next release is the first to carry the full evidence chain: one build, scanned and tested by digest, promoted without a rebuild.</p>
   </blockquote>
   <p><a href="https://github.com/fosterstack/cache/releases/tag/v0.1.0">v0.1.0 on GitHub</a></p>
