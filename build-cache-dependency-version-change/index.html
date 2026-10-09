@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>What a Dependency Update Rebuilds in Your Build Cache</title>
+<meta name="description" content="Gradle and Maven build cache after bumping a dependency version: real builds on 0.2.1 show which modules rebuilt and which came from the cache.">
+<meta property="og:title" content="What a Dependency Update Rebuilds in Your Build Cache">
+<meta property="og:description" content="Gradle and Maven build cache after bumping a dependency version: real builds on 0.2.1 show which modules rebuilt and which came from the cache.">
+<meta property="og:url" content="https://fosterstack.com/build-cache-dependency-version-change/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="FosterStack">
+<link rel="canonical" href="https://fosterstack.com/build-cache-dependency-version-change/">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<style>
+  :root {
+    --bg: #ffffff; --fg: #16181d; --muted: #5b6472; --line: #e4e7ec;
+    --accent: #0d7a5f; --accent-fg: #ffffff; --card: #f6f8f9; --warn-bg: #fff7ed; --warn-line: #fdba74;
+    --mark: #0f4d66;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #101318; --fg: #e8eaf0; --muted: #98a2b3; --line: #262c36;
+      --accent: #2fbf95; --accent-fg: #08110e; --card: #171c23; --warn-bg: #241a10; --warn-line: #7c4a12;
+      --mark: #e8eaf0;
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 44rem; margin: 0 auto; padding: 0 1.25rem 4rem; }
+  header.site { max-width: 44rem; margin: 0 auto; padding: 1.25rem; display: flex; align-items: baseline; gap: .6rem; }
+  .logo { font-weight: 700; font-size: 1.05rem; letter-spacing: -.01em; }
+  .logo span { color: var(--accent); }
+  .logo .mark { width: 1.2em; height: 1.2em; vertical-align: -.24em; margin-right: .4em; }
+  .tag { color: var(--muted); font-size: .85rem; }
+  .notice {
+    background: var(--warn-bg); border: 1px solid var(--warn-line); border-radius: 8px;
+    padding: .7rem 1rem; font-size: .92rem; margin: 1.5rem 0 2.5rem;
+  }
+  h1 { font-size: 2rem; line-height: 1.2; letter-spacing: -.02em; margin-bottom: 1rem; }
+  .lede { font-size: 1.12rem; color: var(--muted); margin-bottom: 2rem; }
+  h2 { font-size: 1.25rem; margin: 3rem 0 .9rem; letter-spacing: -.01em; }
+  p + p { margin-top: .8rem; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: .8rem; margin-top: 1rem; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1rem 1.1rem; }
+  .card h3 { font-size: .98rem; margin-bottom: .35rem; }
+  .card p { font-size: .9rem; color: var(--muted); }
+  ul.trust { list-style: none; margin-top: .5rem; }
+  ul.trust li { padding: .45rem 0 .45rem 1.6rem; position: relative; }
+  ul.trust li::before { content: "✓"; position: absolute; left: .2rem; color: var(--accent); font-weight: 700; }
+  code, pre { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .88em; }
+  code { background: var(--card); border: 1px solid var(--line); border-radius: 5px; padding: .1em .35em; }
+  pre code { background: none; border: 0; padding: 0; color: inherit; font-size: 1em; }
+  button {
+    padding: .7rem 1.3rem; font-size: 1rem; font-weight: 600; cursor: pointer;
+    background: var(--accent); color: var(--accent-fg); border: 0; border-radius: 8px;
+  }
+  button:disabled { opacity: .6; cursor: default; }
+  table { width: 100%; border-collapse: collapse; font-size: .92rem; margin-top: 1rem; }
+  th, td { text-align: left; padding: .55rem .6rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  pre { background: #0f172a; color: #e2e8f0; padding: .9rem 1rem; border-radius: 8px;
+        overflow-x: auto; font-size: .9rem; line-height: 1.5; }
+  .cta-row { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1.1rem; }
+  .btn { display: inline-block; padding: .55rem 1rem; border-radius: 8px; font-weight: 600;
+         text-decoration: none; background: var(--accent); color: var(--accent-fg); }
+  .btn-secondary { background: transparent; color: inherit; border: 1px solid var(--muted); }
+  .muted-note { color: var(--muted); font-size: .93rem; margin-top: 1.1rem; }
+  footer { border-top: 1px solid var(--line); margin-top: 4rem; padding: 1.5rem 1.25rem 3rem; }
+  footer div { max-width: 44rem; margin: 0 auto; color: var(--muted); font-size: .82rem; }
+  a { color: var(--accent); }
+  code { overflow-wrap: anywhere; }
+  pre code { overflow-wrap: normal; }
+  .table-scroll { max-width: 100%; overflow-x: auto; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+</style>
+</head>
+<body>
+<header class="site">
+  <div class="logo"><svg class="mark" viewBox="0 0 96 96" aria-hidden="true" focusable="false"><rect x="12" y="14" width="72" height="18" rx="5" fill="var(--mark)"/><rect x="12" y="39" width="48" height="18" rx="5" fill="var(--mark)"/><rect x="12" y="64" width="26" height="18" rx="5" fill="var(--accent)"/></svg>foster<span>stack</span></div>
+  <div class="tag">Infrastructure worth keeping — and kept patched.</div>
+</header>
+<main>
+  <h1>What a dependency update rebuilds in your build cache</h1>
+  <p class="lede">Know before you bump a dependency: in our runs, only the module that uses it rebuilt, in both Gradle and Maven, and going back to the old version restored the old result. At FosterStack we prove everything, so here is how we proved it to ourselves: a two-module project, five real builds per tool, one version bump and one revert.</p>
+
+  <h2>The short answer</h2>
+  <ul class="trust">
+    <li>After the bump, the module that uses the dependency rebuilt. The module that does not use it came from the cache.</li>
+    <li>Building the new version a second time restored both modules.</li>
+    <li>Going back to the old version restored both modules, so the old entries were still there.</li>
+    <li>Gradle and Maven gave the same pattern in our runs.</li>
+  </ul>
+
+  <h2>What we ran</h2>
+  <p>A project with two modules. <code>lib</code> has no dependencies. <code>app</code> depends on one library, Gson (<code>com.google.code.gson:gson</code>), and calls it. We changed only the Gson version, from 2.10.1 to 2.11.0, and nothing else. The two builds below used a self-hosted cache (FosterStack Cache 0.2.1, release 0.2.1).</p>
+  <p>Gradle was 9.8.0, with the compile tasks <code>:lib:compileJava</code> and <code>:app:compileJava</code>. Maven was 3.9.9 with the Apache Maven Build Cache Extension 1.2.3 and <code>mvn verify</code>; all eight default plugin versions were pinned in the POM, because an unpinned plugin version changes the Maven cache key (see <a href="/maven-build-cache-different-maven-versions/">Maven build cache across Maven versions</a>). Both used Java 21 (Temurin 21.0.12.1) on one Mac (arm64).</p>
+  <p>Each tool had one series of five builds. The series started on a new, empty cache server. Every build used a fresh copy of the project with no earlier build output and an empty local build cache. The Gson file was downloaded once into a shared download folder before the series, so no build waited on the network. Every build ended with <code>BUILD SUCCESSFUL</code> (Gradle) or <code>BUILD SUCCESS</code> (Maven).</p>
+  <div class="table-scroll"><div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
+    <thead><tr><th>Build</th><th>Gson</th><th>Gradle <code>lib</code></th><th>Gradle <code>app</code></th><th>Maven <code>lib</code></th><th>Maven <code>app</code></th></tr></thead>
+    <tbody>
+      <tr><td>1 first build</td><td>2.10.1</td><td>ran</td><td>ran</td><td>built</td><td>built</td></tr>
+      <tr><td>2 same again</td><td>2.10.1</td><td>from cache</td><td>from cache</td><td>restored</td><td>restored</td></tr>
+      <tr><td>3 after the bump</td><td>2.11.0</td><td>from cache</td><td><strong>ran</strong></td><td>restored</td><td><strong>built</strong></td></tr>
+      <tr><td>4 new version again</td><td>2.11.0</td><td>from cache</td><td>from cache</td><td>restored</td><td>restored</td></tr>
+      <tr><td>5 back to the old version</td><td>2.10.1</td><td>from cache</td><td>from cache</td><td>restored</td><td>restored</td></tr>
+    </tbody>
+  </table></div>
+  <p>In the Gradle columns, "ran" means the task printed <code>:app:compileJava</code> with nothing after it and "from cache" means <code>FROM-CACHE</code>. In the Maven columns, "restored" means Maven printed <code>Found cached build, restoring</code> for that module and "built" means it did not.</p>
+
+  <h2>What this means when you update a dependency</h2>
+  <ul class="trust">
+    <li><strong>The cost is the modules that use it.</strong> In our runs a module with no use of the library was not rebuilt, in either tool.</li>
+    <li><strong>You can try a version and go back.</strong> The old entries were still on the server after the bump, and the revert restored them.</li>
+    <li><strong>A shared cache helps the next person.</strong> Once one build has run the new version, the others restore it, as build 4 did.</li>
+  </ul>
+  <p>Our advice, not a test result: bump a version in one change, let one CI build fill the cache, and then expect everyone else's builds to restore.</p>
+  <p>We did not test a dependency that <code>lib</code> and <code>app</code> both use, a module that depends on <code>app</code> (a module downstream of the change), other libraries, other versions, Gradle's wrapper, or Linux. The Mac was busy with other jobs during the runs, so we make no claim about build times.</p>
+
+  <h2>If nothing is restored</h2>
+  <p>Work through <a href="/gradle-build-cache-hit-rate-low/">why the Gradle hit rate is low</a> or <a href="/maven-build-cache-extension-not-restoring/">Maven build cache extension not restoring</a>.</p>
+
+  <p class="muted-note">Run on Gradle 9.8.0 and Maven 3.9.9 (Build Cache Extension 1.2.3), Temurin 21.0.12.1, FosterStack Cache 0.2.1, macOS (arm64).</p>
+</main>
+<footer>
+  <div>
+    <p>FosterStack is not affiliated with, endorsed by, or sponsored by Gradle Inc.
+    "Gradle" and "Develocity" are trademarks of Gradle Inc., used here only to identify
+    compatibility. FosterStack contains no Gradle Inc. code; it is a clean-room implementation
+    of the documented remote build cache HTTP protocol. Apache Maven is a trademark of the
+    Apache Software Foundation; the Maven Build Cache Extension is Apache's project, not
+    ours.</p>
+    <p style="margin-top:.6rem">© 2026 FosterStack · <a href="/build-cache-node-end-of-life/">Build Cache Node end of life</a> · <a href="/migrate-build-cache-node/">Migrate</a> · <a href="/build-cache-node-faq/">FAQ</a> · <a href="/jenkins-ci-build-cache/">CI setup</a> · <a href="/how-we-build/">How we build</a> · <a href="/regulated/">For regulated markets</a> · <a href="https://github.com/fosterstack/cache">github.com/fosterstack/cache</a> · <a href="mailto:hello@fosterstack.com">hello@fosterstack.com</a></p>
+  </div>
+</footer>
+</body>
+</html>
