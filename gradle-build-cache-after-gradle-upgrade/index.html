@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Why Your Gradle Build Cache Goes Cold After a Gradle Upgrade</title>
+<meta name="description" content="Do different Gradle versions share a build cache? Real builds with Gradle 9.5.1, 9.7.1 and 9.8.0 and the cache-key inputs that differ. Release 0.2.1.">
+<meta property="og:title" content="Why Your Gradle Build Cache Goes Cold After a Gradle Upgrade">
+<meta property="og:description" content="Do different Gradle versions share a build cache? Real builds with Gradle 9.5.1, 9.7.1 and 9.8.0 and the cache-key inputs that differ. Release 0.2.1.">
+<meta property="og:url" content="https://fosterstack.com/gradle-build-cache-after-gradle-upgrade/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="FosterStack">
+<link rel="canonical" href="https://fosterstack.com/gradle-build-cache-after-gradle-upgrade/">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<style>
+  :root {
+    --bg: #ffffff; --fg: #16181d; --muted: #5b6472; --line: #e4e7ec;
+    --accent: #0d7a5f; --accent-fg: #ffffff; --card: #f6f8f9; --warn-bg: #fff7ed; --warn-line: #fdba74;
+    --mark: #0f4d66;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #101318; --fg: #e8eaf0; --muted: #98a2b3; --line: #262c36;
+      --accent: #2fbf95; --accent-fg: #08110e; --card: #171c23; --warn-bg: #241a10; --warn-line: #7c4a12;
+      --mark: #e8eaf0;
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 44rem; margin: 0 auto; padding: 0 1.25rem 4rem; }
+  header.site { max-width: 44rem; margin: 0 auto; padding: 1.25rem; display: flex; align-items: baseline; gap: .6rem; }
+  .logo { font-weight: 700; font-size: 1.05rem; letter-spacing: -.01em; }
+  .logo span { color: var(--accent); }
+  .logo .mark { width: 1.2em; height: 1.2em; vertical-align: -.24em; margin-right: .4em; }
+  .tag { color: var(--muted); font-size: .85rem; }
+  .notice {
+    background: var(--warn-bg); border: 1px solid var(--warn-line); border-radius: 8px;
+    padding: .7rem 1rem; font-size: .92rem; margin: 1.5rem 0 2.5rem;
+  }
+  h1 { font-size: 2rem; line-height: 1.2; letter-spacing: -.02em; margin-bottom: 1rem; }
+  .lede { font-size: 1.12rem; color: var(--muted); margin-bottom: 2rem; }
+  h2 { font-size: 1.25rem; margin: 3rem 0 .9rem; letter-spacing: -.01em; }
+  p + p { margin-top: .8rem; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: .8rem; margin-top: 1rem; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1rem 1.1rem; }
+  .card h3 { font-size: .98rem; margin-bottom: .35rem; }
+  .card p { font-size: .9rem; color: var(--muted); }
+  ul.trust { list-style: none; margin-top: .5rem; }
+  ul.trust li { padding: .45rem 0 .45rem 1.6rem; position: relative; }
+  ul.trust li::before { content: "✓"; position: absolute; left: .2rem; color: var(--accent); font-weight: 700; }
+  code, pre { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .88em; }
+  code { background: var(--card); border: 1px solid var(--line); border-radius: 5px; padding: .1em .35em; }
+  pre code { background: none; border: 0; padding: 0; color: inherit; font-size: 1em; }
+  button {
+    padding: .7rem 1.3rem; font-size: 1rem; font-weight: 600; cursor: pointer;
+    background: var(--accent); color: var(--accent-fg); border: 0; border-radius: 8px;
+  }
+  button:disabled { opacity: .6; cursor: default; }
+  table { width: 100%; border-collapse: collapse; font-size: .92rem; margin-top: 1rem; }
+  th, td { text-align: left; padding: .55rem .6rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  pre { background: #0f172a; color: #e2e8f0; padding: .9rem 1rem; border-radius: 8px;
+        overflow-x: auto; font-size: .9rem; line-height: 1.5; }
+  .cta-row { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1.1rem; }
+  .btn { display: inline-block; padding: .55rem 1rem; border-radius: 8px; font-weight: 600;
+         text-decoration: none; background: var(--accent); color: var(--accent-fg); }
+  .btn-secondary { background: transparent; color: inherit; border: 1px solid var(--muted); }
+  .muted-note { color: var(--muted); font-size: .93rem; margin-top: 1.1rem; }
+  footer { border-top: 1px solid var(--line); margin-top: 4rem; padding: 1.5rem 1.25rem 3rem; }
+  footer div { max-width: 44rem; margin: 0 auto; color: var(--muted); font-size: .82rem; }
+  a { color: var(--accent); }
+  code { overflow-wrap: anywhere; }
+  pre code { overflow-wrap: normal; }
+  .table-scroll { max-width: 100%; overflow-x: auto; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+</style>
+</head>
+<body>
+<header class="site">
+  <div class="logo"><svg class="mark" viewBox="0 0 96 96" aria-hidden="true" focusable="false"><rect x="12" y="14" width="72" height="18" rx="5" fill="var(--mark)"/><rect x="12" y="39" width="48" height="18" rx="5" fill="var(--mark)"/><rect x="12" y="64" width="26" height="18" rx="5" fill="var(--accent)"/></svg>foster<span>stack</span></div>
+  <div class="tag">Infrastructure worth keeping — and kept patched.</div>
+</header>
+<main>
+  <h1>Why your Gradle build cache goes cold after a Gradle upgrade</h1>
+  <p class="lede">Each Gradle version we tried built and restored only its own cache entries, so after an upgrade the first builds on the new version rebuild instead of restoring. At FosterStack we prove everything, so here is how we proved it to ourselves: three series of real builds across Gradle 9.5.1, 9.7.1 and 9.8.0, and the cache-key inputs that differ.</p>
+
+  <h2>The short answer</h2>
+  <ul class="trust">
+    <li>Gradle 9.8.0, 9.7.1 and 9.5.1 did not restore each other's compile results, in either direction, in our runs.</li>
+    <li>Each version restored its own earlier build.</li>
+    <li>What differs in the cache key is Gradle's own task code. The key parts that come from your project were identical.</li>
+  </ul>
+
+  <h2>What we ran</h2>
+  <p>The four-module project from <a href="/gradle-build-cache-monorepo/">Gradle build cache for a monorepo</a>, and its <code>:core:compileJava</code> task, against a self-hosted cache (FosterStack Cache 0.2.1). We used Gradle 9.8.0 (installed with Homebrew), and Gradle 9.7.1 and 9.5.1 from the official downloads, each checked against the SHA-256 checksum Gradle publishes. All three ran on the same Java, Temurin 21.0.12.1, so only Gradle differed.</p>
+  <p>There were three series of three builds. Each series started on a new, empty cache server. Every build used a fresh copy of the project with no earlier build output, a new empty Gradle home, and the local build cache off. All builds ran on the same Mac. Each cell below is one build, and every build ended with <code>BUILD SUCCESSFUL</code>.</p>
+  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
+    <thead><tr><th>Series</th><th>Build 1</th><th>Build 2 (other Gradle)</th><th>Build 3 (first Gradle again)</th></tr></thead>
+    <tbody>
+      <tr><td>9.8.0 first, then 9.7.1</td><td>9.8.0: ran</td><td>9.7.1: ran</td><td>9.8.0: <code>FROM-CACHE</code></td></tr>
+      <tr><td>9.7.1 first, then 9.8.0</td><td>9.7.1: ran</td><td>9.8.0: ran</td><td>9.7.1: <code>FROM-CACHE</code></td></tr>
+      <tr><td>9.5.1 first, then 9.8.0</td><td>9.5.1: ran</td><td>9.8.0: ran</td><td>9.5.1: <code>FROM-CACHE</code></td></tr>
+    </tbody>
+  </table></div>
+  <p>"Ran" means Gradle printed <code>:core:compileJava</code> with nothing after it. So the second Gradle version found nothing it could use, and the first version found its own entry again.</p>
+
+  <h2>What differs in the cache key</h2>
+  <p>Gradle can print every input it puts into a task's cache key. We ran the compile task under Gradle 9.8.0 and 9.7.1 with this option and compared the lines for <code>:core:compileJava</code>:</p>
+<pre tabindex="0"><code>gradle :core:compileJava -Dorg.gradle.caching.debug=true</code></pre>
+  <p>The cache keys came out different (<code>0850668412069d9ad6250e00d6fa0d31</code> for 9.8.0 and <code>b644334977a3e4eb2455429377dc58b9</code> for 9.7.1). The debug output listed 39 input lines for each key. Here is what we found:</p>
+  <ul class="trust">
+    <li><strong>The same in both:</strong> the fingerprint of the project's source files (<code>f3429a2c9b16b51bf45944cd89e7ed46</code>), the compiler arguments, the release setting, the encoding, debug and fork settings, the classpath and the output names.</li>
+    <li><strong>Different:</strong> the task's own implementation (<code>org.gradle.api.tasks.compile.JavaCompile_Decorated</code>, with a different hash on each version), and several fingerprints that describe Gradle's own task and compiler classes, such as <code>javaCompiler</code>, <code>modularity</code> and <code>options</code>.</li>
+  </ul>
+  <p>In our runs, then, nothing about the project explained the miss. The key changed with the Gradle version because Gradle's own task code is part of it. We did not test other tasks or other Gradle versions in the debug comparison.</p>
+
+  <h2>What this means for an upgrade</h2>
+  <ul class="trust">
+    <li><strong>Expect a cold start on the new version.</strong> In our runs the first build on a different Gradle version rebuilt, and the next build on that version restored.</li>
+    <li><strong>Mixed versions mean mixed entries.</strong> If laptops and CI run different Gradle versions, each version fills and reads its own entries and neither gets hits from the other.</li>
+    <li><strong>Java and Maven were different.</strong> In our other tests, a different Java gave separate Gradle entries (<a href="/gradle-build-cache-hit-rate-low/">Gradle build cache hit rate low</a>, cause 3), while switching Java did restore for Maven (<a href="/maven-build-cache-different-java-versions/">Keep your Maven build cache across Java 21 and Java 27</a>).</li>
+  </ul>
+  <p>Our advice, not a test result: move CI and everyone who shares the cache to a new Gradle version together, and expect the first builds after the move to rebuild.</p>
+  <p>We did not test other Gradle versions, other tasks such as tests or jars, a project that uses the Gradle wrapper, other Java versions with these Gradle versions, or Linux. The Mac was busy with other jobs during the runs, so we make no claim about build times.</p>
+
+  <h2>If nothing is restored</h2>
+  <p>Work through <a href="/gradle-build-cache-hit-rate-low/">why the hit rate is low</a> and <a href="/gradle-remote-cache-not-working/">Gradle remote build cache not working</a>.</p>
+
+  <p class="muted-note">Run on Gradle 9.8.0, 9.7.1 and 9.5.1 with Temurin 21.0.12.1 and FosterStack Cache 0.2.1, macOS (arm64).</p>
+</main>
+
+<footer>
+  <div>
+    <p>FosterStack is not affiliated with, endorsed by, or sponsored by Gradle Inc.
+    "Gradle" and "Develocity" are trademarks of Gradle Inc., used here only to identify
+    compatibility. FosterStack contains no Gradle Inc. code; it is a clean-room implementation
+    of the documented remote build cache HTTP protocol. Apache Maven is a trademark of the
+    Apache Software Foundation; the Maven Build Cache Extension is Apache's project, not
+    ours.</p>
+    <p style="margin-top:.6rem">© 2026 FosterStack · <a href="/build-cache-node-end-of-life/">Build Cache Node end of life</a> · <a href="/migrate-build-cache-node/">Migrate</a> · <a href="/build-cache-node-faq/">FAQ</a> · <a href="/jenkins-ci-build-cache/">CI setup</a> · <a href="/how-we-build/">How we build</a> · <a href="/regulated/">For regulated markets</a> · <a href="https://github.com/fosterstack/cache">github.com/fosterstack/cache</a> · <a href="mailto:hello@fosterstack.com">hello@fosterstack.com</a></p>
+  </div>
+</footer>
+</body>
+</html>

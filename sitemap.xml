@@ -227,4 +227,8 @@
     <loc>https://fosterstack.com/maven-build-cache-different-maven-versions/</loc>
     <lastmod>2026-10-09</lastmod>
   </url>
+  <url>
+    <loc>https://fosterstack.com/gradle-build-cache-after-gradle-upgrade/</loc>
+    <lastmod>2026-10-09</lastmod>
+  </url>
 </urlset>
