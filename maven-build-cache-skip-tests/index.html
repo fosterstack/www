@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Does the Build Cache Survive a Restart? A Real Test</title>
-<meta name="description" content="We restarted and killed a self-hosted Gradle build cache server to see if stored results survive. They do if the data folder does. Tested on release 0.2.1.">
-<meta property="og:title" content="Does the Build Cache Survive a Restart? A Real Test">
-<meta property="og:description" content="We restarted and killed a self-hosted Gradle build cache server to see if stored results survive. They do if the data folder does. Tested on release 0.2.1.">
-<meta property="og:url" content="https://fosterstack.com/build-cache-survives-restart/">
+<title>Skip tests that already passed with the Maven build cache</title>
+<meta name="description" content="Does the Apache Maven Build Cache Extension skip tests when a build is restored? Six real runs with JUnit against a self-hosted cache, including a failing test.">
+<meta property="og:title" content="Skip tests that already passed with the Maven build cache">
+<meta property="og:description" content="Does the Apache Maven Build Cache Extension skip tests when a build is restored? Six real runs with JUnit against a self-hosted cache, including a failing test.">
+<meta property="og:url" content="https://fosterstack.com/maven-build-cache-skip-tests/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="FosterStack">
-<link rel="canonical" href="https://fosterstack.com/build-cache-survives-restart/">
+<link rel="canonical" href="https://fosterstack.com/maven-build-cache-skip-tests/">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -87,43 +87,53 @@
   <div class="tag">Infrastructure worth keeping — and kept patched.</div>
 </header>
 <main>
-  <h1>Does the build cache survive a restart? A real test</h1>
-  <p class="lede">You restart the cache server, or it crashes, or the container is replaced. Do your stored build results come back? We tested a clean stop, a forced kill and a wrong data folder with FosterStack Cache 0.2.1 and a real Gradle build.</p>
+  <h1>Skip tests that already passed with the Maven build cache</h1>
+  <p class="lede">When nothing in a module has changed, the Maven build cache extension restores its result and skips the tests that already passed. At FosterStack we prove everything, so here is how we proved it to ourselves: real builds, the exact log lines, and the cases where the tests rightly ran again.</p>
 
   <h2>The short answer</h2>
   <ul class="trust">
-    <li>After a clean stop and start on the same data folder, every result was still there.</li>
-    <li>After the server was killed with <code>kill -9</code> and started again on the same folder, every result was still there.</li>
-    <li>On a different, empty data folder, the cache was empty and the next build rebuilt everything.</li>
+    <li>A fresh copy with the same code restored the whole build. No compile, no tests.</li>
+    <li>Change the main code or the tests and Maven built the module and ran the tests again.</li>
+    <li>In our runs, a failing test ran again each time, and a failing build was not restored.</li>
   </ul>
-  <p>The results live in the data folder, not in the running server. If that folder survives, your cache survives.</p>
 
   <h2>What we ran</h2>
-  <p>A four-module Gradle 9.8.0 project (the one from <a href="/gradle-build-cache-monorepo/">Gradle build cache for a monorepo</a>) against a server set up with <code>FSCACHE_DATA_DIR</code> pointing at a folder. Every build used a fresh copy of the project and an empty Gradle home, so the only shared thing was the server. Our first run used a project folder that still held build output from an earlier check; we repeated all four steps from a clean copy and got the same results. All four builds ended with <code>BUILD SUCCESSFUL</code>. "From cache" counts the four <code>compileJava</code> tasks that printed <code>FROM-CACHE</code>.</p>
+  <p>A one-module Maven project with one class and two JUnit tests, run with the Surefire plugin (3.5.2). Every build used a fresh copy of the project on the same Mac and an empty local build cache. The builds shared the cache server, and one Maven repository folder so the test libraries were downloaded once. All runs used <code>mvn verify</code>, with extra options for the cache location and the shared repository. The cache setup is the one on <a href="/maven-remote-build-cache-setup/">Maven remote build cache setup</a>. We counted the <code>Tests run:</code> line that Maven prints.</p>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
-    <thead><tr><th>Step</th><th>Server state before the build</th><th>Entries in the status page</th><th>From cache</th></tr></thead>
+    <thead><tr><th>Run</th><th>Result</th><th>Tests run</th></tr></thead>
     <tbody>
-      <tr><td>1. First build</td><td>New, empty data folder A</td><td>0, then 13 afterwards</td><td>0 of 4</td></tr>
-      <tr><td>2. Clean restart</td><td>Stopped normally, started on folder A</td><td>13 (same as before)</td><td>4 of 4</td></tr>
-      <tr><td>3. Crash</td><td>Killed with <code>kill -9</code>, started on folder A</td><td>13 (same as before)</td><td>4 of 4</td></tr>
-      <tr><td>4. Wrong folder</td><td>Started on a different empty folder B</td><td>0</td><td>0 of 4</td></tr>
+      <tr><td>1. First build, as CI would do it</td><td>Built, <code>BUILD SUCCESS</code></td><td>2</td></tr>
+      <tr><td>2. Fresh copy, same code</td><td>Restored from the cache, <code>BUILD SUCCESS</code></td><td>none</td></tr>
+      <tr><td>3. Change the main code</td><td>Built, <code>BUILD SUCCESS</code></td><td>2</td></tr>
+      <tr><td>4. Add a test</td><td>Built, <code>BUILD SUCCESS</code></td><td>3</td></tr>
+      <tr><td>5. A test that fails</td><td>Built, <code>BUILD FAILURE</code></td><td>2, with 1 failure</td></tr>
+      <tr><td>6. The same failing test, fresh copy</td><td>Built again, <code>BUILD FAILURE</code></td><td>2, with 1 failure</td></tr>
     </tbody>
   </table></div>
-  <p>The status page is the server's <code>/statusz</code> address. It showed the same 13 entries and the same size in bytes right after each restart, before any build ran.</p>
+  <p>In run 2 Maven restored the module and then listed the steps it skipped, the tests included:</p>
+<pre tabindex="0"><code>[INFO] Found cached build, restoring demo:mtest from cache by checksum ...
+[INFO] Skipping plugin execution (cached): resources:resources
+[INFO] Skipping plugin execution (cached): compiler:compile
+[INFO] Skipping plugin execution (cached): resources:testResources
+[INFO] Skipping plugin execution (cached): compiler:testCompile
+[INFO] Skipping plugin execution (cached): surefire:test
+[INFO] Skipping plugin execution (cached): jar:jar</code></pre>
 
-  <h2>One limit of this test</h2>
-  <p>We killed the server while it was idle. We did not kill it in the middle of an upload, so this page says nothing about a half-written result. What we can say is that a crash with nothing in flight lost nothing.</p>
-
-  <h2>If your cache comes back empty</h2>
-  <p>An empty cache after a restart means the server is looking at a different folder than before. It is the same as step 4. Check that the data folder or volume is still the one you expect:</p>
+  <h2>What this means for your builds</h2>
   <ul class="trust">
-    <li><strong>Docker:</strong> use a named volume or a mounted folder for the data directory. See <a href="/gradle-build-cache-docker-compose/">Gradle build cache with Docker Compose</a>.</li>
-    <li><strong>Kubernetes:</strong> the data directory needs a persistent volume claim. See <a href="/gradle-build-cache-kubernetes/">Gradle build cache on Kubernetes</a>.</li>
-    <li><strong>Permissions:</strong> if the server cannot write to the folder, see <a href="/build-cache-permission-denied-data-directory/">permission denied on the data directory</a>.</li>
+    <li><strong>The tests are skipped as part of restoring the whole module.</strong> Maven restores the module's result and then skips each step, <code>surefire:test</code> among them. In Gradle the test task is taken from the cache as an entry of its own; see <a href="/gradle-test-task-from-cache/">Gradle test task FROM-CACHE</a>.</li>
+    <li><strong>A passing build was reusable, a failing one was not.</strong> In runs 5 and 6 the tests ran and failed each time. A fresh copy of the same broken code did not get a restored result.</li>
+    <li><strong>Each change we made rebuilt the module and ran all its tests.</strong> Run 3 changed one line of main code and both tests ran again. Run 4 added a test and all three ran. We did not try a comment-only edit or a change to a non-source file.</li>
   </ul>
-  <p>To copy the data somewhere safe, or to move it to another server, see <a href="/back-up-and-restore-build-cache/">back up and restore</a>.</p>
+  <p>We did not test a project with several modules here. For that, see <a href="/maven-build-cache-extension-multi-module/">Maven build cache extension in a multi-module project</a>. We also did not test tests that read the clock, the network or files outside the project: if a test result depends on something Maven does not see, a restored pass could stand when it should not. That is a decision about your tests, not about the cache.</p>
 
-  <p class="muted-note">Run on FosterStack Cache 0.2.1 (macOS, arm64) with Gradle 9.8.0, Java 27.</p>
+  <h2>If you want the tests to run every time</h2>
+  <p>Turn the cache off or skip the lookup for that build. The switches, and what each did in a real run, are on <a href="/maven-build-cache-extension-enable-disable/">enable or disable the Maven build cache extension</a>.</p>
+
+  <h2>If nothing is restored</h2>
+  <p>See <a href="/maven-build-cache-extension-not-restoring/">Maven build cache not restoring</a>. The setup is on <a href="/maven-remote-build-cache-setup/">Maven remote build cache setup</a>.</p>
+
+  <p class="muted-note">Run on Maven 3.10.0 with maven-build-cache-extension 1.2.3, Surefire 3.5.2, JUnit 5.11.0 and FosterStack Cache 0.2.1, macOS (arm64), Java 27.</p>
 </main>
 
 <footer>

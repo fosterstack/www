@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Does the Build Cache Survive a Restart? A Real Test</title>
-<meta name="description" content="We restarted and killed a self-hosted Gradle build cache server to see if stored results survive. They do if the data folder does. Tested on release 0.2.1.">
-<meta property="og:title" content="Does the Build Cache Survive a Restart? A Real Test">
-<meta property="og:description" content="We restarted and killed a self-hosted Gradle build cache server to see if stored results survive. They do if the data folder does. Tested on release 0.2.1.">
-<meta property="og:url" content="https://fosterstack.com/build-cache-survives-restart/">
+<title>Skip rebuilding buildSrc and included builds in Gradle</title>
+<meta name="description" content="Do buildSrc and includeBuild use the Gradle build cache? Six real runs against a self-hosted cache show what is restored and what is rebuilt. Release 0.2.1.">
+<meta property="og:title" content="Skip rebuilding buildSrc and included builds in Gradle">
+<meta property="og:description" content="Do buildSrc and includeBuild use the Gradle build cache? Six real runs against a self-hosted cache show what is restored and what is rebuilt. Release 0.2.1.">
+<meta property="og:url" content="https://fosterstack.com/gradle-build-cache-buildsrc-included-builds/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="FosterStack">
-<link rel="canonical" href="https://fosterstack.com/build-cache-survives-restart/">
+<link rel="canonical" href="https://fosterstack.com/gradle-build-cache-buildsrc-included-builds/">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -87,43 +87,64 @@
   <div class="tag">Infrastructure worth keeping — and kept patched.</div>
 </header>
 <main>
-  <h1>Does the build cache survive a restart? A real test</h1>
-  <p class="lede">You restart the cache server, or it crashes, or the container is replaced. Do your stored build results come back? We tested a clean stop, a forced kill and a wrong data folder with FosterStack Cache 0.2.1 and a real Gradle build.</p>
+  <h1>Skip rebuilding buildSrc and included builds in Gradle</h1>
+  <p class="lede">Gradle can restore the compiled result of buildSrc and of an included build from the cache, so in our runs a change in one part rebuilt only that part, except that a new public method in the included build also rebuilt the app. At FosterStack we prove everything, so here is how we proved it to ourselves: six real runs showing what was restored and what was rebuilt.</p>
 
   <h2>The short answer</h2>
   <ul class="trust">
-    <li>After a clean stop and start on the same data folder, every result was still there.</li>
-    <li>After the server was killed with <code>kill -9</code> and started again on the same folder, every result was still there.</li>
-    <li>On a different, empty data folder, the cache was empty and the next build rebuilt everything.</li>
+    <li><code>buildSrc</code> and the included build each stored and restored their own <code>compileJava</code> result.</li>
+    <li>An edit in one of them rebuilt that part, and in our runs not the others, unless a public method changed.</li>
+    <li>In our run the cache was set up once, in the root <code>settings.gradle.kts</code> and <code>gradle.properties</code>. Nothing extra was needed in <code>buildSrc</code> or in the included build's build file.</li>
   </ul>
-  <p>The results live in the data folder, not in the running server. If that folder survives, your cache survives.</p>
 
   <h2>What we ran</h2>
-  <p>A four-module Gradle 9.8.0 project (the one from <a href="/gradle-build-cache-monorepo/">Gradle build cache for a monorepo</a>) against a server set up with <code>FSCACHE_DATA_DIR</code> pointing at a folder. Every build used a fresh copy of the project and an empty Gradle home, so the only shared thing was the server. Our first run used a project folder that still held build output from an earlier check; we repeated all four steps from a clean copy and got the same results. All four builds ended with <code>BUILD SUCCESSFUL</code>. "From cache" counts the four <code>compileJava</code> tasks that printed <code>FROM-CACHE</code>.</p>
+  <p>Three parts: a <code>buildSrc</code> folder with one Java class, an included build called <code>lib</code> with one Java class, and an <code>app</code> project that uses <code>lib</code>. Every run used a fresh copy of the project, a new empty Gradle home folder, and the local build cache switched off, so the only build state the runs shared was the cache server (they also used the same Gradle install and the same Java). Runs 3 to 6 each made one edit on a fresh copy of the original code; the edits were not stacked. All runs used <code>gradle :app:build --console=plain --no-daemon</code> on the same Mac, with Java 27 (Homebrew). All six builds ended with <code>BUILD SUCCESSFUL</code>.</p>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
-    <thead><tr><th>Step</th><th>Server state before the build</th><th>Entries in the status page</th><th>From cache</th></tr></thead>
+    <thead><tr><th>Run</th><th>buildSrc</th><th>lib (included build)</th><th>app</th></tr></thead>
     <tbody>
-      <tr><td>1. First build</td><td>New, empty data folder A</td><td>0, then 13 afterwards</td><td>0 of 4</td></tr>
-      <tr><td>2. Clean restart</td><td>Stopped normally, started on folder A</td><td>13 (same as before)</td><td>4 of 4</td></tr>
-      <tr><td>3. Crash</td><td>Killed with <code>kill -9</code>, started on folder A</td><td>13 (same as before)</td><td>4 of 4</td></tr>
-      <tr><td>4. Wrong folder</td><td>Started on a different empty folder B</td><td>0</td><td>0 of 4</td></tr>
+      <tr><td>1. First build, as CI would do it</td><td>ran</td><td>ran</td><td>ran</td></tr>
+      <tr><td>2. Fresh copy, same code</td><td>FROM-CACHE</td><td>FROM-CACHE</td><td>FROM-CACHE</td></tr>
+      <tr><td>3. Edit <code>buildSrc</code></td><td>ran</td><td>FROM-CACHE</td><td>FROM-CACHE</td></tr>
+      <tr><td>4. Edit inside a method in <code>lib</code></td><td>FROM-CACHE</td><td>ran</td><td>FROM-CACHE</td></tr>
+      <tr><td>5. Add a public method to <code>lib</code></td><td>FROM-CACHE</td><td>ran</td><td>ran</td></tr>
+      <tr><td>6. Edit only <code>app</code></td><td>FROM-CACHE</td><td>FROM-CACHE</td><td>ran</td></tr>
     </tbody>
   </table></div>
-  <p>The status page is the server's <code>/statusz</code> address. It showed the same 13 entries and the same size in bytes right after each restart, before any build ran.</p>
+  <p>The columns show the <code>compileJava</code> task of each part. These are three lines from run 2, with the lines between them left out:</p>
+<pre tabindex="0"><code>&gt; Task :buildSrc:compileJava FROM-CACHE
+...
+&gt; Task :lib:compileJava FROM-CACHE
+...
+&gt; Task :app:compileJava FROM-CACHE</code></pre>
 
-  <h2>One limit of this test</h2>
-  <p>We killed the server while it was idle. We did not kill it in the middle of an upload, so this page says nothing about a half-written result. What we can say is that a crash with nothing in flight lost nothing.</p>
-
-  <h2>If your cache comes back empty</h2>
-  <p>An empty cache after a restart means the server is looking at a different folder than before. It is the same as step 4. Check that the data folder or volume is still the one you expect:</p>
+  <h2>What this means for your build</h2>
   <ul class="trust">
-    <li><strong>Docker:</strong> use a named volume or a mounted folder for the data directory. See <a href="/gradle-build-cache-docker-compose/">Gradle build cache with Docker Compose</a>.</li>
-    <li><strong>Kubernetes:</strong> the data directory needs a persistent volume claim. See <a href="/gradle-build-cache-kubernetes/">Gradle build cache on Kubernetes</a>.</li>
-    <li><strong>Permissions:</strong> if the server cannot write to the folder, see <a href="/build-cache-permission-denied-data-directory/">permission denied on the data directory</a>.</li>
+    <li><strong>buildSrc is cached like any other project.</strong> A change to it recompiled it (run 3). It did not recompile <code>lib</code> or <code>app</code> in our run.</li>
+    <li><strong>An included build is cached too.</strong> Its tasks show up as <code>:lib:compileJava</code> and came from the cache in run 2.</li>
+    <li><strong>A change inside a method did not spread (run 4); a new public method did (run 5).</strong> That matches what we saw with modules in <a href="/gradle-build-cache-monorepo/">Gradle build cache for a monorepo</a>.</li>
   </ul>
-  <p>To copy the data somewhere safe, or to move it to another server, see <a href="/back-up-and-restore-build-cache/">back up and restore</a>.</p>
+  <p>We tried one small class in each part. We did not test a <code>buildSrc</code> that holds plugins, convention plugins, or other languages, and we did not test an included build that is itself a large multi-module build.</p>
 
-  <p class="muted-note">Run on FosterStack Cache 0.2.1 (macOS, arm64) with Gradle 9.8.0, Java 27.</p>
+  <h2>The files we used</h2>
+  <p>Root <code>settings.gradle.kts</code>. The address is for a test on one machine over plain HTTP; use your server's address and HTTPS across a network.</p>
+<pre tabindex="0"><code>rootProject.name = "composite"
+includeBuild("lib")
+include(":app")
+
+buildCache {
+    local { isEnabled = false }
+    remote&lt;HttpBuildCache&gt; {
+        url = uri("http://127.0.0.1:18220/")
+        isPush = true
+        isAllowInsecureProtocol = true
+    }
+}</code></pre>
+  <p>The root <code>gradle.properties</code> has one line, <code>org.gradle.caching=true</code>. The root <code>build.gradle.kts</code> has one line that prints a value from the <code>buildSrc</code> class. <code>lib/settings.gradle.kts</code> is <code>rootProject.name = "lib"</code>. <code>buildSrc/build.gradle.kts</code> is <code>plugins { java }</code>. <code>lib/build.gradle.kts</code> is <code>plugins { `java-library` }</code> with <code>group = "demo"</code>, and <code>app/build.gradle.kts</code> adds <code>implementation("demo:lib")</code>.</p>
+
+  <h2>If something does not come from the cache</h2>
+  <p>Work through <a href="/gradle-build-cache-hit-rate-low/">why the hit rate is low</a>. To see what Gradle stores, see <a href="/what-gradle-stores-in-build-cache/">what Gradle stores in the build cache</a>.</p>
+
+  <p class="muted-note">Run on Gradle 9.8.0 with FosterStack Cache 0.2.1, macOS (arm64), Java 27 (Homebrew).</p>
 </main>
 
 <footer>

@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Does the Build Cache Survive a Restart? A Real Test</title>
-<meta name="description" content="We restarted and killed a self-hosted Gradle build cache server to see if stored results survive. They do if the data folder does. Tested on release 0.2.1.">
-<meta property="og:title" content="Does the Build Cache Survive a Restart? A Real Test">
-<meta property="og:description" content="We restarted and killed a self-hosted Gradle build cache server to see if stored results survive. They do if the data folder does. Tested on release 0.2.1.">
-<meta property="og:url" content="https://fosterstack.com/build-cache-survives-restart/">
+<title>Know what your Gradle build cache stores before you size it</title>
+<meta name="description" content="What one real Gradle build stored in a self-hosted build cache: which tasks make entries, which make none, and how to count them. Tested on release 0.2.1.">
+<meta property="og:title" content="Know what your Gradle build cache stores before you size it">
+<meta property="og:description" content="What one real Gradle build stored in a self-hosted build cache: which tasks make entries, which make none, and how to count them. Tested on release 0.2.1.">
+<meta property="og:url" content="https://fosterstack.com/what-gradle-stores-in-build-cache/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="FosterStack">
-<link rel="canonical" href="https://fosterstack.com/build-cache-survives-restart/">
+<link rel="canonical" href="https://fosterstack.com/what-gradle-stores-in-build-cache/">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -87,43 +87,50 @@
   <div class="tag">Infrastructure worth keeping — and kept patched.</div>
 </header>
 <main>
-  <h1>Does the build cache survive a restart? A real test</h1>
-  <p class="lede">You restart the cache server, or it crashes, or the container is replaced. Do your stored build results come back? We tested a clean stop, a forced kill and a wrong data folder with FosterStack Cache 0.2.1 and a real Gradle build.</p>
+  <h1>Know what your Gradle build cache stores before you size it</h1>
+  <p class="lede">Knowing what Gradle puts in the cache tells you what you are paying disk for and which tasks stored nothing in our build. At FosterStack we prove everything, so here is how we proved it to ourselves: one real build, every entry counted, and the tasks that stored nothing.</p>
 
   <h2>The short answer</h2>
   <ul class="trust">
-    <li>After a clean stop and start on the same data folder, every result was still there.</li>
-    <li>After the server was killed with <code>kill -9</code> and started again on the same folder, every result was still there.</li>
-    <li>On a different, empty data folder, the cache was empty and the next build rebuilt everything.</li>
+    <li>Each <code>compileJava</code> task stored one entry.</li>
+    <li>The compiled build scripts stored entries too, which is why there are more entries than compile tasks. On a Gradle home that had already compiled them, they were not stored again.</li>
+    <li>The jar, classes, assemble and build tasks stored nothing in our run.</li>
+    <li>The 13 entries from a four-module build took about 36 KB.</li>
   </ul>
-  <p>The results live in the data folder, not in the running server. If that folder survives, your cache survives.</p>
 
   <h2>What we ran</h2>
-  <p>A four-module Gradle 9.8.0 project (the one from <a href="/gradle-build-cache-monorepo/">Gradle build cache for a monorepo</a>) against a server set up with <code>FSCACHE_DATA_DIR</code> pointing at a folder. Every build used a fresh copy of the project and an empty Gradle home, so the only shared thing was the server. Our first run used a project folder that still held build output from an earlier check; we repeated all four steps from a clean copy and got the same results. All four builds ended with <code>BUILD SUCCESSFUL</code>. "From cache" counts the four <code>compileJava</code> tasks that printed <code>FROM-CACHE</code>.</p>
+  <p>The four-module build from <a href="/gradle-build-cache-monorepo/">Gradle build cache for a monorepo</a>: <code>core</code>, <code>util</code>, <code>api</code> and <code>app</code>, each with 12 small Java classes and a Kotlin build file. Our first run used a project folder that still held build output from an earlier check; we repeated it, with the same 13 entries, from a clean copy and got the same results. We started a new, empty server and ran <code>gradle build --console=plain --no-daemon -i</code> once, with the local cache off and a new, empty Gradle home. The <code>-i</code> flag makes Gradle print a line each time it stores something. The build ended with <code>BUILD SUCCESSFUL</code>. The project has no tests, so there are no test entries here; for those, see <a href="/gradle-test-task-from-cache/">Gradle test task FROM-CACHE</a>.</p>
+  <p>The server's status page then said: 13 entries, 36,054 bytes. When we repeated the run, the entry count was the same and the size varied by a few dozen bytes (36,054 to 36,103 across our runs).</p>
+
+  <h2>What the 13 entries were</h2>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
-    <thead><tr><th>Step</th><th>Server state before the build</th><th>Entries in the status page</th><th>From cache</th></tr></thead>
+    <thead><tr><th>Stored</th><th>Entries</th></tr></thead>
     <tbody>
-      <tr><td>1. First build</td><td>New, empty data folder A</td><td>0, then 13 afterwards</td><td>0 of 4</td></tr>
-      <tr><td>2. Clean restart</td><td>Stopped normally, started on folder A</td><td>13 (same as before)</td><td>4 of 4</td></tr>
-      <tr><td>3. Crash</td><td>Killed with <code>kill -9</code>, started on folder A</td><td>13 (same as before)</td><td>4 of 4</td></tr>
-      <tr><td>4. Wrong folder</td><td>Started on a different empty folder B</td><td>0</td><td>0 of 4</td></tr>
+      <tr><td><code>:core:compileJava</code></td><td>1</td></tr>
+      <tr><td><code>:util:compileJava</code></td><td>1</td></tr>
+      <tr><td><code>:api:compileJava</code></td><td>1</td></tr>
+      <tr><td><code>:app:compileJava</code></td><td>1</td></tr>
+      <tr><td>Kotlin build script compilation, first stage</td><td>5</td></tr>
+      <tr><td>Kotlin build script compilation, second stage</td><td>4</td></tr>
     </tbody>
   </table></div>
-  <p>The status page is the server's <code>/statusz</code> address. It showed the same 13 entries and the same size in bytes right after each restart, before any build ran.</p>
+  <p>These are the lines Gradle printed:</p>
+<pre tabindex="0"><code>Stored cache entry for task ':core:compileJava' with cache key ...
+Stored cache entry for Kotlin DSL script compilation (Project/TopLevel/stage1) with cache key ...
+Stored cache entry for Kotlin DSL script compilation (Project/TopLevel/stage2) with cache key ...</code></pre>
 
-  <h2>One limit of this test</h2>
-  <p>We killed the server while it was idle. We did not kill it in the middle of an upload, so this page says nothing about a half-written result. What we can say is that a crash with nothing in flight lost nothing.</p>
+  <h2>What was not stored</h2>
+  <p>These tasks ran and stored nothing: <code>classes</code>, <code>jar</code>, <code>assemble</code> and <code>build</code> for each of the four modules. In our other runs the jar tasks never printed <code>FROM-CACHE</code> either. In our builds you will see them run on every fresh checkout.</p>
 
-  <h2>If your cache comes back empty</h2>
-  <p>An empty cache after a restart means the server is looking at a different folder than before. It is the same as step 4. Check that the data folder or volume is still the one you expect:</p>
-  <ul class="trust">
-    <li><strong>Docker:</strong> use a named volume or a mounted folder for the data directory. See <a href="/gradle-build-cache-docker-compose/">Gradle build cache with Docker Compose</a>.</li>
-    <li><strong>Kubernetes:</strong> the data directory needs a persistent volume claim. See <a href="/gradle-build-cache-kubernetes/">Gradle build cache on Kubernetes</a>.</li>
-    <li><strong>Permissions:</strong> if the server cannot write to the folder, see <a href="/build-cache-permission-denied-data-directory/">permission denied on the data directory</a>.</li>
-  </ul>
-  <p>To copy the data somewhere safe, or to move it to another server, see <a href="/back-up-and-restore-build-cache/">back up and restore</a>.</p>
+  <h2>See it for your own build</h2>
+  <p>Start from an empty cache, run your build once with <code>-i</code>, and count. We ran exactly this command, with the output saved, and it printed the same 13 entries:</p>
+<pre tabindex="0"><code>gradle build -i | grep "Stored cache entry"</code></pre>
+  <p>If your Gradle home has already compiled your build scripts, you will not see the script entries again: in a second run with the same Gradle home against a new empty server, only the 4 <code>compileJava</code> entries were stored, and the server held 4 entries and 11,425 bytes. The server's status page (<code>/statusz</code>) shows the entry count and the size in bytes. To see how it changes as you build, see <a href="/monitor-build-cache-prometheus-grafana/">monitor the cache with Prometheus and Grafana</a>. To pick a size limit, see <a href="/build-cache-server-sizing/">how big a server does a build cache need</a> and <a href="/build-cache-eviction-size-limit/">how the size limit works</a>.</p>
 
-  <p class="muted-note">Run on FosterStack Cache 0.2.1 (macOS, arm64) with Gradle 9.8.0, Java 27.</p>
+  <h2>If an entry you expect is missing</h2>
+  <p>Look at <a href="/gradle-build-cache-hit-rate-low/">why the hit rate is low</a> and <a href="/gradle-build-cache-enable-disable/">enable or disable the Gradle build cache</a>. A task that stored nothing in your build, such as the jar tasks in ours, could not come from the cache.</p>
+
+  <p class="muted-note">Run on Gradle 9.8.0 with FosterStack Cache 0.2.1, macOS (arm64), Java 27.</p>
 </main>
 
 <footer>

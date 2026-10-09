@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Use your Gradle build cache over HTTPS with a private CA</title>
+<meta name="description" content="Fix the PKIX path building failed error for a Gradle build cache behind HTTPS with a private CA: trust store settings and a Maven Central trap. Tested on 0.2.1.">
+<meta property="og:title" content="Use your Gradle build cache over HTTPS with a private CA">
+<meta property="og:description" content="Fix the PKIX path building failed error for a Gradle build cache behind HTTPS with a private CA: trust store settings and a Maven Central trap. Tested on 0.2.1.">
+<meta property="og:url" content="https://fosterstack.com/gradle-remote-build-cache-private-ca-https/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="FosterStack">
+<link rel="canonical" href="https://fosterstack.com/gradle-remote-build-cache-private-ca-https/">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<style>
+  :root {
+    --bg: #ffffff; --fg: #16181d; --muted: #5b6472; --line: #e4e7ec;
+    --accent: #0d7a5f; --accent-fg: #ffffff; --card: #f6f8f9; --warn-bg: #fff7ed; --warn-line: #fdba74;
+    --mark: #0f4d66;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #101318; --fg: #e8eaf0; --muted: #98a2b3; --line: #262c36;
+      --accent: #2fbf95; --accent-fg: #08110e; --card: #171c23; --warn-bg: #241a10; --warn-line: #7c4a12;
+      --mark: #e8eaf0;
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 44rem; margin: 0 auto; padding: 0 1.25rem 4rem; }
+  header.site { max-width: 44rem; margin: 0 auto; padding: 1.25rem; display: flex; align-items: baseline; gap: .6rem; }
+  .logo { font-weight: 700; font-size: 1.05rem; letter-spacing: -.01em; }
+  .logo span { color: var(--accent); }
+  .logo .mark { width: 1.2em; height: 1.2em; vertical-align: -.24em; margin-right: .4em; }
+  .tag { color: var(--muted); font-size: .85rem; }
+  .notice {
+    background: var(--warn-bg); border: 1px solid var(--warn-line); border-radius: 8px;
+    padding: .7rem 1rem; font-size: .92rem; margin: 1.5rem 0 2.5rem;
+  }
+  h1 { font-size: 2rem; line-height: 1.2; letter-spacing: -.02em; margin-bottom: 1rem; }
+  .lede { font-size: 1.12rem; color: var(--muted); margin-bottom: 2rem; }
+  h2 { font-size: 1.25rem; margin: 3rem 0 .9rem; letter-spacing: -.01em; }
+  p + p { margin-top: .8rem; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: .8rem; margin-top: 1rem; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1rem 1.1rem; }
+  .card h3 { font-size: .98rem; margin-bottom: .35rem; }
+  .card p { font-size: .9rem; color: var(--muted); }
+  ul.trust { list-style: none; margin-top: .5rem; }
+  ul.trust li { padding: .45rem 0 .45rem 1.6rem; position: relative; }
+  ul.trust li::before { content: "✓"; position: absolute; left: .2rem; color: var(--accent); font-weight: 700; }
+  code, pre { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .88em; }
+  code { background: var(--card); border: 1px solid var(--line); border-radius: 5px; padding: .1em .35em; }
+  pre code { background: none; border: 0; padding: 0; color: inherit; font-size: 1em; }
+  button {
+    padding: .7rem 1.3rem; font-size: 1rem; font-weight: 600; cursor: pointer;
+    background: var(--accent); color: var(--accent-fg); border: 0; border-radius: 8px;
+  }
+  button:disabled { opacity: .6; cursor: default; }
+  table { width: 100%; border-collapse: collapse; font-size: .92rem; margin-top: 1rem; }
+  th, td { text-align: left; padding: .55rem .6rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  pre { background: #0f172a; color: #e2e8f0; padding: .9rem 1rem; border-radius: 8px;
+        overflow-x: auto; font-size: .9rem; line-height: 1.5; }
+  .cta-row { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1.1rem; }
+  .btn { display: inline-block; padding: .55rem 1rem; border-radius: 8px; font-weight: 600;
+         text-decoration: none; background: var(--accent); color: var(--accent-fg); }
+  .btn-secondary { background: transparent; color: inherit; border: 1px solid var(--muted); }
+  .muted-note { color: var(--muted); font-size: .93rem; margin-top: 1.1rem; }
+  footer { border-top: 1px solid var(--line); margin-top: 4rem; padding: 1.5rem 1.25rem 3rem; }
+  footer div { max-width: 44rem; margin: 0 auto; color: var(--muted); font-size: .82rem; }
+  a { color: var(--accent); }
+  code { overflow-wrap: anywhere; }
+  pre code { overflow-wrap: normal; }
+  .table-scroll { max-width: 100%; overflow-x: auto; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+</style>
+</head>
+<body>
+<header class="site">
+  <div class="logo"><svg class="mark" viewBox="0 0 96 96" aria-hidden="true" focusable="false"><rect x="12" y="14" width="72" height="18" rx="5" fill="var(--mark)"/><rect x="12" y="39" width="48" height="18" rx="5" fill="var(--mark)"/><rect x="12" y="64" width="26" height="18" rx="5" fill="var(--accent)"/></svg>foster<span>stack</span></div>
+  <div class="tag">Infrastructure worth keeping — and kept patched.</div>
+</header>
+<main>
+  <h1>Use your Gradle build cache over HTTPS with a private CA</h1>
+  <p class="lede">With the right trust store, Gradle uses a cache behind HTTPS with your own certificate authority, and in our runs the cache hits worked. At FosterStack we prove everything, so here is how we proved it to ourselves: real runs with a private CA, the exact error without it, and the trap that broke downloads from Maven Central.</p>
+
+  <h2>The short answer</h2>
+  <ul class="trust">
+    <li>With no trust settings, Gradle printed <code>PKIX path building failed</code>, turned the remote cache off, and the build still succeeded.</li>
+    <li>Pointing Gradle at a trust store that contains your CA fixed it, from <code>gradle.properties</code> and also from the command line.</li>
+    <li>A trust store with only your CA replaced Java's normal list of trusted authorities, and the build then failed to download from Maven Central. A store that holds the normal list plus your CA worked.</li>
+  </ul>
+
+  <h2>What we ran</h2>
+  <p>The cache server speaks plain HTTP, so HTTPS comes from a TLS front end in front of it. For this test the front end was a small TLS proxy we wrote, a stand-in for nginx or any other TLS front end; for a real nginx setup see <a href="/build-cache-docker-compose-production/">production Docker Compose with nginx and TLS</a>. The certificate came from a private test CA. The address was <code>https://127.0.0.1:18443/</code>, and the certificate names that IP address.</p>
+  <p>All six builds ran on the same Mac, each from a fresh copy of the project and a new empty Gradle home, with Java 27 (Homebrew) and the local build cache off. The cache server (with no login) and the test certificate were shared, so runs 3 to 6 read the entry that run 2 stored. We ran the installed <code>gradle</code> command with <code>--no-daemon</code>; Gradle still started a single-use daemon for each build. Every build ended with <code>BUILD SUCCESSFUL</code> except run 5, which is the one that was meant to fail. Runs 1 to 4 ran <code>gradle compileJava</code>; runs 5 and 6 ran <code>gradle test</code>, because they needed Maven Central.</p>
+  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
+    <thead><tr><th>Run</th><th>Trust setting</th><th>Result</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>None</td><td><code>PKIX path building failed</code>. Remote cache disabled. Build succeeded, the task ran.</td></tr>
+      <tr><td>2</td><td>Trust store with our CA, in <code>gradle.properties</code></td><td>Task ran. Run 3 then took it from the cache.</td></tr>
+      <tr><td>3</td><td>Same, fresh copy</td><td><code>compileJava FROM-CACHE</code></td></tr>
+      <tr><td>4</td><td>Trust store with our CA, on the command line only</td><td><code>compileJava FROM-CACHE</code></td></tr>
+      <tr><td>5</td><td>Trust store with only our CA, and a project that needs Maven Central</td><td><code>compileJava FROM-CACHE</code>, so the cache over HTTPS still worked, then <code>BUILD FAILED</code>: could not get the JUnit file from Central, SSL handshake exception.</td></tr>
+      <tr><td>6</td><td>Trust store with Java's normal list plus our CA, same project</td><td><code>BUILD SUCCESSFUL</code>, <code>compileJava FROM-CACHE</code></td></tr>
+    </tbody>
+  </table></div>
+
+  <h2>The error, as Gradle printed it</h2>
+<pre tabindex="0"><code>Could not load entry a7d91d3d57397e7a7b4c0f7d07e2ba1e from remote build cache: (certificate_unknown) PKIX path building failed: sun.security.provider.certpath.SunCertPathBuilderException: unable to find valid certification path to requested target
+...
+The remote build cache was disabled during the build due to errors.</code></pre>
+  <p>Gradle treats a broken remote cache as non-fatal, so the build carried on without the cache. In a real pipeline that looks like a build that is simply slow, so look for this line in the log. A tool like curl fails on the same address too: in our test it exited with code 60 until we gave it the CA with <code>--cacert</code>.</p>
+
+  <h2>Fix 1: a trust store with your CA</h2>
+  <p>Make a Java trust store that contains your CA certificate (the password here is only the test value; <code>keytool</code> made a PKCS12 file, which Java reads without being told the type):</p>
+<pre tabindex="0"><code>keytool -importcert -alias testca -file ca/ca.crt -keystore truststore-only.p12 -storepass changeit -noprompt</code></pre>
+  <p>Then point Gradle at it in <code>gradle.properties</code>. These two lines made run 2 and run 3 work:</p>
+<pre tabindex="0"><code>systemProp.javax.net.ssl.trustStore=/path/to/truststore-only.p12
+systemProp.javax.net.ssl.trustStorePassword=changeit</code></pre>
+  <p>Passing the same two settings on the command line, as <code>-Djavax.net.ssl.trustStore=...</code> and <code>-Djavax.net.ssl.trustStorePassword=...</code>, worked in run 4. We did not test how a long-running daemon picks up the setting.</p>
+
+  <h2>The trap: your own CA replaces the normal list</h2>
+  <p>With the standard Java settings we used, setting a trust store makes Java trust only what is in that store. Run 5 had only our CA, and Gradle could no longer download from Maven Central:</p>
+<pre tabindex="0"><code>&gt; Could not GET 'https://repo.maven.apache.org/maven2/org/junit/junit-bom/5.11.0/junit-bom-5.11.0.pom'.
+   &gt; Got SSL handshake exception during request. It might be caused by SSL misconfiguration
+      &gt; (certificate_unknown) PKIX path building failed: sun.security.provider.certpath.SunCertPathBuilderException: unable to find valid certification path to requested target</code></pre>
+  <p>It is the same PKIX message as in run 1, this time about Maven Central.</p>
+  <p>The fix is a store that holds Java's normal list as well. Copy the <code>cacerts</code> file that ships with your Java (it is under <code>lib/security</code> in the Java folder), then add your CA to the copy:</p>
+<pre tabindex="0"><code>cp /path/to/java/lib/security/cacerts truststore-combined.p12
+chmod u+w truststore-combined.p12
+keytool -importcert -alias testca -file ca/ca.crt -keystore truststore-combined.p12 -storepass changeit -noprompt</code></pre>
+  <p>The Java default file uses the password <code>changeit</code>, and that is what worked here. The copy does not follow later updates to Java's list, so make the copy again when you update Java. Run 6 used this combined store and passed, with both the Central download and the cache over HTTPS working. Our combined store held 112 certificates: the 111 that came with Java plus ours.</p>
+
+  <h2>How we made the test certificates</h2>
+  <p>These are the exact commands in the setup script we ran before the six builds. The 30-day lifetime is only for the test; choose your own.</p>
+<pre tabindex="0"><code>openssl genrsa -out ca.key 2048
+openssl req -x509 -new -key ca.key -sha256 -days 30 -subj "/CN=Test Private CA" -out ca.crt
+openssl genrsa -out server.key 2048
+openssl req -new -key server.key -subj "/CN=cache.test" -out server.csr
+printf "subjectAltName=IP:127.0.0.1,DNS:localhost\nbasicConstraints=CA:FALSE\nextendedKeyUsage=serverAuth\n" &gt; ext.cnf
+openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out server.crt -days 30 -sha256 -extfile ext.cnf</code></pre>
+  <p>The certificate has to name the address your builds use. We did not test a certificate that names a different host, an expired certificate, the Gradle wrapper (<code>./gradlew</code>), or Linux or Windows.</p>
+
+  <h2>If it still does not work</h2>
+  <p>Work through <a href="/gradle-remote-cache-not-working/">Gradle remote build cache not working</a>. For the server side of HTTPS, see <a href="/build-cache-docker-compose-production/">production Docker Compose with nginx and TLS</a>.</p>
+
+  <p class="muted-note">Run on Gradle 9.8.0 with FosterStack Cache 0.2.1 behind a test TLS proxy, macOS (arm64), Java 27 (Homebrew), OpenSSL 3.6.5.</p>
+</main>
+
+<footer>
+  <div>
+    <p>FosterStack is not affiliated with, endorsed by, or sponsored by Gradle Inc.
+    "Gradle" and "Develocity" are trademarks of Gradle Inc., used here only to identify
+    compatibility. FosterStack contains no Gradle Inc. code; it is a clean-room implementation
+    of the documented remote build cache HTTP protocol. Apache Maven is a trademark of the
+    Apache Software Foundation; the Maven Build Cache Extension is Apache's project, not
+    ours.</p>
+    <p style="margin-top:.6rem">© 2026 FosterStack · <a href="/build-cache-node-end-of-life/">Build Cache Node end of life</a> · <a href="/migrate-build-cache-node/">Migrate</a> · <a href="/build-cache-node-faq/">FAQ</a> · <a href="/jenkins-ci-build-cache/">CI setup</a> · <a href="/how-we-build/">How we build</a> · <a href="/regulated/">For regulated markets</a> · <a href="https://github.com/fosterstack/cache">github.com/fosterstack/cache</a> · <a href="mailto:hello@fosterstack.com">hello@fosterstack.com</a></p>
+  </div>
+</footer>
+</body>
+</html>

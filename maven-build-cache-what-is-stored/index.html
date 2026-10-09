@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Does the Build Cache Survive a Restart? A Real Test</title>
-<meta name="description" content="We restarted and killed a self-hosted Gradle build cache server to see if stored results survive. They do if the data folder does. Tested on release 0.2.1.">
-<meta property="og:title" content="Does the Build Cache Survive a Restart? A Real Test">
-<meta property="og:description" content="We restarted and killed a self-hosted Gradle build cache server to see if stored results survive. They do if the data folder does. Tested on release 0.2.1.">
-<meta property="og:url" content="https://fosterstack.com/build-cache-survives-restart/">
+<title>Size your Maven build cache: what it stores, in real numbers</title>
+<meta name="description" content="What a real three-module Maven build uploads to a self-hosted build cache: jars, build info and a report per build, with counts and bytes. Release 0.2.1.">
+<meta property="og:title" content="Size your Maven build cache: what it stores, in real numbers">
+<meta property="og:description" content="What a real three-module Maven build uploads to a self-hosted build cache: jars, build info and a report per build, with counts and bytes. Release 0.2.1.">
+<meta property="og:url" content="https://fosterstack.com/maven-build-cache-what-is-stored/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="FosterStack">
-<link rel="canonical" href="https://fosterstack.com/build-cache-survives-restart/">
+<link rel="canonical" href="https://fosterstack.com/maven-build-cache-what-is-stored/">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -87,43 +87,52 @@
   <div class="tag">Infrastructure worth keeping — and kept patched.</div>
 </header>
 <main>
-  <h1>Does the build cache survive a restart? A real test</h1>
-  <p class="lede">You restart the cache server, or it crashes, or the container is replaced. Do your stored build results come back? We tested a clean stop, a forced kill and a wrong data folder with FosterStack Cache 0.2.1 and a real Gradle build.</p>
+  <h1>Size your Maven build cache: what it stores, in real numbers</h1>
+  <p class="lede">Knowing what the Maven build cache extension uploads gives you a starting point for how much disk a shared cache needs. At FosterStack we prove everything, so here is how we proved it to ourselves: a real three-module build, every file counted, and what a fully restored build added.</p>
 
   <h2>The short answer</h2>
   <ul class="trust">
-    <li>After a clean stop and start on the same data folder, every result was still there.</li>
-    <li>After the server was killed with <code>kill -9</code> and started again on the same folder, every result was still there.</li>
-    <li>On a different, empty data folder, the cache was empty and the next build rebuilt everything.</li>
+    <li>Each built module uploaded two files: its jar (about 5 KB here) and a <code>buildinfo.xml</code> (about 9 KB here).</li>
+    <li>Both of our builds also uploaded one <code>build-cache-report.xml</code>.</li>
+    <li>Our three-module build left 7 entries and 44,810 bytes on an empty server.</li>
+    <li>A second build that restored every module added just that one entry, the report.</li>
   </ul>
-  <p>The results live in the data folder, not in the running server. If that folder survives, your cache survives.</p>
 
   <h2>What we ran</h2>
-  <p>A four-module Gradle 9.8.0 project (the one from <a href="/gradle-build-cache-monorepo/">Gradle build cache for a monorepo</a>) against a server set up with <code>FSCACHE_DATA_DIR</code> pointing at a folder. Every build used a fresh copy of the project and an empty Gradle home, so the only shared thing was the server. Our first run used a project folder that still held build output from an earlier check; we repeated all four steps from a clean copy and got the same results. All four builds ended with <code>BUILD SUCCESSFUL</code>. "From cache" counts the four <code>compileJava</code> tasks that printed <code>FROM-CACHE</code>.</p>
+  <p>The three-module project from <a href="/maven-build-cache-extension-multi-module/">Maven build cache extension in a multi-module project</a>: <code>core</code>, <code>util</code> and <code>app</code>. We started a new, empty server and ran <code>mvn verify</code> twice, each time from a fresh copy of the project with an empty local build cache. Both builds ran on the same Mac and shared one already-filled local Maven repository, offline (<code>-o -B</code>, plus options for the repository and the local cache location). Both ended with <code>BUILD SUCCESS</code>. In our runs the extension printed one <code>Saved to remote cache</code> line for each entry that ended up on the server, and the server's status page (<code>/statusz</code>) gave the counts.</p>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
-    <thead><tr><th>Step</th><th>Server state before the build</th><th>Entries in the status page</th><th>From cache</th></tr></thead>
+    <thead><tr><th>Step</th><th>Entries on the server</th><th>Bytes</th></tr></thead>
     <tbody>
-      <tr><td>1. First build</td><td>New, empty data folder A</td><td>0, then 13 afterwards</td><td>0 of 4</td></tr>
-      <tr><td>2. Clean restart</td><td>Stopped normally, started on folder A</td><td>13 (same as before)</td><td>4 of 4</td></tr>
-      <tr><td>3. Crash</td><td>Killed with <code>kill -9</code>, started on folder A</td><td>13 (same as before)</td><td>4 of 4</td></tr>
-      <tr><td>4. Wrong folder</td><td>Started on a different empty folder B</td><td>0</td><td>0 of 4</td></tr>
+      <tr><td>Empty server</td><td>0</td><td>0</td></tr>
+      <tr><td>After the first build (all three modules built)</td><td>7</td><td>44,810</td></tr>
+      <tr><td>After a second build from a fresh copy (all three restored)</td><td>8</td><td>46,128</td></tr>
     </tbody>
   </table></div>
-  <p>The status page is the server's <code>/statusz</code> address. It showed the same 13 entries and the same size in bytes right after each restart, before any build ran.</p>
 
-  <h2>One limit of this test</h2>
-  <p>We killed the server while it was idle. We did not kill it in the middle of an upload, so this page says nothing about a half-written result. What we can say is that a crash with nothing in flight lost nothing.</p>
+  <h2>The 7 entries from the first build</h2>
+  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
+    <thead><tr><th>File</th><th>How many</th><th>What it is</th></tr></thead>
+    <tbody>
+      <tr><td><code>core.jar</code>, <code>util.jar</code>, <code>app.jar</code></td><td>3</td><td>The built jar of each module (5,028 to 5,340 bytes each)</td></tr>
+      <tr><td><code>buildinfo.xml</code></td><td>3</td><td>A record for each module that the next build looks up first (9,007 to 9,332 bytes each)</td></tr>
+      <tr><td><code>build-cache-report.xml</code></td><td>1</td><td>A report about the build run itself</td></tr>
+    </tbody>
+  </table></div>
+  <p>The key is shortened to <code>&lt;key&gt;</code> here:</p>
+<pre tabindex="0"><code>[INFO] Saved to remote cache http://127.0.0.1:18180//v1.1/demo/core/&lt;key&gt;/core.jar</code></pre>
 
-  <h2>If your cache comes back empty</h2>
-  <p>An empty cache after a restart means the server is looking at a different folder than before. It is the same as step 4. Check that the data folder or volume is still the one you expect:</p>
-  <ul class="trust">
-    <li><strong>Docker:</strong> use a named volume or a mounted folder for the data directory. See <a href="/gradle-build-cache-docker-compose/">Gradle build cache with Docker Compose</a>.</li>
-    <li><strong>Kubernetes:</strong> the data directory needs a persistent volume claim. See <a href="/gradle-build-cache-kubernetes/">Gradle build cache on Kubernetes</a>.</li>
-    <li><strong>Permissions:</strong> if the server cannot write to the folder, see <a href="/build-cache-permission-denied-data-directory/">permission denied on the data directory</a>.</li>
-  </ul>
-  <p>To copy the data somewhere safe, or to move it to another server, see <a href="/back-up-and-restore-build-cache/">back up and restore</a>.</p>
+  <h2>What a restored build adds</h2>
+  <p>The second build restored all three modules and built nothing, and it uploaded one file: <code>build-cache-report.xml</code>. So our fully restored build still added one entry, 1,318 bytes (46,128 minus 44,810). We saw two builds, so we cannot say whether every restored build does the same.</p>
+  <p>On the first build, against an empty server, Maven also printed three <code>[ERROR] Error downloading cache item ... buildinfo.xml</code> lines. Those were ordinary misses on an empty cache, and the build succeeded; see <a href="/maven-build-cache-extension-enable-disable/">enable or disable the Maven build cache extension</a>.</p>
 
-  <p class="muted-note">Run on FosterStack Cache 0.2.1 (macOS, arm64) with Gradle 9.8.0, Java 27.</p>
+  <h2>What this means for sizing</h2>
+  <p>In this tiny project the <code>buildinfo.xml</code> files were bigger than the jars: about 9 KB each against about 5 KB, and together 27,661 of the 44,810 bytes. We did not test how that balance changes with large jars, so measure your own project before you pick a limit. To choose a size limit, see <a href="/build-cache-server-sizing/">how big a server does a build cache need</a> and <a href="/build-cache-eviction-size-limit/">how the size limit works</a>. The same question for Gradle is on <a href="/what-gradle-stores-in-build-cache/">what Gradle stores in the build cache</a>.</p>
+  <p>We tried one small project with jars of a few kilobytes. We did not test large jars, many versions of the same module, or a project with test reports.</p>
+
+  <h2>If you do not see restores</h2>
+  <p>See <a href="/maven-build-cache-extension-not-restoring/">Maven build cache not restoring</a>.</p>
+
+  <p class="muted-note">Run on Maven 3.10.0 with maven-build-cache-extension 1.2.3 and FosterStack Cache 0.2.1, macOS (arm64), Java 27 (Homebrew).</p>
 </main>
 
 <footer>

@@ -191,4 +191,36 @@
     <loc>https://fosterstack.com/maven-build-cache-extension-multi-module/</loc>
     <lastmod>2026-10-08</lastmod>
   </url>
+  <url>
+    <loc>https://fosterstack.com/gradle-test-task-from-cache/</loc>
+    <lastmod>2026-10-09</lastmod>
+  </url>
+  <url>
+    <loc>https://fosterstack.com/what-gradle-stores-in-build-cache/</loc>
+    <lastmod>2026-10-09</lastmod>
+  </url>
+  <url>
+    <loc>https://fosterstack.com/maven-build-cache-skip-tests/</loc>
+    <lastmod>2026-10-09</lastmod>
+  </url>
+  <url>
+    <loc>https://fosterstack.com/gradle-build-cache-buildsrc-included-builds/</loc>
+    <lastmod>2026-10-09</lastmod>
+  </url>
+  <url>
+    <loc>https://fosterstack.com/maven-build-cache-what-is-stored/</loc>
+    <lastmod>2026-10-09</lastmod>
+  </url>
+  <url>
+    <loc>https://fosterstack.com/gradle-remote-build-cache-private-ca-https/</loc>
+    <lastmod>2026-10-09</lastmod>
+  </url>
+  <url>
+    <loc>https://fosterstack.com/maven-build-cache-different-java-versions/</loc>
+    <lastmod>2026-10-09</lastmod>
+  </url>
+  <url>
+    <loc>https://fosterstack.com/gradle-build-cache-docker-ci-fresh-container/</loc>
+    <lastmod>2026-10-09</lastmod>
+  </url>
 </urlset>

@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Faster Gradle builds: skip the tests whose code didn't change</title>
+<meta name="description" content="When Gradle takes the test task from a self-hosted build cache and when it runs the tests again, from seven real runs with JUnit on release 0.2.1.">
+<meta property="og:title" content="Faster Gradle builds: skip the tests whose code didn&#x27;t change">
+<meta property="og:description" content="When Gradle takes the test task from a self-hosted build cache and when it runs the tests again, from seven real runs with JUnit on release 0.2.1.">
+<meta property="og:url" content="https://fosterstack.com/gradle-test-task-from-cache/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="FosterStack">
+<link rel="canonical" href="https://fosterstack.com/gradle-test-task-from-cache/">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<style>
+  :root {
+    --bg: #ffffff; --fg: #16181d; --muted: #5b6472; --line: #e4e7ec;
+    --accent: #0d7a5f; --accent-fg: #ffffff; --card: #f6f8f9; --warn-bg: #fff7ed; --warn-line: #fdba74;
+    --mark: #0f4d66;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #101318; --fg: #e8eaf0; --muted: #98a2b3; --line: #262c36;
+      --accent: #2fbf95; --accent-fg: #08110e; --card: #171c23; --warn-bg: #241a10; --warn-line: #7c4a12;
+      --mark: #e8eaf0;
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 44rem; margin: 0 auto; padding: 0 1.25rem 4rem; }
+  header.site { max-width: 44rem; margin: 0 auto; padding: 1.25rem; display: flex; align-items: baseline; gap: .6rem; }
+  .logo { font-weight: 700; font-size: 1.05rem; letter-spacing: -.01em; }
+  .logo span { color: var(--accent); }
+  .logo .mark { width: 1.2em; height: 1.2em; vertical-align: -.24em; margin-right: .4em; }
+  .tag { color: var(--muted); font-size: .85rem; }
+  .notice {
+    background: var(--warn-bg); border: 1px solid var(--warn-line); border-radius: 8px;
+    padding: .7rem 1rem; font-size: .92rem; margin: 1.5rem 0 2.5rem;
+  }
+  h1 { font-size: 2rem; line-height: 1.2; letter-spacing: -.02em; margin-bottom: 1rem; }
+  .lede { font-size: 1.12rem; color: var(--muted); margin-bottom: 2rem; }
+  h2 { font-size: 1.25rem; margin: 3rem 0 .9rem; letter-spacing: -.01em; }
+  p + p { margin-top: .8rem; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: .8rem; margin-top: 1rem; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1rem 1.1rem; }
+  .card h3 { font-size: .98rem; margin-bottom: .35rem; }
+  .card p { font-size: .9rem; color: var(--muted); }
+  ul.trust { list-style: none; margin-top: .5rem; }
+  ul.trust li { padding: .45rem 0 .45rem 1.6rem; position: relative; }
+  ul.trust li::before { content: "✓"; position: absolute; left: .2rem; color: var(--accent); font-weight: 700; }
+  code, pre { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .88em; }
+  code { background: var(--card); border: 1px solid var(--line); border-radius: 5px; padding: .1em .35em; }
+  pre code { background: none; border: 0; padding: 0; color: inherit; font-size: 1em; }
+  button {
+    padding: .7rem 1.3rem; font-size: 1rem; font-weight: 600; cursor: pointer;
+    background: var(--accent); color: var(--accent-fg); border: 0; border-radius: 8px;
+  }
+  button:disabled { opacity: .6; cursor: default; }
+  table { width: 100%; border-collapse: collapse; font-size: .92rem; margin-top: 1rem; }
+  th, td { text-align: left; padding: .55rem .6rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  pre { background: #0f172a; color: #e2e8f0; padding: .9rem 1rem; border-radius: 8px;
+        overflow-x: auto; font-size: .9rem; line-height: 1.5; }
+  .cta-row { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1.1rem; }
+  .btn { display: inline-block; padding: .55rem 1rem; border-radius: 8px; font-weight: 600;
+         text-decoration: none; background: var(--accent); color: var(--accent-fg); }
+  .btn-secondary { background: transparent; color: inherit; border: 1px solid var(--muted); }
+  .muted-note { color: var(--muted); font-size: .93rem; margin-top: 1.1rem; }
+  footer { border-top: 1px solid var(--line); margin-top: 4rem; padding: 1.5rem 1.25rem 3rem; }
+  footer div { max-width: 44rem; margin: 0 auto; color: var(--muted); font-size: .82rem; }
+  a { color: var(--accent); }
+  code { overflow-wrap: anywhere; }
+  pre code { overflow-wrap: normal; }
+  .table-scroll { max-width: 100%; overflow-x: auto; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  code { overflow-wrap: anywhere; }
+  pre code { overflow-wrap: normal; }
+</style>
+</head>
+<body>
+<header class="site">
+  <div class="logo"><svg class="mark" viewBox="0 0 96 96" aria-hidden="true" focusable="false"><rect x="12" y="14" width="72" height="18" rx="5" fill="var(--mark)"/><rect x="12" y="39" width="48" height="18" rx="5" fill="var(--mark)"/><rect x="12" y="64" width="26" height="18" rx="5" fill="var(--accent)"/></svg>foster<span>stack</span></div>
+  <div class="tag">Infrastructure worth keeping — and kept patched.</div>
+</header>
+<main>
+  <h1>Faster Gradle builds: skip the tests whose code didn't change</h1>
+  <p class="lede">When nothing a test depends on has changed, Gradle takes its passing result from FosterStack Cache instead of running it again, and your build finishes sooner. At FosterStack we prove everything, so here is how we proved it to ourselves: real runs, real numbers, and the cases where the tests rightly ran again.</p>
+
+  <h2>The short answer</h2>
+  <ul class="trust">
+    <li>A fresh copy of the project with the same code got <code>:test FROM-CACHE</code>. The tests were not run.</li>
+    <li>In our runs 3 and 4, changing the main code or the test code made the tests run again.</li>
+    <li>A comment added on the same line recompiled the main code, but the tests still came from the cache.</li>
+    <li>In our runs, a failing test ran each time. It was never taken from the cache.</li>
+  </ul>
+
+  <h2>What we ran</h2>
+  <p>A small Java project with one class and two JUnit tests. Every run used a fresh copy of the project on the same Mac, with the same Java and Gradle, and the local build cache was switched off. The runs shared the cache server, and one Gradle home folder so the test libraries were downloaded once. A different machine or Java version was not tested. All the runs used <code>gradle test --console=plain --no-daemon</code>.</p>
+  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
+    <thead><tr><th>Run</th><th>compileJava</th><th>compileTestJava</th><th>test</th></tr></thead>
+    <tbody>
+      <tr><td>1. First build, as CI would do it</td><td>ran</td><td>ran</td><td>ran</td></tr>
+      <tr><td>2. Fresh copy, same code</td><td>FROM-CACHE</td><td>FROM-CACHE</td><td>FROM-CACHE</td></tr>
+      <tr><td>3. Change the main code</td><td>ran</td><td>FROM-CACHE</td><td>ran</td></tr>
+      <tr><td>4. Add a test</td><td>FROM-CACHE</td><td>ran</td><td>ran</td></tr>
+      <tr><td>5. Add a comment on the same line in the main code</td><td>ran</td><td>FROM-CACHE</td><td>FROM-CACHE</td></tr>
+      <tr><td>6. A test that fails</td><td>FROM-CACHE</td><td>ran</td><td>FAILED</td></tr>
+      <tr><td>7. The same failing test, fresh copy</td><td>FROM-CACHE</td><td>FROM-CACHE</td><td>FAILED</td></tr>
+    </tbody>
+  </table></div>
+  <p>Runs 1 to 5 ended with <code>BUILD SUCCESSFUL</code>. Runs 6 and 7 ended with <code>BUILD FAILED</code>, as intended. This is the line run 2 printed:</p>
+<pre tabindex="0"><code>&gt; Task :test FROM-CACHE</code></pre>
+
+  <h2>How much time does it save?</h2>
+  <p>On the first project the tests are so quick that the totals were 3 seconds and 2 seconds, which tells you nothing. So we made a second project, set up the same way as above, with three more tests that each wait 10 seconds, made slow on purpose so the time is visible. It still has the two quick tests. Each build used its own copy of the project and the local build cache was off. The Mac was busy with other jobs the whole time, so all the totals are high; the gap is what matters.</p>
+  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
+    <thead><tr><th>Run</th><th><code>:test</code> task</th><th>Gradle's total</th></tr></thead>
+    <tbody>
+      <tr><td>1. First build</td><td>ran</td><td>1m 23s</td></tr>
+      <tr><td>2. Fresh copy, same code</td><td><code>FROM-CACHE</code></td><td>35s</td></tr>
+      <tr><td>3. Main code changed</td><td>ran</td><td>1m 12s</td></tr>
+      <tr><td>4. Fresh copy, same code again</td><td><code>FROM-CACHE</code></td><td>32s</td></tr>
+    </tbody>
+  </table></div>
+  <p>The builds where the tests came from the cache finished about 40 to 50 seconds sooner: 48 seconds sooner for run 2 against run 1, and 40 seconds sooner for run 4 against run 3. (Run 3 also recompiled the main code, so it is not the same two builds as run 1.) The three sleeping tests account for at least 30 seconds of that; the rest is compiling and starting the tests, which the cached builds skipped too. Even the fully cached builds took 32 to 35 seconds on this busy Mac. Each total is a single run. Your tests will differ, so measure your own build.</p>
+
+  <h2>What this means for your builds</h2>
+  <ul class="trust">
+    <li><strong>The first run pays, the next skips.</strong> After the tests have run once for a change, a fresh copy with the same code did not run them again (run 2). With CI and laptops that is the idea, though we ran everything on one Mac.</li>
+    <li><strong>In our runs, only the steps whose inputs changed ran again.</strong> Changing test code left the main code's compile step in the cache (run 4). Changing the main code left the test code's compile step in the cache (run 3).</li>
+    <li><strong>An edit that does not change the compiled output can still skip the tests (run 5).</strong> The comment made Gradle compile the main code again, but the compiled output evidently did not change, because the test task found its stored result. We only tried a comment on the same line; a comment that adds lines can change the compiled output, and we did not test that.</li>
+    <li><strong>A failing test was not skipped.</strong> In runs 6 and 7 the test task ran and failed each time. In run 7, a fresh copy of the same broken code ran the tests again and reported <code>2 tests completed, 1 failed</code>.</li>
+  </ul>
+  <p>We did not test tests that read the clock, the network or files outside the project. If a test result depends on something Gradle does not see, a stored pass could be reused when it should not be. That is a decision about your tests, not about the cache.</p>
+
+  <h2>The files we used</h2>
+  <p><code>build.gradle.kts</code>:</p>
+<pre tabindex="0"><code>plugins { java }
+
+repositories { mavenCentral() }
+
+dependencies {
+    testImplementation(platform("org.junit:junit-bom:5.11.0"))
+    testImplementation("org.junit.jupiter:junit-jupiter")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+}
+
+tasks.test { useJUnitPlatform() }</code></pre>
+  <p><code>gradle.properties</code> has one line, <code>org.gradle.caching=true</code>. <code>settings.gradle.kts</code> is the same cache setup as on <a href="/gradle-build-cache-enable-disable/">enable or disable the Gradle build cache</a>, with a different port. We used <code>127.0.0.1</code> over plain HTTP because the test ran on one machine; use HTTPS across a network.</p>
+
+  <h2>If the test task does not come from the cache</h2>
+  <p>Work through <a href="/gradle-build-cache-hit-rate-low/">why the hit rate is low</a>. For a multi-module build, see <a href="/gradle-build-cache-monorepo/">Gradle build cache for a monorepo</a>.</p>
+
+  <p class="muted-note">Run on Gradle 9.8.0 with FosterStack Cache 0.2.1, macOS (arm64), Java 27, JUnit 5.11.0.</p>
+</main>
+
+<footer>
+  <div>
+    <p>FosterStack is not affiliated with, endorsed by, or sponsored by Gradle Inc.
+    "Gradle" and "Develocity" are trademarks of Gradle Inc., used here only to identify
+    compatibility. FosterStack contains no Gradle Inc. code; it is a clean-room implementation
+    of the documented remote build cache HTTP protocol. Apache Maven is a trademark of the
+    Apache Software Foundation; the Maven Build Cache Extension is Apache's project, not
+    ours.</p>
+    <p style="margin-top:.6rem">© 2026 FosterStack · <a href="/build-cache-node-end-of-life/">Build Cache Node end of life</a> · <a href="/migrate-build-cache-node/">Migrate</a> · <a href="/build-cache-node-faq/">FAQ</a> · <a href="/jenkins-ci-build-cache/">CI setup</a> · <a href="/how-we-build/">How we build</a> · <a href="/regulated/">For regulated markets</a> · <a href="https://github.com/fosterstack/cache">github.com/fosterstack/cache</a> · <a href="mailto:hello@fosterstack.com">hello@fosterstack.com</a></p>
+  </div>
+</footer>
+</body>
+</html>

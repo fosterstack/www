@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Does the Build Cache Survive a Restart? A Real Test</title>
-<meta name="description" content="We restarted and killed a self-hosted Gradle build cache server to see if stored results survive. They do if the data folder does. Tested on release 0.2.1.">
-<meta property="og:title" content="Does the Build Cache Survive a Restart? A Real Test">
-<meta property="og:description" content="We restarted and killed a self-hosted Gradle build cache server to see if stored results survive. They do if the data folder does. Tested on release 0.2.1.">
-<meta property="og:url" content="https://fosterstack.com/build-cache-survives-restart/">
+<title>Keep your Maven build cache across Java 21 and Java 27</title>
+<meta name="description" content="Does a Maven build cached on Java 21 restore on Java 27? A real test with the Apache Maven Build Cache Extension and a self-hosted cache, release 0.2.1.">
+<meta property="og:title" content="Keep your Maven build cache across Java 21 and Java 27">
+<meta property="og:description" content="Does a Maven build cached on Java 21 restore on Java 27? A real test with the Apache Maven Build Cache Extension and a self-hosted cache, release 0.2.1.">
+<meta property="og:url" content="https://fosterstack.com/maven-build-cache-different-java-versions/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="FosterStack">
-<link rel="canonical" href="https://fosterstack.com/build-cache-survives-restart/">
+<link rel="canonical" href="https://fosterstack.com/maven-build-cache-different-java-versions/">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -87,43 +87,52 @@
   <div class="tag">Infrastructure worth keeping — and kept patched.</div>
 </header>
 <main>
-  <h1>Does the build cache survive a restart? A real test</h1>
-  <p class="lede">You restart the cache server, or it crashes, or the container is replaced. Do your stored build results come back? We tested a clean stop, a forced kill and a wrong data folder with FosterStack Cache 0.2.1 and a real Gradle build.</p>
+  <h1>Keep your Maven build cache across Java 21 and Java 27</h1>
+  <p class="lede">In our test, a Maven build cached on Java 21 was restored on Java 27 and back, so switching Java restored the cached build instead of rebuilding. At FosterStack we prove everything, so here is how we proved it to ourselves: three real series of builds, both directions, and what the restored jar contains.</p>
 
   <h2>The short answer</h2>
   <ul class="trust">
-    <li>After a clean stop and start on the same data folder, every result was still there.</li>
-    <li>After the server was killed with <code>kill -9</code> and started again on the same folder, every result was still there.</li>
-    <li>On a different, empty data folder, the cache was empty and the next build rebuilt everything.</li>
+    <li>In our test, a build cached on one Java was restored on the other, in both directions. Nothing was rebuilt.</li>
+    <li>The jar you get is the one the first build made. The manifest inside it names that Java: <code>Build-Jdk-Spec: 21</code> or <code>Build-Jdk-Spec: 27</code>.</li>
+    <li>Gradle behaved differently in our other run: a different Java gave separate entries there.</li>
   </ul>
-  <p>The results live in the data folder, not in the running server. If that folder survives, your cache survives.</p>
 
   <h2>What we ran</h2>
-  <p>A four-module Gradle 9.8.0 project (the one from <a href="/gradle-build-cache-monorepo/">Gradle build cache for a monorepo</a>) against a server set up with <code>FSCACHE_DATA_DIR</code> pointing at a folder. Every build used a fresh copy of the project and an empty Gradle home, so the only shared thing was the server. Our first run used a project folder that still held build output from an earlier check; we repeated all four steps from a clean copy and got the same results. All four builds ended with <code>BUILD SUCCESSFUL</code>. "From cache" counts the four <code>compileJava</code> tasks that printed <code>FROM-CACHE</code>.</p>
+  <p>A one-module Maven project, built five times in each of three series, with <code>mvn verify</code> and <code>JAVA_HOME</code> set for each build. For series B and C we saved <code>mvn -v</code> for every build to confirm which Java ran (series A has only its summary): Temurin 21.0.12.1 or OpenJDK 27 from Homebrew.</p>
+  <ul class="trust">
+    <li><strong>Series A:</strong> <code>maven.compiler.release</code> set to 17, first build on Java 21.</li>
+    <li><strong>Series B:</strong> no <code>maven.compiler.release</code>, first build on Java 21.</li>
+    <li><strong>Series C:</strong> no <code>maven.compiler.release</code>, first build on Java 27.</li>
+  </ul>
+  <p>Every build used a fresh copy of the project and an empty local build cache. All builds ran on the same Mac, shared one already-filled local Maven repository (offline), and shared the cache server. Each series started on an empty server. Every build ended with <code>BUILD SUCCESS</code>.</p>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
-    <thead><tr><th>Step</th><th>Server state before the build</th><th>Entries in the status page</th><th>From cache</th></tr></thead>
+    <thead><tr><th>Build</th><th>Series B: Java</th><th>Series B: result</th><th>Series C: Java</th><th>Series C: result</th></tr></thead>
     <tbody>
-      <tr><td>1. First build</td><td>New, empty data folder A</td><td>0, then 13 afterwards</td><td>0 of 4</td></tr>
-      <tr><td>2. Clean restart</td><td>Stopped normally, started on folder A</td><td>13 (same as before)</td><td>4 of 4</td></tr>
-      <tr><td>3. Crash</td><td>Killed with <code>kill -9</code>, started on folder A</td><td>13 (same as before)</td><td>4 of 4</td></tr>
-      <tr><td>4. Wrong folder</td><td>Started on a different empty folder B</td><td>0</td><td>0 of 4</td></tr>
+      <tr><td>1</td><td>21</td><td>Built</td><td>27</td><td>Built</td></tr>
+      <tr><td>2</td><td>21</td><td>Restored</td><td>27</td><td>Restored</td></tr>
+      <tr><td>3</td><td>27</td><td>Restored</td><td>21</td><td>Restored</td></tr>
+      <tr><td>4</td><td>27</td><td>Restored</td><td>21</td><td>Restored</td></tr>
+      <tr><td>5</td><td>21</td><td>Restored</td><td>27</td><td>Restored</td></tr>
     </tbody>
   </table></div>
-  <p>The status page is the server's <code>/statusz</code> address. It showed the same 13 entries and the same size in bytes right after each restart, before any build ran.</p>
+  <p>"Restored" means the log said <code>Found cached build, restoring</code> and Maven skipped the compile and test steps. Series A, with the release setting, gave the same pattern as series B.</p>
 
-  <h2>One limit of this test</h2>
-  <p>We killed the server while it was idle. We did not kill it in the middle of an upload, so this page says nothing about a half-written result. What we can say is that a crash with nothing in flight lost nothing.</p>
+  <h2>Which jar you get</h2>
+  <p>In series B all five jars had one checksum, <code>0f4e29a2...</code>, so the jar restored on Java 27 was the jar built on Java 21. In series C all five had another, <code>ddb48271...</code>, the jar built on Java 27. The files inside the two jars differ in a single place. The manifest in the first says <code>Build-Jdk-Spec: 21</code> and in the second <code>Build-Jdk-Spec: 27</code>. The compiled class inside was byte-for-byte the same in both (we compared it with <code>cmp</code>). Without the release setting the compiler plugin still compiled for Java 8 on both Javas (the log said <code>target 1.8</code>), which is why the class was the same.</p>
 
-  <h2>If your cache comes back empty</h2>
-  <p>An empty cache after a restart means the server is looking at a different folder than before. It is the same as step 4. Check that the data folder or volume is still the one you expect:</p>
+  <h2>What this means</h2>
   <ul class="trust">
-    <li><strong>Docker:</strong> use a named volume or a mounted folder for the data directory. See <a href="/gradle-build-cache-docker-compose/">Gradle build cache with Docker Compose</a>.</li>
-    <li><strong>Kubernetes:</strong> the data directory needs a persistent volume claim. See <a href="/gradle-build-cache-kubernetes/">Gradle build cache on Kubernetes</a>.</li>
-    <li><strong>Permissions:</strong> if the server cannot write to the folder, see <a href="/build-cache-permission-denied-data-directory/">permission denied on the data directory</a>.</li>
+    <li><strong>Switching Java still restored from the cache.</strong> In our runs the extension restored the existing result and did not rebuild on the new Java.</li>
+    <li><strong>In our runs, the first build decided what everyone got.</strong> If a Java 21 build fills the cache, a Java 27 build restores a jar that says it was built on Java 21. Here that was harmless, because the class was identical. We did not test a project whose output depends on the Java that compiles it.</li>
+    <li><strong>For Gradle it was the other way round.</strong> Our Gradle run on a different Java ran its tasks again and made its own entries; see <a href="/gradle-build-cache-hit-rate-low/">Gradle build cache hit rate low</a>, cause 3.</li>
   </ul>
-  <p>To copy the data somewhere safe, or to move it to another server, see <a href="/back-up-and-restore-build-cache/">back up and restore</a>.</p>
+  <p>Our advice, not a test result: use one Java version for the builds that fill a shared cache, so you know which Java made what you restore.</p>
+  <p>We did not test other Java vendors, other Maven or extension versions, a project whose build settings change with the Java version (for example, profiles that switch on by JDK), or Linux or Windows.</p>
 
-  <p class="muted-note">Run on FosterStack Cache 0.2.1 (macOS, arm64) with Gradle 9.8.0, Java 27.</p>
+  <h2>If you do not see restores</h2>
+  <p>See <a href="/maven-build-cache-extension-not-restoring/">Maven build cache not restoring</a>. The setup is on <a href="/maven-remote-build-cache-setup/">Maven remote build cache setup</a>, and the multi-module case is on <a href="/maven-build-cache-extension-multi-module/">Maven build cache extension in a multi-module project</a>.</p>
+
+  <p class="muted-note">Run on Maven 3.10.0 with maven-build-cache-extension 1.2.3 and FosterStack Cache 0.2.1, macOS (arm64), Temurin 21.0.12.1 and OpenJDK 27 (Homebrew).</p>
 </main>
 
 <footer>
