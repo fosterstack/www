@@ -69,15 +69,15 @@
         overflow-x: auto; font-size: .9rem; line-height: 1.5; }
   .cta-row { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1.1rem; }
   .btn { display: inline-block; padding: .55rem 1rem; border-radius: 8px; font-weight: 600;
-         text-decoration: none; background: var(--accent); color: #fff; }
-  .btn-secondary { background: transparent; color: inherit; border: 1px solid #cbd5e1; }
+         text-decoration: none; background: var(--accent); color: var(--accent-fg); }
+  .btn-secondary { background: transparent; color: inherit; border: 1px solid var(--muted); }
   .muted-note { color: var(--muted); font-size: .93rem; margin-top: 1.1rem; }
   footer { border-top: 1px solid var(--line); margin-top: 4rem; padding: 1.5rem 1.25rem 3rem; }
   footer div { max-width: 44rem; margin: 0 auto; color: var(--muted); font-size: .82rem; }
   a { color: var(--accent); }
-  table { display: block; max-width: 100%; overflow-x: auto; }
   code { overflow-wrap: anywhere; }
   pre code { overflow-wrap: normal; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 </style>
 </head>
 <body>
@@ -95,12 +95,12 @@
 
   <h2>Let CI write, let developers read</h2>
   <p>The simplest safe setup is that only CI uploads to the cache and laptops only download. The server can enforce this: give laptops the optional read-only login (<code>FSCACHE_RO_USERNAME</code> and <code>FSCACHE_RO_PASSWORD</code>), and any write they attempt is refused. On the Gradle side you can also stop uploads from non-CI machines in <code>settings.gradle.kts</code>:</p>
-  <pre><code>isPush = System.getenv("CI") != null</code></pre>
+  <pre tabindex="0"><code>isPush = System.getenv("CI") != null</code></pre>
   <p>That line alone is the client choosing not to upload, not a rule on the server. Anyone holding the read-write password can write, so share it only with people and systems you already trust to change your code.</p>
 
   <h2>Runners inside your Kubernetes cluster</h2>
   <p>If your runners already run in the cluster that hosts the cache (including Jenkins agents), you need no load balancer and no ingress. Point the build at the cluster-internal name:</p>
-  <pre><code>// FosterStack Cache — remote Gradle build cache.
+  <pre tabindex="0"><code>// FosterStack Cache — remote Gradle build cache.
 // https://github.com/fosterstack/cache
 buildCache {
     remote&lt;HttpBuildCache&gt; {

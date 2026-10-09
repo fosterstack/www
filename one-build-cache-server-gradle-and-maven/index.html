@@ -69,15 +69,16 @@
         overflow-x: auto; font-size: .9rem; line-height: 1.5; }
   .cta-row { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1.1rem; }
   .btn { display: inline-block; padding: .55rem 1rem; border-radius: 8px; font-weight: 600;
-         text-decoration: none; background: var(--accent); color: #fff; }
-  .btn-secondary { background: transparent; color: inherit; border: 1px solid #cbd5e1; }
+         text-decoration: none; background: var(--accent); color: var(--accent-fg); }
+  .btn-secondary { background: transparent; color: inherit; border: 1px solid var(--muted); }
   .muted-note { color: var(--muted); font-size: .93rem; margin-top: 1.1rem; }
   footer { border-top: 1px solid var(--line); margin-top: 4rem; padding: 1.5rem 1.25rem 3rem; }
   footer div { max-width: 44rem; margin: 0 auto; color: var(--muted); font-size: .82rem; }
   a { color: var(--accent); }
-  table { display: block; max-width: 100%; overflow-x: auto; }
   code { overflow-wrap: anywhere; }
   pre code { overflow-wrap: normal; }
+  .table-scroll { max-width: 100%; overflow-x: auto; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 </style>
 </head>
 <body>
@@ -90,18 +91,18 @@
   <p class="lede">If your company builds some projects with Gradle and others with Maven, you do not need two cache servers. FosterStack Cache serves both, with one login. This is a real run: a repository with a Gradle app and a Maven app, both pointed at one 0.2.1 server. Maven works through the Apache Maven Build Cache Extension.</p>
 
   <h2>The repository</h2>
-  <pre><code>mixed-repo/
+  <pre tabindex="0"><code>mixed-repo/
   gradle-app/    settings.gradle.kts, build.gradle.kts, gradle.properties, src/
   maven-app/     pom.xml, settings.xml, src/, .mvn/extensions.xml, .mvn/maven-build-cache-config.xml</code></pre>
   <p>Two small Java apps, built by two different tools.</p>
 
   <h2>One server, one login</h2>
-  <pre><code>FSCACHE_USERNAME=build FSCACHE_PASSWORD=&lt;a long secret&gt; ./fscache</code></pre>
+  <pre tabindex="0"><code>FSCACHE_USERNAME=build FSCACHE_PASSWORD=&lt;a long secret&gt; ./fscache</code></pre>
   <p>Both tools send that same login, each in its own way. The secret comes from one environment variable, <code>FSCACHE_PASSWORD</code>.</p>
 
   <h2>The Gradle side</h2>
   <p><code>gradle-app/settings.gradle.kts</code>, with <code>org.gradle.caching=true</code> in <code>gradle.properties</code>:</p>
-  <pre><code>rootProject.name = &quot;gradle-app&quot;
+  <pre tabindex="0"><code>rootProject.name = &quot;gradle-app&quot;
 
 // FosterStack Cache — remote Gradle build cache.
 // https://github.com/fosterstack/cache
@@ -118,7 +119,7 @@ buildCache {
 
   <h2>The Maven side</h2>
   <p><code>maven-app/.mvn/maven-build-cache-config.xml</code>. The <code>remote</code> element goes inside <code>configuration</code>, and <code>saveToRemote="true"</code> is what makes it upload:</p>
-  <pre><code>&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;
+  <pre tabindex="0"><code>&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;
 &lt;cache xmlns=&quot;http://maven.apache.org/BUILD-CACHE-CONFIG/1.2.0&quot;
        xmlns:xsi=&quot;http://www.w3.org/2001/XMLSchema-instance&quot;
        xsi:schemaLocation=&quot;http://maven.apache.org/BUILD-CACHE-CONFIG/1.2.0 https://maven.apache.org/xsd/build-cache-config-1.2.0.xsd&quot;&gt;
@@ -132,7 +133,7 @@ buildCache {
   &lt;/configuration&gt;
 &lt;/cache&gt;</code></pre>
   <p>And <code>settings.xml</code>, whose server <code>id</code> must match the remote's. Maven filled in the password from the same environment variable:</p>
-  <pre><code>&lt;settings&gt;
+  <pre tabindex="0"><code>&lt;settings&gt;
   &lt;servers&gt;
     &lt;server&gt;
       &lt;id&gt;fosterstack-cache&lt;/id&gt;
@@ -145,15 +146,15 @@ buildCache {
 
   <h2>What happened</h2>
   <p>Each app was built twice. For Gradle, I ran <code>gradle clean</code> in between. For Maven, I deleted <code>target</code> and the extension's local cache folder, so the only copy left was on the server. (I also turned Gradle's local cache off.)</p>
-  <table>
+  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <tr><th>Build</th><th>Result</th><th>Server afterwards</th></tr>
     <tr><td>Gradle, first</td><td><code>:compileJava</code> ran</td><td>1 entry</td></tr>
     <tr><td>Gradle, second</td><td><code>&gt; Task :compileJava FROM-CACHE</code>, "1 from cache"</td><td>1 hit</td></tr>
     <tr><td>Maven, first</td><td>built, then three lines of <code>Saved to remote cache</code></td><td>4 entries in all</td></tr>
     <tr><td>Maven, second</td><td><code>Found cached build, restoring demo:maven-app from cache</code></td><td>3 hits in all</td></tr>
-  </table>
+  </table></div>
   <p>The counts are the server's own, from its status page. Gradle stores its work under keys of a single long hex number. The Maven extension stores its files under a path. Here is what the server held on disk afterwards:</p>
-  <pre><code>blobs/8a/8a2fb682ab19c1d434fd2d1ee3e8b27a                              (Gradle)
+  <pre tabindex="0"><code>blobs/8a/8a2fb682ab19c1d434fd2d1ee3e8b27a                              (Gradle)
 blobs/v1.1/demo/maven-app/3aa3eaca44f8d0fa/ma/maven-app.jar            (Maven)
 blobs/v1.1/demo/maven-app/3aa3eaca44f8d0fa/bu/buildinfo.xml            (Maven)
 blobs/v1.1/demo/maven-app/e17172d0-.../bu/build-cache-report.xml       (Maven)

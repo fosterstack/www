@@ -69,15 +69,15 @@
         overflow-x: auto; font-size: .9rem; line-height: 1.5; }
   .cta-row { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1.1rem; }
   .btn { display: inline-block; padding: .55rem 1rem; border-radius: 8px; font-weight: 600;
-         text-decoration: none; background: var(--accent); color: #fff; }
-  .btn-secondary { background: transparent; color: inherit; border: 1px solid #cbd5e1; }
+         text-decoration: none; background: var(--accent); color: var(--accent-fg); }
+  .btn-secondary { background: transparent; color: inherit; border: 1px solid var(--muted); }
   .muted-note { color: var(--muted); font-size: .93rem; margin-top: 1.1rem; }
   footer { border-top: 1px solid var(--line); margin-top: 4rem; padding: 1.5rem 1.25rem 3rem; }
   footer div { max-width: 44rem; margin: 0 auto; color: var(--muted); font-size: .82rem; }
   a { color: var(--accent); }
-  table { display: block; max-width: 100%; overflow-x: auto; }
   code { overflow-wrap: anywhere; }
   pre code { overflow-wrap: normal; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 </style>
 </head>
 <body>
@@ -94,15 +94,15 @@
   <p>It is also safe to do. A build cache holds results your builds can always rebuild. The first builds after a reset are slower while it refills, and that is all.</p>
 
   <h2>Docker Compose</h2>
-  <pre><code>docker compose down -v &amp;&amp; docker compose up -d</code></pre>
+  <pre tabindex="0"><code>docker compose down -v &amp;&amp; docker compose up -d</code></pre>
   <p>The <code>-v</code> removes the named data volume. The fresh start sets up its ownership correctly.</p>
 
   <h2>Plain Docker</h2>
-  <pre><code>docker rm -f fscache
+  <pre tabindex="0"><code>docker rm -f fscache
 docker volume rm fscache-data
 # then run your original docker run command again</code></pre>
   <p>Tested on the 0.2.1 image. Before the reset, <code>/statusz</code> showed one stored entry. After removing the container and the volume and starting again:</p>
-  <pre><code>$ curl -s localhost:8080/statusz | grep -E &#x27;&quot;store_entries&quot;|&quot;store_bytes&quot;&#x27;
+  <pre tabindex="0"><code>$ curl -s localhost:8080/statusz | grep -E &#x27;&quot;store_entries&quot;|&quot;store_bytes&quot;&#x27;
   &quot;store_bytes&quot;: 0,
   &quot;store_entries&quot;: 0,
 $ curl -s localhost:8080/testkey -o /dev/null -w &#x27;GET testkey %{http_code}\n&#x27;
@@ -110,7 +110,7 @@ GET testkey 404</code></pre>
 
   <h2>Kubernetes</h2>
   <p>Delete the volume claim, then create it again. The Deployment cannot start without its claim, so the new claim is a required step. Tested on a throwaway cluster:</p>
-  <pre><code>kubectl -n fscache-ns scale deploy/fscache --replicas=0
+  <pre tabindex="0"><code>kubectl -n fscache-ns scale deploy/fscache --replicas=0
 kubectl -n fscache-ns delete pvc fscache-data
 kubectl -n fscache-ns apply -f fscache-pvc.yaml   # your claim manifest, the same one you first applied
 kubectl -n fscache-ns scale deploy/fscache --replicas=1</code></pre>

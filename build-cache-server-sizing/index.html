@@ -69,15 +69,16 @@
         overflow-x: auto; font-size: .9rem; line-height: 1.5; }
   .cta-row { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1.1rem; }
   .btn { display: inline-block; padding: .55rem 1rem; border-radius: 8px; font-weight: 600;
-         text-decoration: none; background: var(--accent); color: #fff; }
-  .btn-secondary { background: transparent; color: inherit; border: 1px solid #cbd5e1; }
+         text-decoration: none; background: var(--accent); color: var(--accent-fg); }
+  .btn-secondary { background: transparent; color: inherit; border: 1px solid var(--muted); }
   .muted-note { color: var(--muted); font-size: .93rem; margin-top: 1.1rem; }
   footer { border-top: 1px solid var(--line); margin-top: 4rem; padding: 1.5rem 1.25rem 3rem; }
   footer div { max-width: 44rem; margin: 0 auto; color: var(--muted); font-size: .82rem; }
   a { color: var(--accent); }
-  table { display: block; max-width: 100%; overflow-x: auto; }
   code { overflow-wrap: anywhere; }
   pre code { overflow-wrap: normal; }
+  .table-scroll { max-width: 100%; overflow-x: auto; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 </style>
 </head>
 <body>
@@ -90,24 +91,24 @@
   <p class="lede">You are sizing a disk, not a compute tier. The server is one small program that idles in tens of megabytes, so the question is how much cache you want to keep.</p>
 
   <h2>Starting sizes</h2>
-  <table>
+  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <tr><th></th><th>vCPU</th><th>RAM</th><th>Disk</th></tr>
     <tr><td>Absolute minimum</td><td>1</td><td>1 GB</td><td>cache cap + about 5 GB for the system</td></tr>
     <tr><td>Recommended start, about 5 to 20 developers plus CI</td><td>1 to 2</td><td>2 GB</td><td>25 to 50 GB SSD</td></tr>
     <tr><td>Larger CI farms</td><td>2 to 4</td><td>4 to 8 GB</td><td>cache cap + about 20%</td></tr>
-  </table>
+  </table></div>
   <p class="muted-note">These are starting points from our deployment guide. Your build graph decides the rest. It is hard to be limited by CPU, because the busy path is reading and writing stored files, not computing.</p>
 
   <h2>Set a size cap</h2>
   <p>Choose how much cache you want, set it with <code>FSCACHE_MAX_BYTES</code>, and make the disk about 20% bigger. When the cache reaches the cap it removes the least recently used entries and never grows past it. The extra room covers file system overhead and uploads in progress.</p>
   <p><strong>The value is in bytes.</strong> It is easy to be wrong by a factor of 1024, so copy one:</p>
-  <table>
+  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <tr><th>Cap</th><th><code>FSCACHE_MAX_BYTES</code></th></tr>
     <tr><td>10 GiB</td><td><code>10737418240</code></td></tr>
     <tr><td>20 GiB</td><td><code>21474836480</code></td></tr>
     <tr><td>50 GiB</td><td><code>53687091200</code></td></tr>
     <tr><td>100 GiB</td><td><code>107374182400</code></td></tr>
-  </table>
+  </table></div>
 
   <h2>Two mistakes that look like "the cache doesn't help"</h2>
   <ul class="trust">

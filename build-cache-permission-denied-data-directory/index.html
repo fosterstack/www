@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>FIPS 140-3 build cache: run the FIPS image and confirm it</title>
-<meta name="description" content="Run the FIPS build of FosterStack Cache, which uses Go&#x27;s validated FIPS 140-3 module, and confirm FIPS mode from the startup log and status page. Real output.">
-<meta property="og:title" content="FIPS 140-3 build cache: run the FIPS image and confirm it">
-<meta property="og:description" content="Run the FIPS build of FosterStack Cache, which uses Go&#x27;s validated FIPS 140-3 module, and confirm FIPS mode from the startup log and status page. Real output.">
-<meta property="og:url" content="https://fosterstack.com/fips-140-3-build-cache/">
+<title>Build cache server exits: permission denied on its data</title>
+<meta name="description" content="The FosterStack Cache container exits with permission denied on its data directory: the exact error, why it happens, and the fix, reproduced on the 0.2.1 image.">
+<meta property="og:title" content="Build cache server exits: permission denied on its data">
+<meta property="og:description" content="The FosterStack Cache container exits with permission denied on its data directory: the exact error, why it happens, and the fix, reproduced on the 0.2.1 image.">
+<meta property="og:url" content="https://fosterstack.com/build-cache-permission-denied-data-directory/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="FosterStack">
-<link rel="canonical" href="https://fosterstack.com/fips-140-3-build-cache/">
+<link rel="canonical" href="https://fosterstack.com/build-cache-permission-denied-data-directory/">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -86,42 +86,39 @@
   <div class="tag">Infrastructure worth keeping — and kept patched.</div>
 </header>
 <main>
-  <h1>FIPS 140-3 build cache: run the FIPS image and confirm it</h1>
-  <p class="lede">FosterStack Cache has a FIPS build that uses Go's validated FIPS 140-3 cryptographic module. This page shows how to run it and how to see for yourself that it is in FIPS mode. The outputs below are from the real 0.2.1 images.</p>
+  <h1>Build cache server exits with "permission denied" on its data</h1>
+  <p class="lede">You start the container and it stops straight away. The log ends with <code>permission denied</code>. The cause I reproduced is who owns the data directory. This page shows the failure and the fix, reproduced for real with the 0.2.1 image.</p>
 
-  <h2>What the FIPS build is</h2>
-  <p>It is the same source as the standard build, compiled so that it uses Go's validated FIPS 140-3 module (CMVP certificate #5247). It is available as a container image tag ending in <code>-fips</code>, and as Linux binaries for amd64 and arm64. There is no macOS FIPS build.</p>
+  <h2>What you see</h2>
+  <p>The container exits with status 1 within a few seconds, and its log says:</p>
+  <pre tabindex="0"><code>{&quot;level&quot;:&quot;ERROR&quot;,&quot;msg&quot;:&quot;fscache: fatal&quot;,&quot;error&quot;:&quot;write shutdown marker: open data/.unclean-shutdown: permission denied&quot;}</code></pre>
 
-  <h2>Run it</h2>
-  <pre tabindex="0"><code>docker run -d -p 127.0.0.1:8080:8080 -v fscache-data:/home/nonroot \
-  ghcr.io/fosterstack/cache:0.2.1-fips</code></pre>
-  <p>Pin an exact version, as here, rather than a floating tag. To check you pulled the real image, use the steps in <a href="/verify-a-release/">Verify a release yourself</a>. The FIPS image's digest in the release manifest for 0.2.1 is <code>sha256:e125fe3f6ed2c18c478453300ba2b787a42999edf66a39403877efb39865ab1b</code>, and that is what the pull returned.</p>
+  <h2>Why it happens</h2>
+  <p>The server does not run as root. It runs as user 65532, and it keeps its files in a <code>data</code> folder inside <code>/home/nonroot</code>. If that folder already exists and belongs to someone else, the server cannot write to it and stops.</p>
+  <p>I reproduced it with a volume that already held data owned by root, which is what you get after restoring a backup as root:</p>
+  <pre tabindex="0"><code>/d       0:0   drwxr-xr-x      (owner:group, mode)
+/d/data  0:0   drwxr-xr-x</code></pre>
 
-  <h2>Confirm it is in FIPS mode</h2>
-  <p>The build says so when it starts, so the property can be seen and not just trusted:</p>
-  <pre tabindex="0"><code>$ docker logs &lt;container&gt;
-{&quot;time&quot;:&quot;2026-10-09T01:00:54.861529344Z&quot;,&quot;level&quot;:&quot;INFO&quot;,&quot;msg&quot;:&quot;fscache: starting&quot;,&quot;version&quot;:&quot;v0.2.1&quot;,&quot;addr&quot;:&quot;:8080&quot;,&quot;data_dir&quot;:&quot;./data&quot;,&quot;max_bytes&quot;:0,&quot;auth&quot;:&quot;disabled&quot;,&quot;fips140&quot;:&quot;active (Go validated module v1.0.0, CMVP cert #5247)&quot;}</code></pre>
-  <p>The status page reports the same:</p>
-  <pre tabindex="0"><code>$ curl -s localhost:8080/statusz | grep -E &#x27;version|fips140&#x27;
-  &quot;version&quot;: &quot;v0.2.1&quot;,
-  &quot;fips140&quot;: true,
-  &quot;fips140_note&quot;: &quot;active (Go validated module v1.0.0, CMVP cert #5247)&quot;,</code></pre>
-  <p>The standard image, for comparison, reports it as off:</p>
-  <pre tabindex="0"><code>$ curl -s localhost:8080/statusz | grep -E &#x27;version|fips140&#x27;
-  &quot;version&quot;: &quot;v0.2.1&quot;,
-  &quot;fips140&quot;: false,
-  &quot;fips140_note&quot;: &quot;off&quot;,</code></pre>
+  <h2>The fix</h2>
+  <p>Give the whole tree to user 65532. The image has no shell, so use a throwaway container to do it:</p>
+  <pre tabindex="0"><code>docker run --rm -v fscache-data:/d ubuntu:24.04 chown -R 65532:65532 /d</code></pre>
+  <p>After that the same image started normally: <code>/healthz</code> answered <code>ok</code> and an upload returned 201.</p>
 
-  <h2>What this tells you, and what it does not</h2>
+  <h2>What does not cause it</h2>
   <ul class="trust">
-    <li>It shows the running program is using Go's validated module. The validation is of that cryptographic module.</li>
-    <li>Our own tests run the whole suite against the FIPS build with the module set to refuse any algorithm it does not approve. That proves the code paths the tests reach. It does not exercise the released FIPS image itself, which no test currently runs.</li>
-    <li>FosterStack Cache is not "FedRAMP compliant" or "CMMC compliant". Those attach to your service and your organisation, never to a component you deploy. The FIPS build is validated crypto for your compliance program, not a substitute for it.</li>
+    <li><strong>A new, empty named volume.</strong> This is what <a href="/first-15-minutes-build-cache/">our first-run steps</a> create, and the volume then belongs to 65532. I also tried a new empty volume whose top folder I had set to root. The server still started, and afterwards the folder belonged to 65532, because Docker copies the image's ownership into an empty volume the first time it is used.</li>
   </ul>
 
-  <p class="muted-note">Related: <a href="/regulated/">for teams entering regulated markets</a> and <a href="/security/">security policy</a>. Details: <a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md">SECURITY.md</a>.</p>
+  <h2>What I did not test</h2>
+  <ul class="trust">
+    <li>A bind mount of a host folder on Linux. The same rule should apply (the folder has to be writable by 65532), but I ran on a Mac, where bind mounts behave differently.</li>
+    <li>Kubernetes without the <code>fsGroup</code> setting. The manifests in our <a href="/gradle-build-cache-kubernetes/">Kubernetes page</a> set <code>fsGroup: 65532</code>, and I ran them with it; I did not run them without it.</li>
+    <li>Running the container as root to avoid the problem. It is not what we document.</li>
+  </ul>
+
+  <p class="muted-note">Related: <a href="/back-up-and-restore-build-cache/">back up and restore a build cache</a>, where the restore step has to keep the ownership, and <a href="/gradle-build-cache-docker-compose/">Gradle build cache with Docker Compose</a>.</p>
   <div class="cta-row">
-    <a class="btn" href="/verify-a-release/">Verify a release yourself</a>
+    <a class="btn" href="/first-15-minutes-build-cache/">Your first 15 minutes</a>
     <a class="btn btn-secondary" href="/">FosterStack home</a>
   </div>
 </main>
@@ -133,7 +130,7 @@
     of the documented remote build cache HTTP protocol. Apache Maven is a trademark of the
     Apache Software Foundation; the Maven Build Cache Extension is Apache's project, not
     ours.</p>
-    <p style="margin-top:.6rem">© 2026 FosterStack · <a href="/regulated/">For regulated markets</a> · <a href="https://github.com/fosterstack/cache">github.com/fosterstack/cache</a> · <a href="mailto:hello@fosterstack.com">hello@fosterstack.com</a></p>
+    <p style="margin-top:.6rem">© 2026 FosterStack · <a href="/build-cache-node-end-of-life/">Build Cache Node end of life</a> · <a href="/migrate-build-cache-node/">Migrate</a> · <a href="/build-cache-node-faq/">FAQ</a> · <a href="/jenkins-ci-build-cache/">CI setup</a> · <a href="/how-we-build/">How we build</a> · <a href="/regulated/">For regulated markets</a> · <a href="https://github.com/fosterstack/cache">github.com/fosterstack/cache</a> · <a href="mailto:hello@fosterstack.com">hello@fosterstack.com</a></p>
   </div>
 </footer>
 </body>

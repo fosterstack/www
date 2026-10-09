@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>FIPS 140-3 build cache: run the FIPS image and confirm it</title>
-<meta name="description" content="Run the FIPS build of FosterStack Cache, which uses Go&#x27;s validated FIPS 140-3 module, and confirm FIPS mode from the startup log and status page. Real output.">
-<meta property="og:title" content="FIPS 140-3 build cache: run the FIPS image and confirm it">
-<meta property="og:description" content="Run the FIPS build of FosterStack Cache, which uses Go&#x27;s validated FIPS 140-3 module, and confirm FIPS mode from the startup log and status page. Real output.">
-<meta property="og:url" content="https://fosterstack.com/fips-140-3-build-cache/">
+<title>Does the Build Cache Survive a Restart? A Real Test</title>
+<meta name="description" content="We restarted and killed a self-hosted Gradle build cache server to see if stored results survive. They do if the data folder does. Tested on release 0.2.1.">
+<meta property="og:title" content="Does the Build Cache Survive a Restart? A Real Test">
+<meta property="og:description" content="We restarted and killed a self-hosted Gradle build cache server to see if stored results survive. They do if the data folder does. Tested on release 0.2.1.">
+<meta property="og:url" content="https://fosterstack.com/build-cache-survives-restart/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="FosterStack">
-<link rel="canonical" href="https://fosterstack.com/fips-140-3-build-cache/">
+<link rel="canonical" href="https://fosterstack.com/build-cache-survives-restart/">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -77,6 +77,7 @@
   a { color: var(--accent); }
   code { overflow-wrap: anywhere; }
   pre code { overflow-wrap: normal; }
+  .table-scroll { max-width: 100%; overflow-x: auto; }
   :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 </style>
 </head>
@@ -86,45 +87,45 @@
   <div class="tag">Infrastructure worth keeping — and kept patched.</div>
 </header>
 <main>
-  <h1>FIPS 140-3 build cache: run the FIPS image and confirm it</h1>
-  <p class="lede">FosterStack Cache has a FIPS build that uses Go's validated FIPS 140-3 cryptographic module. This page shows how to run it and how to see for yourself that it is in FIPS mode. The outputs below are from the real 0.2.1 images.</p>
+  <h1>Does the build cache survive a restart? A real test</h1>
+  <p class="lede">You restart the cache server, or it crashes, or the container is replaced. Do your stored build results come back? We tested a clean stop, a forced kill and a wrong data folder with FosterStack Cache 0.2.1 and a real Gradle build.</p>
 
-  <h2>What the FIPS build is</h2>
-  <p>It is the same source as the standard build, compiled so that it uses Go's validated FIPS 140-3 module (CMVP certificate #5247). It is available as a container image tag ending in <code>-fips</code>, and as Linux binaries for amd64 and arm64. There is no macOS FIPS build.</p>
-
-  <h2>Run it</h2>
-  <pre tabindex="0"><code>docker run -d -p 127.0.0.1:8080:8080 -v fscache-data:/home/nonroot \
-  ghcr.io/fosterstack/cache:0.2.1-fips</code></pre>
-  <p>Pin an exact version, as here, rather than a floating tag. To check you pulled the real image, use the steps in <a href="/verify-a-release/">Verify a release yourself</a>. The FIPS image's digest in the release manifest for 0.2.1 is <code>sha256:e125fe3f6ed2c18c478453300ba2b787a42999edf66a39403877efb39865ab1b</code>, and that is what the pull returned.</p>
-
-  <h2>Confirm it is in FIPS mode</h2>
-  <p>The build says so when it starts, so the property can be seen and not just trusted:</p>
-  <pre tabindex="0"><code>$ docker logs &lt;container&gt;
-{&quot;time&quot;:&quot;2026-10-09T01:00:54.861529344Z&quot;,&quot;level&quot;:&quot;INFO&quot;,&quot;msg&quot;:&quot;fscache: starting&quot;,&quot;version&quot;:&quot;v0.2.1&quot;,&quot;addr&quot;:&quot;:8080&quot;,&quot;data_dir&quot;:&quot;./data&quot;,&quot;max_bytes&quot;:0,&quot;auth&quot;:&quot;disabled&quot;,&quot;fips140&quot;:&quot;active (Go validated module v1.0.0, CMVP cert #5247)&quot;}</code></pre>
-  <p>The status page reports the same:</p>
-  <pre tabindex="0"><code>$ curl -s localhost:8080/statusz | grep -E &#x27;version|fips140&#x27;
-  &quot;version&quot;: &quot;v0.2.1&quot;,
-  &quot;fips140&quot;: true,
-  &quot;fips140_note&quot;: &quot;active (Go validated module v1.0.0, CMVP cert #5247)&quot;,</code></pre>
-  <p>The standard image, for comparison, reports it as off:</p>
-  <pre tabindex="0"><code>$ curl -s localhost:8080/statusz | grep -E &#x27;version|fips140&#x27;
-  &quot;version&quot;: &quot;v0.2.1&quot;,
-  &quot;fips140&quot;: false,
-  &quot;fips140_note&quot;: &quot;off&quot;,</code></pre>
-
-  <h2>What this tells you, and what it does not</h2>
+  <h2>The short answer</h2>
   <ul class="trust">
-    <li>It shows the running program is using Go's validated module. The validation is of that cryptographic module.</li>
-    <li>Our own tests run the whole suite against the FIPS build with the module set to refuse any algorithm it does not approve. That proves the code paths the tests reach. It does not exercise the released FIPS image itself, which no test currently runs.</li>
-    <li>FosterStack Cache is not "FedRAMP compliant" or "CMMC compliant". Those attach to your service and your organisation, never to a component you deploy. The FIPS build is validated crypto for your compliance program, not a substitute for it.</li>
+    <li>After a clean stop and start on the same data folder, every result was still there.</li>
+    <li>After the server was killed with <code>kill -9</code> and started again on the same folder, every result was still there.</li>
+    <li>On a different, empty data folder, the cache was empty and the next build rebuilt everything.</li>
   </ul>
+  <p>The results live in the data folder, not in the running server. If that folder survives, your cache survives.</p>
 
-  <p class="muted-note">Related: <a href="/regulated/">for teams entering regulated markets</a> and <a href="/security/">security policy</a>. Details: <a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md">SECURITY.md</a>.</p>
-  <div class="cta-row">
-    <a class="btn" href="/verify-a-release/">Verify a release yourself</a>
-    <a class="btn btn-secondary" href="/">FosterStack home</a>
-  </div>
+  <h2>What we ran</h2>
+  <p>A four-module Gradle 9.8.0 project (the one from <a href="/gradle-build-cache-monorepo/">Gradle build cache for a monorepo</a>) against a server set up with <code>FSCACHE_DATA_DIR</code> pointing at a folder. Every build used a fresh copy of the project and an empty Gradle home, so the only shared thing was the server. All four builds ended with <code>BUILD SUCCESSFUL</code>. "From cache" counts the four <code>compileJava</code> tasks that printed <code>FROM-CACHE</code>.</p>
+  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
+    <thead><tr><th>Step</th><th>Server state before the build</th><th>Entries in the status page</th><th>From cache</th></tr></thead>
+    <tbody>
+      <tr><td>1. First build</td><td>New, empty data folder A</td><td>0, then 13 afterwards</td><td>0 of 4</td></tr>
+      <tr><td>2. Clean restart</td><td>Stopped normally, started on folder A</td><td>13 (same as before)</td><td>4 of 4</td></tr>
+      <tr><td>3. Crash</td><td>Killed with <code>kill -9</code>, started on folder A</td><td>13 (same as before)</td><td>4 of 4</td></tr>
+      <tr><td>4. Wrong folder</td><td>Started on a different empty folder B</td><td>0</td><td>0 of 4</td></tr>
+    </tbody>
+  </table></div>
+  <p>The status page is the server's <code>/statusz</code> address. It showed the same 13 entries and the same size in bytes right after each restart, before any build ran.</p>
+
+  <h2>One limit of this test</h2>
+  <p>We killed the server while it was idle. We did not kill it in the middle of an upload, so this page says nothing about a half-written result. What we can say is that a crash with nothing in flight lost nothing.</p>
+
+  <h2>If your cache comes back empty</h2>
+  <p>An empty cache after a restart means the server is looking at a different folder than before. It is the same as step 4. Check that the data folder or volume is still the one you expect:</p>
+  <ul class="trust">
+    <li><strong>Docker:</strong> use a named volume or a mounted folder for the data directory. See <a href="/gradle-build-cache-docker-compose/">Gradle build cache with Docker Compose</a>.</li>
+    <li><strong>Kubernetes:</strong> the data directory needs a persistent volume claim. See <a href="/gradle-build-cache-kubernetes/">Gradle build cache on Kubernetes</a>.</li>
+    <li><strong>Permissions:</strong> if the server cannot write to the folder, see <a href="/build-cache-permission-denied-data-directory/">permission denied on the data directory</a>.</li>
+  </ul>
+  <p>To copy the data somewhere safe, or to move it to another server, see <a href="/back-up-and-restore-build-cache/">back up and restore</a>.</p>
+
+  <p class="muted-note">Run on FosterStack Cache 0.2.1 (macOS, arm64) with Gradle 9.8.0, Java 27.</p>
 </main>
+
 <footer>
   <div>
     <p>FosterStack is not affiliated with, endorsed by, or sponsored by Gradle Inc.
@@ -133,7 +134,7 @@
     of the documented remote build cache HTTP protocol. Apache Maven is a trademark of the
     Apache Software Foundation; the Maven Build Cache Extension is Apache's project, not
     ours.</p>
-    <p style="margin-top:.6rem">© 2026 FosterStack · <a href="/regulated/">For regulated markets</a> · <a href="https://github.com/fosterstack/cache">github.com/fosterstack/cache</a> · <a href="mailto:hello@fosterstack.com">hello@fosterstack.com</a></p>
+    <p style="margin-top:.6rem">© 2026 FosterStack · <a href="/build-cache-node-end-of-life/">Build Cache Node end of life</a> · <a href="/migrate-build-cache-node/">Migrate</a> · <a href="/build-cache-node-faq/">FAQ</a> · <a href="/jenkins-ci-build-cache/">CI setup</a> · <a href="/how-we-build/">How we build</a> · <a href="/regulated/">For regulated markets</a> · <a href="https://github.com/fosterstack/cache">github.com/fosterstack/cache</a> · <a href="mailto:hello@fosterstack.com">hello@fosterstack.com</a></p>
   </div>
 </footer>
 </body>

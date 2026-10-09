@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Back up and restore a self-hosted build cache</title>
-<meta name="description" content="Back up and restore the data volume of a self-hosted Gradle and Maven build cache, run for real on the 0.2.1 image: commands, ownership, and what was not tested.">
-<meta property="og:title" content="Back up and restore a self-hosted build cache">
-<meta property="og:description" content="Back up and restore the data volume of a self-hosted Gradle and Maven build cache, run for real on the 0.2.1 image: commands, ownership, and what was not tested.">
-<meta property="og:url" content="https://fosterstack.com/back-up-and-restore-build-cache/">
+<title>Gradle Build Cache for a Monorepo: Real Multi-Module Run</title>
+<meta name="description" content="A real run of a four-module Gradle monorepo against a self-hosted build cache: what came from the cache, what rebuilt, and why. Release 0.2.1.">
+<meta property="og:title" content="Gradle Build Cache for a Monorepo: Real Multi-Module Run">
+<meta property="og:description" content="A real run of a four-module Gradle monorepo against a self-hosted build cache: what came from the cache, what rebuilt, and why. Release 0.2.1.">
+<meta property="og:url" content="https://fosterstack.com/gradle-build-cache-monorepo/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="FosterStack">
-<link rel="canonical" href="https://fosterstack.com/back-up-and-restore-build-cache/">
+<link rel="canonical" href="https://fosterstack.com/gradle-build-cache-monorepo/">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -77,6 +77,7 @@
   a { color: var(--accent); }
   code { overflow-wrap: anywhere; }
   pre code { overflow-wrap: normal; }
+  .table-scroll { max-width: 100%; overflow-x: auto; }
   :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 </style>
 </head>
@@ -86,55 +87,67 @@
   <div class="tag">Infrastructure worth keeping — and kept patched.</div>
 </header>
 <main>
-  <h1>Back up and restore a self-hosted build cache</h1>
-  <p class="lede">A build cache can always be rebuilt, so you do not have to back it up. But a big cache takes days of builds to fill again, and you may want to move it to a new host. This page shows a backup and restore of the Docker volume, run for real on the 0.2.1 image.</p>
+  <h1>Gradle build cache for a monorepo: what a multi-module run shows</h1>
+  <p class="lede">A monorepo is many Gradle modules in one build. A shared cache server lets CI and every developer reuse each module's work. Below is a real run with four modules against FosterStack Cache 0.2.1: which modules came from the cache, and which did not.</p>
 
-  <h2>Do you need a backup?</h2>
-  <p>Usually not. If the cache is lost, builds are slower until it refills, and nothing breaks. A backup is worth it only if refilling is expensive for you, or if you are moving the cache to a new server. To simply empty a cache, see <a href="/reset-gradle-build-cache/">how to clear or reset a build cache</a>.</p>
-
-  <h2>Where the data lives</h2>
-  <p>The Docker command in our guides mounts a volume at <code>/home/nonroot</code>. The server keeps its blobs and index in a <code>data</code> folder inside it, and it runs as user 65532. Backing up the volume backs up the cache.</p>
-
-  <h2>1. Stop the server, then back up the volume</h2>
-  <p>I stopped the container first. I did not test copying the files while the server is running, so I cannot say that is safe. The container image has no shell, so a second small container does the copying:</p>
-  <pre tabindex="0"><code>docker stop fscache
-docker run --rm -v fscache-data:/data:ro -v &quot;$PWD&quot;:/backup ubuntu:24.04 \
-  tar czf /backup/fscache-data.tgz -C /data .</code></pre>
-  <p>In my test, with three small entries, the archive held a <code>data/blobs/</code> folder with one folder per entry prefix, and was 578 bytes.</p>
-
-  <h2>2. Restore it into a new volume</h2>
-  <p>To check it, I deleted the container and the volume, then restored into a new, empty one:</p>
-  <pre tabindex="0"><code>docker volume create fscache-data-restored
-docker run --rm -v fscache-data-restored:/data -v &quot;$PWD&quot;:/backup:ro ubuntu:24.04 \
-  sh -c &#x27;tar xzf /backup/fscache-data.tgz -C /data&#x27;
-ls -ln /data   # inside the helper: the files are owned by 65532</code></pre>
-  <p>Listing the restored volume showed the <code>data</code> folder still owned by user and group 65532, which is what the server runs as. If you restore as a different user, the server will not be able to write.</p>
-
-  <h2>3. Start the server on the restored volume</h2>
-  <pre tabindex="0"><code>docker run -d --name fscache -p 127.0.0.1:8080:8080 \
-  -v fscache-data-restored:/home/nonroot ghcr.io/fosterstack/cache:0.2.1</code></pre>
-  <p>The status page and the entries were all back:</p>
-  <pre tabindex="0"><code>$ curl -s localhost:8080/statusz | grep -E &#x27;&quot;store_entries&quot;|&quot;store_bytes&quot;&#x27;
-  &quot;store_bytes&quot;: 32,
-  &quot;store_entries&quot;: 3,
-$ curl -s localhost:8080/alpha
-value-alpha
-$ curl -s -o /dev/null -w &#x27;%{http_code}\n&#x27; localhost:8080/nothere
-404</code></pre>
-
-  <h2>What I did not test</h2>
+  <h2>The short answer</h2>
   <ul class="trust">
-    <li>Backing up while the server is running.</li>
-    <li>Restoring into a different version of the server than the one that wrote the data.</li>
-    <li>Kubernetes or Compose. The same idea applies to the volume behind the claim, but I only ran plain Docker.</li>
+    <li>Change one module's code and the other modules still come from the cache.</li>
+    <li>Change a module's public methods and every module that uses it rebuilds.</li>
+    <li>A teammate who makes the same change gets everything from the cache.</li>
   </ul>
 
-  <p class="muted-note">Related: <a href="/build-cache-server-sizing/">server sizing</a> and <a href="/gradle-build-cache-docker-compose/">Gradle build cache with Docker Compose</a>.</p>
-  <div class="cta-row">
-    <a class="btn" href="/reset-gradle-build-cache/">Clear or reset a build cache</a>
-    <a class="btn btn-secondary" href="/">FosterStack home</a>
-  </div>
+  <h2>What we ran</h2>
+  <p>A build with four modules. <code>core</code> has no dependencies. <code>util</code> and <code>api</code> use <code>core</code>. <code>app</code> uses <code>util</code> and <code>api</code>. Each module has 12 small Java classes. The cache server was release 0.2.1 (macOS, arm64), with Gradle 9.8.0.</p>
+  <p>Every run below used a brand-new copy of the project and an empty Gradle home folder, and the local cache was switched off. The only thing the runs shared was the cache server. Each run was <code>gradle build --console=plain --no-daemon</code>, and every build finished with <code>BUILD SUCCESSFUL</code>.</p>
+
+  <h2>Results: what each module's compile step did</h2>
+  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
+    <thead><tr><th>Run</th><th>core</th><th>util</th><th>api</th><th>app</th></tr></thead>
+    <tbody>
+      <tr><td>1. First build, as CI would do it</td><td>ran</td><td>ran</td><td>ran</td><td>ran</td></tr>
+      <tr><td>2. Another machine, same code</td><td>from cache</td><td>from cache</td><td>from cache</td><td>from cache</td></tr>
+      <tr><td>3. Edit inside a method in <code>core</code></td><td>ran</td><td>from cache</td><td>from cache</td><td>from cache</td></tr>
+      <tr><td>4. A teammate makes the same edit</td><td>from cache</td><td>from cache</td><td>from cache</td><td>from cache</td></tr>
+      <tr><td>5. Add a public method to <code>core</code></td><td>ran</td><td>ran</td><td>ran</td><td>ran</td></tr>
+      <tr><td>6. Edit only <code>app</code></td><td>from cache</td><td>from cache</td><td>from cache</td><td>ran</td></tr>
+    </tbody>
+  </table></div>
+  <p>"Ran" means Gradle did the work and uploaded the result. "From cache" means Gradle downloaded it instead, and printed <code>FROM-CACHE</code> next to the task. This is what run 3 printed:</p>
+<pre tabindex="0"><code>&gt; Task :core:compileJava
+&gt; Task :util:compileJava FROM-CACHE
+&gt; Task :api:compileJava FROM-CACHE
+&gt; Task :app:compileJava FROM-CACHE</code></pre>
+
+  <h2>What this means for your monorepo</h2>
+  <ul class="trust">
+    <li><strong>Edits inside a method stay local (run 3).</strong> Gradle compares the public shape of a module, not every byte, when it decides whether a module that depends on it must rebuild. A change inside a method body left the other three modules' inputs the same, so they came from the cache.</li>
+    <li><strong>Changes to public methods spread (run 5).</strong> All four modules ran. In a big monorepo, a small, stable shared module with few public changes keeps more of the build cached.</li>
+    <li><strong>The first person pays, everyone else downloads (runs 4 and 6).</strong> The edit in run 3 was uploaded once. In run 4 a fresh checkout made the same edit and ran nothing.</li>
+  </ul>
+  <p>Only the compile step is shown here, because it is the step that showed the pattern clearly in a small project. The jar steps in this build are not cacheable by default in Gradle, so they ran every time. The project is small, so we are not quoting time saved: the cache pays off as your modules get bigger.</p>
+
+  <h2>Set it up</h2>
+  <p>This is the exact <code>settings.gradle.kts</code> we ran. Replace the address with your server's. We used <code>127.0.0.1</code> over plain HTTP because the test ran on one machine; use HTTPS across a network.</p>
+<pre tabindex="0"><code>buildCache {
+    local { isEnabled = false }
+    remote&lt;HttpBuildCache&gt; {
+        url = uri("http://127.0.0.1:18140/")
+        isPush = true
+        isAllowInsecureProtocol = true
+    }
+}</code></pre>
+  <p>And this is the whole <code>gradle.properties</code>:</p>
+<pre tabindex="0"><code>org.gradle.caching=true
+org.gradle.parallel=true</code></pre>
+  <p>In a real team, let only CI upload (<code>isPush</code>) and have developers read. That setup, with a read-only login, is on the <a href="/gradle-build-cache-ci-writes-developers-read/">CI writes, developers read</a> page.</p>
+
+  <h2>If you do not see FROM-CACHE</h2>
+  <p>Work through <a href="/gradle-build-cache-hit-rate-low/">why the hit rate is low</a>. To check the server itself, see <a href="/first-15-minutes-build-cache/">your first 15 minutes</a>, and for logins see <a href="/gradle-remote-build-cache-authentication/">authentication</a>.</p>
+
+  <p class="muted-note">Run on Gradle 9.8.0 with FosterStack Cache 0.2.1 on macOS (arm64), Java 27.</p>
 </main>
+
 <footer>
   <div>
     <p>FosterStack is not affiliated with, endorsed by, or sponsored by Gradle Inc.

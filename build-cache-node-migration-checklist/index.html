@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Gradle build cache hit rate low: the common causes</title>
-<meta name="description" content="Gradle build cache works but most tasks still run? Three common causes reproduced with real output: absolute paths, changing inputs and different Java versions.">
-<meta property="og:title" content="Gradle build cache hit rate low: the common causes">
-<meta property="og:description" content="Gradle build cache works but most tasks still run? Three common causes reproduced with real output: absolute paths, changing inputs and different Java versions.">
-<meta property="og:url" content="https://fosterstack.com/gradle-build-cache-hit-rate-low/">
+<title>Build Cache Node migration checklist for Gradle</title>
+<meta name="description" content="A checklist for moving from the Develocity Build Cache Node to FosterStack Cache, with a real run: only the URL changes, first build is cold, rollback works.">
+<meta property="og:title" content="Build Cache Node migration checklist for Gradle">
+<meta property="og:description" content="A checklist for moving from the Develocity Build Cache Node to FosterStack Cache, with a real run: only the URL changes, first build is cold, rollback works.">
+<meta property="og:url" content="https://fosterstack.com/build-cache-node-migration-checklist/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="FosterStack">
-<link rel="canonical" href="https://fosterstack.com/gradle-build-cache-hit-rate-low/">
+<link rel="canonical" href="https://fosterstack.com/build-cache-node-migration-checklist/">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -77,6 +77,7 @@
   a { color: var(--accent); }
   code { overflow-wrap: anywhere; }
   pre code { overflow-wrap: normal; }
+  .table-scroll { max-width: 100%; overflow-x: auto; }
   :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 </style>
 </head>
@@ -86,65 +87,55 @@
   <div class="tag">Infrastructure worth keeping — and kept patched.</div>
 </header>
 <main>
-  <h1>Gradle build cache hit rate low: the common causes</h1>
-  <p class="lede">The cache is set up and working, but most tasks still run. A task only comes from the cache if its inputs produce the same key as when it was stored. These are the three most common reasons the keys differ, each reproduced for real with a 0.2.1 server and Gradle 9.8.0, with the local cache switched off so every hit is a hit on the server.</p>
+  <h1>Build Cache Node migration checklist for Gradle</h1>
+  <p class="lede">A short checklist for moving builds from the Develocity Build Cache Node to FosterStack Cache, with a real run to back it: the same project built against an old node, then against FosterStack Cache 0.2.1, then back. Read why the node is going away in <a href="/build-cache-node-end-of-life/">Build Cache Node end of life</a>.</p>
 
-  <h2>How to find the cause</h2>
-  <p>Run the build with <code>--info</code>. For every cacheable task Gradle prints its key:</p>
-  <pre tabindex="0"><code>Build cache key for task &#x27;:greetStable&#x27; is 932183de90ed643c9e448f23bd169d87</code></pre>
-  <p>If the same task has a different key on two machines or two runs, something in its inputs differs. Compare the keys first, then look for what changed. If the key is the same and the task still ran, look at the server (the last section).</p>
+  <h2>What I tested</h2>
+  <p>Gradle 9.8.0 and a small Java project, built twice against each server. The old side was a Build Cache Node image (version 21.2, built June 2025), run locally and set up to allow anonymous reads and writes for the test. The new side was a FosterStack Cache 0.2.1 server with no password. I did not test Maven in this run; for Maven see the <a href="/migrate-build-cache-node/">setup page</a>.</p>
 
-  <h2>The test project</h2>
-  <p>Java sources plus three small cacheable tasks in <code>build.gradle.kts</code>. They differ only in the value they take as input:</p>
-  <pre tabindex="0"><code>@CacheableTask
-abstract class Greet : DefaultTask() {
-    @get:Input abstract val label: Property&lt;String&gt;
-    @get:OutputFile abstract val out: RegularFileProperty
-    @TaskAction fun run() { out.get().asFile.writeText(&quot;hello &quot; + label.get()) }
-}
+  <h2>The checklist</h2>
+  <h3>1. Find every place your builds point at the old node</h3>
+  <p>Search your repositories and CI settings for <code>HttpBuildCache</code> and for the node's address. The old node's address ends in <code>/cache/</code>. Write the list down: each entry is one line to change.</p>
 
-tasks.register&lt;Greet&gt;(&quot;greetStable&quot;) {          // same input everywhere
-    label.set(&quot;demo&quot;)
-    out.set(layout.buildDirectory.file(&quot;greet-stable.txt&quot;))
-}
-tasks.register&lt;Greet&gt;(&quot;greetAbsPath&quot;) {         // input holds an absolute path
-    label.set(projectDir.absolutePath)
-    out.set(layout.buildDirectory.file(&quot;greet-abs.txt&quot;))
-}
-tasks.register&lt;Greet&gt;(&quot;greetTime&quot;) {            // input changes every build
-    label.set(System.currentTimeMillis().toString())
-    out.set(layout.buildDirectory.file(&quot;greet-time.txt&quot;))
+  <h3>2. Start the new server</h3>
+  <p>Follow <a href="/first-15-minutes-build-cache/">your first 15 minutes</a>. Turn on a password before other machines can reach it.</p>
+
+  <h3>3. Change one line</h3>
+  <pre tabindex="0"><code>buildCache {
+    remote&lt;HttpBuildCache&gt; {
+-       url = uri(&quot;http://old-node.example.com:5071/cache/&quot;)
++       url = uri(&quot;https://cache.example.com/&quot;)
+        isPush = true
+    }
 }</code></pre>
-  <p>I built it once to fill the cache, then tried three things.</p>
+  <p>If the new server has a password, also add a <code>credentials</code> block. See <a href="/gradle-remote-build-cache-authentication/">authentication and 401 errors</a>.</p>
 
-  <h2>Cause 1: a path that is only true on one machine</h2>
-  <p>I copied the project to a different directory and built the same tasks from a clean checkout:</p>
-  <pre tabindex="0"><code>&gt; Task :compileJava FROM-CACHE
-&gt; Task :greetStable FROM-CACHE
-&gt; Task :greetAbsPath
-&gt; Task :greetTime</code></pre>
-  <p>Moving the checkout did not matter for <code>compileJava</code> or for the task with a stable input. The task whose input holds the project's absolute path ran again. The keys show why:</p>
-  <pre tabindex="0"><code>$ gradle greetAbsPath --info        (in the first directory)
-Build cache key for task &#x27;:greetAbsPath&#x27; is 24c324403b9dacb75e78e128fbf76848
-$ gradle greetAbsPath --info        (in the copy)
-Build cache key for task &#x27;:greetAbsPath&#x27; is b7b4f69d180d1dc577a36f2869d0806e</code></pre>
-  <p>Back in the first directory, <code>greetAbsPath</code> hit again, because that directory's entry was there. So a path-in-the-input problem looks fine on one machine and wrong on every other, such as CI against laptops. <strong>Fix:</strong> keep absolute paths out of cacheable task inputs, or mark file inputs with a path sensitivity such as relative.</p>
+  <h3>4. Expect the first build to miss</h3>
+  <p>Nothing is copied over, and nothing needs to be: a cache holds results your builds can always rebuild. The first build on the new server runs everything and fills it; the second hits.</p>
 
-  <h2>Cause 2: a value that changes on every build</h2>
-  <p><code>greetTime</code> puts the current time in its input. In every build above it ran, in every directory, including right after an identical build. A timestamp, a random value, a build number or a hostname in an input means that task can never hit. <strong>Fix:</strong> take the changing value out of the inputs, or stop caching that task.</p>
+  <h3>5. Decide about the <code>/cache/</code> part of the URL</h3>
+  <p>You can drop it, as above, or keep it. FosterStack Cache uses the whole request path as the key, so a prefix works. Entries under different paths are separate, so pick one and use it everywhere.</p>
 
-  <h2>Cause 3: a different Java</h2>
-  <p>The cache had been filled by Gradle running on JDK 27. I ran the same project, in the same directory, with Gradle on JDK 21:</p>
-  <pre tabindex="0"><code>&gt; Task :compileJava
-&gt; Task :greetStable</code></pre>
-  <p>Both ran again. A second run on JDK 21 hit, and going back to JDK 27 hit its own entries. So two Java versions on your CI agents and laptops means two separate sets of entries and a lower hit rate. <strong>Fix:</strong> use the same Java version everywhere builds share a cache.</p>
+  <h3>6. Keep the old node running until you are sure</h3>
+  <p>With Gradle, rolling back is the same one-line change in reverse; I tested that.</p>
 
-  <h2>What the server's counters can and cannot tell you</h2>
-  <p>The status page counts hits and misses, but those are individual lookups, not tasks. My four-task project stored six entries on its first build, so the counters do not map one-to-one to tasks. Use the server's hit rate to watch the trend, and use <code>FROM-CACHE</code> in the build output to see which tasks missed. A hit rate that never climbs while the eviction counter keeps rising points at a cache that is too small instead. See <a href="/build-cache-eviction-size-limit/">how eviction works</a> and <a href="/monitor-build-cache-prometheus-grafana/">monitoring</a>.</p>
+  <h3>7. Retire the old node, and check the new one</h3>
+  <p>When builds are hitting the new server, stop the old node. Watch the new one with <a href="/monitor-build-cache-prometheus-grafana/">monitoring</a>, and size its disk with <a href="/build-cache-server-sizing/">server sizing</a>.</p>
 
-  <p class="muted-note">Not tested here: Gradle versions other than 9.8.0, Java toolchains, and Gradle's path-sensitivity annotations mentioned above. Related: <a href="/gradle-remote-cache-not-working/">Gradle remote build cache not working</a> and <a href="/gradle-build-cache-tutorial/">the tutorial</a>.</p>
+  <h2>What happened in the run</h2>
+  <p>Each row is two builds of the same project with <code>gradle clean</code> in between and Gradle's own local cache turned off, so a hit can only come from the server:</p>
+  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
+    <tr><th>Pointed at</th><th>First build</th><th>Second build</th></tr>
+    <tr><td>The old node, URL ending in <code>/cache/</code></td><td><code>:compileJava</code> ran</td><td><code>:compileJava FROM-CACHE</code></td></tr>
+    <tr><td>FosterStack Cache, only the URL changed (no <code>/cache/</code>)</td><td><code>:compileJava</code> ran: the new server was empty</td><td><code>:compileJava FROM-CACHE</code></td></tr>
+    <tr><td>FosterStack Cache, URL kept with <code>/cache/</code></td><td><code>:compileJava</code> ran: separate entries</td><td><code>:compileJava FROM-CACHE</code></td></tr>
+    <tr><td>Back to the old node (rollback)</td><td><code>:compileJava FROM-CACHE</code>: its entries were still there</td><td>not run</td></tr>
+  </table></div>
+  <p>The new server's status page agreed: two entries stored, two hits, two misses. One small difference you may notice: a successful upload returns 200 from the old node and 201 from FosterStack Cache. Gradle accepted both.</p>
+
+  <p class="muted-note">Related: <a href="/build-cache-node-faq/">questions and answers</a> and <a href="/verify-replacement-build-cache/">what to check in a replacement build cache</a>.</p>
   <div class="cta-row">
-    <a class="btn" href="/gradle-remote-cache-not-working/">Not working at all?</a>
+    <a class="btn" href="/migrate-build-cache-node/">Gradle and Maven setup</a>
     <a class="btn btn-secondary" href="/">FosterStack home</a>
   </div>
 </main>

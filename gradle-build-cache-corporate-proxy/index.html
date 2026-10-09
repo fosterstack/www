@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Gradle configuration cache vs build cache</title>
-<meta name="description" content="The difference between Gradle's configuration cache and build cache, and a real run of both together: what each saves, where it lives, and what invalidates it.">
-<meta property="og:title" content="Gradle configuration cache vs build cache">
-<meta property="og:description" content="The difference between Gradle&#x27;s configuration cache and build cache, and a real run of both together: what each saves, where it lives, and what invalidates it.">
-<meta property="og:url" content="https://fosterstack.com/gradle-configuration-cache-vs-build-cache/">
+<title>Gradle build cache behind a corporate proxy</title>
+<meta name="description" content="How Gradle's remote build cache behaves behind a proxy: the settings, the loopback trap, a proxy that refuses, and how to tell it from a cache error. Real run.">
+<meta property="og:title" content="Gradle build cache behind a corporate proxy">
+<meta property="og:description" content="How Gradle&#x27;s remote build cache behaves behind a proxy: the settings, the loopback trap, a proxy that refuses, and how to tell it from a cache error. Real run.">
+<meta property="og:url" content="https://fosterstack.com/gradle-build-cache-corporate-proxy/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="FosterStack">
-<link rel="canonical" href="https://fosterstack.com/gradle-configuration-cache-vs-build-cache/">
+<link rel="canonical" href="https://fosterstack.com/gradle-build-cache-corporate-proxy/">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -87,48 +87,55 @@
   <div class="tag">Infrastructure worth keeping — and kept patched.</div>
 </header>
 <main>
-  <h1>Gradle configuration cache vs build cache</h1>
-  <p class="lede">They sound alike and they are not the same thing. One saves Gradle from working out your build again. The other saves your tasks from running again. You can use both, and only the second one uses a cache server. This is a real run of both together, on Gradle 9.8.0 and a 0.2.1 server.</p>
+  <h1>Gradle build cache behind a corporate proxy</h1>
+  <p class="lede">Many companies make builds reach the network through a proxy. This page shows how Gradle's remote build cache behaves behind one: the settings, the ways it goes wrong, and how to tell a proxy problem from a cache problem. Everything was run for real with Gradle 9.8.0 and FosterStack Cache 0.2.1.</p>
 
-  <h2>The short answer</h2>
+  <h2>What was tested, and what was not</h2>
+  <ul class="trust">
+    <li><strong>Tested:</strong> a small proxy I wrote for the test (it forwards plain HTTP, tunnels HTTPS with <code>CONNECT</code>, can refuse a host, and logs every request), the cache on a non-loopback address, once over plain HTTP and once over HTTPS through nginx with a self-signed certificate that Java was told to trust.</li>
+    <li><strong>Not tested:</strong> a real corporate proxy product, a proxy that asks for a password (407), a proxy that inspects and re-signs TLS, automatic proxy configuration files, and the <code>HTTP_PROXY</code> variables. Maven is covered on <a href="/maven-build-cache-corporate-proxy/">its own page</a>, where it behaves differently: for example it does not skip the proxy for loopback addresses.</li>
+  </ul>
+
+  <h2>The settings</h2>
+  <p>Gradle takes proxy settings from Java system properties. Put them in <code>~/.gradle/gradle.properties</code> or the project's <code>gradle.properties</code>, with the <code>systemProp.</code> prefix:</p>
+  <pre tabindex="0"><code>systemProp.http.proxyHost=proxy.example.com
+systemProp.http.proxyPort=3128
+systemProp.https.proxyHost=proxy.example.com
+systemProp.https.proxyPort=3128
+systemProp.http.nonProxyHosts=cache.internal.example.com|localhost|127.*</code></pre>
+  <p>Use the <code>https</code> pair for an <code>https://</code> cache URL and the <code>http</code> pair for plain HTTP. The last line lists hosts that should skip the proxy.</p>
+
+  <h2>What I saw</h2>
+  <p>For the plain-HTTP rows I set <code>isAllowInsecureProtocol = true</code>, which Gradle requires for non-loopback <code>http://</code>. That is for the test rig only; use HTTPS for real.</p>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
-    <tr><th></th><th>Configuration cache</th><th>Build cache</th></tr>
-    <tr><td>What it saves</td><td>The work of reading your build files and planning the tasks</td><td>The work of running a task, by reusing its saved output</td></tr>
-    <tr><td>Where it lives</td><td>A folder in your project, on your machine</td><td>On your machine, and optionally on a server shared with a team</td></tr>
-    <tr><td>Turned on with</td><td><code>--configuration-cache</code></td><td><code>--build-cache</code> (and a server URL for a shared one)</td></tr>
-    <tr><td>Thrown away when</td><td>A build file it depends on changes</td><td>A task's inputs change, so it gets a different key</td></tr>
-    <tr><td>Shows up as</td><td>"Reusing configuration cache."</td><td><code>FROM-CACHE</code> next to a task</td></tr>
+    <tr><th>Setup</th><th>Result</th><th>What the proxy logged</th></tr>
+    <tr><td>No proxy settings, cache at <code>&lt;cache-ip&gt;</code></td><td>second build <code>FROM-CACHE</code></td><td>nothing (not used)</td></tr>
+    <tr><td>Proxy settings, same plain-HTTP URL</td><td><code>FROM-CACHE</code></td><td><code>GET http://&lt;cache-ip&gt;:18130/&lt;key&gt;</code>, one per build</td></tr>
+    <tr><td>Proxy settings, but the cache URL is <code>127.0.0.1</code></td><td><code>FROM-CACHE</code></td><td><strong>nothing</strong>: Java skips the proxy for loopback addresses</td></tr>
+    <tr><td>Proxy settings, with the cache's address in <code>nonProxyHosts</code></td><td><code>FROM-CACHE</code></td><td><strong>nothing</strong></td></tr>
+    <tr><td>Proxy settings, HTTPS cache, tunnel allowed</td><td><code>FROM-CACHE</code></td><td><code>CONNECT &lt;cache-ip&gt;:18443</code>, one per build</td></tr>
+    <tr><td>Proxy settings, proxy refuses the cache host</td><td>the build succeeds but without the cache (log below)</td><td>the request, answered 403</td></tr>
   </table></div>
-  <p>A remote cache server such as FosterStack Cache is for the build cache only. If Gradle suggests enabling the configuration cache, that is a separate local feature and has nothing to do with the server.</p>
 
-  <h2>Both together, in a real run</h2>
-  <p>The same small project, both flags on, the build cache pointed at a server:</p>
-  <pre tabindex="0"><code>gradle build --configuration-cache --build-cache</code></pre>
-  <p><strong>1. The first build.</strong> Nothing is cached anywhere yet:</p>
-  <pre tabindex="0"><code>Calculating task graph as no cached configuration is available for tasks: build
-&gt; Task :compileJava
-BUILD SUCCESSFUL in 5s
-Configuration cache entry stored.</code></pre>
-  <p><strong>2. The same build again.</strong> Both caches work, in different ways. The plan is reused, and the task is simply up to date on disk:</p>
-  <pre tabindex="0"><code>Reusing configuration cache.
-&gt; Task :compileJava UP-TO-DATE
-BUILD SUCCESSFUL in 1s
-Configuration cache entry reused.</code></pre>
-  <p><strong>3. After <code>gradle clean</code>.</strong> The build outputs are gone, so the task would have to run again. The plan is still reused, and the output now comes from the server:</p>
-  <pre tabindex="0"><code>Reusing configuration cache.
-&gt; Task :compileJava FROM-CACHE
-BUILD SUCCESSFUL in 1s
-Configuration cache entry reused.</code></pre>
-  <p>The server's status page counted one hit for that, and it holds the compiled output only.</p>
-  <p><strong>4. After editing <code>build.gradle.kts</code>, then <code>gradle clean</code>.</strong> Now the configuration cache is thrown away, because a build file changed, but the build cache still works, because the task's inputs did not change:</p>
-  <pre tabindex="0"><code>Calculating task graph as configuration cache cannot be reused because file &#x27;build.gradle.kts&#x27; has changed.
-&gt; Task :compileJava FROM-CACHE
-BUILD SUCCESSFUL in 2s
-Configuration cache entry stored.</code></pre>
-  <p>That fourth step is the clearest way to see they are separate: one was invalidated and the other was not.</p>
+  <h2>Three things that catch people</h2>
+  <p><strong>1. Testing against localhost skips the proxy.</strong> With the cache at <code>127.0.0.1</code>, Gradle never used the proxy even though it was configured. A setup that works on your laptop against a local cache proves nothing about the proxy path. Test against the real address.</p>
+  <p><strong>2. A refusing proxy looks like a cache error.</strong> When the proxy answered 403 to the tunnel, Gradle printed:</p>
+  <pre tabindex="0"><code>Could not load entry d4f2de693b561fd2c5d60b17a9232d6f from remote build cache: Loading entry from &#x27;https://&lt;cache-ip&gt;:18443/d4f2de693b561fd2c5d60b17a9232d6f&#x27; response status 403: Forbidden</code></pre>
+  <p>That is the same text you would get from the cache refusing a write with the read-only login (see <a href="/gradle-build-cache-http-status-codes/">the status codes</a>). To tell them apart, take Gradle out of it and try the same route with curl:</p>
+  <pre tabindex="0"><code>$ curl -sS -x http://proxy.example.com:3128 https://cache.example.com/healthz
+curl: (56) CONNECT tunnel failed, response 403      # the proxy said no
+$ curl -sS --noproxy &#x27;*&#x27; https://cache.example.com/healthz
+ok                                                   # the cache is fine</code></pre>
+  <p>I substituted example hostnames in those commands; the two output lines are the real ones, from my test proxy refusing and from the cache answering directly. If the first one fails and the second works, ask whoever runs the proxy to allow the cache's host and port.</p>
+  <p><strong>3. Over HTTPS the proxy only sees the address.</strong> A <code>CONNECT</code> tunnel shows the proxy the host and port and nothing inside, so the password and the cache keys are not visible to it. That also means any rule on the path cannot be applied. This is how the proxy log looked in my run: one <code>CONNECT</code> line per build.</p>
 
-  <h2>Which should I turn on?</h2>
-  <p>They solve different problems. The configuration cache helps most on large builds, where planning takes a while. The build cache helps most where the same work is done on many machines, such as CI runners and developer laptops. To set up a shared build cache, start with the <a href="/gradle-build-cache-tutorial/">Gradle build cache tutorial</a>.</p>
+  <h2>Checklist</h2>
+  <ul class="trust">
+    <li>Ask for the cache's host and port to be allowed through the proxy (HTTPS).</li>
+    <li>Put the proxy lines in <code>gradle.properties</code>, with the <code>systemProp.</code> prefix, and list internal hosts in <code>nonProxyHosts</code>.</li>
+    <li>Use HTTPS to the cache. See <a href="/build-cache-docker-compose-production/">a production setup with nginx and TLS</a>.</li>
+    <li>If the proxy re-signs TLS, Java will need your company's certificate authority. I did not test that case.</li>
+  </ul>
 
   <p class="muted-note">Related: <a href="/gradle-remote-cache-not-working/">Gradle remote build cache not working</a> and <a href="/gradle-remote-build-cache-authentication/">authentication and 401 errors</a>.</p>
   <div class="cta-row">

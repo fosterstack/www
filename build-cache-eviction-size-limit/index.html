@@ -69,15 +69,16 @@
         overflow-x: auto; font-size: .9rem; line-height: 1.5; }
   .cta-row { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1.1rem; }
   .btn { display: inline-block; padding: .55rem 1rem; border-radius: 8px; font-weight: 600;
-         text-decoration: none; background: var(--accent); color: #fff; }
-  .btn-secondary { background: transparent; color: inherit; border: 1px solid #cbd5e1; }
+         text-decoration: none; background: var(--accent); color: var(--accent-fg); }
+  .btn-secondary { background: transparent; color: inherit; border: 1px solid var(--muted); }
   .muted-note { color: var(--muted); font-size: .93rem; margin-top: 1.1rem; }
   footer { border-top: 1px solid var(--line); margin-top: 4rem; padding: 1.5rem 1.25rem 3rem; }
   footer div { max-width: 44rem; margin: 0 auto; color: var(--muted); font-size: .82rem; }
   a { color: var(--accent); }
-  table { display: block; max-width: 100%; overflow-x: auto; }
   code { overflow-wrap: anywhere; }
   pre code { overflow-wrap: normal; }
+  .table-scroll { max-width: 100%; overflow-x: auto; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 </style>
 </head>
 <body>
@@ -91,17 +92,17 @@
 
   <h2>Setting the cap</h2>
   <p>Set <code>FSCACHE_MAX_BYTES</code>, in bytes. The default, <code>0</code>, means no limit. Real servers use gigabytes; see <a href="/build-cache-server-sizing/">server sizing</a> for values you can copy. For this test I used 3500 bytes, so that a few small entries fill it:</p>
-  <pre><code>FSCACHE_MAX_BYTES=3500 ./fscache</code></pre>
+  <pre tabindex="0"><code>FSCACHE_MAX_BYTES=3500 ./fscache</code></pre>
 
   <h2>What happened</h2>
   <p>I stored three 1,000-byte entries, read one of them, then stored two more. After each step I looked at <code>/statusz</code>, the status page, and tried to read every key back.</p>
-  <table>
+  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <tr><th>Step</th><th>Stored afterwards</th><th>Evicted so far</th><th>Which keys could be read</th></tr>
     <tr><td>Store k1, k2, k3</td><td>3,000 bytes, 3 entries</td><td>0</td><td>all three</td></tr>
     <tr><td>Read k1</td><td>unchanged</td><td>0</td><td>k1 is now the most recently used</td></tr>
     <tr><td>Store k4 (would go over 3,500)</td><td>3,000 bytes, 3 entries</td><td>1</td><td>k1, k3, k4. <strong>k2 is gone.</strong></td></tr>
     <tr><td>Store k5</td><td>3,000 bytes, 3 entries</td><td>2</td><td>k3, k4, k5. <strong>k1 is gone.</strong></td></tr>
-  </table>
+  </table></div>
   <p>The stored size never went above the cap. Each time something new did not fit, the entry that had gone longest without being used was removed.</p>
   <p><strong>Reading counts as using.</strong> In the last step k1 went too, even though I had read it earlier. That is because my own checks after storing k4 read k1, k3 and k4 in that order, which made k1 the oldest again. A cache hit keeps an entry alive.</p>
 
@@ -112,7 +113,7 @@
   <p>The same numbers are in <code>/statusz</code> as <code>store_bytes</code>, <code>max_bytes</code>, <code>store_entries</code> and <code>evicted_entries</code>, and in the Prometheus metrics (<code>fscache_evicted_entries_total</code> and <code>fscache_store_bytes</code>). A rising eviction count together with a hit rate that never climbs means the cap is too small for your build. See <a href="/monitor-build-cache-prometheus-grafana/">monitoring</a>.</p>
 
   <h2>Try it yourself</h2>
-  <pre><code>FSCACHE_ADDR=127.0.0.1:8080 FSCACHE_DATA_DIR=./data FSCACHE_MAX_BYTES=3500 ./fscache &amp;
+  <pre tabindex="0"><code>FSCACHE_ADDR=127.0.0.1:8080 FSCACHE_DATA_DIR=./data FSCACHE_MAX_BYTES=3500 ./fscache &amp;
 until curl -s localhost:8080/healthz &gt;/dev/null; do sleep 0.2; done   # wait until it is up
 
 put() { head -c 1000 /dev/zero | curl -s -o /dev/null -w &quot;PUT $1 %{http_code}\n&quot; -X PUT --data-binary @- localhost:8080/$1; }

@@ -69,15 +69,16 @@
         overflow-x: auto; font-size: .9rem; line-height: 1.5; }
   .cta-row { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1.1rem; }
   .btn { display: inline-block; padding: .55rem 1rem; border-radius: 8px; font-weight: 600;
-         text-decoration: none; background: var(--accent); color: #fff; }
-  .btn-secondary { background: transparent; color: inherit; border: 1px solid #cbd5e1; }
+         text-decoration: none; background: var(--accent); color: var(--accent-fg); }
+  .btn-secondary { background: transparent; color: inherit; border: 1px solid var(--muted); }
   .muted-note { color: var(--muted); font-size: .93rem; margin-top: 1.1rem; }
   footer { border-top: 1px solid var(--line); margin-top: 4rem; padding: 1.5rem 1.25rem 3rem; }
   footer div { max-width: 44rem; margin: 0 auto; color: var(--muted); font-size: .82rem; }
   a { color: var(--accent); }
-  table { display: block; max-width: 100%; overflow-x: auto; }
   code { overflow-wrap: anywhere; }
   pre code { overflow-wrap: normal; }
+  .table-scroll { max-width: 100%; overflow-x: auto; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 </style>
 </head>
 <body>
@@ -93,7 +94,7 @@
     <a href="/build-cache-node-end-of-life/">What that means and your options</a>.
   </div>
 
-  <h1>Your build cache shouldn't die with its vendor.</h1>
+  <h1>Fast builds from cache are worth keeping.</h1>
   <p class="lede">
     FosterStack is a self-hosted remote build cache server — a Develocity Build Cache Node
     replacement that speaks the same Gradle remote build cache HTTP protocol, so migrating is
@@ -106,7 +107,7 @@
   <h2 id="try">Try it now</h2>
   <p>There is no signup, no waitlist, and no license key for the free tier. Pull the
   image and point your build at it:</p>
-  <pre><code>docker run -d -p 8080:8080 ghcr.io/fosterstack/cache:latest
+  <pre tabindex="0"><code>docker run -d -p 8080:8080 ghcr.io/fosterstack/cache:latest
 curl localhost:8080/healthz   # -&gt; ok</code></pre>
   <p class="cta-row">
     <a class="btn" href="https://github.com/fosterstack/cache#quickstart-docker">Quickstart</a>
@@ -135,37 +136,21 @@ curl localhost:8080/healthz   # -&gt; ok</code></pre>
     <div class="card"><h3>Cache management</h3><p>Size-capped LRU eviction that keeps a busy CI cache healthy without hand-tending — set the cap, and the oldest-unused entries make room.</p></div>
     <div class="card"><h3>Authentication</h3><p>HTTP Basic Auth over TLS, wired the way Gradle and Maven already expect credentials. Constant-time comparison, no credential ever logged.</p></div>
     <div class="card"><h3>Metrics &amp; status</h3><p>Prometheus metrics, a read-only status page with hit rates and size-vs-cap, and a Grafana dashboard in the repo — so you know the cache is earning its keep.</p></div>
-    <div class="card"><h3>Maintenance target</h3><p>Dependency CVEs remediated fast — target within 48 hours of disclosure. A stated intention until the paid tiers exist, and the release history is the track record either way.</p></div>
-    <div class="card"><h3>Acceptance-tested</h3><p>Every change runs against a real multi-module Gradle build in CI: a from-scratch second build must produce real remote-cache hits, or the change does not merge.</p></div>
+    <div class="card"><h3>Maintenance target</h3><p>Vulnerable dependencies fixed fast — our target is 48 hours from disclosure.</p></div>
+    <div class="card"><h3>Designed against NIST guidance</h3><p>Our release pipeline is designed against NIST SP 800-204C and 800-204D: each stage's result is recorded in a signed statement, and nothing is promoted to the public registries until a signed release authorization has verified every earlier statement. Guidance we designed against, not a certification we hold. <a href="/how-our-pipeline-maps-to-nist-and-slsa/">See how each stage maps</a>.</p></div>
     <div class="card"><h3>30-minute migration</h3><p>A step-by-step guide for existing Build Cache Node deployments. Same protocol, same CI config shape — migrating is mostly a URL change.</p></div>
   </div>
 
-  <h2>Security is the difference</h2>
-  <p>Security is what sets this product apart. The release items below ship in the current release. The supply-chain items describe how we work today, in our own build and CI. You can check each one yourself.</p>
-  <h3>Signed and verifiable</h3>
+  <h2>More than kept patched.</h2>
   <ul class="trust">
-    <li><strong>Signed releases.</strong> Images and the checksums file are signed with Sigstore, with no signing key stored anywhere. <a href="https://github.com/fosterstack/cache/blob/main/docs/verify-images.md">How to verify</a>.</li>
-    <li><strong>Build provenance.</strong> Every image and binary archive carries a signed statement naming the CI run that built it.</li>
-    <li><strong>A bill of materials.</strong> Every binary archive ships with an SBOM.</li>
-    <li><strong>Published vulnerability statements.</strong> A VEX file with each release says which known vulnerabilities do and do not affect it.</li>
-    <li><strong>Reproducible.</strong> Each image is assembled a second time on a separate machine, and the digests must match or the release fails.</li>
+    <li>Signed releases you can verify in minutes.</li>
+    <li>Build record, parts list (SBOM) and vulnerability statements published with every release.</li>
+    <li>Scanned before every release, rescanned every day.</li>
+    <li>Images assembled twice on separate machines; the results must match.</li>
+    <li>Minimal image, no telemetry. FIPS variant available.</li>
+    <li>Vulnerable dependencies fixed fast — our target is 48 hours from disclosure.</li>
   </ul>
-  <h3>Supply chain</h3>
-  <ul class="trust">
-    <li><strong>Pinned build steps.</strong> Every GitHub Action our releases use is pinned to an exact commit, and a check in CI enforces it on every change. The container base image is pinned by digest.</li>
-    <li><strong>Hash-checked installs.</strong> Python tooling in our CI is installed with hash checking, so a swapped package is refused.</li>
-    <li><strong>A 7-day wait.</strong> Our CI holds new dependency versions for 7 days before adopting them, and Dependabot has the same cooling-off period.</li>
-    <li><strong>A daily supply-chain check.</strong> Once a day, everything our build and CI pull in (actions, tools, packages) is checked against public advisory databases and malicious-package reports. Any hit opens an issue.</li>
-    <li><strong>Scanned before release.</strong> Two independent scanners with different databases check every release candidate, and any finding blocks the release unless a published VEX statement explains it. <a href="https://github.com/fosterstack/cache/blob/main/RELEASING.md">RELEASING.md</a>.</li>
-    <li><strong>Rescanned every day.</strong> Every published image is scanned again daily, so a new vulnerability in something we shipped raises an issue.</li>
-  </ul>
-  <h3>Small, quiet and patched</h3>
-  <ul class="trust">
-    <li><strong>Tiny and quiet.</strong> A distroless image with one static program and no shell. It sends no telemetry and makes no outbound connections.</li>
-    <li><strong>A FIPS build.</strong> A FIPS variant uses Go's validated FIPS 140-3 cryptographic module.</li>
-    <li><strong>Patched for everyone.</strong> We aim to ship dependency fixes within 48 hours of disclosure. That is a target, not a promise. Security patches are never withheld from the free tier.</li>
-    <li><strong>Report a problem privately.</strong> See the <a href="/security/">security policy</a>.</li>
-  </ul>
+  <p><a href="/how-we-build/">How we build</a> · <a href="/security/">Security policy</a> · <a href="/verify-a-release/">Verify a release</a></p>
 
   <h2>Built to be verified, not trusted</h2>
   <p>We're a new vendor asking to sit in your build pipeline, so the burden of proof is on us.
@@ -199,7 +184,7 @@ curl localhost:8080/healthz   # -&gt; ok</code></pre>
 
   <h2 id="pricing">Pricing</h2>
   <p>Per product. Free is the full product.</p>
-  <table>
+  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <tr><th>Free</th><th>Team</th><th>Business</th><th>Compliance</th></tr>
     <tr>
       <td>The full cache server, MIT-licensed, self-hosted. Every security patch, the
@@ -213,7 +198,7 @@ curl localhost:8080/healthz   # -&gt; ok</code></pre>
       security-questionnaire support up to 8 hours per year (async), and named-version
       LTS. <a href="/regulated/">Who this is for.</a></td>
     </tr>
-  </table>
+  </table></div>
   <p><strong>No sales call. No per-seat tax. No enterprise pricing mystery.</strong></p>
   <p style="color:var(--muted); font-size:.95rem">
     The Compliance tier, plainly: the security evidence underneath — SBOMs, SLSA

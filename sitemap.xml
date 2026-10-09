@@ -16,6 +16,10 @@
     <lastmod>2026-10-08</lastmod>
   </url>
   <url>
+    <loc>https://fosterstack.com/build-cache-docker-compose-production/</loc>
+    <lastmod>2026-10-08</lastmod>
+  </url>
+  <url>
     <loc>https://fosterstack.com/build-cache-eviction-size-limit/</loc>
     <lastmod>2026-10-08</lastmod>
   </url>
@@ -25,6 +29,14 @@
   </url>
   <url>
     <loc>https://fosterstack.com/build-cache-node-faq/</loc>
+    <lastmod>2026-10-08</lastmod>
+  </url>
+  <url>
+    <loc>https://fosterstack.com/build-cache-node-migration-checklist/</loc>
+    <lastmod>2026-10-08</lastmod>
+  </url>
+  <url>
+    <loc>https://fosterstack.com/build-cache-permission-denied-data-directory/</loc>
     <lastmod>2026-10-08</lastmod>
   </url>
   <url>
@@ -45,6 +57,10 @@
   </url>
   <url>
     <loc>https://fosterstack.com/gradle-build-cache-ci-writes-developers-read/</loc>
+    <lastmod>2026-10-08</lastmod>
+  </url>
+  <url>
+    <loc>https://fosterstack.com/gradle-build-cache-corporate-proxy/</loc>
     <lastmod>2026-10-08</lastmod>
   </url>
   <url>
@@ -80,6 +96,10 @@
     <lastmod>2026-10-08</lastmod>
   </url>
   <url>
+    <loc>https://fosterstack.com/how-our-pipeline-maps-to-nist-and-slsa/</loc>
+    <lastmod>2026-10-08</lastmod>
+  </url>
+  <url>
     <loc>https://fosterstack.com/how-we-build/</loc>
     <lastmod>2026-10-08</lastmod>
   </url>
@@ -89,6 +109,10 @@
   </url>
   <url>
     <loc>https://fosterstack.com/long-term-support-build-cache/</loc>
+    <lastmod>2026-10-08</lastmod>
+  </url>
+  <url>
+    <loc>https://fosterstack.com/maven-build-cache-corporate-proxy/</loc>
     <lastmod>2026-10-08</lastmod>
   </url>
   <url>
@@ -128,6 +152,10 @@
     <lastmod>2026-10-08</lastmod>
   </url>
   <url>
+    <loc>https://fosterstack.com/upgrade-build-cache-server/</loc>
+    <lastmod>2026-10-08</lastmod>
+  </url>
+  <url>
     <loc>https://fosterstack.com/verify-a-release/</loc>
     <lastmod>2026-10-08</lastmod>
   </url>
@@ -137,6 +165,30 @@
   </url>
   <url>
     <loc>https://fosterstack.com/verify-replacement-build-cache/</loc>
+    <lastmod>2026-10-08</lastmod>
+  </url>
+  <url>
+    <loc>https://fosterstack.com/gradle-build-cache-monorepo/</loc>
+    <lastmod>2026-10-08</lastmod>
+  </url>
+  <url>
+    <loc>https://fosterstack.com/migrate-maven-build-cache-to-a-new-server/</loc>
+    <lastmod>2026-10-08</lastmod>
+  </url>
+  <url>
+    <loc>https://fosterstack.com/gradle-build-cache-enable-disable/</loc>
+    <lastmod>2026-10-08</lastmod>
+  </url>
+  <url>
+    <loc>https://fosterstack.com/maven-build-cache-extension-enable-disable/</loc>
+    <lastmod>2026-10-08</lastmod>
+  </url>
+  <url>
+    <loc>https://fosterstack.com/build-cache-survives-restart/</loc>
+    <lastmod>2026-10-08</lastmod>
+  </url>
+  <url>
+    <loc>https://fosterstack.com/maven-build-cache-extension-multi-module/</loc>
     <lastmod>2026-10-08</lastmod>
   </url>
 </urlset>

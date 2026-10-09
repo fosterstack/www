@@ -3,8 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Page not found</title>
-<meta name="robots" content="noindex">
+<title>Enable or Disable the Maven Build Cache Extension</title>
+<meta name="description" content="The switches of the Apache Maven Build Cache Extension, tested against a real self-hosted cache: enabled, skipCache, remote.enabled and remote.save.enabled.">
+<meta property="og:title" content="Enable or Disable the Maven Build Cache Extension">
+<meta property="og:description" content="The switches of the Apache Maven Build Cache Extension, tested against a real self-hosted cache: enabled, skipCache, remote.enabled and remote.save.enabled.">
+<meta property="og:url" content="https://fosterstack.com/maven-build-cache-extension-enable-disable/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="FosterStack">
+<link rel="canonical" href="https://fosterstack.com/maven-build-cache-extension-enable-disable/">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -71,6 +77,7 @@
   a { color: var(--accent); }
   code { overflow-wrap: anywhere; }
   pre code { overflow-wrap: normal; }
+  .table-scroll { max-width: 100%; overflow-x: auto; }
   :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 </style>
 </head>
@@ -80,17 +87,58 @@
   <div class="tag">Infrastructure worth keeping — and kept patched.</div>
 </header>
 <main>
-  <h1>Page not found</h1>
-  <p class="lede">There is nothing at this address. Here are the places most people are looking for.</p>
+  <h1>Enable or disable the Maven build cache extension: the switches that work</h1>
+  <p class="lede">The Apache Maven Build Cache Extension has command-line switches to turn it off, skip the lookup, stop talking to the server, or stop uploading. Here is what each one did in a real run against a self-hosted cache (FosterStack Cache 0.2.1, Maven 3.10.0, extension 1.2.3).</p>
+
+  <h2>The short answer</h2>
   <ul class="trust">
-    <li><a href="/">FosterStack home</a></li>
-    <li><a href="/build-cache-node-end-of-life/">Build Cache Node end of life: what happens and your options</a></li>
-    <li><a href="/migrate-build-cache-node/">Migrate from Build Cache Node: Gradle and Maven setup</a></li>
-    <li><a href="/build-cache-node-faq/">Questions and answers</a></li>
-    <li><a href="/gradle-remote-cache-not-working/">Gradle remote build cache not working</a></li>
-    <li><a href="/security/">Security policy: how to report a vulnerability</a></li>
+    <li><code>-Dmaven.build.cache.enabled=false</code> turns the cache off for that build.</li>
+    <li><code>-Dmaven.build.cache.skipCache=true</code> ignores stored results and builds fully.</li>
+    <li><code>-Dmaven.build.cache.remote.enabled=false</code> stops all contact with the server.</li>
+    <li><code>-Dmaven.build.cache.remote.save.enabled=false</code> lets the build download but never upload.</li>
   </ul>
+
+  <h2>What we ran</h2>
+  <p>A small Maven project with the extension set up as described in <a href="/maven-remote-build-cache-setup/">Maven remote build cache setup</a>. Every build used a fresh copy of the project and an empty local build cache, so the only shared thing was the server. All seven builds ended with <code>BUILD SUCCESS</code>.</p>
+  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
+    <thead><tr><th>Build</th><th>Added to the command</th><th>Result</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>nothing (empty server)</td><td>Compiled, and saved the result to the server</td></tr>
+      <tr><td>2</td><td>nothing (another machine)</td><td>Restored from the cache, no compile</td></tr>
+      <tr><td>3</td><td><code>-Dmaven.build.cache.enabled=false</code></td><td>Compiled. The cache was off</td></tr>
+      <tr><td>4</td><td><code>-Dmaven.build.cache.skipCache=true</code></td><td>Compiled, although a result was stored</td></tr>
+      <tr><td>5</td><td><code>-Dmaven.build.cache.remote.enabled=false</code></td><td>Compiled. It did not ask the server at all</td></tr>
+      <tr><td>6</td><td><code>-Dmaven.build.cache.remote.save.enabled=false</code> (empty server)</td><td>Compiled. The server still had 0 entries</td></tr>
+      <tr><td>7</td><td>same as 6, again</td><td>Compiled again, because nothing was ever stored</td></tr>
+    </tbody>
+  </table></div>
+
+  <h2>What Maven prints for each switch</h2>
+<pre tabindex="0"><code>enabled=false:
+[INFO] Cache disabled by command line flag, project will be built fully and not cached
+
+skipCache=true:
+[INFO] Project demo:demo is marked as requiring force rebuild, will skip lookup in build cache</code></pre>
+  <p>With <code>remote.enabled=false</code> there was no download attempt in the log. With <code>remote.save.enabled=false</code> the build still looked in the server, found nothing, and built locally.</p>
+
+  <h2>"Error downloading cache item" on a normal miss</h2>
+  <p>The first build against an empty server printed this line, and it still succeeded:</p>
+<pre tabindex="0"><code>[ERROR] Error downloading cache item: http://127.0.0.1:18160//v1.1/demo/demo/ebb9bceba2f7a6bc/buildinfo.xml
+[INFO] Remote cache is incomplete or missing, trying local build for demo:demo</code></pre>
+  <p>In our run this was an ordinary miss: nothing was stored under that key yet, so Maven built the project itself. The next line says so. If you see this line on a cache that you know holds the result, check the address, the login and the proxy: see <a href="/maven-build-cache-extension-not-restoring/">Maven build cache not restoring</a>.</p>
+
+  <h2>Which one to use</h2>
+  <ul class="trust">
+    <li><strong>A suspect build:</strong> <code>enabled=false</code> rules the cache out completely.</li>
+    <li><strong>Make sure you build fresh:</strong> <code>skipCache=true</code>, for example for a release build.</li>
+    <li><strong>Working offline or off the VPN:</strong> <code>remote.enabled=false</code>, so Maven does not wait on a server it cannot reach.</li>
+    <li><strong>Developers read, CI writes:</strong> <code>remote.save.enabled=false</code> on developer machines. The same idea for Gradle is on <a href="/gradle-build-cache-ci-writes-developers-read/">CI writes, developers read</a>. A read-only login on the server enforces it.</li>
+  </ul>
+  <p>The same job for Gradle is on <a href="/gradle-build-cache-enable-disable/">enable or disable the Gradle build cache</a>.</p>
+
+  <p class="muted-note">Run on Maven 3.10.0 with maven-build-cache-extension 1.2.3 and FosterStack Cache 0.2.1, macOS (arm64).</p>
 </main>
+
 <footer>
   <div>
     <p>FosterStack is not affiliated with, endorsed by, or sponsored by Gradle Inc.

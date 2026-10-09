@@ -69,15 +69,15 @@
         overflow-x: auto; font-size: .9rem; line-height: 1.5; }
   .cta-row { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1.1rem; }
   .btn { display: inline-block; padding: .55rem 1rem; border-radius: 8px; font-weight: 600;
-         text-decoration: none; background: var(--accent); color: #fff; }
-  .btn-secondary { background: transparent; color: inherit; border: 1px solid #cbd5e1; }
+         text-decoration: none; background: var(--accent); color: var(--accent-fg); }
+  .btn-secondary { background: transparent; color: inherit; border: 1px solid var(--muted); }
   .muted-note { color: var(--muted); font-size: .93rem; margin-top: 1.1rem; }
   footer { border-top: 1px solid var(--line); margin-top: 4rem; padding: 1.5rem 1.25rem 3rem; }
   footer div { max-width: 44rem; margin: 0 auto; color: var(--muted); font-size: .82rem; }
   a { color: var(--accent); }
-  table { display: block; max-width: 100%; overflow-x: auto; }
   code { overflow-wrap: anywhere; }
   pre code { overflow-wrap: normal; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 </style>
 </head>
 <body>
@@ -91,13 +91,13 @@
 
   <h2>1. Is the build cache switched on?</h2>
   <p>The <code>buildCache</code> block in <code>settings.gradle(.kts)</code> says where the cache is. It does not turn caching on. Without this line the block does nothing:</p>
-  <pre><code># gradle.properties
+  <pre tabindex="0"><code># gradle.properties
 org.gradle.caching=true</code></pre>
   <p>Or pass <code>--build-cache</code> on each run. This is the most common cause.</p>
 
   <h2>2. Is the local cache hiding the problem?</h2>
   <p>Gradle's local cache is on by default and gives hits even when the remote is failing. So <code>FROM-CACHE</code> on its own does not prove the remote works. Take the local cache out of the picture and show remote errors:</p>
-  <pre><code>rm -rf ~/.gradle/caches/build-cache-1
+  <pre tabindex="0"><code>rm -rf ~/.gradle/caches/build-cache-1
 ./gradlew --stop
 ./gradlew build --build-cache -i</code></pre>
   <p>Run it twice. The second run is the one that tells you something.</p>
@@ -109,7 +109,7 @@ org.gradle.caching=true</code></pre>
     <li>Check that the variable is set in the shell or CI job that runs Gradle. In our test with Gradle 9.8.0 on macOS, a password exported after the background daemon was already running was used by the very next build (same daemon, no restart), and a wrong one gave the 401 straight away. If a password still seems ignored, run <code>./gradlew --stop</code> to rule the daemon out, or put it in <code>~/.gradle/gradle.properties</code> (never in the repo).</li>
   </ul>
   <p>To test the server's password directly, a 401 means the credentials are wrong and a 404 means they are right and the key just is not there yet:</p>
-  <pre><code>curl -s -o /dev/null -w '%{http_code}\n' -u gradle:wrong-password \
+  <pre tabindex="0"><code>curl -s -o /dev/null -w '%{http_code}\n' -u gradle:wrong-password \
   https://cache.example.com/some-key</code></pre>
 
   <h2>4. Is the URL right, and is it HTTPS?</h2>
@@ -117,7 +117,7 @@ org.gradle.caching=true</code></pre>
   <p>One trap in test setups: some sample projects run a check that fails any build containing an <code>http://</code> URL, including the cache URL. That is the check, not the cache.</p>
 
   <h2>5. Is the server seeing requests?</h2>
-  <pre><code>curl -s https://cache.example.com/metrics | grep -E 'fscache_cache_(hits|misses)_total'</code></pre>
+  <pre tabindex="0"><code>curl -s https://cache.example.com/metrics | grep -E 'fscache_cache_(hits|misses)_total'</code></pre>
   <p>Run a build and run this again. If neither counter moves, the requests are not arriving. If misses move and hits do not, the cache is working and has not been filled yet, or something in the task inputs changes on every build.</p>
 
   <h2>6. Is this client allowed to upload?</h2>

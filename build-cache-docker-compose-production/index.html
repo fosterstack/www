@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Your first 15 minutes with a self-hosted build cache</title>
-<meta name="description" content="A checklist from nothing to your first FROM-CACHE with a self-hosted Gradle build cache, with the commands timed in a real run on release 0.2.1.">
-<meta property="og:title" content="Your first 15 minutes with a self-hosted build cache">
-<meta property="og:description" content="A checklist from nothing to your first FROM-CACHE with a self-hosted Gradle build cache, with the commands timed in a real run on release 0.2.1.">
-<meta property="og:url" content="https://fosterstack.com/first-15-minutes-build-cache/">
+<title>Production build cache: Docker Compose, nginx and TLS</title>
+<meta name="description" content="A Compose file for a self-hosted build cache behind nginx with TLS and a password, run for real on 0.2.1 and Gradle 9.8.0, with what was and was not tested.">
+<meta property="og:title" content="Production build cache: Docker Compose, nginx and TLS">
+<meta property="og:description" content="A Compose file for a self-hosted build cache behind nginx with TLS and a password, run for real on 0.2.1 and Gradle 9.8.0, with what was and was not tested.">
+<meta property="og:url" content="https://fosterstack.com/build-cache-docker-compose-production/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="FosterStack">
-<link rel="canonical" href="https://fosterstack.com/first-15-minutes-build-cache/">
+<link rel="canonical" href="https://fosterstack.com/build-cache-docker-compose-production/">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -87,82 +87,88 @@
   <div class="tag">Infrastructure worth keeping — and kept patched.</div>
 </header>
 <main>
-  <h1>Your first 15 minutes with a self-hosted build cache</h1>
-  <p class="lede">A checklist from nothing to your first <code>FROM-CACHE</code>. I timed the commands on a real 0.2.1 release: ten seconds in all, on a laptop that already had Gradle and Java and a fast network. The 15 minutes is for you: reading, choosing values, and pointing your own project at the server.</p>
+  <h1>Production build cache: Docker Compose, nginx and TLS</h1>
+  <p class="lede">A Compose file for a shared build cache that only answers over HTTPS, with a password, behind nginx. Everything here was run for real on FosterStack Cache 0.2.1 and Gradle 9.8.0. The exact list of what was and was not tested is just below.</p>
 
-  <h2>What I timed</h2>
-  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
-    <tr><th>Step</th><th>Took</th></tr>
-    <tr><td>Download the release and verify its signature and checksum</td><td>1 second</td></tr>
-    <tr><td>Unpack it and start the server, with a password and a size cap</td><td>1 second</td></tr>
-    <tr><td>Write the project files</td><td>under 1 second</td></tr>
-    <tr><td>Build, clean, build again, and see <code>FROM-CACHE</code></td><td>8 seconds</td></tr>
-  </table></div>
-
-  <h2>The checklist</h2>
-  <h3>1. Decide where it will run</h3>
+  <h2>What was tested, and what was not</h2>
   <ul class="trust">
-    <li>A machine your CI runners and developers can reach. The server is one small program, and disk is what matters. See <a href="/build-cache-server-sizing/">server sizing</a>.</li>
-    <li>Plan on HTTPS for anything beyond a first try. Gradle sends the password with every request.</li>
+    <li><strong>Tested:</strong> the two files below, with Docker Compose on a Mac, nginx 1.29 as the proxy, a <strong>self-signed</strong> certificate for <code>localhost</code>, and a real Gradle build over HTTPS.</li>
+    <li><strong>Not tested:</strong> a certificate from a public authority or automatic renewal, a public server on port 443, other proxies or load balancers, Kubernetes ingress, and long-running use.</li>
   </ul>
 
-  <h3>2. Download it and check it is ours</h3>
-  <pre tabindex="0"><code>VER=0.2.1
-PLATFORM=darwin_arm64    # or linux_amd64, linux_arm64, darwin_amd64
-gh release download v${VER} --repo fosterstack/cache \
-  -p checksums.txt -p checksums.txt.bundle -p &quot;fscache_${VER}_${PLATFORM}.tar.gz&quot;
-cosign verify-blob --bundle checksums.txt.bundle \
-  --certificate-identity-regexp=&#x27;^https://github.com/fosterstack/cache/&#x27; \
-  --certificate-oidc-issuer=&#x27;https://token.actions.githubusercontent.com&#x27; checksums.txt
-sha256sum -c &lt;(grep &quot;fscache_${VER}_${PLATFORM}.tar.gz&quot; checksums.txt | grep -v sbom)</code></pre>
-  <p>You should see <code>Verified OK</code> and then <code>...tar.gz: OK</code>. More checks are in <a href="/verify-a-release/">Verify a release yourself</a>. Prefer a container? See <a href="/gradle-build-cache-docker-compose/">Gradle build cache with Docker Compose</a>.</p>
+  <h2>compose.yaml</h2>
+  <pre tabindex="0"><code>services:
+  fscache:
+    image: ghcr.io/fosterstack/cache:0.2.1
+    restart: unless-stopped
+    # no &quot;ports:&quot; on purpose: only the proxy is reachable from outside
+    volumes:
+      - fscache-data:/home/nonroot
+    environment:
+      FSCACHE_MAX_BYTES: &quot;53687091200&quot;      # 50 GiB
+      FSCACHE_USERNAME: gradle
+      FSCACHE_PASSWORD: change-me           # generate one: openssl rand -base64 24
 
-  <h3>3. Start it with a password and a size cap</h3>
-  <pre tabindex="0"><code>tar xzf fscache_${VER}_${PLATFORM}.tar.gz
-FSCACHE_USERNAME=gradle FSCACHE_PASSWORD=&lt;a long secret&gt; \
-FSCACHE_MAX_BYTES=1073741824 ./fscache</code></pre>
-  <p>That cap is 1 GiB, in bytes. Real caches are bigger; copy values from <a href="/build-cache-server-sizing/">the sizing page</a>.</p>
+  proxy:
+    image: nginx:1.29-alpine
+    restart: unless-stopped
+    depends_on:
+      - fscache
+    ports:
+      - &quot;127.0.0.1:8443:443&quot;                # use 443:443 on a real server
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./certs:/etc/nginx/certs:ro
 
-  <h3>4. Check it is up</h3>
-  <ul class="trust">
-    <li><code>curl localhost:8080/healthz</code> should print <code>ok</code>.</li>
-    <li><code>curl -u gradle:&lt;secret&gt; localhost:8080/statusz</code> should show <code>"version": "v0.2.1"</code>.</li>
-  </ul>
+volumes:
+  fscache-data:</code></pre>
+  <p>The cache has no <code>ports</code> entry on purpose. Only the proxy is reachable from outside. Generate a real password, for example with <code>openssl rand -base64 24</code>, and never keep <code>change-me</code>.</p>
 
-  <h3>5. Point Gradle at it</h3>
-  <p>In <code>settings.gradle.kts</code>, and turn caching on with <code>org.gradle.caching=true</code> in <code>gradle.properties</code>:</p>
-  <pre tabindex="0"><code>// FosterStack Cache — remote Gradle build cache.
-// https://github.com/fosterstack/cache
-buildCache {
-    remote&lt;HttpBuildCache&gt; {
-        url = uri(&quot;http://127.0.0.1:8080/&quot;)
-        isPush = true
-        credentials {
-            username = &quot;gradle&quot;
-            password = System.getenv(&quot;FSCACHE_PASSWORD&quot;)
-        }
+  <h2>nginx.conf</h2>
+  <pre tabindex="0"><code>server {
+    listen 443 ssl;
+    server_name localhost;
+    ssl_certificate     /etc/nginx/certs/cert.pem;
+    ssl_certificate_key /etc/nginx/certs/key.pem;
+
+    # the cache accepts entries up to 1 GiB by default; nginx&#x27;s own default is 1 MB
+    client_max_body_size 1g;
+
+    location / {
+        proxy_pass http://fscache:8080;
+        proxy_set_header Host $host;
     }
 }</code></pre>
-  <p>Use <code>127.0.0.1</code> for a first try on the same machine. On Gradle 9.8.0 the name <code>localhost</code> was refused without an opt-in. Maven instead? See <a href="/maven-remote-build-cache-setup/">the Maven setup</a>.</p>
+  <p>The <code>client_max_body_size</code> line matters. See the tests below.</p>
 
-  <h3>6. Build twice and look for FROM-CACHE</h3>
-  <pre tabindex="0"><code>export FSCACHE_PASSWORD=&lt;a long secret&gt;
-gradle build --build-cache
-gradle clean
-gradle build --build-cache
-&gt; Task :compileJava FROM-CACHE</code></pre>
-  <p>In my run the first build printed <code>&gt; Task :compileJava</code> and the second <code>&gt; Task :compileJava FROM-CACHE</code>, and the status page showed one entry and one hit. (I had turned Gradle's local cache off in this test, so the hit had to come from the server. With it on, a hit can come from your own machine instead, and the server's hit counter may not move. I did not test that case.) For a fuller walk-through, see the <a href="/gradle-build-cache-tutorial/">Gradle build cache tutorial</a>. If the second build does not show it, see <a href="/gradle-remote-cache-not-working/">Gradle remote build cache not working</a>.</p>
+  <h2>What I checked, and what I saw</h2>
+  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
+    <tr><th>Check</th><th>Result</th></tr>
+    <tr><td><code>https://localhost:8443/healthz</code> with the certificate trusted</td><td><code>ok</code></td></tr>
+    <tr><td>The same without trusting the certificate</td><td>curl refuses (exit 60)</td></tr>
+    <tr><td>The cache's own port 8080 from the host</td><td>not reachable</td></tr>
+    <tr><td>Plain <code>http://</code> to the proxy's TLS port</td><td>400</td></tr>
+    <tr><td>Upload with no password, through the proxy</td><td>401</td></tr>
+    <tr><td>Upload with the password, through the proxy</td><td>201, and the value reads back</td></tr>
+    <tr><td>Uploads of about 1 MB and 2 MB with nginx's default settings</td><td><strong>413</strong> from nginx, not from the cache</td></tr>
+    <tr><td>The same uploads, and 20 MB, after <code>client_max_body_size 1g;</code></td><td>201 each</td></tr>
+  </table></div>
+  <p>The size limit is the one to watch. nginx rejects bodies over 1 MB by default, and Gradle's cache entries are often bigger, so uploads of larger entries would be refused. The cache itself accepts up to 1 GiB per entry by default, which is why the example uses <code>1g</code>. See <a href="/gradle-build-cache-http-status-codes/">the status codes page</a>.</p>
 
-  <h3>7. Before you roll it out to a team</h3>
-  <ul class="trust">
-    <li>Put it behind HTTPS and give CI the read-write login and everyone else the read-only one: <a href="/gradle-build-cache-ci-writes-developers-read/">let CI write, developers only read</a>.</li>
-    <li>Watch it: <a href="/monitor-build-cache-prometheus-grafana/">monitoring</a>. Know how it forgets: <a href="/build-cache-eviction-size-limit/">eviction</a>.</li>
-    <li>Know how to empty it: <a href="/reset-gradle-build-cache/">reset</a>, and how to move it: <a href="/back-up-and-restore-build-cache/">back up and restore</a>.</li>
-  </ul>
+  <h2>Gradle over HTTPS</h2>
+  <p>With a certificate Gradle does not trust, the build still succeeds, but without the cache, and prints:</p>
+  <pre tabindex="0"><code>Could not load entry d4f2de693b561fd2c5d60b17a9232d6f from remote build cache: (certificate_unknown) PKIX path building failed: sun.security.provider.certpath.SunCertPathBuilderException: unable to find valid certification path to requested target</code></pre>
+  <p>For my self-signed test certificate I made Java trust it:</p>
+  <pre tabindex="0"><code>keytool -importcert -alias fsprod -file certs/cert.pem -keystore trust.jks -storepass changeit -noprompt
 
-  <p class="muted-note">This is a first try, not a production plan. The project is early, and the paid tiers are not built.</p>
+# gradle.properties
+systemProp.javax.net.ssl.trustStore=/path/to/trust.jks
+systemProp.javax.net.ssl.trustStorePassword=changeit</code></pre>
+  <p>With that, the first build ran <code>:compileJava</code> and the second printed <code>&gt; Task :compileJava FROM-CACHE</code>, through the proxy, over HTTPS, with the password. With a certificate from an authority Java already trusts you would not need the truststore lines. The Gradle side of the setup is in <a href="/gradle-build-cache-tutorial/">the tutorial</a>.</p>
+
+  <p class="muted-note">Related: <a href="/gradle-build-cache-docker-compose/">Gradle build cache with Docker Compose</a> and <a href="/remote-build-cache-security/">who can write to a remote build cache</a>.</p>
   <div class="cta-row">
-    <a class="btn" href="/gradle-build-cache-tutorial/">Gradle build cache tutorial</a>
+    <a class="btn" href="/first-15-minutes-build-cache/">Your first 15 minutes</a>
     <a class="btn btn-secondary" href="/">FosterStack home</a>
   </div>
 </main>

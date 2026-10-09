@@ -3,8 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Page not found</title>
-<meta name="robots" content="noindex">
+<title>Move a Maven Build Cache to a New Server: Real Run</title>
+<meta name="description" content="How to move the Apache Maven Build Cache Extension from one cache server to another: change one line, or copy the data folder. Tested with release 0.2.1.">
+<meta property="og:title" content="Move a Maven Build Cache to a New Server: Real Run">
+<meta property="og:description" content="How to move the Apache Maven Build Cache Extension from one cache server to another: change one line, or copy the data folder. Tested with release 0.2.1.">
+<meta property="og:url" content="https://fosterstack.com/migrate-maven-build-cache-to-a-new-server/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="FosterStack">
+<link rel="canonical" href="https://fosterstack.com/migrate-maven-build-cache-to-a-new-server/">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -71,6 +77,7 @@
   a { color: var(--accent); }
   code { overflow-wrap: anywhere; }
   pre code { overflow-wrap: normal; }
+  .table-scroll { max-width: 100%; overflow-x: auto; }
   :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 </style>
 </head>
@@ -80,17 +87,58 @@
   <div class="tag">Infrastructure worth keeping — and kept patched.</div>
 </header>
 <main>
-  <h1>Page not found</h1>
-  <p class="lede">There is nothing at this address. Here are the places most people are looking for.</p>
+  <h1>Move a Maven build cache to a new server</h1>
+  <p class="lede">You are replacing the machine that runs your build cache and your builds use the Apache Maven Build Cache Extension. Here is what to change, what to expect from the first build, and how to keep the cache warm. Every step was run for real with FosterStack Cache 0.2.1.</p>
+
+  <h2>The short answer</h2>
   <ul class="trust">
-    <li><a href="/">FosterStack home</a></li>
-    <li><a href="/build-cache-node-end-of-life/">Build Cache Node end of life: what happens and your options</a></li>
-    <li><a href="/migrate-build-cache-node/">Migrate from Build Cache Node: Gradle and Maven setup</a></li>
-    <li><a href="/build-cache-node-faq/">Questions and answers</a></li>
-    <li><a href="/gradle-remote-cache-not-working/">Gradle remote build cache not working</a></li>
-    <li><a href="/security/">Security policy: how to report a vulnerability</a></li>
+    <li>Change the address in <code>.mvn/maven-build-cache-config.xml</code>. Nothing else in the project changes.</li>
+    <li>If you only change the address, the first build is a normal full build and fills the new server. Nothing fails.</li>
+    <li>If you want the new server to be ready at once, stop the old one, copy its data folder, and start the new server on the copy.</li>
   </ul>
+
+  <h2>What we ran</h2>
+  <p>A small Maven project, Maven 3.10.0, extension 1.2.3, macOS (arm64). Every build used a fresh copy of the project and an empty local build cache, so the only thing shared was the cache server. All five builds ended with <code>BUILD SUCCESS</code>.</p>
+  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
+    <thead><tr><th>Build</th><th>Server it used</th><th>Result</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>Old server, empty</td><td>Built the project and saved the result to the server</td></tr>
+      <tr><td>2</td><td>Old server, from another machine</td><td>Restored from the cache, no compile</td></tr>
+      <tr><td>3</td><td>New server, empty, only the address changed</td><td>Full build, saved to the new server</td></tr>
+      <tr><td>4</td><td>New server, from another machine</td><td>Restored from the cache, no compile</td></tr>
+      <tr><td>5</td><td>New server started on a copy of the old data folder</td><td>Restored from the cache, no compile</td></tr>
+    </tbody>
+  </table></div>
+
+  <h2>Option 1: change the address only</h2>
+  <p>Start the new server, then edit the <code>url</code> in the cache config and commit it. We changed this one line and nothing else:</p>
+<pre tabindex="0"><code>&lt;remote enabled="true" saveToRemote="true" id="fosterstack-cache"&gt;
+  &lt;url&gt;http://127.0.0.1:18151/&lt;/url&gt;
+&lt;/remote&gt;</code></pre>
+  <p>Build 3 had no cached result to find, so Maven compiled the project and saved it:</p>
+<pre tabindex="0"><code>[INFO] Attempting to restore project demo:demo from build cache
+[INFO] Compiling 1 source file with javac [debug release 17] to target/classes
+[INFO] Saved to remote cache http://127.0.0.1:18151//v1.1/demo/demo/ebb9bceba2f7a6bc/demo.jar</code></pre>
+  <p>From then on, every other machine pointing at the new address gets the result from the new server, as build 4 did. Anyone who still has the old address in their config keeps using the old server until they update.</p>
+
+  <h2>Option 2: copy the data folder first</h2>
+  <p>This keeps the new server warm from the first build. Stop the old server, copy its data folder, and start the new server with its data folder set to the copy. See <a href="/back-up-and-restore-build-cache/">back up and restore</a> for why the old server should be stopped first.</p>
+<pre tabindex="0"><code>cp -R data-old data-new-copied
+FSCACHE_ADDR=127.0.0.1:18152 FSCACHE_DATA_DIR=$PWD/data-new-copied fscache</code></pre>
+  <p>Build 5 found the result straight away, with no compile:</p>
+<pre tabindex="0"><code>[INFO] Attempting to restore project demo:demo from build cache
+[INFO] Found cached build, restoring demo:demo from cache by checksum ebb9bceba2f7a6bc</code></pre>
+  <p>The new server's status page agreed: 2 hits and 0 misses at that point.</p>
+
+  <h2>How to tell it worked</h2>
+  <p>Look for <code>Found cached build, restoring</code> in the Maven output. You may also see <code>Saved to remote cache</code> lines on a build that restored. In our run these were a small report file that the extension saves each time, not a rebuild. If a build prints <code>Compiling</code> instead of <code>Found cached build</code>, it did not find a stored result.</p>
+
+  <h2>Credentials and other settings</h2>
+  <p>If the new server has logins, Maven reads them from the <code>&lt;server&gt;</code> entry in <code>settings.xml</code> whose id matches the <code>id</code> on the <code>&lt;remote&gt;</code> line. See <a href="/maven-remote-build-cache-setup/">Maven remote build cache setup</a> for that, and <a href="/maven-build-cache-corporate-proxy/">behind a corporate proxy</a> if your builds go through one. To move Gradle builds too, see <a href="/one-build-cache-server-gradle-and-maven/">one server for Gradle and Maven</a>.</p>
+
+  <p class="muted-note">Run on Maven 3.10.0 with maven-build-cache-extension 1.2.3 and FosterStack Cache 0.2.1, macOS (arm64).</p>
 </main>
+
 <footer>
   <div>
     <p>FosterStack is not affiliated with, endorsed by, or sponsored by Gradle Inc.

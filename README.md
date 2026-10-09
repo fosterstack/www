@@ -1,8 +1,7 @@
 # fosterstack/www — marketing site
 
 Static landing page for fosterstack.com. No forms, no email capture, no cookies, no
-analytics, and no third-party requests of any kind
-service, no analytics (add privacy-respecting analytics later if wanted).
+analytics, and no third-party requests of any kind.
 
 **One-time setup after cloning:** `git config core.hooksPath .githooks` — enables the
 public-repo hygiene pre-commit hook (see below). CI enforces the same check as a backstop

@@ -69,15 +69,15 @@
         overflow-x: auto; font-size: .9rem; line-height: 1.5; }
   .cta-row { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1.1rem; }
   .btn { display: inline-block; padding: .55rem 1rem; border-radius: 8px; font-weight: 600;
-         text-decoration: none; background: var(--accent); color: #fff; }
-  .btn-secondary { background: transparent; color: inherit; border: 1px solid #cbd5e1; }
+         text-decoration: none; background: var(--accent); color: var(--accent-fg); }
+  .btn-secondary { background: transparent; color: inherit; border: 1px solid var(--muted); }
   .muted-note { color: var(--muted); font-size: .93rem; margin-top: 1.1rem; }
   footer { border-top: 1px solid var(--line); margin-top: 4rem; padding: 1.5rem 1.25rem 3rem; }
   footer div { max-width: 44rem; margin: 0 auto; color: var(--muted); font-size: .82rem; }
   a { color: var(--accent); }
-  table { display: block; max-width: 100%; overflow-x: auto; }
   code { overflow-wrap: anywhere; }
   pre code { overflow-wrap: normal; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 </style>
 </head>
 <body>
@@ -90,12 +90,12 @@
   <p class="lede">How to put a password on a self-hosted build cache and give Gradle the right one, three ways to supply it, and what you see when it is wrong. Every output below is from a real run: a 0.2.1 server and Gradle 9.8.0 on macOS.</p>
 
   <h2>Turn on a password on the server</h2>
-  <pre><code>FSCACHE_USERNAME=gradle FSCACHE_PASSWORD=&lt;a long secret&gt; ./fscache</code></pre>
+  <pre tabindex="0"><code>FSCACHE_USERNAME=gradle FSCACHE_PASSWORD=&lt;a long secret&gt; ./fscache</code></pre>
   <p>This is HTTP Basic Auth. The health and metrics paths stay open without a password, so monitoring still works. The status page does not. For a second, read-only login see <a href="/gradle-build-cache-ci-writes-developers-read/">let CI write, developers only read</a>.</p>
 
   <h2>Tell Gradle the password</h2>
   <p>In <code>settings.gradle.kts</code>:</p>
-  <pre><code>// FosterStack Cache — remote Gradle build cache.
+  <pre tabindex="0"><code>// FosterStack Cache — remote Gradle build cache.
 // https://github.com/fosterstack/cache
 buildCache {
     remote&lt;HttpBuildCache&gt; {
@@ -119,7 +119,7 @@ buildCache {
 
   <h2>What a wrong or missing password looks like</h2>
   <p>Gradle treats a broken remote cache as non-fatal, so the build still succeeds, just without the cache. In my runs it printed this at the default log level, with a wrong password and with none:</p>
-  <pre><code>Could not load entry d4f2de693b561fd2c5d60b17a9232d6f from remote build cache: Loading entry from &#x27;http://127.0.0.1:18099/d4f2de693b561fd2c5d60b17a9232d6f&#x27; response status 401: Unauthorized</code></pre>
+  <pre tabindex="0"><code>Could not load entry d4f2de693b561fd2c5d60b17a9232d6f from remote build cache: Loading entry from &#x27;http://127.0.0.1:18099/d4f2de693b561fd2c5d60b17a9232d6f&#x27; response status 401: Unauthorized</code></pre>
   <p>If you see that line, the password Gradle sent was wrong or missing. To test the server directly, a 401 means wrong credentials and a 404 means the credentials are right and the key is not stored yet. See <a href="/gradle-build-cache-http-status-codes/">the status codes</a>.</p>
 
   <h2>Do I need to restart the Gradle daemon?</h2>

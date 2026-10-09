@@ -3,8 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Page not found</title>
-<meta name="robots" content="noindex">
+<title>Maven Build Cache Extension in a Multi-Module Project</title>
+<meta name="description" content="A real run of the Apache Maven Build Cache Extension on a three-module project with a self-hosted cache: which modules restore, which rebuild, and why.">
+<meta property="og:title" content="Maven Build Cache Extension in a Multi-Module Project">
+<meta property="og:description" content="A real run of the Apache Maven Build Cache Extension on a three-module project with a self-hosted cache: which modules restore, which rebuild, and why.">
+<meta property="og:url" content="https://fosterstack.com/maven-build-cache-extension-multi-module/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="FosterStack">
+<link rel="canonical" href="https://fosterstack.com/maven-build-cache-extension-multi-module/">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -71,6 +77,7 @@
   a { color: var(--accent); }
   code { overflow-wrap: anywhere; }
   pre code { overflow-wrap: normal; }
+  .table-scroll { max-width: 100%; overflow-x: auto; }
   :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 </style>
 </head>
@@ -80,17 +87,69 @@
   <div class="tag">Infrastructure worth keeping — and kept patched.</div>
 </header>
 <main>
-  <h1>Page not found</h1>
-  <p class="lede">There is nothing at this address. Here are the places most people are looking for.</p>
+  <h1>Maven build cache extension in a multi-module project: a real run</h1>
+  <p class="lede">With many modules, the Apache Maven Build Cache Extension keeps one stored result per module. We ran a three-module project against a self-hosted cache (FosterStack Cache 0.2.1, Maven 3.10.0, extension 1.2.3) and recorded which modules were restored and which were built.</p>
+
+  <h2>The short answer</h2>
   <ul class="trust">
-    <li><a href="/">FosterStack home</a></li>
-    <li><a href="/build-cache-node-end-of-life/">Build Cache Node end of life: what happens and your options</a></li>
-    <li><a href="/migrate-build-cache-node/">Migrate from Build Cache Node: Gradle and Maven setup</a></li>
-    <li><a href="/build-cache-node-faq/">Questions and answers</a></li>
-    <li><a href="/gradle-remote-cache-not-working/">Gradle remote build cache not working</a></li>
-    <li><a href="/security/">Security policy: how to report a vulnerability</a></li>
+    <li>Every module is stored and restored on its own.</li>
+    <li>Change one module and the modules it depends on are still restored.</li>
+    <li>Change one module and the modules that depend on it are built again.</li>
+    <li>You set the cache up once, in the parent project. Modules need no changes.</li>
   </ul>
+
+  <h2>What we ran</h2>
+  <p>Three modules: <code>core</code> has no dependencies, <code>util</code> uses <code>core</code>, and <code>app</code> uses <code>util</code>. Each has six small Java classes. Every build used a fresh copy of the project and an empty local build cache, so the only shared thing was the cache server. All six builds ended with <code>BUILD SUCCESS</code>.</p>
+  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
+    <thead><tr><th>Build</th><th>core</th><th>util</th><th>app</th></tr></thead>
+    <tbody>
+      <tr><td>1. First build, as CI would do it</td><td>built</td><td>built</td><td>built</td></tr>
+      <tr><td>2. Another machine, same code</td><td>restored</td><td>restored</td><td>restored</td></tr>
+      <tr><td>3. Edit inside a method in <code>core</code></td><td>built</td><td>built</td><td>built</td></tr>
+      <tr><td>4. A teammate makes the same edit</td><td>restored</td><td>restored</td><td>restored</td></tr>
+      <tr><td>5. Edit only <code>app</code></td><td>restored</td><td>restored</td><td>built</td></tr>
+      <tr><td>6. Edit only <code>util</code></td><td>restored</td><td>built</td><td>built</td></tr>
+    </tbody>
+  </table></div>
+  <p>"Restored" is the log line <code>Found cached build, restoring demo:core from cache</code> for that module. "Built" means Maven compiled it, then saved the result.</p>
+
+  <h2>What this means for your project</h2>
+  <ul class="trust">
+    <li><strong>Work flows downstream, not upstream (builds 5 and 6).</strong> An edit rebuilt that module and the modules that use it, and nothing before it.</li>
+    <li><strong>A small edit in a base module rebuilds everything above it (build 3).</strong> Even a change inside a method rebuilt all three modules in this run. Put code that changes often in modules near the top of the dependency chain.</li>
+    <li><strong>The first person pays (builds 3 and 4).</strong> The teammate with the same edit built nothing.</li>
+    <li><strong>This differs from Gradle in our other run.</strong> There, a change inside a method in the base module left the modules above it restored; see <a href="/gradle-build-cache-monorepo/">Gradle build cache for a monorepo</a>. Plan around the tool you use.</li>
+  </ul>
+
+  <h2>Set it up once, in the parent</h2>
+  <p>Two files in the <code>.mvn</code> folder at the root of the project, the same as for a single module:</p>
+<pre tabindex="0"><code>&lt;!-- .mvn/extensions.xml --&gt;
+&lt;extensions&gt;
+  &lt;extension&gt;
+    &lt;groupId&gt;org.apache.maven.extensions&lt;/groupId&gt;
+    &lt;artifactId&gt;maven-build-cache-extension&lt;/artifactId&gt;
+    &lt;version&gt;1.2.3&lt;/version&gt;
+  &lt;/extension&gt;
+&lt;/extensions&gt;</code></pre>
+<pre tabindex="0"><code>&lt;!-- .mvn/maven-build-cache-config.xml --&gt;
+&lt;cache xmlns="http://maven.apache.org/BUILD-CACHE-CONFIG/1.2.0"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://maven.apache.org/BUILD-CACHE-CONFIG/1.2.0 https://maven.apache.org/xsd/build-cache-config-1.2.0.xsd"&gt;
+  &lt;configuration&gt;
+    &lt;enabled&gt;true&lt;/enabled&gt;
+    &lt;remote enabled="true" saveToRemote="true" id="fosterstack-cache"&gt;
+      &lt;url&gt;http://127.0.0.1:18180/&lt;/url&gt;
+    &lt;/remote&gt;
+  &lt;/configuration&gt;
+&lt;/cache&gt;</code></pre>
+  <p>Replace the address with your server's. We used <code>127.0.0.1</code> over plain HTTP because the test ran on one machine; use HTTPS across a network. For logins, see <a href="/maven-remote-build-cache-setup/">Maven remote build cache setup</a>.</p>
+
+  <h2>If modules are not restored</h2>
+  <p>See <a href="/maven-build-cache-extension-not-restoring/">Maven build cache not restoring</a>. To turn the cache off or skip it for one build, see <a href="/maven-build-cache-extension-enable-disable/">enable or disable the extension</a>.</p>
+
+  <p class="muted-note">Run on Maven 3.10.0 with maven-build-cache-extension 1.2.3 and FosterStack Cache 0.2.1, macOS (arm64).</p>
 </main>
+
 <footer>
   <div>
     <p>FosterStack is not affiliated with, endorsed by, or sponsored by Gradle Inc.

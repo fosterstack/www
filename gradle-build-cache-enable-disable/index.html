@@ -3,8 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Page not found</title>
-<meta name="robots" content="noindex">
+<title>Enable or Disable the Gradle Build Cache: Flag or Property</title>
+<meta name="description" content="Every way to switch the Gradle build cache on or off, tested against a real self-hosted cache: --build-cache, org.gradle.caching, --no-build-cache and more.">
+<meta property="og:title" content="Enable or Disable the Gradle Build Cache: Flag or Property">
+<meta property="og:description" content="Every way to switch the Gradle build cache on or off, tested against a real self-hosted cache: --build-cache, org.gradle.caching, --no-build-cache and more.">
+<meta property="og:url" content="https://fosterstack.com/gradle-build-cache-enable-disable/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="FosterStack">
+<link rel="canonical" href="https://fosterstack.com/gradle-build-cache-enable-disable/">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -71,6 +77,7 @@
   a { color: var(--accent); }
   code { overflow-wrap: anywhere; }
   pre code { overflow-wrap: normal; }
+  .table-scroll { max-width: 100%; overflow-x: auto; }
   :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 </style>
 </head>
@@ -80,17 +87,60 @@
   <div class="tag">Infrastructure worth keeping — and kept patched.</div>
 </header>
 <main>
-  <h1>Page not found</h1>
-  <p class="lede">There is nothing at this address. Here are the places most people are looking for.</p>
+  <h1>Enable or disable the Gradle build cache: flag, property or settings</h1>
+  <p class="lede">Gradle uses the build cache only when it is switched on and a cache is set up. Here is every way we tried to switch it on and off, with what each one did against a real cache server (release 0.2.1, Gradle 9.8.0).</p>
+
+  <h2>The short answer</h2>
   <ul class="trust">
-    <li><a href="/">FosterStack home</a></li>
-    <li><a href="/build-cache-node-end-of-life/">Build Cache Node end of life: what happens and your options</a></li>
-    <li><a href="/migrate-build-cache-node/">Migrate from Build Cache Node: Gradle and Maven setup</a></li>
-    <li><a href="/build-cache-node-faq/">Questions and answers</a></li>
-    <li><a href="/gradle-remote-cache-not-working/">Gradle remote build cache not working</a></li>
-    <li><a href="/security/">Security policy: how to report a vulnerability</a></li>
+    <li>To turn it on for one build, add <code>--build-cache</code>.</li>
+    <li>To turn it on for everyone, put <code>org.gradle.caching=true</code> in <code>gradle.properties</code>.</li>
+    <li>To turn it off for one build, add <code>--no-build-cache</code>. It wins over the property.</li>
+    <li>Switching it on is not enough by itself: the project also needs the cache address in <code>settings.gradle.kts</code>.</li>
   </ul>
+
+  <h2>What we ran</h2>
+  <p>A four-module project with the cache address set in <code>settings.gradle.kts</code> (shown below). Each run used a fresh copy of the project and an empty Gradle home, so the only shared thing was the cache server. We ran only <code>:core:compileJava</code> and looked at what Gradle printed next to it. Every build ended with <code>BUILD SUCCESSFUL</code>.</p>
+  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
+    <thead><tr><th>How it was switched</th><th>Command</th><th>Result</th></tr></thead>
+    <tbody>
+      <tr><td>Flag (first build)</td><td><code>gradle :core:compileJava --build-cache</code></td><td>Ran, and saved the result to the server</td></tr>
+      <tr><td>Nothing set</td><td><code>gradle :core:compileJava</code></td><td>Ran. The cache was not used</td></tr>
+      <tr><td>Flag</td><td><code>gradle :core:compileJava --build-cache</code></td><td><code>FROM-CACHE</code></td></tr>
+      <tr><td>Property in <code>gradle.properties</code></td><td><code>org.gradle.caching=true</code></td><td><code>FROM-CACHE</code></td></tr>
+      <tr><td>Property, and the flag off</td><td><code>org.gradle.caching=true</code> and <code>--no-build-cache</code></td><td>Ran. The flag won</td></tr>
+      <tr><td>System property</td><td><code>gradle :core:compileJava -Dorg.gradle.caching=true</code></td><td><code>FROM-CACHE</code></td></tr>
+      <tr><td>Flag, and rerun everything</td><td><code>--build-cache --rerun-tasks</code></td><td>Ran, even though a result was stored</td></tr>
+    </tbody>
+  </table></div>
+
+  <h2>Which one to use</h2>
+  <ul class="trust">
+    <li><strong>Everyone, always:</strong> the property in <code>gradle.properties</code>, checked in with the project. New machines then need no flags.</li>
+    <li><strong>CI only:</strong> pass <code>--build-cache</code> in the CI command and leave the property out.</li>
+    <li><strong>A suspect build:</strong> run it with <code>--no-build-cache</code> to rule the cache out. If it stays broken, the cache is not the cause.</li>
+    <li><strong>Force fresh work:</strong> <code>--rerun-tasks</code> makes Gradle redo the tasks even when a stored result exists.</li>
+  </ul>
+
+  <h2>The address still has to be set</h2>
+  <p>This is the <code>settings.gradle.kts</code> we ran. Replace the address with your server's. We used <code>127.0.0.1</code> over plain HTTP because the test ran on one machine; use HTTPS across a network.</p>
+<pre tabindex="0"><code>buildCache {
+    local { isEnabled = false }
+    remote&lt;HttpBuildCache&gt; {
+        url = uri("http://127.0.0.1:18141/")
+        isPush = true
+        isAllowInsecureProtocol = true
+    }
+}</code></pre>
+
+  <h2>Read-only: turn off uploading, not the cache</h2>
+  <p>Setting <code>isPush = false</code> lets a build download from the cache but never upload. We tried it against an empty server with the cache switched on. The build succeeded and ran the task, and the server still held 0 entries afterwards. A second build also ran the task, because nothing had ever been stored. Read-only only helps when someone else, such as CI, fills the cache. That setup is described in <a href="/gradle-build-cache-ci-writes-developers-read/">CI writes, developers read</a>.</p>
+
+  <h2>If you do not see FROM-CACHE</h2>
+  <p>Work through <a href="/gradle-build-cache-hit-rate-low/">why the hit rate is low</a> and <a href="/gradle-remote-cache-not-working/">remote cache not working</a>. To clear stored results, see <a href="/reset-gradle-build-cache/">reset the build cache</a>.</p>
+
+  <p class="muted-note">Run on Gradle 9.8.0 with FosterStack Cache 0.2.1, macOS (arm64), Java 27.</p>
 </main>
+
 <footer>
   <div>
     <p>FosterStack is not affiliated with, endorsed by, or sponsored by Gradle Inc.
