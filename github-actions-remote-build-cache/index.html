@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Use a Remote Build Cache in GitHub Actions</title>
+<meta name="description" content="Set up a Gradle or Maven remote build cache in GitHub Actions: logins in secrets, a read-only login for pull requests, and what happens when secrets are empty.">
+<meta property="og:title" content="Use a Remote Build Cache in GitHub Actions">
+<meta property="og:description" content="Set up a Gradle or Maven remote build cache in GitHub Actions: logins in secrets, a read-only login for pull requests, and what happens when secrets are empty.">
+<meta property="og:url" content="https://fosterstack.com/github-actions-remote-build-cache/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="FosterStack">
+<link rel="canonical" href="https://fosterstack.com/github-actions-remote-build-cache/">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<style>
+  :root {
+    --bg: #ffffff; --fg: #16181d; --muted: #5b6472; --line: #e4e7ec;
+    --accent: #0d7a5f; --accent-fg: #ffffff; --card: #f6f8f9; --warn-bg: #fff7ed; --warn-line: #fdba74;
+    --mark: #0f4d66;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #101318; --fg: #e8eaf0; --muted: #98a2b3; --line: #262c36;
+      --accent: #2fbf95; --accent-fg: #08110e; --card: #171c23; --warn-bg: #241a10; --warn-line: #7c4a12;
+      --mark: #e8eaf0;
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 44rem; margin: 0 auto; padding: 0 1.25rem 4rem; }
+  header.site { max-width: 44rem; margin: 0 auto; padding: 1.25rem; display: flex; align-items: baseline; gap: .6rem; }
+  .logo { font-weight: 700; font-size: 1.05rem; letter-spacing: -.01em; }
+  .logo span { color: var(--accent); }
+  .logo .mark { width: 1.2em; height: 1.2em; vertical-align: -.24em; margin-right: .4em; }
+  .tag { color: var(--muted); font-size: .85rem; }
+  .notice {
+    background: var(--warn-bg); border: 1px solid var(--warn-line); border-radius: 8px;
+    padding: .7rem 1rem; font-size: .92rem; margin: 1.5rem 0 2.5rem;
+  }
+  h1 { font-size: 2rem; line-height: 1.2; letter-spacing: -.02em; margin-bottom: 1rem; }
+  .lede { font-size: 1.12rem; color: var(--muted); margin-bottom: 2rem; }
+  h2 { font-size: 1.25rem; margin: 3rem 0 .9rem; letter-spacing: -.01em; }
+  p + p { margin-top: .8rem; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: .8rem; margin-top: 1rem; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1rem 1.1rem; }
+  .card h3 { font-size: .98rem; margin-bottom: .35rem; }
+  .card p { font-size: .9rem; color: var(--muted); }
+  ul.trust { list-style: none; margin-top: .5rem; }
+  ul.trust li { padding: .45rem 0 .45rem 1.6rem; position: relative; }
+  ul.trust li::before { content: "✓"; position: absolute; left: .2rem; color: var(--accent); font-weight: 700; }
+  code, pre { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .88em; }
+  code { background: var(--card); border: 1px solid var(--line); border-radius: 5px; padding: .1em .35em; }
+  pre code { background: none; border: 0; padding: 0; color: inherit; font-size: 1em; }
+  button {
+    padding: .7rem 1.3rem; font-size: 1rem; font-weight: 600; cursor: pointer;
+    background: var(--accent); color: var(--accent-fg); border: 0; border-radius: 8px;
+  }
+  button:disabled { opacity: .6; cursor: default; }
+  table { width: 100%; border-collapse: collapse; font-size: .92rem; margin-top: 1rem; }
+  th, td { text-align: left; padding: .55rem .6rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  pre { background: #0f172a; color: #e2e8f0; padding: .9rem 1rem; border-radius: 8px;
+        overflow-x: auto; font-size: .9rem; line-height: 1.5; }
+  .cta-row { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1.1rem; }
+  .btn { display: inline-block; padding: .55rem 1rem; border-radius: 8px; font-weight: 600;
+         text-decoration: none; background: var(--accent); color: var(--accent-fg); }
+  .btn-secondary { background: transparent; color: inherit; border: 1px solid var(--muted); }
+  .muted-note { color: var(--muted); font-size: .93rem; margin-top: 1.1rem; }
+  footer { border-top: 1px solid var(--line); margin-top: 4rem; padding: 1.5rem 1.25rem 3rem; }
+  footer div { max-width: 44rem; margin: 0 auto; color: var(--muted); font-size: .82rem; }
+  a { color: var(--accent); }
+  code { overflow-wrap: anywhere; }
+  pre code { overflow-wrap: normal; }
+  .table-scroll { max-width: 100%; overflow-x: auto; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+</style>
+</head>
+<body>
+<header class="site">
+  <div class="logo"><svg class="mark" viewBox="0 0 96 96" aria-hidden="true" focusable="false"><rect x="12" y="14" width="72" height="18" rx="5" fill="var(--mark)"/><rect x="12" y="39" width="48" height="18" rx="5" fill="var(--mark)"/><rect x="12" y="64" width="26" height="18" rx="5" fill="var(--accent)"/></svg>foster<span>stack</span></div>
+  <div class="tag">Infrastructure worth keeping — and kept patched.</div>
+</header>
+<main>
+  <h1>Use a remote build cache in GitHub Actions</h1>
+  <p class="lede">You want your GitHub Actions builds to reuse each other's work without a password in the repository. Store the cache address and logins as secrets, read them from environment variables in your build settings, and let only builds on main store results.</p>
+
+  <h2>First: can the runner reach your server?</h2>
+  <p>A GitHub-hosted runner is a machine on GitHub's network, not on yours. It can only use a cache server at an address it can reach: a public HTTPS address, or a self-hosted runner on the same network as the server. We did not test any particular hosting. Put HTTPS in front of a server that the internet can reach. See <a href="/build-cache-docker-compose-production/">production build cache: Docker Compose, nginx and TLS</a>.</p>
+
+  <h2>1. Store five secrets</h2>
+  <p>In your repository, add these under Settings, Secrets and variables, Actions. Use the two logins from <a href="/gradle-build-cache-ci-writes-developers-read/">let CI write, developers only read</a>.</p>
+  <ul>
+    <li><code>CACHE_URL</code>: the address of your cache server.</li>
+    <li><code>CACHE_RW_USER</code> and <code>CACHE_RW_PASSWORD</code>: the read-write login, for builds on main.</li>
+    <li><code>CACHE_RO_USER</code> and <code>CACHE_RO_PASSWORD</code>: the read-only login, for pull requests.</li>
+  </ul>
+
+  <h2>2. Gradle: read the settings from environment variables</h2>
+  <p>In <code>settings.gradle.kts</code>:</p>
+<pre tabindex="0"><code>buildCache {
+    remote&lt;HttpBuildCache&gt; {
+        val cacheUrl = providers.environmentVariable("CACHE_URL").orNull
+        isEnabled = !cacheUrl.isNullOrBlank()
+        if (!cacheUrl.isNullOrBlank()) {
+            url = uri(cacheUrl)
+        }
+        isPush = providers.environmentVariable("CACHE_PUSH").orNull == "true"
+        credentials {
+            username = providers.environmentVariable("CACHE_USER").orNull
+            password = providers.environmentVariable("CACHE_PASSWORD").orNull
+        }
+    }
+}</code></pre>
+  <p>And in <code>gradle.properties</code>, so the build cache is on:</p>
+<pre tabindex="0"><code>org.gradle.caching=true</code></pre>
+  <p>With no <code>CACHE_URL</code> the remote cache is switched off and the build runs as it always did. That is what a fork pull request gets.</p>
+
+  <h2>3. The workflow</h2>
+<pre tabindex="0"><code>name: build
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Build
+        env:
+          CACHE_URL: ${{ secrets.CACHE_URL }}
+          CACHE_USER: ${{ github.event_name == 'push' &amp;&amp; secrets.CACHE_RW_USER || secrets.CACHE_RO_USER }}
+          CACHE_PASSWORD: ${{ github.event_name == 'push' &amp;&amp; secrets.CACHE_RW_PASSWORD || secrets.CACHE_RO_PASSWORD }}
+          CACHE_PUSH: ${{ github.event_name == 'push' &amp;&amp; 'true' || 'false' }}
+        run: ./gradlew build</code></pre>
+  <p>The secrets go into <code>env:</code> and are read from the environment. They are never written into the <code>run:</code> text. Pull in Java the way you already do; this snippet assumes the runner's own Java and the Gradle wrapper.</p>
+
+  <h2>Maven</h2>
+  <p>Maven needs three small files. The cache config keeps the remote switched off, so a build without the variables is a plain build. In <code>.mvn/maven-build-cache-config.xml</code>:</p>
+<pre tabindex="0"><code>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;cache xmlns="http://maven.apache.org/BUILD-CACHE-CONFIG/1.2.0"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://maven.apache.org/BUILD-CACHE-CONFIG/1.2.0 https://maven.apache.org/xsd/build-cache-config-1.2.0.xsd"&gt;
+  &lt;configuration&gt;
+    &lt;enabled&gt;true&lt;/enabled&gt;
+    &lt;remote enabled="false" id="fosterstack-cache"&gt;
+      &lt;url&gt;https://cache.example.com/&lt;/url&gt;
+    &lt;/remote&gt;
+  &lt;/configuration&gt;
+&lt;/cache&gt;</code></pre>
+  <p>The extension itself is set up in <code>.mvn/extensions.xml</code>; see <a href="/maven-remote-build-cache-setup/">Maven build cache extension: remote server setup</a>. The login goes in <code>.mvn/ci-settings.xml</code>. Maven fills in the <code>${env.NAME}</code> parts from the environment:</p>
+<pre tabindex="0"><code>&lt;settings&gt;
+  &lt;servers&gt;
+    &lt;server&gt;
+      &lt;id&gt;fosterstack-cache&lt;/id&gt;
+      &lt;username&gt;${env.CACHE_USER}&lt;/username&gt;
+      &lt;password&gt;${env.CACHE_PASSWORD}&lt;/password&gt;
+    &lt;/server&gt;
+  &lt;/servers&gt;
+&lt;/settings&gt;</code></pre>
+  <p>Use the same <code>env:</code> block as above and this <code>run:</code> step. Only pass the cache flags when there is a URL:</p>
+<pre tabindex="0"><code>run: |
+  if [ -n "$CACHE_URL" ]; then
+    mvn -B -s .mvn/ci-settings.xml \
+      -Dmaven.build.cache.remote.enabled=true \
+      -Dmaven.build.cache.remote.url="$CACHE_URL" \
+      -Dmaven.build.cache.remote.save.enabled="$CACHE_PUSH" \
+      verify
+  else
+    mvn -B verify
+  fi</code></pre>
+  <p>The guard matters. In our test, passing the cache flags with an empty address made Maven stop with an internal error and no build.</p>
+
+  <h2>Pull requests and forks</h2>
+  <p>Our advice, not a test result:</p>
+  <ul>
+    <li><strong>Give pull requests the read-only login.</strong> A pull request can then use what main stored, and cannot change it. See <a href="/can-someone-poison-our-build-cache/">can someone poison our shared build cache</a>.</li>
+    <li><strong>Do not hand the read-write login to pull requests.</strong> Keep it for builds on main.</li>
+    <li><strong>Expect fork pull requests to build without the cache.</strong> GitHub does not pass secrets to the runner when a workflow is triggered from a forked repository. With the settings above that is a plain build, which is fine.</li>
+    <li><strong>Avoid <code>pull_request_target</code> for builds.</strong> It runs with secrets, on code you did not write.</li>
+  </ul>
+
+  <h2>How we checked</h2>
+  <p>We ran both recipes against a real FosterStack Cache 0.2.1 server on a Mac. The server had a read-write login and a read-only login, both made up for the test. The cache address and logins reached the build only as environment variables.</p>
+  <div class="table-scroll" role="region" aria-label="What each build did" tabindex="0"><table>
+    <thead><tr><th>Build</th><th>Gradle</th><th>Maven</th></tr></thead>
+    <tbody>
+      <tr><td>Main build, read-write login, push on</td><td>Both compile tasks ran and were stored</td><td>Built; stored 3 files</td></tr>
+      <tr><td>Main build again from a fresh project</td><td>Both came from the cache</td><td>Restored from the cache</td></tr>
+      <tr><td>Pull request: read-only login, push off, one file changed</td><td>The unchanged module came from the cache, the changed one ran, nothing was stored</td><td>Built (the one module changed); nothing stored</td></tr>
+      <tr><td>Read-only login with push on</td><td>Build succeeded. <code>Could not store entry ... response status 403: Forbidden</code>, then <code>The remote build cache was disabled during the build due to errors.</code> Nothing stored</td><td>Build succeeded. <code>Unable to save to remote cache ...</code> with a 403 stack trace, 3 times. Nothing stored</td></tr>
+      <tr><td>No variables at all, or all of them empty (fork pull request)</td><td>Build succeeded without the cache. No cache warning was printed</td><td>Build succeeded without the cache (no flags passed)</td></tr>
+      <tr><td>Address set, login empty or missing, or a wrong password</td><td>Build succeeded. <code>Could not load entry ... response status 401: Unauthorized</code></td><td>Build succeeded. <code>[ERROR] Error downloading cache item</code></td></tr>
+      <tr><td>Cache flags passed with an empty address</td><td>Not applicable</td><td>Maven stopped with an internal error: <code>NoTransporterException: Cannot access  using the registered transporter factories</code></td></tr>
+    </tbody>
+  </table></div>
+  <p id="runner-pending"><strong>RUNNER-PENDING</strong>: the hosted-runner result goes here.</p>
+  <!-- RUNNER-PENDING: replace the paragraph above with the GitHub-hosted runner summary table and its run link before this page is merged. -->
+  <p class="muted-note">Gradle 9.8.0 with Java 21.0.12.1. Maven 3.9.9 with Build Cache Extension 1.2.3 and all eight plugin versions pinned. Every build used a fresh copy of the project and an empty local cache. Gradle built a two-module project with the compile tasks only. Maven built a one-module project with two tests. macOS (arm64), one machine.</p>
+  <p class="muted-note">Not tested: the workflow file itself (we did not run these exact YAML lines in GitHub Actions), a hosted runner reaching a real server, other Maven versions, and secrets that are missing as opposed to empty in a real fork pull request. All Maven runs used Maven 3.9.9. On Maven 3.10.0 an ordinary first-time miss is also logged as <code>[ERROR]</code>, so that line alone does not mean a login problem.</p>
+</main>
+<footer>
+  <div>
+    <p>FosterStack is not affiliated with, endorsed by, or sponsored by Gradle Inc.
+    "Gradle" and "Develocity" are trademarks of Gradle Inc., used here only to identify
+    compatibility. FosterStack contains no Gradle Inc. code; it is a clean-room implementation
+    of the documented remote build cache HTTP protocol. Apache Maven is a trademark of the
+    Apache Software Foundation; the Maven Build Cache Extension is Apache's project, not
+    ours.</p>
+    <p style="margin-top:.6rem">© 2026 FosterStack · <a href="/build-cache-node-end-of-life/">Build Cache Node end of life</a> · <a href="/migrate-build-cache-node/">Migrate</a> · <a href="/build-cache-node-faq/">FAQ</a> · <a href="/jenkins-ci-build-cache/">CI setup</a> · <a href="/how-we-build/">How we build</a> · <a href="/regulated/">For regulated markets</a> · <a href="https://github.com/fosterstack/cache">github.com/fosterstack/cache</a> · <a href="mailto:hello@fosterstack.com">hello@fosterstack.com</a></p>
+  </div>
+</footer>
+</body>
+</html>
