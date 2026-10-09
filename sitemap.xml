@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- One <url> per page with exactly one <loc>. Pages not listed on purpose: 404.html (noindex) and anything under .drafts/ (not deployed). -->
+<!-- One <url> per page with exactly one <loc>. Pages not listed on purpose: 404.html (noindex). -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://fosterstack.com/</loc>

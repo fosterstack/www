@@ -19,3 +19,6 @@ jobs:
 
       - name: check every tracked file against the allowlist
         run: git ls-files | ./bin/check-file-allowlist.sh
+
+      - name: self-test the allowlist (dot-prefixed paths are served, so they are held to a short list)
+        run: bash bin/test-check-file-allowlist.sh
