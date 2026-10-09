@@ -88,10 +88,10 @@
 </header>
 <main>
   <h1>Use a remote build cache in GitHub Actions</h1>
-  <p class="lede">You want your GitHub Actions builds to reuse each other's work without a password in the repository. Store the cache address and logins as secrets, read them from environment variables in your build settings, and let only builds on main store results.</p>
+  <p class="lede">Point your GitHub Actions builds at your own FosterStack Cache server so they reuse each other's work, with no password in the repository. Store the cache address and logins as secrets, read them from environment variables in your build settings, and let only builds on main store results.</p>
 
   <h2>First: can the runner reach your server?</h2>
-  <p>A GitHub-hosted runner is a machine on GitHub's network, not on yours. It can only use a cache server at an address it can reach: a public HTTPS address, or a self-hosted runner on the same network as the server. We did not test any particular hosting. Put HTTPS in front of a server that the internet can reach. See <a href="/build-cache-docker-compose-production/">production build cache: Docker Compose, nginx and TLS</a>.</p>
+  <p>A GitHub-hosted runner is a machine on GitHub's network, not on yours. It can only use a cache server at an address it can reach: a public HTTPS address, or a self-hosted runner on the same network as the server. We did not test any particular hosting. If the server is on the internet, put HTTPS in front of it. See <a href="/build-cache-docker-compose-production/">production build cache: Docker Compose, nginx and TLS</a>.</p>
 
   <h2>1. Store five secrets</h2>
   <p>In your repository, add these under Settings, Secrets and variables, Actions. Use the two logins from <a href="/gradle-build-cache-ci-writes-developers-read/">let CI write, developers only read</a>.</p>
@@ -136,6 +136,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Build
         env:
@@ -144,7 +146,7 @@ jobs:
           CACHE_PASSWORD: ${{ github.event_name == 'push' &amp;&amp; secrets.CACHE_RW_PASSWORD || secrets.CACHE_RO_PASSWORD }}
           CACHE_PUSH: ${{ github.event_name == 'push' &amp;&amp; 'true' || 'false' }}
         run: ./gradlew build</code></pre>
-  <p>The secrets go into <code>env:</code> and are read from the environment. They are never written into the <code>run:</code> text. Pull in Java the way you already do; this snippet assumes the runner's own Java and the Gradle wrapper.</p>
+  <p>The secrets go into <code>env:</code> and are read from the environment. They are never written into the <code>run:</code> text. This uses the runner's own Java and the Gradle wrapper; set up Java your usual way.</p>
 
   <h2>Maven</h2>
   <p>Maven needs three small files. The cache config keeps the remote switched off, so a build without the variables is a plain build. In <code>.mvn/maven-build-cache-config.xml</code>:</p>
@@ -175,20 +177,21 @@ jobs:
     mvn -B -s .mvn/ci-settings.xml \
       -Dmaven.build.cache.remote.enabled=true \
       -Dmaven.build.cache.remote.url="$CACHE_URL" \
-      -Dmaven.build.cache.remote.save.enabled="$CACHE_PUSH" \
+      -Dmaven.build.cache.remote.save.enabled="${CACHE_PUSH:-false}" \
       verify
   else
     mvn -B verify
   fi</code></pre>
-  <p>The guard matters. In our test, passing the cache flags with an empty address made Maven stop with an internal error and no build.</p>
+  <p>The guard matters: without it, Maven fails when there is no address (see the table below).</p>
 
   <h2>Pull requests and forks</h2>
   <p>Our advice, not a test result:</p>
   <ul>
-    <li><strong>Give pull requests the read-only login.</strong> A pull request can then use what main stored, and cannot change it. See <a href="/can-someone-poison-our-build-cache/">can someone poison our shared build cache</a>.</li>
+    <li><strong>Give pull requests the read-only login.</strong> The workflow above does not hand them the read-write login, so a pull request can use what main stored but cannot change it through this workflow. See <a href="/can-someone-poison-our-build-cache/">can someone poison our shared build cache</a>.</li>
+    <li><strong>Remember that anyone who can push a branch can edit the workflow in that branch.</strong> For stronger separation, keep the read-write secrets in a <a href="https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/manage-environments">GitHub environment</a> that only main can use. On private repositories environments need a paid GitHub plan.</li>
     <li><strong>Do not hand the read-write login to pull requests.</strong> Keep it for builds on main.</li>
-    <li><strong>Expect fork pull requests to build without the cache.</strong> GitHub does not pass secrets to the runner when a workflow is triggered from a forked repository. With the settings above that is a plain build, which is fine.</li>
-    <li><strong>Avoid <code>pull_request_target</code> for builds.</strong> It runs with secrets, on code you did not write.</li>
+    <li><strong>Expect fork pull requests to build without the cache.</strong> By default GitHub does not pass secrets to the runner when a workflow is triggered from a forked repository (<a href="https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-secrets">GitHub's page on secrets</a>). With the settings above that is a plain build, which is fine.</li>
+    <li><strong>Avoid <code>pull_request_target</code> for builds.</strong> It runs with secrets. If it also checks out the pull request's code, that code runs with those secrets (<a href="https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows">GitHub's page on events</a>).</li>
   </ul>
 
   <h2>How we checked</h2>
@@ -201,11 +204,11 @@ jobs:
       <tr><td>Pull request: read-only login, push off, one file changed</td><td>The unchanged module came from the cache, the changed one ran, nothing was stored</td><td>Built (the one module changed); nothing stored</td></tr>
       <tr><td>Read-only login with push on</td><td>Build succeeded. <code>Could not store entry ... response status 403: Forbidden</code>, then <code>The remote build cache was disabled during the build due to errors.</code> Nothing stored</td><td>Build succeeded. <code>Unable to save to remote cache ...</code> with a 403 stack trace, 3 times. Nothing stored</td></tr>
       <tr><td>No variables at all, or all of them empty (fork pull request)</td><td>Build succeeded without the cache. No cache warning was printed</td><td>Build succeeded without the cache (no flags passed)</td></tr>
-      <tr><td>Address set, login empty or missing, or a wrong password</td><td>Build succeeded. <code>Could not load entry ... response status 401: Unauthorized</code></td><td>Build succeeded. <code>[ERROR] Error downloading cache item</code></td></tr>
+      <tr><td>Address set, login empty (Gradle), missing, or a wrong password</td><td>Build succeeded. <code>Could not load entry ... response status 401: Unauthorized</code></td><td>Build succeeded. <code>[ERROR] Error downloading cache item</code></td></tr>
       <tr><td>Cache flags passed with an empty address</td><td>Not applicable</td><td>Maven stopped with an internal error: <code>NoTransporterException: Cannot access  using the registered transporter factories</code></td></tr>
     </tbody>
   </table></div>
-  <p><strong>On a GitHub-hosted machine.</strong> We also ran the Gradle settings from step 2 in a GitHub Actions job, with the cache address and logins passed as environment variables. A FosterStack Cache server ran on the same machine with made-up logins. Four builds:</p>
+  <p><strong>On a GitHub-hosted machine (Ubuntu 24, 4 CPUs, Java 21.0.12.1, Gradle 9.8.0).</strong> We also ran the Gradle settings from step 2 in a GitHub Actions job, with the cache address and logins passed as environment variables. A FosterStack Cache server ran on the same machine with made-up logins. Four builds:</p>
   <div class="table-scroll" role="region" aria-label="The four builds on a GitHub-hosted machine" tabindex="0"><table>
     <thead><tr><th>Build</th><th>Library compile</th><th>App compile</th><th>Entries on the server</th></tr></thead>
     <tbody>
@@ -215,8 +218,8 @@ jobs:
       <tr><td>All variables empty (fork pull request)</td><td>ran</td><td>ran</td><td>6 to 6</td></tr>
     </tbody>
   </table></div>
-  <p>The script also wrote straight to the server with the read-only login and with a wrong password, and would have stopped the run unless it got HTTP 403 and 401. The run passed. <a href="https://github.com/fosterstack/www/actions/runs/38004412787">The run and its log are public</a>, and the script is <a href="/bin/demo-github-actions.sh">bin/demo-github-actions.sh</a>. The server ran on the same machine, so this shows the settings and the environment-variable mechanism work. It does not show that a hosted runner can reach your own server.</p>  <p class="muted-note">Gradle 9.8.0 with Java 21.0.12.1. Maven 3.9.9 with Build Cache Extension 1.2.3 and all eight plugin versions pinned. Every build used a fresh copy of the project and an empty local cache. Gradle built a two-module project with the compile tasks only. Maven built a one-module project with two tests. macOS (arm64), one machine.</p>
-  <p class="muted-note">Not tested: the workflow file above with real secrets (the hosted-runner job used the same settings with made-up logins), a hosted runner reaching a real server, Maven on a hosted runner, other Maven versions, and secrets that are missing as opposed to empty in a real fork pull request. All Maven runs used Maven 3.9.9. On Maven 3.10.0 an ordinary first-time miss is also logged as <code>[ERROR]</code>, so that line alone does not mean a login problem.</p>
+  <p>The script also wrote straight to the server with the read-only login and with a wrong password, and would have stopped the run unless it got HTTP 403 and 401. The run passed. <a href="https://github.com/fosterstack/www/actions/runs/38004412787">The run and its log are public</a>, and the script is <a href="/bin/demo-github-actions.sh">bin/demo-github-actions.sh</a>. The server ran on the same machine, so this shows the settings and the environment-variable mechanism work. It does not show that a hosted runner can reach your own server.</p>  <p class="muted-note">Local runs: Gradle 9.8.0 with Java 21.0.12.1. Maven 3.9.9 with Build Cache Extension 1.2.3 and all eight plugin versions pinned. Every build used a fresh copy of the project and an empty local cache. Gradle built a two-module project with the compile tasks only. Maven built a one-module project with two tests. macOS (arm64), one machine.</p>
+  <p class="muted-note">Not tested: the workflow file above with real secrets (the hosted-runner job used the same settings with made-up logins), a hosted runner reaching a real server, Maven on a hosted runner, an empty Maven login (only a missing login and a wrong password were run), other Maven versions, and secrets that are missing as opposed to empty in a real fork pull request. All Maven runs used Maven 3.9.9. On Maven 3.10.0 an ordinary first-time miss is also logged as <code>[ERROR]</code>, so that line alone does not mean a login problem (see <a href="/maven-remote-build-cache-setup/">Maven build cache extension: remote server setup</a>).</p>
 </main>
 <footer>
   <div>
