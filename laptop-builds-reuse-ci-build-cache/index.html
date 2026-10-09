@@ -98,7 +98,7 @@
   </ol>
   <p>It works with Gradle and with Maven. You can let only CI write to the cache and give laptops read-only access. For Gradle see <a href="/gradle-build-cache-ci-writes-developers-read/">let CI write, developers only read</a>; for Maven see <a href="/maven-remote-build-cache-setup/">Maven remote build cache setup</a>.</p>
 
-  <h2>Does it work from a Mac laptop with Linux CI?</h2>
+  <h2>Does it work from a Mac laptop with Linux?</h2>
   <p>Yes, in our checks. A result stored in a Linux container was restored on a Mac, and a result stored on a Mac was restored in a Linux container. We checked this with Gradle and with Maven.</p>
 
   <h2>What has to match</h2>
@@ -107,7 +107,7 @@
     <li><strong>Gradle:</strong> a different Gradle version, or a different Java version (we tested Java 21 against 27).</li>
     <li><strong>Maven:</strong> a different Maven version, when plugin versions are left unpinned. Pin every plugin version your build uses, including clean, install, deploy and site, or keep the Maven version the same.</li>
   </ul>
-  <p>Keep those the same on laptops and CI. If your laptop still rebuilds, see <a href="/gradle-build-cache-hit-rate-low/">why the Gradle hit rate is low</a> or <a href="/maven-build-cache-extension-not-restoring/">why the Maven cache is not restoring</a>. To set it up, see <a href="/maven-remote-build-cache-setup/">Maven remote build cache setup</a> and the Gradle setup in the <a href="/gradle-build-cache-ci-writes-developers-read/">CI-writes page</a>.</p>
+  <p>Keep those the same on laptops and CI. For what to expect after an upgrade, see <a href="/build-cache-cold-after-gradle-or-maven-upgrade/">we upgraded Gradle or Maven and builds got slow</a>. If your laptop still rebuilds, see <a href="/gradle-build-cache-hit-rate-low/">why the Gradle hit rate is low</a> or <a href="/maven-build-cache-extension-not-restoring/">why the Maven cache is not restoring</a>. To set it up, see <a href="/maven-remote-build-cache-setup/">Maven remote build cache setup</a> and the Gradle setup in the <a href="/gradle-build-cache-ci-writes-developers-read/">CI-writes page</a>.</p>
 
   <h2>How we checked</h2>
   <div class="table-scroll" role="region" aria-label="Which platform stored and which restored" tabindex="0"><table>
@@ -117,7 +117,10 @@
       <tr><td>Mac</td><td>Linux</td><td>from cache</td><td>restored</td></tr>
     </tbody>
   </table></div>
-  <p class="muted-note">One small project per tool, one build per cell, a new empty cache server and a fresh project copy each time. Gradle: four modules, Gradle 9.8.0, Java 21.0.12.1 on both sides, tested on Linux arm64 and on emulated amd64 with the same result. Maven: one module, Maven 3.9.9, all plugin versions pinned, Java 21.0.12.1 on the Mac and 21.0.7 on Linux. The Linux side was a container on the same Mac as the cache server, not a real CI runner. Not tested: Windows, real CI hardware. The Gradle runs covered the compile tasks only. Run on FosterStack Cache 0.2.1.</p>
+  <p class="muted-note">One small project per tool, one build per cell. Each series started on a new empty cache server, every build used a fresh project copy, and no login was set.</p>
+  <p class="muted-note">Gradle: four modules, Gradle 9.8.0, Java 21.0.12.1 on both sides, tested on Linux arm64 and on emulated amd64 with the same result. The runs covered the compile tasks only.</p>
+  <p class="muted-note">Maven: one module, Maven 3.9.9, all plugin versions pinned, Java 21.0.12.1 on the Mac and 21.0.7 on Linux.</p>
+  <p class="muted-note">The Linux side was a container on the same Mac as the cache server, not a real CI runner. Not tested: Windows, real CI hardware, Maven on amd64. Run on FosterStack Cache 0.2.1.</p>
 </main>
 <footer>
   <div>
