@@ -112,14 +112,23 @@
 
   <h2>Security is the difference</h2>
   <p>Security is what we are building this product around. Everything below ships in the current release, and you can check each item yourself.</p>
+  <h3>Signed and verifiable</h3>
   <ul class="trust">
     <li><strong>Signed releases.</strong> Images and the checksums file are signed with Sigstore, with no signing key stored anywhere. <a href="https://github.com/fosterstack/cache/blob/main/docs/verify-images.md">How to verify</a>.</li>
     <li><strong>Build provenance.</strong> Every image and binary archive carries a signed statement naming the CI run that built it.</li>
     <li><strong>A bill of materials.</strong> Every binary archive ships with an SBOM.</li>
     <li><strong>Published vulnerability statements.</strong> A VEX file with each release says which known vulnerabilities do and do not affect it.</li>
+    <li><strong>Reproducible.</strong> Each image is assembled a second time on a separate machine, and the digests must match or the release fails.</li>
+  </ul>
+  <h3>Supply chain</h3>
+  <ul class="trust">
+    <li><strong>Pinned build steps.</strong> Every GitHub Action our releases use is pinned to an exact commit, and the container base image is pinned by digest.</li>
+    <li><strong>Watched for updates.</strong> Dependabot watches our Actions, Go modules and the base image.</li>
     <li><strong>Scanned before release.</strong> Two independent scanners with different databases check every release candidate, and any finding blocks the release unless a published VEX statement explains it. <a href="https://github.com/fosterstack/cache/blob/main/RELEASING.md">RELEASING.md</a>.</li>
     <li><strong>Rescanned every day.</strong> Every published image is scanned again daily, so a new vulnerability in something we shipped raises an issue.</li>
-    <li><strong>Reproducible.</strong> Each image is assembled a second time on a separate machine, and the digests must match or the release fails.</li>
+  </ul>
+  <h3>Small, quiet and patched</h3>
+  <ul class="trust">
     <li><strong>Tiny and quiet.</strong> A distroless image with one static program and no shell. It sends no telemetry and makes no outbound connections.</li>
     <li><strong>A FIPS build.</strong> A FIPS variant uses Go's validated FIPS 140-3 cryptographic module.</li>
     <li><strong>Patched for everyone.</strong> We aim to ship dependency fixes within 48 hours of disclosure. That is a target, not a promise. Security patches are never withheld from the free tier.</li>
