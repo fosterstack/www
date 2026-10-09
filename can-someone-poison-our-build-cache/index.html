@@ -91,12 +91,13 @@
   <p class="lede">Anyone who holds the write login can change what every other build restores. FosterStack Cache does not stop that holder. It lets you give everyone else a read-only login, and in our runs the server refused their writes.</p>
 
   <h2>The short answer</h2>
+  <p>The server has two logins. The write login lets a client store and replace entries. The read-only login lets a client only read them.</p>
   <ul style="padding-left:1.25rem">
     <li><strong>With the write login, yes.</strong> In our runs one plain HTTP request replaced a real entry. A fresh build from untouched source then restored the replaced output.</li>
     <li><strong>With the read-only login, no.</strong> Its writes and deletes were refused with a 403, and the stored entry stayed the same.</li>
     <li><strong>With no login, nothing.</strong> Reads and writes were refused with a 401.</li>
     <li><strong>The server stored whatever the write login sent.</strong> That was a different valid entry and 200 random bytes. The random bytes broke the next build.</li>
-    <li><strong><code>isPush = false</code> only stops your own build.</strong> With it set, the build uploaded nothing, but the same login could still write with a direct request.</li>
+    <li><strong>Gradle's <code>isPush = false</code> only stops your own build.</strong> With it set, the build uploaded nothing, but the same login could still write with a direct request.</li>
   </ul>
 
   <h2>What to do</h2>
