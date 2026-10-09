@@ -7,6 +7,7 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -22,3 +23,18 @@ jobs:
 
       - name: self-test the allowlist (dot-prefixed paths are served, so they are held to a short list)
         run: bash bin/test-check-file-allowlist.sh
+
+  # Timed runs for the "what does a cache miss cost" page. Manual dispatch only; never runs on push or
+  # pull request. No secrets, no write permission, no third-party action beyond the pinned checkout above.
+  # The script downloads the FosterStack Cache release and Gradle, and checks both against pinned sha256 values.
+  bench-miss-cost:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: timed runs (cache off, cache on and empty, cache on and filled)
+        run: BENCH_N=7 bash bin/bench-miss-cost.sh
