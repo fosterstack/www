@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gradle remote build cache authentication and 401 errors</title>
+<meta name="description" content="Put a password on a self-hosted Gradle build cache and give Gradle the right one: env var, gradle.properties or -P, and what a wrong password looks like.">
+<meta property="og:title" content="Gradle remote build cache authentication and 401 errors">
+<meta property="og:description" content="Put a password on a self-hosted Gradle build cache and give Gradle the right one: env var, gradle.properties or -P, and what a wrong password looks like.">
+<meta property="og:url" content="https://fosterstack.com/gradle-remote-build-cache-authentication/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="FosterStack">
+<link rel="canonical" href="https://fosterstack.com/gradle-remote-build-cache-authentication/">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<style>
+  :root {
+    --bg: #ffffff; --fg: #16181d; --muted: #5b6472; --line: #e4e7ec;
+    --accent: #0d7a5f; --accent-fg: #ffffff; --card: #f6f8f9; --warn-bg: #fff7ed; --warn-line: #fdba74;
+    --mark: #0f4d66;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #101318; --fg: #e8eaf0; --muted: #98a2b3; --line: #262c36;
+      --accent: #2fbf95; --accent-fg: #08110e; --card: #171c23; --warn-bg: #241a10; --warn-line: #7c4a12;
+      --mark: #e8eaf0;
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 44rem; margin: 0 auto; padding: 0 1.25rem 4rem; }
+  header.site { max-width: 44rem; margin: 0 auto; padding: 1.25rem; display: flex; align-items: baseline; gap: .6rem; }
+  .logo { font-weight: 700; font-size: 1.05rem; letter-spacing: -.01em; }
+  .logo span { color: var(--accent); }
+  .logo .mark { width: 1.2em; height: 1.2em; vertical-align: -.24em; margin-right: .4em; }
+  .tag { color: var(--muted); font-size: .85rem; }
+  .notice {
+    background: var(--warn-bg); border: 1px solid var(--warn-line); border-radius: 8px;
+    padding: .7rem 1rem; font-size: .92rem; margin: 1.5rem 0 2.5rem;
+  }
+  h1 { font-size: 2rem; line-height: 1.2; letter-spacing: -.02em; margin-bottom: 1rem; }
+  .lede { font-size: 1.12rem; color: var(--muted); margin-bottom: 2rem; }
+  h2 { font-size: 1.25rem; margin: 3rem 0 .9rem; letter-spacing: -.01em; }
+  p + p { margin-top: .8rem; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: .8rem; margin-top: 1rem; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1rem 1.1rem; }
+  .card h3 { font-size: .98rem; margin-bottom: .35rem; }
+  .card p { font-size: .9rem; color: var(--muted); }
+  ul.trust { list-style: none; margin-top: .5rem; }
+  ul.trust li { padding: .45rem 0 .45rem 1.6rem; position: relative; }
+  ul.trust li::before { content: "✓"; position: absolute; left: .2rem; color: var(--accent); font-weight: 700; }
+  code, pre { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .88em; }
+  code { background: var(--card); border: 1px solid var(--line); border-radius: 5px; padding: .1em .35em; }
+  pre code { background: none; border: 0; padding: 0; color: inherit; font-size: 1em; }
+  button {
+    padding: .7rem 1.3rem; font-size: 1rem; font-weight: 600; cursor: pointer;
+    background: var(--accent); color: var(--accent-fg); border: 0; border-radius: 8px;
+  }
+  button:disabled { opacity: .6; cursor: default; }
+  table { width: 100%; border-collapse: collapse; font-size: .92rem; margin-top: 1rem; }
+  th, td { text-align: left; padding: .55rem .6rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  pre { background: #0f172a; color: #e2e8f0; padding: .9rem 1rem; border-radius: 8px;
+        overflow-x: auto; font-size: .9rem; line-height: 1.5; }
+  .cta-row { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1.1rem; }
+  .btn { display: inline-block; padding: .55rem 1rem; border-radius: 8px; font-weight: 600;
+         text-decoration: none; background: var(--accent); color: #fff; }
+  .btn-secondary { background: transparent; color: inherit; border: 1px solid #cbd5e1; }
+  .muted-note { color: var(--muted); font-size: .93rem; margin-top: 1.1rem; }
+  footer { border-top: 1px solid var(--line); margin-top: 4rem; padding: 1.5rem 1.25rem 3rem; }
+  footer div { max-width: 44rem; margin: 0 auto; color: var(--muted); font-size: .82rem; }
+  a { color: var(--accent); }
+  table { display: block; max-width: 100%; overflow-x: auto; }
+  code { overflow-wrap: anywhere; }
+  pre code { overflow-wrap: normal; }
+</style>
+</head>
+<body>
+<header class="site">
+  <div class="logo"><svg class="mark" viewBox="0 0 96 96" aria-hidden="true" focusable="false"><rect x="12" y="14" width="72" height="18" rx="5" fill="var(--mark)"/><rect x="12" y="39" width="48" height="18" rx="5" fill="var(--mark)"/><rect x="12" y="64" width="26" height="18" rx="5" fill="var(--accent)"/></svg>foster<span>stack</span></div>
+  <div class="tag">Infrastructure worth keeping — and kept patched.</div>
+</header>
+<main>
+  <h1>Gradle remote build cache authentication and 401 errors</h1>
+  <p class="lede">How to put a password on a self-hosted build cache and give Gradle the right one, three ways to supply it, and what you see when it is wrong. Every output below is from a real run: a 0.2.1 server and Gradle 9.8.0 on macOS.</p>
+
+  <h2>Turn on a password on the server</h2>
+  <pre><code>FSCACHE_USERNAME=gradle FSCACHE_PASSWORD=&lt;a long secret&gt; ./fscache</code></pre>
+  <p>This is HTTP Basic Auth. The health and metrics paths stay open without a password, so monitoring still works. The status page does not. For a second, read-only login see <a href="/gradle-build-cache-ci-writes-developers-read/">let CI write, developers only read</a>.</p>
+
+  <h2>Tell Gradle the password</h2>
+  <p>In <code>settings.gradle.kts</code>:</p>
+  <pre><code>// FosterStack Cache — remote Gradle build cache.
+// https://github.com/fosterstack/cache
+buildCache {
+    remote&lt;HttpBuildCache&gt; {
+        url = uri(&quot;https://cache.example.com/&quot;)
+        isPush = true
+        credentials {
+            username = &quot;gradle&quot;
+            password = System.getenv(&quot;FSCACHE_PASSWORD&quot;)
+        }
+    }
+}</code></pre>
+  <p>Keep the <code>credentials</code> block even where the server has no password. I tested a client with this block against a server with authentication switched off: the build stored an entry and the next build got a hit, so one config works against both a test server and a real one.</p>
+
+  <h2>Three ways to supply the password</h2>
+  <p>All three were tested and gave <code>:compileJava FROM-CACHE</code>:</p>
+  <ul class="trust">
+    <li><strong>An environment variable</strong>, as above: <code>export FSCACHE_PASSWORD=...</code>. Good for CI, where the secret store sets it.</li>
+    <li><strong>Your user <code>~/.gradle/gradle.properties</code></strong>, with <code>password = providers.gradleProperty("fscachePassword").orNull</code> in the settings file and <code>fscachePassword=...</code> in that file. Never put it in the project's own <code>gradle.properties</code>, which gets committed.</li>
+    <li><strong>The command line</strong>: <code>gradle build -PfscachePassword=...</code>. Handy for one-off tests; it also shows up in the process list.</li>
+  </ul>
+
+  <h2>What a wrong or missing password looks like</h2>
+  <p>Gradle treats a broken remote cache as non-fatal, so the build still succeeds, just without the cache. In my runs it printed this at the default log level, with a wrong password and with none:</p>
+  <pre><code>Could not load entry d4f2de693b561fd2c5d60b17a9232d6f from remote build cache: Loading entry from &#x27;http://127.0.0.1:18099/d4f2de693b561fd2c5d60b17a9232d6f&#x27; response status 401: Unauthorized</code></pre>
+  <p>If you see that line, the password Gradle sent was wrong or missing. To test the server directly, a 401 means wrong credentials and a 404 means the credentials are right and the key is not stored yet. See <a href="/gradle-build-cache-http-status-codes/">the status codes</a>.</p>
+
+  <h2>Do I need to restart the Gradle daemon?</h2>
+  <p>Not in my test. I started a daemon with no password, exported the right one in the same shell, and the next build used it (same daemon process, no restart) and got <code>FROM-CACHE</code>. Then I exported a wrong one and the next build printed the 401 line straight away. If a password still seems ignored on your setup, <code>./gradlew --stop</code> is a quick way to rule the daemon out. I only tested macOS with Gradle 9.8.0.</p>
+
+  <h2>Use HTTPS</h2>
+  <p>Gradle sends the password with every request, so over plain HTTP it travels in the clear. Gradle refuses plain <code>http://</code> unless you opt in with <code>isAllowInsecureProtocol</code>; in my test the address <code>127.0.0.1</code> was let through without it, but the name <code>localhost</code> was refused. Put real servers behind HTTPS.</p>
+
+  <p class="muted-note">Related: <a href="/gradle-remote-cache-not-working/">Gradle remote build cache not working</a> and <a href="/remote-build-cache-security/">who can write to a remote build cache</a>.</p>
+  <div class="cta-row">
+    <a class="btn" href="/gradle-build-cache-tutorial/">Gradle build cache tutorial</a>
+    <a class="btn btn-secondary" href="/">FosterStack home</a>
+  </div>
+</main>
+<footer>
+  <div>
+    <p>FosterStack is not affiliated with, endorsed by, or sponsored by Gradle Inc.
+    "Gradle" and "Develocity" are trademarks of Gradle Inc., used here only to identify
+    compatibility. FosterStack contains no Gradle Inc. code; it is a clean-room implementation
+    of the documented remote build cache HTTP protocol. Apache Maven is a trademark of the
+    Apache Software Foundation; the Maven Build Cache Extension is Apache's project, not
+    ours.</p>
+    <p style="margin-top:.6rem">© 2026 FosterStack · <a href="/build-cache-node-end-of-life/">Build Cache Node end of life</a> · <a href="/migrate-build-cache-node/">Migrate</a> · <a href="/build-cache-node-faq/">FAQ</a> · <a href="/jenkins-ci-build-cache/">CI setup</a> · <a href="/how-we-build/">How we build</a> · <a href="/regulated/">For regulated markets</a> · <a href="https://github.com/fosterstack/cache">github.com/fosterstack/cache</a> · <a href="mailto:hello@fosterstack.com">hello@fosterstack.com</a></p>
+  </div>
+</footer>
+</body>
+</html>

@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Your first 15 minutes with a self-hosted build cache</title>
+<meta name="description" content="A checklist from nothing to your first FROM-CACHE with a self-hosted Gradle build cache, with the commands timed in a real run on release 0.2.1.">
+<meta property="og:title" content="Your first 15 minutes with a self-hosted build cache">
+<meta property="og:description" content="A checklist from nothing to your first FROM-CACHE with a self-hosted Gradle build cache, with the commands timed in a real run on release 0.2.1.">
+<meta property="og:url" content="https://fosterstack.com/first-15-minutes-build-cache/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="FosterStack">
+<link rel="canonical" href="https://fosterstack.com/first-15-minutes-build-cache/">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<style>
+  :root {
+    --bg: #ffffff; --fg: #16181d; --muted: #5b6472; --line: #e4e7ec;
+    --accent: #0d7a5f; --accent-fg: #ffffff; --card: #f6f8f9; --warn-bg: #fff7ed; --warn-line: #fdba74;
+    --mark: #0f4d66;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #101318; --fg: #e8eaf0; --muted: #98a2b3; --line: #262c36;
+      --accent: #2fbf95; --accent-fg: #08110e; --card: #171c23; --warn-bg: #241a10; --warn-line: #7c4a12;
+      --mark: #e8eaf0;
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 44rem; margin: 0 auto; padding: 0 1.25rem 4rem; }
+  header.site { max-width: 44rem; margin: 0 auto; padding: 1.25rem; display: flex; align-items: baseline; gap: .6rem; }
+  .logo { font-weight: 700; font-size: 1.05rem; letter-spacing: -.01em; }
+  .logo span { color: var(--accent); }
+  .logo .mark { width: 1.2em; height: 1.2em; vertical-align: -.24em; margin-right: .4em; }
+  .tag { color: var(--muted); font-size: .85rem; }
+  .notice {
+    background: var(--warn-bg); border: 1px solid var(--warn-line); border-radius: 8px;
+    padding: .7rem 1rem; font-size: .92rem; margin: 1.5rem 0 2.5rem;
+  }
+  h1 { font-size: 2rem; line-height: 1.2; letter-spacing: -.02em; margin-bottom: 1rem; }
+  .lede { font-size: 1.12rem; color: var(--muted); margin-bottom: 2rem; }
+  h2 { font-size: 1.25rem; margin: 3rem 0 .9rem; letter-spacing: -.01em; }
+  p + p { margin-top: .8rem; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: .8rem; margin-top: 1rem; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1rem 1.1rem; }
+  .card h3 { font-size: .98rem; margin-bottom: .35rem; }
+  .card p { font-size: .9rem; color: var(--muted); }
+  ul.trust { list-style: none; margin-top: .5rem; }
+  ul.trust li { padding: .45rem 0 .45rem 1.6rem; position: relative; }
+  ul.trust li::before { content: "✓"; position: absolute; left: .2rem; color: var(--accent); font-weight: 700; }
+  code, pre { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .88em; }
+  code { background: var(--card); border: 1px solid var(--line); border-radius: 5px; padding: .1em .35em; }
+  pre code { background: none; border: 0; padding: 0; color: inherit; font-size: 1em; }
+  button {
+    padding: .7rem 1.3rem; font-size: 1rem; font-weight: 600; cursor: pointer;
+    background: var(--accent); color: var(--accent-fg); border: 0; border-radius: 8px;
+  }
+  button:disabled { opacity: .6; cursor: default; }
+  table { width: 100%; border-collapse: collapse; font-size: .92rem; margin-top: 1rem; }
+  th, td { text-align: left; padding: .55rem .6rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  pre { background: #0f172a; color: #e2e8f0; padding: .9rem 1rem; border-radius: 8px;
+        overflow-x: auto; font-size: .9rem; line-height: 1.5; }
+  .cta-row { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1.1rem; }
+  .btn { display: inline-block; padding: .55rem 1rem; border-radius: 8px; font-weight: 600;
+         text-decoration: none; background: var(--accent); color: #fff; }
+  .btn-secondary { background: transparent; color: inherit; border: 1px solid #cbd5e1; }
+  .muted-note { color: var(--muted); font-size: .93rem; margin-top: 1.1rem; }
+  footer { border-top: 1px solid var(--line); margin-top: 4rem; padding: 1.5rem 1.25rem 3rem; }
+  footer div { max-width: 44rem; margin: 0 auto; color: var(--muted); font-size: .82rem; }
+  a { color: var(--accent); }
+  table { display: block; max-width: 100%; overflow-x: auto; }
+  code { overflow-wrap: anywhere; }
+  pre code { overflow-wrap: normal; }
+</style>
+</head>
+<body>
+<header class="site">
+  <div class="logo"><svg class="mark" viewBox="0 0 96 96" aria-hidden="true" focusable="false"><rect x="12" y="14" width="72" height="18" rx="5" fill="var(--mark)"/><rect x="12" y="39" width="48" height="18" rx="5" fill="var(--mark)"/><rect x="12" y="64" width="26" height="18" rx="5" fill="var(--accent)"/></svg>foster<span>stack</span></div>
+  <div class="tag">Infrastructure worth keeping — and kept patched.</div>
+</header>
+<main>
+  <h1>Your first 15 minutes with a self-hosted build cache</h1>
+  <p class="lede">A checklist from nothing to your first <code>FROM-CACHE</code>. I timed the commands on a real 0.2.1 release: ten seconds in all, on a laptop that already had Gradle and Java and a fast network. The 15 minutes is for you: reading, choosing values, and pointing your own project at the server.</p>
+
+  <h2>What I timed</h2>
+  <table>
+    <tr><th>Step</th><th>Took</th></tr>
+    <tr><td>Download the release and verify its signature and checksum</td><td>1 second</td></tr>
+    <tr><td>Unpack it and start the server, with a password and a size cap</td><td>1 second</td></tr>
+    <tr><td>Write the project files</td><td>under 1 second</td></tr>
+    <tr><td>Build, clean, build again, and see <code>FROM-CACHE</code></td><td>8 seconds</td></tr>
+  </table>
+
+  <h2>The checklist</h2>
+  <h3>1. Decide where it will run</h3>
+  <ul class="trust">
+    <li>A machine your CI runners and developers can reach. The server is one small program, and disk is what matters. See <a href="/build-cache-server-sizing/">server sizing</a>.</li>
+    <li>Plan on HTTPS for anything beyond a first try. Gradle sends the password with every request.</li>
+  </ul>
+
+  <h3>2. Download it and check it is ours</h3>
+  <pre><code>VER=0.2.1
+PLATFORM=darwin_arm64    # or linux_amd64, linux_arm64, darwin_amd64
+gh release download v${VER} --repo fosterstack/cache \
+  -p checksums.txt -p checksums.txt.bundle -p &quot;fscache_${VER}_${PLATFORM}.tar.gz&quot;
+cosign verify-blob --bundle checksums.txt.bundle \
+  --certificate-identity-regexp=&#x27;^https://github.com/fosterstack/cache/&#x27; \
+  --certificate-oidc-issuer=&#x27;https://token.actions.githubusercontent.com&#x27; checksums.txt
+sha256sum -c &lt;(grep &quot;fscache_${VER}_${PLATFORM}.tar.gz&quot; checksums.txt | grep -v sbom)</code></pre>
+  <p>You should see <code>Verified OK</code> and then <code>...tar.gz: OK</code>. More checks are in <a href="/verify-a-release/">Verify a release yourself</a>. Prefer a container? See <a href="/gradle-build-cache-docker-compose/">Gradle build cache with Docker Compose</a>.</p>
+
+  <h3>3. Start it with a password and a size cap</h3>
+  <pre><code>tar xzf fscache_${VER}_${PLATFORM}.tar.gz
+FSCACHE_USERNAME=gradle FSCACHE_PASSWORD=&lt;a long secret&gt; \
+FSCACHE_MAX_BYTES=1073741824 ./fscache</code></pre>
+  <p>That cap is 1 GiB, in bytes. Real caches are bigger; copy values from <a href="/build-cache-server-sizing/">the sizing page</a>.</p>
+
+  <h3>4. Check it is up</h3>
+  <ul class="trust">
+    <li><code>curl localhost:8080/healthz</code> should print <code>ok</code>.</li>
+    <li><code>curl -u gradle:&lt;secret&gt; localhost:8080/statusz</code> should show <code>"version": "v0.2.1"</code>.</li>
+  </ul>
+
+  <h3>5. Point Gradle at it</h3>
+  <p>In <code>settings.gradle.kts</code>, and turn caching on with <code>org.gradle.caching=true</code> in <code>gradle.properties</code>:</p>
+  <pre><code>// FosterStack Cache — remote Gradle build cache.
+// https://github.com/fosterstack/cache
+buildCache {
+    remote&lt;HttpBuildCache&gt; {
+        url = uri(&quot;http://127.0.0.1:8080/&quot;)
+        isPush = true
+        credentials {
+            username = &quot;gradle&quot;
+            password = System.getenv(&quot;FSCACHE_PASSWORD&quot;)
+        }
+    }
+}</code></pre>
+  <p>Use <code>127.0.0.1</code> for a first try on the same machine. On Gradle 9.8.0 the name <code>localhost</code> was refused without an opt-in. Maven instead? See <a href="/maven-remote-build-cache-setup/">the Maven setup</a>.</p>
+
+  <h3>6. Build twice and look for FROM-CACHE</h3>
+  <pre><code>export FSCACHE_PASSWORD=&lt;a long secret&gt;
+gradle build --build-cache
+gradle clean
+gradle build --build-cache
+&gt; Task :compileJava FROM-CACHE</code></pre>
+  <p>In my run the first build printed <code>&gt; Task :compileJava</code> and the second <code>&gt; Task :compileJava FROM-CACHE</code>, and the status page showed one entry and one hit. (I had turned Gradle's local cache off in this test, so the hit had to come from the server. With it on, a hit can come from your own machine instead, and the server's hit counter may not move. I did not test that case.) For a fuller walk-through, see the <a href="/gradle-build-cache-tutorial/">Gradle build cache tutorial</a>. If the second build does not show it, see <a href="/gradle-remote-cache-not-working/">Gradle remote build cache not working</a>.</p>
+
+  <h3>7. Before you roll it out to a team</h3>
+  <ul class="trust">
+    <li>Put it behind HTTPS and give CI the read-write login and everyone else the read-only one: <a href="/gradle-build-cache-ci-writes-developers-read/">let CI write, developers only read</a>.</li>
+    <li>Watch it: <a href="/monitor-build-cache-prometheus-grafana/">monitoring</a>. Know how it forgets: <a href="/build-cache-eviction-size-limit/">eviction</a>.</li>
+    <li>Know how to empty it: <a href="/reset-gradle-build-cache/">reset</a>, and how to move it: <a href="/back-up-and-restore-build-cache/">back up and restore</a>.</li>
+  </ul>
+
+  <p class="muted-note">This is a first try, not a production plan. The project is early, and the paid tiers are not built.</p>
+  <div class="cta-row">
+    <a class="btn" href="/gradle-build-cache-tutorial/">Gradle build cache tutorial</a>
+    <a class="btn btn-secondary" href="/">FosterStack home</a>
+  </div>
+</main>
+<footer>
+  <div>
+    <p>FosterStack is not affiliated with, endorsed by, or sponsored by Gradle Inc.
+    "Gradle" and "Develocity" are trademarks of Gradle Inc., used here only to identify
+    compatibility. FosterStack contains no Gradle Inc. code; it is a clean-room implementation
+    of the documented remote build cache HTTP protocol. Apache Maven is a trademark of the
+    Apache Software Foundation; the Maven Build Cache Extension is Apache's project, not
+    ours.</p>
+    <p style="margin-top:.6rem">© 2026 FosterStack · <a href="/build-cache-node-end-of-life/">Build Cache Node end of life</a> · <a href="/migrate-build-cache-node/">Migrate</a> · <a href="/build-cache-node-faq/">FAQ</a> · <a href="/jenkins-ci-build-cache/">CI setup</a> · <a href="/how-we-build/">How we build</a> · <a href="/regulated/">For regulated markets</a> · <a href="https://github.com/fosterstack/cache">github.com/fosterstack/cache</a> · <a href="mailto:hello@fosterstack.com">hello@fosterstack.com</a></p>
+  </div>
+</footer>
+</body>
+</html>

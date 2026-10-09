@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Build cache eviction: how the size limit works</title>
+<meta name="description" content="What a self-hosted build cache does when it reaches its size cap: least-recently-used eviction, real numbers from a 0.2.1 server, and what an oversized entry gets.">
+<meta property="og:title" content="Build cache eviction: how the size limit works">
+<meta property="og:description" content="What a self-hosted build cache does when it reaches its size cap: least-recently-used eviction, real numbers from a 0.2.1 server, and what an oversized entry gets.">
+<meta property="og:url" content="https://fosterstack.com/build-cache-eviction-size-limit/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="FosterStack">
+<link rel="canonical" href="https://fosterstack.com/build-cache-eviction-size-limit/">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<style>
+  :root {
+    --bg: #ffffff; --fg: #16181d; --muted: #5b6472; --line: #e4e7ec;
+    --accent: #0d7a5f; --accent-fg: #ffffff; --card: #f6f8f9; --warn-bg: #fff7ed; --warn-line: #fdba74;
+    --mark: #0f4d66;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #101318; --fg: #e8eaf0; --muted: #98a2b3; --line: #262c36;
+      --accent: #2fbf95; --accent-fg: #08110e; --card: #171c23; --warn-bg: #241a10; --warn-line: #7c4a12;
+      --mark: #e8eaf0;
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 44rem; margin: 0 auto; padding: 0 1.25rem 4rem; }
+  header.site { max-width: 44rem; margin: 0 auto; padding: 1.25rem; display: flex; align-items: baseline; gap: .6rem; }
+  .logo { font-weight: 700; font-size: 1.05rem; letter-spacing: -.01em; }
+  .logo span { color: var(--accent); }
+  .logo .mark { width: 1.2em; height: 1.2em; vertical-align: -.24em; margin-right: .4em; }
+  .tag { color: var(--muted); font-size: .85rem; }
+  .notice {
+    background: var(--warn-bg); border: 1px solid var(--warn-line); border-radius: 8px;
+    padding: .7rem 1rem; font-size: .92rem; margin: 1.5rem 0 2.5rem;
+  }
+  h1 { font-size: 2rem; line-height: 1.2; letter-spacing: -.02em; margin-bottom: 1rem; }
+  .lede { font-size: 1.12rem; color: var(--muted); margin-bottom: 2rem; }
+  h2 { font-size: 1.25rem; margin: 3rem 0 .9rem; letter-spacing: -.01em; }
+  p + p { margin-top: .8rem; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: .8rem; margin-top: 1rem; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1rem 1.1rem; }
+  .card h3 { font-size: .98rem; margin-bottom: .35rem; }
+  .card p { font-size: .9rem; color: var(--muted); }
+  ul.trust { list-style: none; margin-top: .5rem; }
+  ul.trust li { padding: .45rem 0 .45rem 1.6rem; position: relative; }
+  ul.trust li::before { content: "✓"; position: absolute; left: .2rem; color: var(--accent); font-weight: 700; }
+  code, pre { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .88em; }
+  code { background: var(--card); border: 1px solid var(--line); border-radius: 5px; padding: .1em .35em; }
+  pre code { background: none; border: 0; padding: 0; color: inherit; font-size: 1em; }
+  button {
+    padding: .7rem 1.3rem; font-size: 1rem; font-weight: 600; cursor: pointer;
+    background: var(--accent); color: var(--accent-fg); border: 0; border-radius: 8px;
+  }
+  button:disabled { opacity: .6; cursor: default; }
+  table { width: 100%; border-collapse: collapse; font-size: .92rem; margin-top: 1rem; }
+  th, td { text-align: left; padding: .55rem .6rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  pre { background: #0f172a; color: #e2e8f0; padding: .9rem 1rem; border-radius: 8px;
+        overflow-x: auto; font-size: .9rem; line-height: 1.5; }
+  .cta-row { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1.1rem; }
+  .btn { display: inline-block; padding: .55rem 1rem; border-radius: 8px; font-weight: 600;
+         text-decoration: none; background: var(--accent); color: #fff; }
+  .btn-secondary { background: transparent; color: inherit; border: 1px solid #cbd5e1; }
+  .muted-note { color: var(--muted); font-size: .93rem; margin-top: 1.1rem; }
+  footer { border-top: 1px solid var(--line); margin-top: 4rem; padding: 1.5rem 1.25rem 3rem; }
+  footer div { max-width: 44rem; margin: 0 auto; color: var(--muted); font-size: .82rem; }
+  a { color: var(--accent); }
+  table { display: block; max-width: 100%; overflow-x: auto; }
+  code { overflow-wrap: anywhere; }
+  pre code { overflow-wrap: normal; }
+</style>
+</head>
+<body>
+<header class="site">
+  <div class="logo"><svg class="mark" viewBox="0 0 96 96" aria-hidden="true" focusable="false"><rect x="12" y="14" width="72" height="18" rx="5" fill="var(--mark)"/><rect x="12" y="39" width="48" height="18" rx="5" fill="var(--mark)"/><rect x="12" y="64" width="26" height="18" rx="5" fill="var(--accent)"/></svg>foster<span>stack</span></div>
+  <div class="tag">Infrastructure worth keeping — and kept patched.</div>
+</header>
+<main>
+  <h1>Build cache eviction: how the size limit works</h1>
+  <p class="lede">A self-hosted build cache cannot grow forever. FosterStack Cache has a size cap, and when it is reached it removes the entries used least recently. This page shows exactly what that looks like, from a real 0.2.1 server with a deliberately tiny cap.</p>
+
+  <h2>Setting the cap</h2>
+  <p>Set <code>FSCACHE_MAX_BYTES</code>, in bytes. The default, <code>0</code>, means no limit. Real servers use gigabytes; see <a href="/build-cache-server-sizing/">server sizing</a> for values you can copy. For this test I used 3500 bytes, so that a few small entries fill it:</p>
+  <pre><code>FSCACHE_MAX_BYTES=3500 ./fscache</code></pre>
+
+  <h2>What happened</h2>
+  <p>I stored three 1,000-byte entries, read one of them, then stored two more. After each step I looked at <code>/statusz</code>, the status page, and tried to read every key back.</p>
+  <table>
+    <tr><th>Step</th><th>Stored afterwards</th><th>Evicted so far</th><th>Which keys could be read</th></tr>
+    <tr><td>Store k1, k2, k3</td><td>3,000 bytes, 3 entries</td><td>0</td><td>all three</td></tr>
+    <tr><td>Read k1</td><td>unchanged</td><td>0</td><td>k1 is now the most recently used</td></tr>
+    <tr><td>Store k4 (would go over 3,500)</td><td>3,000 bytes, 3 entries</td><td>1</td><td>k1, k3, k4. <strong>k2 is gone.</strong></td></tr>
+    <tr><td>Store k5</td><td>3,000 bytes, 3 entries</td><td>2</td><td>k3, k4, k5. <strong>k1 is gone.</strong></td></tr>
+  </table>
+  <p>The stored size never went above the cap. Each time something new did not fit, the entry that had gone longest without being used was removed.</p>
+  <p><strong>Reading counts as using.</strong> In the last step k1 went too, even though I had read it earlier. That is because my own checks after storing k4 read k1, k3 and k4 in that order, which made k1 the oldest again. A cache hit keeps an entry alive.</p>
+
+  <h2>An entry bigger than the whole cap</h2>
+  <p>I also tried storing 4,000 bytes against the 3,500 cap. The server refused it with a 413 and stored nothing, and nothing else was evicted to make room. The other limit, <code>FSCACHE_MAX_BODY_BYTES</code>, is separate and defaults to 1 GiB per entry. See <a href="/gradle-build-cache-http-status-codes/">the status codes page</a>.</p>
+
+  <h2>Watching it on a real cache</h2>
+  <p>The same numbers are in <code>/statusz</code> as <code>store_bytes</code>, <code>max_bytes</code>, <code>store_entries</code> and <code>evicted_entries</code>, and in the Prometheus metrics (<code>fscache_evicted_entries_total</code> and <code>fscache_store_bytes</code>). A rising eviction count together with a hit rate that never climbs means the cap is too small for your build. See <a href="/monitor-build-cache-prometheus-grafana/">monitoring</a>.</p>
+
+  <h2>Try it yourself</h2>
+  <pre><code>FSCACHE_ADDR=127.0.0.1:8080 FSCACHE_DATA_DIR=./data FSCACHE_MAX_BYTES=3500 ./fscache &amp;
+until curl -s localhost:8080/healthz &gt;/dev/null; do sleep 0.2; done   # wait until it is up
+
+put() { head -c 1000 /dev/zero | curl -s -o /dev/null -w &quot;PUT $1 %{http_code}\n&quot; -X PUT --data-binary @- localhost:8080/$1; }
+get() { curl -s -o /dev/null -w &quot;$1=%{http_code} &quot; localhost:8080/$1; }
+put k1; put k2; put k3
+get k1; echo
+put k4
+for k in k1 k2 k3 k4; do get $k; done; echo
+curl -s localhost:8080/statusz | grep -E &#x27;store_bytes|evicted&#x27;
+
+# the output of the middle line in my run:
+# k1=200 k2=404 k3=200 k4=200</code></pre>
+
+  <p class="muted-note">Related: <a href="/reset-gradle-build-cache/">how to clear a build cache</a> and <a href="/migrate-build-cache-node/">Gradle and Maven setup</a>.</p>
+  <div class="cta-row">
+    <a class="btn" href="/build-cache-server-sizing/">Server sizing</a>
+    <a class="btn btn-secondary" href="/">FosterStack home</a>
+  </div>
+</main>
+<footer>
+  <div>
+    <p>FosterStack is not affiliated with, endorsed by, or sponsored by Gradle Inc.
+    "Gradle" and "Develocity" are trademarks of Gradle Inc., used here only to identify
+    compatibility. FosterStack contains no Gradle Inc. code; it is a clean-room implementation
+    of the documented remote build cache HTTP protocol. Apache Maven is a trademark of the
+    Apache Software Foundation; the Maven Build Cache Extension is Apache's project, not
+    ours.</p>
+    <p style="margin-top:.6rem">© 2026 FosterStack · <a href="/build-cache-node-end-of-life/">Build Cache Node end of life</a> · <a href="/migrate-build-cache-node/">Migrate</a> · <a href="/build-cache-node-faq/">FAQ</a> · <a href="/jenkins-ci-build-cache/">CI setup</a> · <a href="/how-we-build/">How we build</a> · <a href="/regulated/">For regulated markets</a> · <a href="https://github.com/fosterstack/cache">github.com/fosterstack/cache</a> · <a href="mailto:hello@fosterstack.com">hello@fosterstack.com</a></p>
+  </div>
+</footer>
+</body>
+</html>
