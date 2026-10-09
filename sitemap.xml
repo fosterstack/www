@@ -183,4 +183,8 @@
     <loc>https://fosterstack.com/maven-build-cache-extension-enable-disable/</loc>
     <lastmod>2026-10-08</lastmod>
   </url>
+  <url>
+    <loc>https://fosterstack.com/build-cache-survives-restart/</loc>
+    <lastmod>2026-10-08</lastmod>
+  </url>
 </urlset>
