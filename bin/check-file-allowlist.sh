@@ -18,6 +18,7 @@ ALLOW_PATTERNS=(
   # until the watcher verifies the removal.
   '^\.drafts/([A-Za-z0-9._-]+/)*[A-Za-z0-9._-]+\.html$'
   '^index\.html$'
+  '^404\.html$'
   '^README\.md$'
   '^LICENSE$'
   '^_headers$'

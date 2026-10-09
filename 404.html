@@ -3,14 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Gradle build cache with Docker Compose</title>
-<meta name="description" content="A shared Gradle remote build cache in one Docker Compose file: password, size limit, data volume, a curl check that needs no Gradle project, and health checks.">
-<meta property="og:title" content="Gradle build cache with Docker Compose">
-<meta property="og:description" content="A shared Gradle remote build cache in one Docker Compose file: password, size limit, data volume, a curl check that needs no Gradle project, and health checks.">
-<meta property="og:url" content="https://fosterstack.com/gradle-build-cache-docker-compose/">
-<meta property="og:type" content="website">
-<meta property="og:site_name" content="FosterStack">
-<link rel="canonical" href="https://fosterstack.com/gradle-build-cache-docker-compose/">
+<title>Page not found</title>
+<meta name="robots" content="noindex">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -83,53 +77,16 @@
   <div class="tag">Infrastructure worth keeping — and kept patched.</div>
 </header>
 <main>
-  <h1>Gradle build cache with Docker Compose</h1>
-  <p class="lede">Run a shared Gradle build cache for your team in one Compose file, with a password and a size limit. This is the shape we suggest once you go past a first trial.</p>
-
-  <h2>Try it first, on one machine</h2>
-  <pre><code>docker run -d -p 127.0.0.1:8080:8080 -v fscache-data:/home/nonroot ghcr.io/fosterstack/cache:latest</code></pre>
-  <p>The <code>127.0.0.1:</code> keeps it reachable from this machine only. A bare <code>-p 8080:8080</code> opens the port to every network interface, and on a cloud host that is a cache anyone can write to the moment the command returns. Pin a version tag instead of <code>latest</code> for anything real.</p>
-
-  <h2>The Compose file</h2>
-  <p>This one is open to your CI runners, so it has a password on purpose. A cache that untrusted people can write to can feed files into your builds.</p>
-  <pre><code>services:
-  fscache:
-    image: ghcr.io/fosterstack/cache:latest   # pin a version tag
-    restart: unless-stopped
-    ports:
-      - "8080:8080"                    # all interfaces, so auth is on
-    volumes:
-      - fscache-data:/home/nonroot
-    environment:
-      FSCACHE_MAX_BYTES: "53687091200"   # 50 GiB, size to your CI volume
-      FSCACHE_USERNAME: gradle
-      FSCACHE_PASSWORD: change-me        # generate one: openssl rand -base64 24
-
-volumes:
-  fscache-data:</code></pre>
+  <h1>Page not found</h1>
+  <p class="lede">There is nothing at this address. Here are the places most people are looking for.</p>
   <ul class="trust">
-    <li>The data volume mounts at <code>/home/nonroot</code>, not <code>/data</code>. The server runs as a non-root user.</li>
-    <li><code>FSCACHE_MAX_BYTES</code> is in bytes. 50 GiB is <code>53687091200</code>. See <a href="/build-cache-server-sizing/">server sizing</a> for more values.</li>
-    <li>Put an HTTPS proxy in front for real use. Gradle sends the password with every request.</li>
+    <li><a href="/">FosterStack home</a></li>
+    <li><a href="/build-cache-node-end-of-life/">Build Cache Node end of life: what happens and your options</a></li>
+    <li><a href="/migrate-build-cache-node/">Migrate from Build Cache Node: Gradle and Maven setup</a></li>
+    <li><a href="/build-cache-node-faq/">Questions and answers</a></li>
+    <li><a href="/gradle-remote-cache-not-working/">Gradle remote build cache not working</a></li>
+    <li><a href="/security/">Security policy: how to report a vulnerability</a></li>
   </ul>
-
-  <h2>Check it works, with no Gradle project</h2>
-  <pre><code>curl -s localhost:8080/healthz                                   # ok
-curl -s -X PUT --data-binary 'hello' localhost:8080/testkey123   # 201
-curl -s localhost:8080/testkey123                                # hello</code></pre>
-  <p>Add <code>-u gradle:your-password</code> to those calls once you have set a password.</p>
-
-  <h2>Point Gradle at it</h2>
-  <p>Use the settings from our <a href="/migrate-build-cache-node/">Gradle and Maven setup</a> page, and turn caching on with <code>org.gradle.caching=true</code>. If nothing comes from the cache, work through <a href="/gradle-remote-cache-not-working/">Gradle remote build cache not working</a>.</p>
-
-  <h2>Health checks</h2>
-  <p>The container image has no shell, so there is no health check inside the Compose file. Probe <code>/healthz</code> from outside: your orchestrator's HTTP check, a monitor, or <code>curl -f http://localhost:8080/healthz</code> from the host.</p>
-
-  <p class="muted-note">Full detail: <a href="https://github.com/fosterstack/cache/blob/main/docs/docker-deploy.md">Docker deploy guide</a>.</p>
-  <div class="cta-row">
-    <a class="btn" href="/migrate-build-cache-node/">Gradle and Maven setup</a>
-    <a class="btn btn-secondary" href="/">FosterStack home</a>
-  </div>
 </main>
 <footer>
   <div>
@@ -139,7 +96,7 @@ curl -s localhost:8080/testkey123                                # hello</code><
     of the documented remote build cache HTTP protocol. Apache Maven is a trademark of the
     Apache Software Foundation; the Maven Build Cache Extension is Apache's project, not
     ours.</p>
-    <p style="margin-top:.6rem">© 2026 FosterStack · <a href="/regulated/">For regulated markets</a> · <a href="https://github.com/fosterstack/cache">github.com/fosterstack/cache</a> · <a href="mailto:hello@fosterstack.com">hello@fosterstack.com</a></p>
+    <p style="margin-top:.6rem">© 2026 FosterStack · <a href="/build-cache-node-end-of-life/">Build Cache Node end of life</a> · <a href="/migrate-build-cache-node/">Migrate</a> · <a href="/build-cache-node-faq/">FAQ</a> · <a href="/jenkins-ci-build-cache/">CI setup</a> · <a href="/how-we-build/">How we build</a> · <a href="/regulated/">For regulated markets</a> · <a href="https://github.com/fosterstack/cache">github.com/fosterstack/cache</a> · <a href="mailto:hello@fosterstack.com">hello@fosterstack.com</a></p>
   </div>
 </footer>
 </body>
