@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Production build cache: Docker Compose, nginx and TLS</title>
+<meta name="description" content="A Compose file for a self-hosted build cache behind nginx with TLS and a password, run for real on 0.2.1 and Gradle 9.8.0, with what was and was not tested.">
+<meta property="og:title" content="Production build cache: Docker Compose, nginx and TLS">
+<meta property="og:description" content="A Compose file for a self-hosted build cache behind nginx with TLS and a password, run for real on 0.2.1 and Gradle 9.8.0, with what was and was not tested.">
+<meta property="og:url" content="https://fosterstack.com/build-cache-docker-compose-production/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="FosterStack">
+<link rel="canonical" href="https://fosterstack.com/build-cache-docker-compose-production/">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<style>
+  :root {
+    --bg: #ffffff; --fg: #16181d; --muted: #5b6472; --line: #e4e7ec;
+    --accent: #0d7a5f; --accent-fg: #ffffff; --card: #f6f8f9; --warn-bg: #fff7ed; --warn-line: #fdba74;
+    --mark: #0f4d66;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #101318; --fg: #e8eaf0; --muted: #98a2b3; --line: #262c36;
+      --accent: #2fbf95; --accent-fg: #08110e; --card: #171c23; --warn-bg: #241a10; --warn-line: #7c4a12;
+      --mark: #e8eaf0;
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 44rem; margin: 0 auto; padding: 0 1.25rem 4rem; }
+  header.site { max-width: 44rem; margin: 0 auto; padding: 1.25rem; display: flex; align-items: baseline; gap: .6rem; }
+  .logo { font-weight: 700; font-size: 1.05rem; letter-spacing: -.01em; }
+  .logo span { color: var(--accent); }
+  .logo .mark { width: 1.2em; height: 1.2em; vertical-align: -.24em; margin-right: .4em; }
+  .tag { color: var(--muted); font-size: .85rem; }
+  .notice {
+    background: var(--warn-bg); border: 1px solid var(--warn-line); border-radius: 8px;
+    padding: .7rem 1rem; font-size: .92rem; margin: 1.5rem 0 2.5rem;
+  }
+  h1 { font-size: 2rem; line-height: 1.2; letter-spacing: -.02em; margin-bottom: 1rem; }
+  .lede { font-size: 1.12rem; color: var(--muted); margin-bottom: 2rem; }
+  h2 { font-size: 1.25rem; margin: 3rem 0 .9rem; letter-spacing: -.01em; }
+  p + p { margin-top: .8rem; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: .8rem; margin-top: 1rem; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1rem 1.1rem; }
+  .card h3 { font-size: .98rem; margin-bottom: .35rem; }
+  .card p { font-size: .9rem; color: var(--muted); }
+  ul.trust { list-style: none; margin-top: .5rem; }
+  ul.trust li { padding: .45rem 0 .45rem 1.6rem; position: relative; }
+  ul.trust li::before { content: "✓"; position: absolute; left: .2rem; color: var(--accent); font-weight: 700; }
+  code, pre { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .88em; }
+  code { background: var(--card); border: 1px solid var(--line); border-radius: 5px; padding: .1em .35em; }
+  pre code { background: none; border: 0; padding: 0; color: inherit; font-size: 1em; }
+  button {
+    padding: .7rem 1.3rem; font-size: 1rem; font-weight: 600; cursor: pointer;
+    background: var(--accent); color: var(--accent-fg); border: 0; border-radius: 8px;
+  }
+  button:disabled { opacity: .6; cursor: default; }
+  table { width: 100%; border-collapse: collapse; font-size: .92rem; margin-top: 1rem; }
+  th, td { text-align: left; padding: .55rem .6rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  pre { background: #0f172a; color: #e2e8f0; padding: .9rem 1rem; border-radius: 8px;
+        overflow-x: auto; font-size: .9rem; line-height: 1.5; }
+  .cta-row { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1.1rem; }
+  .btn { display: inline-block; padding: .55rem 1rem; border-radius: 8px; font-weight: 600;
+         text-decoration: none; background: var(--accent); color: #fff; }
+  .btn-secondary { background: transparent; color: inherit; border: 1px solid #cbd5e1; }
+  .muted-note { color: var(--muted); font-size: .93rem; margin-top: 1.1rem; }
+  footer { border-top: 1px solid var(--line); margin-top: 4rem; padding: 1.5rem 1.25rem 3rem; }
+  footer div { max-width: 44rem; margin: 0 auto; color: var(--muted); font-size: .82rem; }
+  a { color: var(--accent); }
+  table { display: block; max-width: 100%; overflow-x: auto; }
+  code { overflow-wrap: anywhere; }
+  pre code { overflow-wrap: normal; }
+</style>
+</head>
+<body>
+<header class="site">
+  <div class="logo"><svg class="mark" viewBox="0 0 96 96" aria-hidden="true" focusable="false"><rect x="12" y="14" width="72" height="18" rx="5" fill="var(--mark)"/><rect x="12" y="39" width="48" height="18" rx="5" fill="var(--mark)"/><rect x="12" y="64" width="26" height="18" rx="5" fill="var(--accent)"/></svg>foster<span>stack</span></div>
+  <div class="tag">Infrastructure worth keeping — and kept patched.</div>
+</header>
+<main>
+  <h1>Production build cache: Docker Compose, nginx and TLS</h1>
+  <p class="lede">A Compose file for a shared build cache that only answers over HTTPS, with a password, behind nginx. Everything here was run for real on FosterStack Cache 0.2.1 and Gradle 9.8.0. The exact list of what was and was not tested is just below.</p>
+
+  <h2>What was tested, and what was not</h2>
+  <ul class="trust">
+    <li><strong>Tested:</strong> the two files below, with Docker Compose on a Mac, nginx 1.29 as the proxy, a <strong>self-signed</strong> certificate for <code>localhost</code>, and a real Gradle build over HTTPS.</li>
+    <li><strong>Not tested:</strong> a certificate from a public authority or automatic renewal, a public server on port 443, other proxies or load balancers, Kubernetes ingress, and long-running use.</li>
+  </ul>
+
+  <h2>compose.yaml</h2>
+  <pre><code>services:
+  fscache:
+    image: ghcr.io/fosterstack/cache:0.2.1
+    restart: unless-stopped
+    # no &quot;ports:&quot; on purpose: only the proxy is reachable from outside
+    volumes:
+      - fscache-data:/home/nonroot
+    environment:
+      FSCACHE_MAX_BYTES: &quot;53687091200&quot;      # 50 GiB
+      FSCACHE_USERNAME: gradle
+      FSCACHE_PASSWORD: change-me           # generate one: openssl rand -base64 24
+
+  proxy:
+    image: nginx:1.29-alpine
+    restart: unless-stopped
+    depends_on:
+      - fscache
+    ports:
+      - &quot;127.0.0.1:8443:443&quot;                # use 443:443 on a real server
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+
+volumes:
+  fscache-data:</code></pre>
+  <p>The cache has no <code>ports</code> entry on purpose. Only the proxy is reachable from outside. Generate a real password, for example with <code>openssl rand -base64 24</code>, and never keep <code>change-me</code>.</p>
+
+  <h2>nginx.conf</h2>
+  <pre><code>server {
+    listen 443 ssl;
+    server_name localhost;
+    ssl_certificate     /etc/nginx/certs/cert.pem;
+    ssl_certificate_key /etc/nginx/certs/key.pem;
+
+    # the cache accepts entries up to 1 GiB by default; nginx&#x27;s own default is 1 MB
+    client_max_body_size 1g;
+
+    location / {
+        proxy_pass http://fscache:8080;
+        proxy_set_header Host $host;
+    }
+}</code></pre>
+  <p>The <code>client_max_body_size</code> line matters. See the tests below.</p>
+
+  <h2>What I checked, and what I saw</h2>
+  <table>
+    <tr><th>Check</th><th>Result</th></tr>
+    <tr><td><code>https://localhost:8443/healthz</code> with the certificate trusted</td><td><code>ok</code></td></tr>
+    <tr><td>The same without trusting the certificate</td><td>curl refuses (exit 60)</td></tr>
+    <tr><td>The cache's own port 8080 from the host</td><td>not reachable</td></tr>
+    <tr><td>Plain <code>http://</code> to the proxy's TLS port</td><td>400</td></tr>
+    <tr><td>Upload with no password, through the proxy</td><td>401</td></tr>
+    <tr><td>Upload with the password, through the proxy</td><td>201, and the value reads back</td></tr>
+    <tr><td>Uploads of about 1 MB and 2 MB with nginx's default settings</td><td><strong>413</strong> from nginx, not from the cache</td></tr>
+    <tr><td>The same uploads, and 20 MB, after <code>client_max_body_size 1g;</code></td><td>201 each</td></tr>
+  </table>
+  <p>The size limit is the one to watch. nginx rejects bodies over 1 MB by default, and Gradle's cache entries are often bigger, so uploads of larger entries would be refused. The cache itself accepts up to 1 GiB per entry by default, which is why the example uses <code>1g</code>. See <a href="/gradle-build-cache-http-status-codes/">the status codes page</a>.</p>
+
+  <h2>Gradle over HTTPS</h2>
+  <p>With a certificate Gradle does not trust, the build still succeeds, but without the cache, and prints:</p>
+  <pre><code>Could not load entry d4f2de693b561fd2c5d60b17a9232d6f from remote build cache: (certificate_unknown) PKIX path building failed: sun.security.provider.certpath.SunCertPathBuilderException: unable to find valid certification path to requested target</code></pre>
+  <p>For my self-signed test certificate I made Java trust it:</p>
+  <pre><code>keytool -importcert -alias fsprod -file certs/cert.pem -keystore trust.jks -storepass changeit -noprompt
+
+# gradle.properties
+systemProp.javax.net.ssl.trustStore=/path/to/trust.jks
+systemProp.javax.net.ssl.trustStorePassword=changeit</code></pre>
+  <p>With that, the first build ran <code>:compileJava</code> and the second printed <code>&gt; Task :compileJava FROM-CACHE</code>, through the proxy, over HTTPS, with the password. With a certificate from an authority Java already trusts you would not need the truststore lines. The Gradle side of the setup is in <a href="/gradle-build-cache-tutorial/">the tutorial</a>.</p>
+
+  <p class="muted-note">Related: <a href="/gradle-build-cache-docker-compose/">Gradle build cache with Docker Compose</a> and <a href="/remote-build-cache-security/">who can write to a remote build cache</a>.</p>
+  <div class="cta-row">
+    <a class="btn" href="/first-15-minutes-build-cache/">Your first 15 minutes</a>
+    <a class="btn btn-secondary" href="/">FosterStack home</a>
+  </div>
+</main>
+<footer>
+  <div>
+    <p>FosterStack is not affiliated with, endorsed by, or sponsored by Gradle Inc.
+    "Gradle" and "Develocity" are trademarks of Gradle Inc., used here only to identify
+    compatibility. FosterStack contains no Gradle Inc. code; it is a clean-room implementation
+    of the documented remote build cache HTTP protocol. Apache Maven is a trademark of the
+    Apache Software Foundation; the Maven Build Cache Extension is Apache's project, not
+    ours.</p>
+    <p style="margin-top:.6rem">© 2026 FosterStack · <a href="/build-cache-node-end-of-life/">Build Cache Node end of life</a> · <a href="/migrate-build-cache-node/">Migrate</a> · <a href="/build-cache-node-faq/">FAQ</a> · <a href="/jenkins-ci-build-cache/">CI setup</a> · <a href="/how-we-build/">How we build</a> · <a href="/regulated/">For regulated markets</a> · <a href="https://github.com/fosterstack/cache">github.com/fosterstack/cache</a> · <a href="mailto:hello@fosterstack.com">hello@fosterstack.com</a></p>
+  </div>
+</footer>
+</body>
+</html>
