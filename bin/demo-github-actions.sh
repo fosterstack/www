@@ -105,7 +105,7 @@ run() {
 }
 expect() { # description condition...
   local d="$1"; shift
-  "$@" || { echo "UNEXPECTED: $d" >&2; exit 1; }
+  "$@" || { echo "UNEXPECTED: $d" >&2; echo "**UNEXPECTED: $d**" >> "$SUMMARY"; exit 1; }
 }
 
 # ---- server
@@ -114,6 +114,7 @@ FSCACHE_ADDR="127.0.0.1:$PORT" FSCACHE_DATA_DIR="$WORK/data" FSCACHE_USERNAME="$
   FSCACHE_RO_USERNAME="$DEV_USER" FSCACHE_RO_PASSWORD="$DEV_PASS" "$FSCACHE" > "$WORK/server.log" 2>&1 & SRV_PID=$!
 for _ in $(seq 1 50); do curl -sf "http://127.0.0.1:$PORT/healthz" >/dev/null && break; sleep 0.2; done
 curl -sf "http://127.0.0.1:$PORT/healthz" >/dev/null || { echo "server did not start" >&2; exit 1; }
+kill -0 "$SRV_PID" 2>/dev/null || { echo "the server we started has exited; something else is answering on port $PORT" >&2; exit 1; }
 URL="http://127.0.0.1:$PORT/"
 
 echo "== steps"
@@ -123,6 +124,12 @@ run 2-ci-fresh-checkout base CACHE_URL="$URL" CACHE_USER="$CI_USER" CACHE_PASSWO
 expect "step 2 should restore both tasks" test "$RES_LIB" = FROM-CACHE -a "$RES_APP" = FROM-CACHE
 run 3-pull-request-read-only changed CACHE_URL="$URL" CACHE_USER="$DEV_USER" CACHE_PASSWORD="$DEV_PASS" CACHE_PUSH=false
 expect "step 3 should restore lib, run app, store nothing" test "$RES_LIB" = FROM-CACHE -a "$RES_APP" = ran -a "$RES_AFTER" = "$RES_BEFORE"
+# the read-only login really cannot write: a direct write with it is refused (403), and a wrong password is refused (401)
+RO_CODE="$(curl -s -o /dev/null -w '%{http_code}' -X PUT --data x -u "$DEV_USER:$DEV_PASS" "${URL}cache/probe" || true)"
+BAD_CODE="$(curl -s -o /dev/null -w '%{http_code}' -X PUT --data x -u "$DEV_USER:wrong-password" "${URL}cache/probe" || true)"
+expect "a direct write with the read-only login should be refused (403), got $RO_CODE" test "$RO_CODE" = 403
+expect "a direct write with a wrong password should be refused (401), got $BAD_CODE" test "$BAD_CODE" = 401
+echo "| 3b | direct write with the read-only login: HTTP $RO_CODE; with a wrong password: HTTP $BAD_CODE | | | |" >> "$SUMMARY"
 run 4-fork-style-empty-variables changed CACHE_URL= CACHE_USER= CACHE_PASSWORD= CACHE_PUSH=
 expect "step 4 should build without the cache and store nothing" test "$RES_LIB" = ran -a "$RES_APP" = ran -a "$RES_AFTER" = "$RES_BEFORE"
 
