@@ -88,13 +88,13 @@
 </header>
 <main>
   <h1>Which modules rebuild when you change one? Gradle vs Maven</h1>
-  <p class="lede">Know before you refactor a shared module: in our runs Gradle recompiled the module above only when we added a public method to the module below, while Maven's build cache extension rebuilt every module above after each of the three changes we made below, even a comment. At FosterStack we prove everything, so here is how we proved it to ourselves: a three-module chain, four kinds of change, and a new empty cache server for each.</p>
+  <p class="lede">Know before you refactor a shared module: in our runs Gradle recompiled the module above only when we added a public method to the module below, while Maven's build cache extension rebuilt all three modules after each of our three changes to the bottom one, even a comment. At FosterStack we prove everything, so here is how we proved it to ourselves: a three-module chain, four kinds of change, and a new empty cache server for each.</p>
 
   <h2>The short answer</h2>
   <ul class="trust">
     <li><strong>Gradle (compile tasks):</strong> a body-only or comment-only change in the bottom module recompiled only that module. The two modules above it came from the cache. Adding a public method recompiled the module directly above it too, but not the top one.</li>
     <li><strong>Maven:</strong> each of our three changes in the bottom module (a method body, a comment, a new method) rebuilt all three modules.</li>
-    <li><strong>Both:</strong> in the one run each, a change in the top module alone rebuilt only the top module. The two below it were restored.</li>
+    <li><strong>Both:</strong> in the one run each, a change in the top module alone recompiled (Gradle) or rebuilt (Maven) only the top module. The two below it came from the cache.</li>
   </ul>
 
   <h2>What we ran</h2>
@@ -106,8 +106,8 @@
     <li><strong>API:</strong> a new public method added to <code>core</code>.</li>
     <li><strong>App only:</strong> a number changed in <code>app</code>.</li>
   </ul>
-  <p>Gradle ran the three <code>compileJava</code> tasks (Gradle 9.8.0). Maven ran <code>mvn verify</code> (Maven 3.9.9, Build Cache Extension 1.2.3, all eight default plugin versions pinned, see <a href="/maven-build-cache-different-maven-versions/">Maven build cache across Maven versions</a>). Both used Java 21 (Temurin 21.0.12.1; Maven compiled with release 17). Maven ran a fuller build than Gradle did, and Gradle ran only the compile tasks, so the Gradle column says nothing about tests: <code>service</code> and <code>app</code> would run against <code>core</code>'s changed code, and their test tasks may well run again (we did not test that). Maven's <code>verify</code> had no tests to run here.</p>
-  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
+  <p>Gradle ran the three <code>compileJava</code> tasks (Gradle 9.8.0). Maven ran <code>mvn verify</code> (Maven 3.9.9, Build Cache Extension 1.2.3, all eight default plugin versions pinned, see <a href="/maven-build-cache-different-maven-versions/">Maven build cache across Maven versions</a>). Both used Java 21 (Temurin 21.0.12.1; Maven compiled with release 17). Maven ran a fuller build than Gradle did, and Gradle ran only the compile tasks, so the Gradle column says nothing about tests or jars (we did not run them). Maven's <code>verify</code> had no tests to run here.</p>
+  <div class="table-scroll" role="region" aria-label="Rebuild results by module" tabindex="0"><table>
     <thead><tr><th>Build 2 after this change</th><th>Gradle: core / service / app</th><th>Maven: core / service / app</th></tr></thead>
     <tbody>
       <tr><td>Body of a method in <code>core</code></td><td>ran / from cache / from cache</td><td>built / built / built</td></tr>
@@ -116,23 +116,23 @@
       <tr><td>A number in <code>app</code></td><td>from cache / from cache / ran</td><td>restored / restored / built</td></tr>
     </tbody>
   </table></div>
-  <p>Every build 1 built all three modules, as expected on an empty server. In the Gradle column <strong>ran</strong> means the <code>compileJava</code> task line had nothing after it and <strong>from cache</strong> means <code>FROM-CACHE</code>. In the Maven column <strong>restored</strong> means Maven printed <code>Found cached build, restoring</code> for that module, and <strong>built</strong> means it printed no such line for it.</p>
+  <p>Every build 1 compiled (Gradle) or built (Maven) all three modules, as expected on an empty server. In the Gradle column <strong>ran</strong> means the <code>compileJava</code> task line had nothing after it and <strong>from cache</strong> means <code>FROM-CACHE</code>. In the Maven column <strong>restored</strong> means Maven printed <code>Found cached build, restoring</code> for that module, and <strong>built</strong> means it printed no such line for it.</p>
 
-  <h2>Why Maven rebuilds every module above a change</h2>
+  <h2>Why Maven rebuilds more than Gradle</h2>
   <p>This part is what the logs show, plus the usual explanation.</p>
   <ul class="trust">
     <li><strong>Maven:</strong> the log shows that while it works out the key for <code>service</code> it also works out the key for <code>core</code>. In the comment run, <code>core</code> had a new key and so did <code>service</code> (<code>efd19a4c19b933af</code> before, <code>3d90eee1e1f99534</code> after), though no file in <code>service</code> changed. That is consistent with a module's key including the keys of the modules it depends on.</li>
-    <li><strong>Gradle:</strong> Gradle's documentation describes the cache key for compiling a module as looking only at the public API of the compiled classes it uses; method bodies, private parts and comments are left out. Our results are consistent with that (in these runs; a change to a public constant's value is part of the public API): a body or comment change left <code>service</code> and <code>app</code> in the cache, and a new public method made <code>service</code> run while <code>app</code> (which uses <code>service</code>, whose own public API did not change) still came from the cache. We checked results, not Gradle's internals.</li>
+    <li><strong>Gradle:</strong> Gradle's documentation describes the cache key for compiling a module as looking only at the public API of the compiled classes it uses; method bodies, private parts and comments are left out. Our results are consistent with that: a body or comment change left <code>service</code> and <code>app</code> in the cache, and a new public method made <code>service</code> run while <code>app</code> (which uses <code>service</code>, whose own public API did not change) still came from the cache. We checked results, not Gradle's internals.</li>
   </ul>
 
   <h2>Gradle compile avoidance vs Maven: what it means for a refactor</h2>
   <ul class="trust">
     <li><strong>In our Maven runs, every change to the bottom module rebuilt every module above it.</strong> Even a comment cost a rebuild of the whole chain.</li>
     <li><strong>In our Gradle compile runs, the change that cost more was a change to what the module shows to others.</strong> Edits inside method bodies stayed inside the module.</li>
-    <li><strong>In both tools, a change in <code>app</code> rebuilt only <code>app</code>.</strong> That was one run each.</li>
+    <li><strong>In both tools, a change in <code>app</code> recompiled (Gradle) or rebuilt (Maven) only <code>app</code>.</strong> That was one run each.</li>
   </ul>
-  <p>Our advice, not a test result: in Maven, keep very widely shared modules rarely edited, so a change there is rare.</p>
-  <p>We did not test: Gradle's <code>api</code> dependencies (we used <code>implementation</code> only), tests or jar tasks in Gradle, annotation processors, Kotlin, a change in the middle module, other Gradle or Maven versions, bigger projects, or Linux. The Mac was busy with other jobs during the runs, so we make no claim about build times.</p>
+  <p>Our advice, not a test result: in Maven, expect every edit to a widely shared module to rebuild everything above it, and batch such edits.</p>
+  <p>We did not test: Gradle's <code>api</code> dependencies (we used <code>implementation</code> only), tests or jar tasks in Gradle, annotation processors, Kotlin, a change to a public constant's value, a change in the middle module, other Gradle or Maven versions, bigger projects, or Linux. The Mac was busy with other jobs during the runs, so we make no claim about build times.</p>
 
   <h2>If nothing is restored</h2>
   <p>Work through <a href="/gradle-build-cache-hit-rate-low/">why the Gradle hit rate is low</a> or <a href="/maven-build-cache-extension-not-restoring/">Maven build cache extension not restoring</a>, and see <a href="/maven-build-cache-extension-multi-module/">Maven Build Cache Extension in a Multi-Module Project</a>.</p>
