@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jenkins and CI build cache for Gradle and Maven</title>
+<meta name="description" content="Use one shared self-hosted build cache from Jenkins, GitHub Actions or GitLab runners: who should write, in-cluster setup, passwords, and how to check it works.">
+<link rel="canonical" href="https://fosterstack.com/jenkins-ci-build-cache/">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<style>
+  :root {
+    --bg: #ffffff; --fg: #16181d; --muted: #5b6472; --line: #e4e7ec;
+    --accent: #0d7a5f; --accent-fg: #ffffff; --card: #f6f8f9; --warn-bg: #fff7ed; --warn-line: #fdba74;
+    --mark: #0f4d66;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #101318; --fg: #e8eaf0; --muted: #98a2b3; --line: #262c36;
+      --accent: #2fbf95; --accent-fg: #08110e; --card: #171c23; --warn-bg: #241a10; --warn-line: #7c4a12;
+      --mark: #e8eaf0;
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 44rem; margin: 0 auto; padding: 0 1.25rem 4rem; }
+  header.site { max-width: 44rem; margin: 0 auto; padding: 1.25rem; display: flex; align-items: baseline; gap: .6rem; }
+  .logo { font-weight: 700; font-size: 1.05rem; letter-spacing: -.01em; }
+  .logo span { color: var(--accent); }
+  .logo .mark { width: 1.2em; height: 1.2em; vertical-align: -.24em; margin-right: .4em; }
+  .tag { color: var(--muted); font-size: .85rem; }
+  .notice {
+    background: var(--warn-bg); border: 1px solid var(--warn-line); border-radius: 8px;
+    padding: .7rem 1rem; font-size: .92rem; margin: 1.5rem 0 2.5rem;
+  }
+  h1 { font-size: 2rem; line-height: 1.2; letter-spacing: -.02em; margin-bottom: 1rem; }
+  .lede { font-size: 1.12rem; color: var(--muted); margin-bottom: 2rem; }
+  h2 { font-size: 1.25rem; margin: 3rem 0 .9rem; letter-spacing: -.01em; }
+  p + p { margin-top: .8rem; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: .8rem; margin-top: 1rem; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1rem 1.1rem; }
+  .card h3 { font-size: .98rem; margin-bottom: .35rem; }
+  .card p { font-size: .9rem; color: var(--muted); }
+  ul.trust { list-style: none; margin-top: .5rem; }
+  ul.trust li { padding: .45rem 0 .45rem 1.6rem; position: relative; }
+  ul.trust li::before { content: "✓"; position: absolute; left: .2rem; color: var(--accent); font-weight: 700; }
+  code, pre { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .88em; }
+  code { background: var(--card); border: 1px solid var(--line); border-radius: 5px; padding: .1em .35em; }
+  pre code { background: none; border: 0; padding: 0; color: inherit; font-size: 1em; }
+  button {
+    padding: .7rem 1.3rem; font-size: 1rem; font-weight: 600; cursor: pointer;
+    background: var(--accent); color: var(--accent-fg); border: 0; border-radius: 8px;
+  }
+  button:disabled { opacity: .6; cursor: default; }
+  table { width: 100%; border-collapse: collapse; font-size: .92rem; margin-top: 1rem; }
+  th, td { text-align: left; padding: .55rem .6rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  pre { background: #0f172a; color: #e2e8f0; padding: .9rem 1rem; border-radius: 8px;
+        overflow-x: auto; font-size: .9rem; line-height: 1.5; }
+  .cta-row { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1.1rem; }
+  .btn { display: inline-block; padding: .55rem 1rem; border-radius: 8px; font-weight: 600;
+         text-decoration: none; background: var(--accent); color: #fff; }
+  .btn-secondary { background: transparent; color: inherit; border: 1px solid #cbd5e1; }
+  .muted-note { color: var(--muted); font-size: .93rem; margin-top: 1.1rem; }
+  footer { border-top: 1px solid var(--line); margin-top: 4rem; padding: 1.5rem 1.25rem 3rem; }
+  footer div { max-width: 44rem; margin: 0 auto; color: var(--muted); font-size: .82rem; }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<header class="site">
+  <div class="logo"><svg class="mark" viewBox="0 0 96 96" aria-hidden="true" focusable="false"><rect x="12" y="14" width="72" height="18" rx="5" fill="var(--mark)"/><rect x="12" y="39" width="48" height="18" rx="5" fill="var(--mark)"/><rect x="12" y="64" width="26" height="18" rx="5" fill="var(--accent)"/></svg>foster<span>stack</span></div>
+  <div class="tag">Infrastructure worth keeping — and kept patched.</div>
+</header>
+<main>
+  <h1>Jenkins and CI build cache for Gradle and Maven</h1>
+  <p class="lede">Point your Jenkins agents, GitHub Actions runners or GitLab runners at one shared build cache, so a fresh agent stops rebuilding what another agent already built.</p>
+
+  <h2>How a CI runner uses a remote build cache</h2>
+  <p>The cache is a plain web server. Your build tool (Gradle, or Maven with Apache's Build Cache Extension) asks it for finished task results and uploads new ones. Any runner that can reach the server over HTTP can use it. There is no plugin to install on the CI system.</p>
+  <p>We have not tested it with any particular CI product. Our own tests run in GitHub Actions. The protocol is the same everywhere, so what matters is that the runner can reach the server and holds the password.</p>
+
+  <h2>Let CI write, let developers read</h2>
+  <p>The simplest safe setup is that only CI uploads to the cache and laptops only download. In <code>settings.gradle.kts</code>:</p>
+  <pre><code>isPush = System.getenv("CI") != null</code></pre>
+  <p>This is the Gradle client choosing not to upload. It is not a permission on the server. Today the server has one password, and anyone holding it can write. Share it only with people and systems you already trust to change your code.</p>
+
+  <h2>Runners inside your Kubernetes cluster</h2>
+  <p>If your runners already run in the cluster that hosts the cache (including Jenkins agents), you need no load balancer and no ingress. Point the build at the cluster-internal name:</p>
+  <pre><code>// FosterStack Cache — remote Gradle build cache.
+// https://github.com/fosterstack/cache
+buildCache {
+    remote&lt;HttpBuildCache&gt; {
+        url = uri("http://fscache.fscache-ns.svc.cluster.local/")
+        isAllowInsecureProtocol = true
+        isPush = true
+        credentials {
+            username = System.getenv("FSCACHE_USERNAME")
+            password = System.getenv("FSCACHE_PASSWORD")
+        }
+    }
+}</code></pre>
+  <p>Replace <code>fscache-ns</code> with your namespace. Plain HTTP is acceptable here only because the traffic never leaves the cluster network. The manifests are in the <a href="https://github.com/fosterstack/cache/blob/main/docs/kubernetes.md">Kubernetes guide</a>.</p>
+
+  <h2>Runners outside the cluster, or on plain servers</h2>
+  <p>Run the server on a host the runners can reach and put HTTPS in front of it. Gradle sends the password with every request, so over plain HTTP it travels in the clear. Gradle refuses plain HTTP to anything but localhost unless you opt in, which is a useful warning, not a nuisance. Setup is in the <a href="https://github.com/fosterstack/cache/blob/main/docs/install.md">install guide</a>.</p>
+
+  <h2>Give the runner the password</h2>
+  <p>Store it in your CI system's secret store and expose it as the <code>FSCACHE_PASSWORD</code> environment variable. On a long-lived agent, Gradle's background daemon reads its environment once, when it starts. If you change the secret and builds quietly stop using the cache, run <code>./gradlew --stop</code> so the next build starts a fresh daemon.</p>
+
+  <h2>Check that CI is really using the cache</h2>
+  <p>Run the same build twice on two different agents. The second should show <code>FROM-CACHE</code> next to tasks. A runner's local cache can hide a broken remote, so run once with <code>-i</code>, which prints remote errors. Gradle treats a broken remote as non-fatal, so it fails silently otherwise. On the server, the hit and miss counters at <code>/metrics</code> should move.</p>
+  <p>Maven on CI follows the same pattern with the extension and a <code>&lt;server&gt;</code> entry for the password. The server side for Maven is built; its acceptance testing is still in progress. See the <a href="/migrate-build-cache-node/">Gradle and Maven setup page</a>.</p>
+
+  <div class="cta-row">
+    <a class="btn" href="/migrate-build-cache-node/">Gradle and Maven setup</a>
+    <a class="btn btn-secondary" href="/">FosterStack home</a>
+  </div>
+</main>
+<footer>
+  <div>
+    <p>FosterStack is not affiliated with, endorsed by, or sponsored by Gradle Inc.
+    "Gradle" and "Develocity" are trademarks of Gradle Inc., used here only to identify
+    compatibility. FosterStack contains no Gradle Inc. code; it is a clean-room implementation
+    of the documented remote build cache HTTP protocol. Apache Maven is a trademark of the
+    Apache Software Foundation; the Maven Build Cache Extension is Apache's project, not
+    ours.</p>
+    <p style="margin-top:.6rem">© 2026 FosterStack · <a href="/regulated/">For regulated markets</a> · <a href="https://github.com/fosterstack/cache">github.com/fosterstack/cache</a> · <a href="mailto:hello@fosterstack.com">hello@fosterstack.com</a></p>
+  </div>
+</footer>
+</body>
+</html>
