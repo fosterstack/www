@@ -93,7 +93,7 @@
     <li><strong>Build.</strong> The binaries are built, with checksums and a software bill of materials for each archive.</li>
     <li><strong>Container images.</strong> Each image is assembled once, from the unmodified distroless base plus one binary.</li>
     <li><strong>Reproducibility check.</strong> The image is assembled a second time on a separate machine. The results must be identical, or the release fails.</li>
-    <li><strong>Scans and tests.</strong> Every scanner on our list runs against the exact images. A finding blocks the release unless a published VEX statement explains why it does not apply. The Gradle acceptance tests run against the same images.</li>
+    <li><strong>Scans and tests.</strong> Every scanner on our list runs against the exact images. A finding blocks the release unless a published VEX statement explains why it does not apply. The Gradle and Maven acceptance tests run against the same images.</li>
     <li><strong>Authorization.</strong> One step checks that every earlier step produced signed proof for these exact files. Anything missing stops the release.</li>
     <li><strong>Publish.</strong> The published images are the same digests that were scanned and tested, promoted without a rebuild, and checked again the way a customer would check them.</li>
   </ol>
