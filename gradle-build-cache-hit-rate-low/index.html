@@ -140,9 +140,9 @@ Build cache key for task &#x27;:greetAbsPath&#x27; is b7b4f69d180d1dc577a36f2869
   <p>Both ran again. A second run on JDK 21 hit, and going back to JDK 27 hit its own entries. So two Java versions on your CI agents and laptops means two separate sets of entries and a lower hit rate. <strong>Fix:</strong> use the same Java version everywhere builds share a cache.</p>
 
   <h2>What the server's counters can and cannot tell you</h2>
-  <p>The status page counts hits and misses, but those are individual lookups, not tasks. My four-task project stored six entries on its first build, because Gradle also caches work such as compiling the build script. So use the server's hit rate to watch the trend, and use <code>FROM-CACHE</code> in the build output to see which tasks missed. A hit rate that never climbs while the eviction counter keeps rising points at a cache that is too small instead. See <a href="/build-cache-eviction-size-limit/">how eviction works</a> and <a href="/monitor-build-cache-prometheus-grafana/">monitoring</a>.</p>
+  <p>The status page counts hits and misses, but those are individual lookups, not tasks. My four-task project stored six entries on its first build, so the counters do not map one-to-one to tasks. Use the server's hit rate to watch the trend, and use <code>FROM-CACHE</code> in the build output to see which tasks missed. A hit rate that never climbs while the eviction counter keeps rising points at a cache that is too small instead. See <a href="/build-cache-eviction-size-limit/">how eviction works</a> and <a href="/monitor-build-cache-prometheus-grafana/">monitoring</a>.</p>
 
-  <p class="muted-note">Not tested here: Gradle versions other than 9.8.0, and Java toolchains. Related: <a href="/gradle-remote-cache-not-working/">Gradle remote build cache not working</a> and <a href="/gradle-build-cache-tutorial/">the tutorial</a>.</p>
+  <p class="muted-note">Not tested here: Gradle versions other than 9.8.0, Java toolchains, and Gradle's path-sensitivity annotations mentioned above. Related: <a href="/gradle-remote-cache-not-working/">Gradle remote build cache not working</a> and <a href="/gradle-build-cache-tutorial/">the tutorial</a>.</p>
   <div class="cta-row">
     <a class="btn" href="/gradle-remote-cache-not-working/">Not working at all?</a>
     <a class="btn btn-secondary" href="/">FosterStack home</a>
