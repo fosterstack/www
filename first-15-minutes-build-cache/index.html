@@ -150,7 +150,7 @@ gradle build --build-cache
 gradle clean
 gradle build --build-cache
 &gt; Task :compileJava FROM-CACHE</code></pre>
-  <p>In my run the first build printed <code>&gt; Task :compileJava</code> and the second <code>&gt; Task :compileJava FROM-CACHE</code>, and the status page showed one entry and one hit. For a fuller walk-through, see the <a href="/gradle-build-cache-tutorial/">Gradle build cache tutorial</a>. If the second build does not show it, see <a href="/gradle-remote-cache-not-working/">Gradle remote build cache not working</a>.</p>
+  <p>In my run the first build printed <code>&gt; Task :compileJava</code> and the second <code>&gt; Task :compileJava FROM-CACHE</code>, and the status page showed one entry and one hit. (I had turned Gradle's local cache off in this test, so the hit had to come from the server. With it on, a hit can come from your own machine instead, and the server's hit counter may not move. I did not test that case.) For a fuller walk-through, see the <a href="/gradle-build-cache-tutorial/">Gradle build cache tutorial</a>. If the second build does not show it, see <a href="/gradle-remote-cache-not-working/">Gradle remote build cache not working</a>.</p>
 
   <h3>7. Before you roll it out to a team</h3>
   <ul class="trust">
