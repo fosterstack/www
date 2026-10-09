@@ -105,7 +105,7 @@ org.gradle.caching=true</code></pre>
   https://cache.example.com/some-key</code></pre>
 
   <h2>4. Is the URL right, and is it HTTPS?</h2>
-  <p>Keep the trailing slash on the URL. Gradle adds the cache key straight onto it. Gradle also refuses plain <code>http://</code> to anything except localhost unless you set <code>isAllowInsecureProtocol = true</code>. Use HTTPS in real deployments, because Gradle sends the password with every request.</p>
+  <p>Keep the trailing slash on the URL. Gradle adds the cache key straight onto it. Gradle also refuses plain <code>http://</code> unless you set <code>isAllowInsecureProtocol = true</code>. In our test with Gradle 9.8.0, the address <code>127.0.0.1</code> was allowed without it, but the name <code>localhost</code> was refused. Use HTTPS in real deployments, because Gradle sends the password with every request.</p>
   <p>One trap in test setups: some sample projects run a check that fails any build containing an <code>http://</code> URL, including the cache URL. That is the check, not the cache.</p>
 
   <h2>5. Is the server seeing requests?</h2>
