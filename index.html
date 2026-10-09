@@ -141,31 +141,15 @@ curl localhost:8080/healthz   # -&gt; ok</code></pre>
   </div>
 
   <h2>More than kept patched.</h2>
-  <p>Security is what sets this product apart. The release items below ship in the current release. The supply-chain items describe how we work today, in our own build and CI. You can check each one yourself.</p>
-  <h3>Signed and verifiable</h3>
   <ul class="trust">
-    <li><strong>Signed releases.</strong> Images and the checksums file are signed with Sigstore, with no signing key stored anywhere. <a href="https://github.com/fosterstack/cache/blob/main/docs/verify-images.md">How to verify</a>.</li>
-    <li><strong>Build provenance.</strong> Every image and binary archive carries a signed statement naming the CI run that built it.</li>
-    <li><strong>A bill of materials.</strong> Every binary archive ships with an SBOM.</li>
-    <li><strong>Published vulnerability statements.</strong> A VEX file with each release says which known vulnerabilities do and do not affect it.</li>
-    <li><strong>Reproducible.</strong> Each image is assembled a second time on a separate machine, and the digests must match or the release fails.</li>
+    <li>Signed releases you can verify in minutes.</li>
+    <li>Build record, parts list (SBOM) and vulnerability statements published with every release.</li>
+    <li>Scanned before every release, rescanned every day.</li>
+    <li>Images assembled twice on separate machines; the results must match.</li>
+    <li>Minimal image, no telemetry. FIPS variant available.</li>
+    <li>Vulnerable dependencies fixed fast — our target is 48 hours from disclosure.</li>
   </ul>
-  <h3>Supply chain</h3>
-  <ul class="trust">
-    <li><strong>Pinned build steps.</strong> Every GitHub Action our releases use is pinned to an exact commit, and a check in CI enforces it on every change. The container base image is pinned by digest.</li>
-    <li><strong>Hash-checked installs.</strong> Python tooling in our CI is installed with hash checking, so a swapped package is refused.</li>
-    <li><strong>A 7-day wait.</strong> Our CI holds new dependency versions for 7 days before adopting them, and Dependabot has the same cooling-off period.</li>
-    <li><strong>A daily supply-chain check.</strong> Once a day, everything our build and CI pull in (actions, tools, packages) is checked against public advisory databases and malicious-package reports. Any hit opens an issue.</li>
-    <li><strong>Scanned before release.</strong> Two independent scanners with different databases check every release candidate, and any finding blocks the release unless a published VEX statement explains it. <a href="https://github.com/fosterstack/cache/blob/main/RELEASING.md">RELEASING.md</a>.</li>
-    <li><strong>Rescanned every day.</strong> Every published image is scanned again daily, so a new vulnerability in something we shipped raises an issue.</li>
-  </ul>
-  <h3>Small, quiet and patched</h3>
-  <ul class="trust">
-    <li><strong>Tiny and quiet.</strong> A distroless image with one static program and no shell. It sends no telemetry and makes no outbound connections.</li>
-    <li><strong>A FIPS build.</strong> A FIPS variant uses Go's validated FIPS 140-3 cryptographic module.</li>
-    <li><strong>Patched for everyone.</strong> Vulnerable dependencies fixed fast — our target is 48 hours from disclosure. Security patches are never withheld from the free tier.</li>
-    <li><strong>Report a problem privately.</strong> See the <a href="/security/">security policy</a>.</li>
-  </ul>
+  <p><a href="/how-we-build/">How we build</a> · <a href="/security/">Security policy</a> · <a href="/verify-a-release/">Verify a release</a></p>
 
   <h2>Built to be verified, not trusted</h2>
   <p>We're a new vendor asking to sit in your build pipeline, so the burden of proof is on us.
