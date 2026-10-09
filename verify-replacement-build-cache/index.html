@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>What to check in a replacement build cache</title>
-<meta name="description" content="Eight questions to ask before you move to a replacement for the Build Cache Node: protocol, who can write, signed releases, patching, phoning home, operations, licence, and who runs it.">
+<meta name="description" content="Eight questions to ask before you move to a replacement for the Build Cache Node: protocol, who can write, signed releases, patching, phoning home, operations and licence.">
 <link rel="canonical" href="https://fosterstack.com/verify-replacement-build-cache/">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/favicon.ico" sizes="any">
@@ -79,7 +79,7 @@
 </header>
 <main>
   <h1>What to check in a replacement build cache</h1>
-  <p class="lede">A build cache sits inside your supply chain: what it stores ends up in your builds. Before you move to a replacement, ask these eight questions of any candidate. We answer each one for FosterStack Cache, including where the answer is not good yet.</p>
+  <p class="lede">A build cache sits inside your supply chain: what it stores ends up in your builds. Before you move to a replacement, ask these seven questions of any candidate. We answer each one for FosterStack Cache, including where the answer is not good yet.</p>
 
   <h2>1. Does it speak your build tool's protocol?</h2>
   <p>It should work with the tool's own remote cache setting, with nothing extra to install on developer machines. <strong>How to test:</strong> build twice with the local cache turned off and look for <code>FROM-CACHE</code> on the second run. <strong>FosterStack Cache:</strong> Gradle through its <code>HttpBuildCache</code> setting; Maven through Apache's Build Cache Extension.</p>
@@ -101,9 +101,6 @@
 
   <h2>7. What are the licence terms, and what if the project goes away?</h2>
   <p><strong>FosterStack Cache:</strong> MIT licensed, one static binary, nothing you need from us to keep running it. Paid tiers are described for the future, are not built, and security patches are never withheld from the free tier.</p>
-
-  <h2>8. Who already runs it?</h2>
-  <p><strong>FosterStack Cache:</strong> nobody in a real build pipeline yet except us. If that is a dealbreaker today, it is a fair answer. The <a href="https://github.com/fosterstack/cache">README</a> lists what has shipped and what has not.</p>
 
   <div class="cta-row">
     <a class="btn" href="/migrate-build-cache-node/">Gradle and Maven setup</a>
