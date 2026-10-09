@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maven remote build cache setup with the Apache Build Cache Extension</title>
+<meta name="description" content="Set up the Apache Maven Build Cache Extension against a self-hosted remote cache: extension file, config file, credentials, and how to check cache hits. Server side built, acceptance testing in progress.">
+<link rel="canonical" href="https://fosterstack.com/maven-remote-build-cache-setup/">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<style>
+  :root {
+    --bg: #ffffff; --fg: #16181d; --muted: #5b6472; --line: #e4e7ec;
+    --accent: #0d7a5f; --accent-fg: #ffffff; --card: #f6f8f9; --warn-bg: #fff7ed; --warn-line: #fdba74;
+    --mark: #0f4d66;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #101318; --fg: #e8eaf0; --muted: #98a2b3; --line: #262c36;
+      --accent: #2fbf95; --accent-fg: #08110e; --card: #171c23; --warn-bg: #241a10; --warn-line: #7c4a12;
+      --mark: #e8eaf0;
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 44rem; margin: 0 auto; padding: 0 1.25rem 4rem; }
+  header.site { max-width: 44rem; margin: 0 auto; padding: 1.25rem; display: flex; align-items: baseline; gap: .6rem; }
+  .logo { font-weight: 700; font-size: 1.05rem; letter-spacing: -.01em; }
+  .logo span { color: var(--accent); }
+  .logo .mark { width: 1.2em; height: 1.2em; vertical-align: -.24em; margin-right: .4em; }
+  .tag { color: var(--muted); font-size: .85rem; }
+  .notice {
+    background: var(--warn-bg); border: 1px solid var(--warn-line); border-radius: 8px;
+    padding: .7rem 1rem; font-size: .92rem; margin: 1.5rem 0 2.5rem;
+  }
+  h1 { font-size: 2rem; line-height: 1.2; letter-spacing: -.02em; margin-bottom: 1rem; }
+  .lede { font-size: 1.12rem; color: var(--muted); margin-bottom: 2rem; }
+  h2 { font-size: 1.25rem; margin: 3rem 0 .9rem; letter-spacing: -.01em; }
+  p + p { margin-top: .8rem; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: .8rem; margin-top: 1rem; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1rem 1.1rem; }
+  .card h3 { font-size: .98rem; margin-bottom: .35rem; }
+  .card p { font-size: .9rem; color: var(--muted); }
+  ul.trust { list-style: none; margin-top: .5rem; }
+  ul.trust li { padding: .45rem 0 .45rem 1.6rem; position: relative; }
+  ul.trust li::before { content: "✓"; position: absolute; left: .2rem; color: var(--accent); font-weight: 700; }
+  code, pre { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .88em; }
+  code { background: var(--card); border: 1px solid var(--line); border-radius: 5px; padding: .1em .35em; }
+  pre code { background: none; border: 0; padding: 0; color: inherit; font-size: 1em; }
+  button {
+    padding: .7rem 1.3rem; font-size: 1rem; font-weight: 600; cursor: pointer;
+    background: var(--accent); color: var(--accent-fg); border: 0; border-radius: 8px;
+  }
+  button:disabled { opacity: .6; cursor: default; }
+  table { width: 100%; border-collapse: collapse; font-size: .92rem; margin-top: 1rem; }
+  th, td { text-align: left; padding: .55rem .6rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  pre { background: #0f172a; color: #e2e8f0; padding: .9rem 1rem; border-radius: 8px;
+        overflow-x: auto; font-size: .9rem; line-height: 1.5; }
+  .cta-row { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1.1rem; }
+  .btn { display: inline-block; padding: .55rem 1rem; border-radius: 8px; font-weight: 600;
+         text-decoration: none; background: var(--accent); color: #fff; }
+  .btn-secondary { background: transparent; color: inherit; border: 1px solid #cbd5e1; }
+  .muted-note { color: var(--muted); font-size: .93rem; margin-top: 1.1rem; }
+  footer { border-top: 1px solid var(--line); margin-top: 4rem; padding: 1.5rem 1.25rem 3rem; }
+  footer div { max-width: 44rem; margin: 0 auto; color: var(--muted); font-size: .82rem; }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<header class="site">
+  <div class="logo"><svg class="mark" viewBox="0 0 96 96" aria-hidden="true" focusable="false"><rect x="12" y="14" width="72" height="18" rx="5" fill="var(--mark)"/><rect x="12" y="39" width="48" height="18" rx="5" fill="var(--mark)"/><rect x="12" y="64" width="26" height="18" rx="5" fill="var(--accent)"/></svg>foster<span>stack</span></div>
+  <div class="tag">Infrastructure worth keeping — and kept patched.</div>
+</header>
+<main>
+  <h1>Maven remote build cache setup with the Apache Build Cache Extension</h1>
+  <p class="lede">Share Maven build results across machines using Apache's Build Cache Extension and a self-hosted cache server. About ten minutes. The server side is built; its acceptance testing is still in progress, so treat Maven as newer than Gradle here.</p>
+
+  <h2>Who owns what</h2>
+  <p>The client is Apache's Maven Build Cache Extension. We maintain the server. If your hit rate looks low, that is usually the extension's own project settings (which files count as inputs, what to skip), not the server. Start with the extension's configuration guide.</p>
+
+  <h2>1. Add the extension</h2>
+  <p>In <code>.mvn/extensions.xml</code> (create it if it is missing):</p>
+  <pre><code>&lt;extensions&gt;
+  &lt;extension&gt;
+    &lt;groupId&gt;org.apache.maven.extensions&lt;/groupId&gt;
+    &lt;artifactId&gt;maven-build-cache-extension&lt;/artifactId&gt;
+    &lt;version&gt;1.2.3&lt;/version&gt;
+  &lt;/extension&gt;
+&lt;/extensions&gt;</code></pre>
+  <p>Check Maven Central for the current version. Pin one rather than a range. The versions we test against are the ones in our <a href="https://github.com/fosterstack/cache/blob/main/docs/maven.md">Maven doc</a>; a version outside that list is not something we claim to have tested.</p>
+
+  <h2>2. Point it at the server</h2>
+  <p>Create <code>.mvn/maven-build-cache-config.xml</code>:</p>
+  <pre><code>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;cache xmlns="http://maven.apache.org/BUILD-CACHE-CONFIG/1.2.0"&gt;
+  &lt;configuration&gt;
+    &lt;enabled&gt;true&lt;/enabled&gt;
+  &lt;/configuration&gt;
+  &lt;!-- FosterStack Cache — remote Maven build cache.
+       https://github.com/fosterstack/cache --&gt;
+  &lt;remote enabled="true" id="fosterstack-cache"&gt;
+    &lt;url&gt;https://cache.example.com/&lt;/url&gt;
+  &lt;/remote&gt;
+&lt;/cache&gt;</code></pre>
+  <p>Keep the comment: a cache setting that points at an unfamiliar host looks like data theft to a reviewer without it. Keep the trailing slash on the URL.</p>
+
+  <h2>3. Add the password, if the server has one</h2>
+  <p>In <code>~/.m2/settings.xml</code>, or your CI system's equivalent. The <code>id</code> must match the <code>id</code> in step 2:</p>
+  <pre><code>&lt;settings&gt;
+  &lt;servers&gt;
+    &lt;server&gt;
+      &lt;id&gt;fosterstack-cache&lt;/id&gt;
+      &lt;username&gt;maven&lt;/username&gt;
+      &lt;password&gt;your-password-or-CI-secret&lt;/password&gt;
+    &lt;/server&gt;
+  &lt;/servers&gt;
+&lt;/settings&gt;</code></pre>
+  <p>If the server has no password set, skip this step. For laptops, the server's optional read-only login lets them read the cache without being able to write to it.</p>
+
+  <h2>4. Build, then build again</h2>
+  <pre><code>mvn install</code></pre>
+  <p>The first run fills the cache. A later run from a clean checkout, or after <code>mvn clean install</code>, should show cache hits in the log for modules that did not change. If not, check the id in step 3 matches, then read the extension's own settings.</p>
+
+  <p class="muted-note">Mixed Gradle and Maven shop? Both can use the same server. See <a href="/migrate-build-cache-node/">Gradle and Maven setup</a>. For CI runners, see <a href="/jenkins-ci-build-cache/">Jenkins and CI build cache</a>.</p>
+  <div class="cta-row">
+    <a class="btn" href="/migrate-build-cache-node/">Gradle and Maven setup</a>
+    <a class="btn btn-secondary" href="/">FosterStack home</a>
+  </div>
+</main>
+<footer>
+  <div>
+    <p>FosterStack is not affiliated with, endorsed by, or sponsored by Gradle Inc.
+    "Gradle" and "Develocity" are trademarks of Gradle Inc., used here only to identify
+    compatibility. FosterStack contains no Gradle Inc. code; it is a clean-room implementation
+    of the documented remote build cache HTTP protocol. Apache Maven is a trademark of the
+    Apache Software Foundation; the Maven Build Cache Extension is Apache's project, not
+    ours.</p>
+    <p style="margin-top:.6rem">© 2026 FosterStack · <a href="/regulated/">For regulated markets</a> · <a href="https://github.com/fosterstack/cache">github.com/fosterstack/cache</a> · <a href="mailto:hello@fosterstack.com">hello@fosterstack.com</a></p>
+  </div>
+</footer>
+</body>
+</html>
