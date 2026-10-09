@@ -105,7 +105,7 @@
     <li><strong>Series C:</strong> no <code>maven.compiler.release</code>, first build on Java 27.</li>
   </ul>
   <p>Every build used a fresh copy of the project and an empty local build cache. All builds ran on the same Mac, shared one already-filled local Maven repository (offline), and shared the cache server. Each series started on an empty server. Every build ended with <code>BUILD SUCCESS</code>.</p>
-  <table>
+  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <thead><tr><th>Build</th><th>Series B: Java</th><th>Series B: result</th><th>Series C: Java</th><th>Series C: result</th></tr></thead>
     <tbody>
       <tr><td>1</td><td>21</td><td>Built</td><td>27</td><td>Built</td></tr>
@@ -114,7 +114,7 @@
       <tr><td>4</td><td>27</td><td>Restored</td><td>21</td><td>Restored</td></tr>
       <tr><td>5</td><td>21</td><td>Restored</td><td>27</td><td>Restored</td></tr>
     </tbody>
-  </table>
+  </table></div>
   <p>"Restored" means the log said <code>Found cached build, restoring</code> and Maven skipped the compile and test steps. Series A, with the release setting, gave the same pattern as series B.</p>
 
   <h2>Which jar you get</h2>
