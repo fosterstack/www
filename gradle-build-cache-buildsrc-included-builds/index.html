@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gradle Build Cache with buildSrc and Included Builds</title>
+<meta name="description" content="Do buildSrc and includeBuild use the Gradle build cache? Six real runs against a self-hosted cache show what is restored and what is rebuilt. Release 0.2.1.">
+<meta property="og:title" content="Gradle Build Cache with buildSrc and Included Builds">
+<meta property="og:description" content="Do buildSrc and includeBuild use the Gradle build cache? Six real runs against a self-hosted cache show what is restored and what is rebuilt. Release 0.2.1.">
+<meta property="og:url" content="https://fosterstack.com/gradle-build-cache-buildsrc-included-builds/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="FosterStack">
+<link rel="canonical" href="https://fosterstack.com/gradle-build-cache-buildsrc-included-builds/">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<style>
+  :root {
+    --bg: #ffffff; --fg: #16181d; --muted: #5b6472; --line: #e4e7ec;
+    --accent: #0d7a5f; --accent-fg: #ffffff; --card: #f6f8f9; --warn-bg: #fff7ed; --warn-line: #fdba74;
+    --mark: #0f4d66;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #101318; --fg: #e8eaf0; --muted: #98a2b3; --line: #262c36;
+      --accent: #2fbf95; --accent-fg: #08110e; --card: #171c23; --warn-bg: #241a10; --warn-line: #7c4a12;
+      --mark: #e8eaf0;
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 44rem; margin: 0 auto; padding: 0 1.25rem 4rem; }
+  header.site { max-width: 44rem; margin: 0 auto; padding: 1.25rem; display: flex; align-items: baseline; gap: .6rem; }
+  .logo { font-weight: 700; font-size: 1.05rem; letter-spacing: -.01em; }
+  .logo span { color: var(--accent); }
+  .logo .mark { width: 1.2em; height: 1.2em; vertical-align: -.24em; margin-right: .4em; }
+  .tag { color: var(--muted); font-size: .85rem; }
+  .notice {
+    background: var(--warn-bg); border: 1px solid var(--warn-line); border-radius: 8px;
+    padding: .7rem 1rem; font-size: .92rem; margin: 1.5rem 0 2.5rem;
+  }
+  h1 { font-size: 2rem; line-height: 1.2; letter-spacing: -.02em; margin-bottom: 1rem; }
+  .lede { font-size: 1.12rem; color: var(--muted); margin-bottom: 2rem; }
+  h2 { font-size: 1.25rem; margin: 3rem 0 .9rem; letter-spacing: -.01em; }
+  p + p { margin-top: .8rem; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: .8rem; margin-top: 1rem; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1rem 1.1rem; }
+  .card h3 { font-size: .98rem; margin-bottom: .35rem; }
+  .card p { font-size: .9rem; color: var(--muted); }
+  ul.trust { list-style: none; margin-top: .5rem; }
+  ul.trust li { padding: .45rem 0 .45rem 1.6rem; position: relative; }
+  ul.trust li::before { content: "✓"; position: absolute; left: .2rem; color: var(--accent); font-weight: 700; }
+  code, pre { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .88em; }
+  code { background: var(--card); border: 1px solid var(--line); border-radius: 5px; padding: .1em .35em; }
+  pre code { background: none; border: 0; padding: 0; color: inherit; font-size: 1em; }
+  button {
+    padding: .7rem 1.3rem; font-size: 1rem; font-weight: 600; cursor: pointer;
+    background: var(--accent); color: var(--accent-fg); border: 0; border-radius: 8px;
+  }
+  button:disabled { opacity: .6; cursor: default; }
+  table { width: 100%; border-collapse: collapse; font-size: .92rem; margin-top: 1rem; }
+  th, td { text-align: left; padding: .55rem .6rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  pre { background: #0f172a; color: #e2e8f0; padding: .9rem 1rem; border-radius: 8px;
+        overflow-x: auto; font-size: .9rem; line-height: 1.5; }
+  .cta-row { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1.1rem; }
+  .btn { display: inline-block; padding: .55rem 1rem; border-radius: 8px; font-weight: 600;
+         text-decoration: none; background: var(--accent); color: var(--accent-fg); }
+  .btn-secondary { background: transparent; color: inherit; border: 1px solid var(--muted); }
+  .muted-note { color: var(--muted); font-size: .93rem; margin-top: 1.1rem; }
+  footer { border-top: 1px solid var(--line); margin-top: 4rem; padding: 1.5rem 1.25rem 3rem; }
+  footer div { max-width: 44rem; margin: 0 auto; color: var(--muted); font-size: .82rem; }
+  a { color: var(--accent); }
+  code { overflow-wrap: anywhere; }
+  pre code { overflow-wrap: normal; }
+  .table-scroll { max-width: 100%; overflow-x: auto; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+</style>
+</head>
+<body>
+<header class="site">
+  <div class="logo"><svg class="mark" viewBox="0 0 96 96" aria-hidden="true" focusable="false"><rect x="12" y="14" width="72" height="18" rx="5" fill="var(--mark)"/><rect x="12" y="39" width="48" height="18" rx="5" fill="var(--mark)"/><rect x="12" y="64" width="26" height="18" rx="5" fill="var(--accent)"/></svg>foster<span>stack</span></div>
+  <div class="tag">Infrastructure worth keeping — and kept patched.</div>
+</header>
+<main>
+  <h1>Gradle build cache with buildSrc and included builds: a real run</h1>
+  <p class="lede">If your build has a <code>buildSrc</code> folder or pulls in another build with <code>includeBuild</code>, do those parts use the build cache too? We ran a project with both against a self-hosted cache and recorded which compile tasks came from the cache. The server was FosterStack Cache 0.2.1 and Gradle was 9.8.0.</p>
+
+  <h2>The short answer</h2>
+  <ul class="trust">
+    <li><code>buildSrc</code> and the included build each stored and restored their own <code>compileJava</code> result.</li>
+    <li>An edit in one of them rebuilt that part, and in our runs not the others, unless a public method changed.</li>
+    <li>You set the cache up once, in the root <code>settings.gradle.kts</code>. Nothing is needed inside <code>buildSrc</code> or the included build.</li>
+  </ul>
+
+  <h2>What we ran</h2>
+  <p>Three parts: a <code>buildSrc</code> folder with one Java class, an included build called <code>lib</code> with one Java class, and an <code>app</code> project that uses <code>lib</code>. Every run used a fresh copy of the project, a new empty Gradle home folder, and the local build cache switched off, so the only thing the runs shared was the cache server. All runs used <code>gradle :app:build --console=plain --no-daemon</code> on the same Mac, with Java 27. All six builds ended with <code>BUILD SUCCESSFUL</code>.</p>
+  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
+    <thead><tr><th>Run</th><th>buildSrc</th><th>lib (included build)</th><th>app</th></tr></thead>
+    <tbody>
+      <tr><td>1. First build, as CI would do it</td><td>ran</td><td>ran</td><td>ran</td></tr>
+      <tr><td>2. Fresh copy, same code</td><td>FROM-CACHE</td><td>FROM-CACHE</td><td>FROM-CACHE</td></tr>
+      <tr><td>3. Edit <code>buildSrc</code></td><td>ran</td><td>FROM-CACHE</td><td>FROM-CACHE</td></tr>
+      <tr><td>4. Edit inside a method in <code>lib</code></td><td>FROM-CACHE</td><td>ran</td><td>FROM-CACHE</td></tr>
+      <tr><td>5. Add a public method to <code>lib</code></td><td>FROM-CACHE</td><td>ran</td><td>ran</td></tr>
+      <tr><td>6. Edit only <code>app</code></td><td>FROM-CACHE</td><td>FROM-CACHE</td><td>ran</td></tr>
+    </tbody>
+  </table></div>
+  <p>The columns show the <code>compileJava</code> task of each part. The first build printed a <code>Stored cache entry</code> line for each of the three, so each part has its own entry on the server. This is a row from run 2:</p>
+<pre tabindex="0"><code>&gt; Task :buildSrc:compileJava FROM-CACHE
+&gt; Task :lib:compileJava FROM-CACHE
+&gt; Task :app:compileJava FROM-CACHE</code></pre>
+
+  <h2>What this means for your build</h2>
+  <ul class="trust">
+    <li><strong>buildSrc is cached like any other project.</strong> A change to it recompiled it (run 3). It did not recompile <code>lib</code> or <code>app</code> in our run.</li>
+    <li><strong>An included build is cached too.</strong> Its tasks show up as <code>:lib:compileJava</code> and came from the cache in run 2.</li>
+    <li><strong>A change inside a method did not spread (run 4); a new public method did (run 5).</strong> That matches what we saw with modules in <a href="/gradle-build-cache-monorepo/">Gradle build cache for a monorepo</a>.</li>
+  </ul>
+  <p>We tried one small class in each part. We did not test a <code>buildSrc</code> that holds plugins, convention plugins, or other languages, and we did not test an included build that is itself a large multi-module build.</p>
+
+  <h2>The files we used</h2>
+  <p>Root <code>settings.gradle.kts</code>. The address is for a test on one machine over plain HTTP; use your server's address and HTTPS across a network.</p>
+<pre tabindex="0"><code>rootProject.name = "composite"
+includeBuild("lib")
+include(":app")
+
+buildCache {
+    local { isEnabled = false }
+    remote&lt;HttpBuildCache&gt; {
+        url = uri("http://127.0.0.1:18220/")
+        isPush = true
+        isAllowInsecureProtocol = true
+    }
+}</code></pre>
+  <p>The root <code>gradle.properties</code> has one line, <code>org.gradle.caching=true</code>. <code>buildSrc/build.gradle.kts</code> is <code>plugins { java }</code>. <code>lib/build.gradle.kts</code> is <code>plugins { `java-library` }</code> with <code>group = "demo"</code>, and <code>app/build.gradle.kts</code> adds <code>implementation("demo:lib")</code>.</p>
+
+  <h2>If something does not come from the cache</h2>
+  <p>Work through <a href="/gradle-build-cache-hit-rate-low/">why the hit rate is low</a>. To see what Gradle stores, see <a href="/what-gradle-stores-in-build-cache/">what Gradle stores in the build cache</a>.</p>
+
+  <p class="muted-note">Run on Gradle 9.8.0 with FosterStack Cache 0.2.1, macOS (arm64), Java 27.</p>
+</main>
+
+<footer>
+  <div>
+    <p>FosterStack is not affiliated with, endorsed by, or sponsored by Gradle Inc.
+    "Gradle" and "Develocity" are trademarks of Gradle Inc., used here only to identify
+    compatibility. FosterStack contains no Gradle Inc. code; it is a clean-room implementation
+    of the documented remote build cache HTTP protocol. Apache Maven is a trademark of the
+    Apache Software Foundation; the Maven Build Cache Extension is Apache's project, not
+    ours.</p>
+    <p style="margin-top:.6rem">© 2026 FosterStack · <a href="/build-cache-node-end-of-life/">Build Cache Node end of life</a> · <a href="/migrate-build-cache-node/">Migrate</a> · <a href="/build-cache-node-faq/">FAQ</a> · <a href="/jenkins-ci-build-cache/">CI setup</a> · <a href="/how-we-build/">How we build</a> · <a href="/regulated/">For regulated markets</a> · <a href="https://github.com/fosterstack/cache">github.com/fosterstack/cache</a> · <a href="mailto:hello@fosterstack.com">hello@fosterstack.com</a></p>
+  </div>
+</footer>
+</body>
+</html>
