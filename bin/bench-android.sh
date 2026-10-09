@@ -20,7 +20,7 @@ FS_SHA=7d464d7926cdc0c10636dde754e23a37fc6518e341465c67f58fe88a617aaf6a   # chec
 GR_VER=9.8.0
 GR_URL="https://services.gradle.org/distributions/gradle-${GR_VER}-all.zip"
 GR_SHA=46ac66d47f30f3dacfdf306e0b714a91a34fb94a22ba0a744b280933f47bc0cf   # services.gradle.org/distributions/gradle-9.8.0-all.zip.sha256
-AGP_VER="${BENCH_AGP:-9.4.1}"      # AGP 9.4 needs Gradle >= 9.6.0, SDK Build Tools >= 36.0.0, JDK >= 17, API level <= 37 (developer.android.com release notes)
+AGP_VER="${BENCH_AGP:-9.4.1}"; [[ "$AGP_VER" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "BENCH_AGP must be an exact version like 9.4.1" >&2; exit 1; }      # AGP 9.4 needs Gradle >= 9.6.0, SDK Build Tools >= 36.0.0, JDK >= 17, API level <= 37 (developer.android.com release notes)
 LIMIT="${BENCH_LIMIT:-1500}"       # seconds allowed per build before it is stopped and recorded as TIMEOUT
 PORT=18495
 WORK="$(mktemp -d)"
@@ -62,7 +62,7 @@ echo "image: ${ImageOS:-?} ${ImageVersion:-?}   runner: ${RUNNER_NAME:-?} (${RUN
 echo "java: $("$JAVA_HOME/bin/java" -version 2>&1 | head -1)"
 if [ -n "${BENCH_FSCACHE_BIN:-}${BENCH_GRADLE_BIN:-}" ]; then echo "tools: LOCAL OVERRIDES in use, downloads not checked"; else echo "gradle: ${GR_VER} (distribution checked against pinned sha256)   fscache: v${FS_VER} (checked against checksums.txt value)"; fi
 echo "android sdk: $SDK"; echo "  platforms installed: $PLATFORMS"; echo "  build-tools installed: $BTOOLS"
-echo "  used: compileSdk $COMPILE_SDK, build-tools $BUILD_TOOLS, Android Gradle plugin $AGP_VER (downloaded at run time, not checksum-pinned)"
+echo "  used: compileSdk $COMPILE_SDK, build-tools $BUILD_TOOLS, Android Gradle plugin $AGP_VER (downloaded at run time, not checksum-pinned), together with the Kotlin compiler and plugin that AGP pulls in; SDK auto-download is switched off, so a missing SDK part fails the build"
 echo "per-build limit: ${LIMIT} s; no times are measured by this script"
 
 # ---- project generator
@@ -87,7 +87,7 @@ buildCache {
     }
 }
 EOT
-  printf 'org.gradle.caching=true\norg.gradle.jvmargs=-Xmx3g -Dfile.encoding=UTF-8\nandroid.useAndroidX=false\n' > "$d/gradle.properties"
+  printf 'org.gradle.caching=true\norg.gradle.jvmargs=-Xmx3g -Dfile.encoding=UTF-8\nandroid.useAndroidX=false\nandroid.builder.sdkDownload=false\n' > "$d/gradle.properties"
   printf 'plugins {\n    id("com.android.library") version "%s" apply false\n    id("com.android.application") version "%s" apply false\n}\n' "$AGP_VER" "$AGP_VER" > "$d/build.gradle.kts"
   cat > "$d/lib/build.gradle.kts" <<EOT
 plugins { id("com.android.library") }
@@ -152,7 +152,7 @@ run_build() { # dir cache(on|off) id
 }
 need_ok() { # id: abort the script with the tail of the log if the build did not succeed
   local o; o="$(cat "$WORK/last.txt")"
-  [ "$o" = OK ] || { echo "build $1 ended $o; last lines:" >&2; tail -40 "$WORK/log-$1.txt" >&2; exit 1; }
+  [ "$o" = OK ] || { echo "build $1 ended $o; last lines:" >&2; tail -40 "$WORK/log-$1.txt" >&2; echo "build $1 ended $o (see the job log for the last lines)" >> "${GITHUB_STEP_SUMMARY:-/dev/null}"; exit 1; }
 }
 
 # throwaway build to fill the shared Gradle home with downloads (build cache off)
