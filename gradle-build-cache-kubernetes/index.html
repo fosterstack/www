@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Gradle build cache on Kubernetes</title>
-<meta name="description" content="Run a shared Gradle and Maven build cache on Kubernetes with plain manifests: one replica only, update strategy, sizing, locked-down security context, and in-cluster runners.">
+<title>Gradle build cache on Kubernetes: plain manifests, no Helm chart yet</title>
+<meta name="description" content="Run a shared Gradle and Maven build cache on Kubernetes with plain manifests, since there is no Helm chart yet: one replica only, update strategy, sizing, locked-down security context, and in-cluster runners.">
 <link rel="canonical" href="https://fosterstack.com/gradle-build-cache-kubernetes/">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/favicon.ico" sizes="any">
@@ -78,8 +78,11 @@
   <div class="tag">Infrastructure worth keeping — and kept patched.</div>
 </header>
 <main>
-  <h1>Gradle build cache on Kubernetes</h1>
+  <h1>Gradle build cache on Kubernetes: plain manifests, no Helm chart yet</h1>
   <p class="lede">Run a shared build cache in your cluster with plain manifests: one Deployment, one volume, one Service. There is no Helm chart yet. It has not been through a beta on a production cluster, so treat it that way.</p>
+
+  <h2>Is there a Helm chart?</h2>
+  <p>Not yet. Today the supported way to deploy on Kubernetes is the plain manifests in the <a href="https://github.com/fosterstack/cache/blob/main/docs/kubernetes.md">Kubernetes guide</a>: a Secret, a volume claim, a Deployment and a Service. Copy them into one file and apply it with <code>kubectl apply -f</code>.</p>
 
   <h2>Run exactly one replica</h2>
   <p>Do not scale this out. The cache keeps its index in a database file that one process holds a lock on. A second pod on the same volume does not share the cache; it waits on the lock or fails to start. Two pods on different volumes give you two half-filled caches.</p>
