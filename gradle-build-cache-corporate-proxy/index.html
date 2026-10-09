@@ -105,6 +105,7 @@ systemProp.http.nonProxyHosts=cache.internal.example.com|localhost|127.*</code><
   <p>Use the <code>https</code> pair for an <code>https://</code> cache URL and the <code>http</code> pair for plain HTTP. The last line lists hosts that should skip the proxy.</p>
 
   <h2>What I saw</h2>
+  <p>For the plain-HTTP rows I set <code>isAllowInsecureProtocol = true</code>, which Gradle requires for non-loopback <code>http://</code>. That is for the test rig only; use HTTPS for real.</p>
   <table>
     <tr><th>Setup</th><th>Result</th><th>What the proxy logged</th></tr>
     <tr><td>No proxy settings, cache at <code>&lt;cache-ip&gt;</code></td><td>second build <code>FROM-CACHE</code></td><td>nothing (not used)</td></tr>
@@ -124,12 +125,12 @@ systemProp.http.nonProxyHosts=cache.internal.example.com|localhost|127.*</code><
 curl: (56) CONNECT tunnel failed, response 403      # the proxy said no
 $ curl -sS --noproxy &#x27;*&#x27; https://cache.example.com/healthz
 ok                                                   # the cache is fine</code></pre>
-  <p>Those two lines are what I got from my test proxy refusing, and the cache answering directly. If the first one fails and the second works, ask whoever runs the proxy to allow the cache's host and port.</p>
+  <p>I substituted example hostnames in those commands; the two output lines are the real ones, from my test proxy refusing and from the cache answering directly. If the first one fails and the second works, ask whoever runs the proxy to allow the cache's host and port.</p>
   <p><strong>3. Over HTTPS the proxy only sees the address.</strong> A <code>CONNECT</code> tunnel shows the proxy the host and port and nothing inside, so the password and the cache keys are not visible to it. That also means any rule on the path cannot be applied. This is how the proxy log looked in my run: one <code>CONNECT</code> line per build.</p>
 
   <h2>Checklist</h2>
   <ul class="trust">
-    <li>Ask for the cache's host and port to be allowed through the proxy (HTTPS, usually 443).</li>
+    <li>Ask for the cache's host and port to be allowed through the proxy (HTTPS).</li>
     <li>Put the proxy lines in <code>gradle.properties</code>, with the <code>systemProp.</code> prefix, and list internal hosts in <code>nonProxyHosts</code>.</li>
     <li>Use HTTPS to the cache. See <a href="/build-cache-docker-compose-production/">a production setup with nginx and TLS</a>.</li>
     <li>If the proxy re-signs TLS, Java will need your company's certificate authority. I did not test that case.</li>

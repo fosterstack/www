@@ -152,7 +152,7 @@ volumes:
     <tr><td>Uploads of about 1 MB and 2 MB with nginx's default settings</td><td><strong>413</strong> from nginx, not from the cache</td></tr>
     <tr><td>The same uploads, and 20 MB, after <code>client_max_body_size 1g;</code></td><td>201 each</td></tr>
   </table>
-  <p>The size limit is the one to watch. nginx rejects bodies over 1 MB by default, and Gradle's cache entries are often bigger, so builds would quietly stop storing. The cache itself accepts up to 1 GiB per entry by default, which is why the example uses <code>1g</code>. See <a href="/gradle-build-cache-http-status-codes/">the status codes page</a>.</p>
+  <p>The size limit is the one to watch. nginx rejects bodies over 1 MB by default, and Gradle's cache entries are often bigger, so uploads of larger entries would be refused. The cache itself accepts up to 1 GiB per entry by default, which is why the example uses <code>1g</code>. See <a href="/gradle-build-cache-http-status-codes/">the status codes page</a>.</p>
 
   <h2>Gradle over HTTPS</h2>
   <p>With a certificate Gradle does not trust, the build still succeeds, but without the cache, and prints:</p>

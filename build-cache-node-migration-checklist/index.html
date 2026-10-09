@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Build Cache Node migration checklist for Gradle and Maven</title>
+<title>Build Cache Node migration checklist for Gradle</title>
 <meta name="description" content="A checklist for moving from the Develocity Build Cache Node to FosterStack Cache, with a real run: only the URL changes, first build is cold, rollback works.">
-<meta property="og:title" content="Build Cache Node migration checklist for Gradle and Maven">
+<meta property="og:title" content="Build Cache Node migration checklist for Gradle">
 <meta property="og:description" content="A checklist for moving from the Develocity Build Cache Node to FosterStack Cache, with a real run: only the URL changes, first build is cold, rollback works.">
 <meta property="og:url" content="https://fosterstack.com/build-cache-node-migration-checklist/">
 <meta property="og:type" content="website">
@@ -86,11 +86,11 @@
   <div class="tag">Infrastructure worth keeping — and kept patched.</div>
 </header>
 <main>
-  <h1>Build Cache Node migration checklist for Gradle and Maven</h1>
-  <p class="lede">A short checklist for moving builds from the free Develocity Build Cache Node to FosterStack Cache, with a real run to back it: the same project built against an old node, then against FosterStack Cache 0.2.1, then back. Read why the node is going away in <a href="/build-cache-node-end-of-life/">Build Cache Node end of life</a>.</p>
+  <h1>Build Cache Node migration checklist for Gradle</h1>
+  <p class="lede">A short checklist for moving builds from the Develocity Build Cache Node to FosterStack Cache, with a real run to back it: the same project built against an old node, then against FosterStack Cache 0.2.1, then back. Read why the node is going away in <a href="/build-cache-node-end-of-life/">Build Cache Node end of life</a>.</p>
 
   <h2>What I tested</h2>
-  <p>Gradle 9.8.0 and a small Java project, built twice against each server. The old side was the latest published Build Cache Node image (version 21.2, built June 2025), run locally and set up to allow anonymous reads and writes for the test. The new side was a FosterStack Cache 0.2.1 server with no password. I did not test Maven in this run; for Maven see the <a href="/migrate-build-cache-node/">setup page</a>.</p>
+  <p>Gradle 9.8.0 and a small Java project, built twice against each server. The old side was a Build Cache Node image (version 21.2, built June 2025), run locally and set up to allow anonymous reads and writes for the test. The new side was a FosterStack Cache 0.2.1 server with no password. I did not test Maven in this run; for Maven see the <a href="/migrate-build-cache-node/">setup page</a>.</p>
 
   <h2>The checklist</h2>
   <h3>1. Find every place your builds point at the old node</h3>
@@ -116,7 +116,7 @@
   <p>You can drop it, as above, or keep it. FosterStack Cache uses the whole request path as the key, so a prefix works. Entries under different paths are separate, so pick one and use it everywhere.</p>
 
   <h3>6. Keep the old node running until you are sure</h3>
-  <p>Rolling back is the same one-line change in reverse.</p>
+  <p>With Gradle, rolling back is the same one-line change in reverse; I tested that.</p>
 
   <h3>7. Retire the old node, and check the new one</h3>
   <p>When builds are hitting the new server, stop the old node. Watch the new one with <a href="/monitor-build-cache-prometheus-grafana/">monitoring</a>, and size its disk with <a href="/build-cache-server-sizing/">server sizing</a>.</p>

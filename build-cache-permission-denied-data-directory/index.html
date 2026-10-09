@@ -87,11 +87,11 @@
 </header>
 <main>
   <h1>Build cache server exits with "permission denied" on its data</h1>
-  <p class="lede">You start the container and it stops straight away. The log ends with <code>permission denied</code>. The cause is almost always who owns the data directory. This page shows the failure and the fix, reproduced for real with the 0.2.1 image.</p>
+  <p class="lede">You start the container and it stops straight away. The log ends with <code>permission denied</code>. The cause I reproduced is who owns the data directory. This page shows the failure and the fix, reproduced for real with the 0.2.1 image.</p>
 
   <h2>What you see</h2>
   <p>The container exits with status 1 within a few seconds, and its log says:</p>
-  <pre><code>{{&quot;level&quot;:&quot;ERROR&quot;,&quot;msg&quot;:&quot;fscache: fatal&quot;,&quot;error&quot;:&quot;write shutdown marker: open data/.unclean-shutdown: permission denied&quot;}}</code></pre>
+  <pre><code>{&quot;level&quot;:&quot;ERROR&quot;,&quot;msg&quot;:&quot;fscache: fatal&quot;,&quot;error&quot;:&quot;write shutdown marker: open data/.unclean-shutdown: permission denied&quot;}</code></pre>
 
   <h2>Why it happens</h2>
   <p>The server does not run as root. It runs as user 65532, and it keeps its files in a <code>data</code> folder inside <code>/home/nonroot</code>. If that folder already exists and belongs to someone else, the server cannot write to it and stops.</p>
