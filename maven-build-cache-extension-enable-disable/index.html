@@ -122,7 +122,7 @@ skipCache=true:
   <p>With <code>remote.enabled=false</code> there was no download attempt in the log. With <code>remote.save.enabled=false</code> the build still looked in the server, found nothing, and built locally.</p>
 
   <h2>"Error downloading cache item" on a normal miss</h2>
-  <p>The first build against an empty server printed this line, and it still succeeded:</p>
+  <p>The first build against an empty server printed this line on Maven 3.10.0, and it still succeeded. Maven 3.9.9 prints <code>[INFO] Cache item not found</code> for the same miss:</p>
 <pre tabindex="0"><code>[ERROR] Error downloading cache item: http://127.0.0.1:18160//v1.1/demo/demo/ebb9bceba2f7a6bc/buildinfo.xml
 [INFO] Remote cache is incomplete or missing, trying local build for demo:demo</code></pre>
   <p>In our run this was an ordinary miss: nothing was stored under that key yet, so Maven built the project itself. The next line says so. If you see this line on a cache that you know holds the result, check the address, the login and the proxy: see <a href="/maven-build-cache-extension-not-restoring/">Maven build cache not restoring</a>.</p>
