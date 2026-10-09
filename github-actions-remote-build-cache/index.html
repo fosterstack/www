@@ -205,10 +205,18 @@ jobs:
       <tr><td>Cache flags passed with an empty address</td><td>Not applicable</td><td>Maven stopped with an internal error: <code>NoTransporterException: Cannot access  using the registered transporter factories</code></td></tr>
     </tbody>
   </table></div>
-  <p id="runner-pending"><strong>RUNNER-PENDING</strong>: the hosted-runner result goes here.</p>
-  <!-- RUNNER-PENDING: replace the paragraph above with the GitHub-hosted runner summary table and its run link before this page is merged. -->
-  <p class="muted-note">Gradle 9.8.0 with Java 21.0.12.1. Maven 3.9.9 with Build Cache Extension 1.2.3 and all eight plugin versions pinned. Every build used a fresh copy of the project and an empty local cache. Gradle built a two-module project with the compile tasks only. Maven built a one-module project with two tests. macOS (arm64), one machine.</p>
-  <p class="muted-note">Not tested: the workflow file itself (we did not run these exact YAML lines in GitHub Actions), a hosted runner reaching a real server, other Maven versions, and secrets that are missing as opposed to empty in a real fork pull request. All Maven runs used Maven 3.9.9. On Maven 3.10.0 an ordinary first-time miss is also logged as <code>[ERROR]</code>, so that line alone does not mean a login problem.</p>
+  <p><strong>On a GitHub-hosted machine.</strong> We also ran the Gradle settings from step 2 in a GitHub Actions job, with the cache address and logins passed as environment variables. A FosterStack Cache server ran on the same machine with made-up logins. Four builds:</p>
+  <div class="table-scroll" role="region" aria-label="The four builds on a GitHub-hosted machine" tabindex="0"><table>
+    <thead><tr><th>Build</th><th>Library compile</th><th>App compile</th><th>Entries on the server</th></tr></thead>
+    <tbody>
+      <tr><td>Main build, read-write login, push on</td><td>ran</td><td>ran</td><td>0 to 6</td></tr>
+      <tr><td>Main build again, fresh checkout</td><td>from cache</td><td>from cache</td><td>6 to 6</td></tr>
+      <tr><td>Pull request: read-only login, push off, app changed</td><td>from cache</td><td>ran</td><td>6 to 6</td></tr>
+      <tr><td>All variables empty (fork pull request)</td><td>ran</td><td>ran</td><td>6 to 6</td></tr>
+    </tbody>
+  </table></div>
+  <p>The script also wrote straight to the server with the read-only login and with a wrong password, and would have stopped the run unless it got HTTP 403 and 401. The run passed. <a href="https://github.com/fosterstack/www/actions/runs/38004412787">The run and its log are public</a>, and the script is <a href="/bin/demo-github-actions.sh">bin/demo-github-actions.sh</a>. The server ran on the same machine, so this shows the settings and the environment-variable mechanism work. It does not show that a hosted runner can reach your own server.</p>  <p class="muted-note">Gradle 9.8.0 with Java 21.0.12.1. Maven 3.9.9 with Build Cache Extension 1.2.3 and all eight plugin versions pinned. Every build used a fresh copy of the project and an empty local cache. Gradle built a two-module project with the compile tasks only. Maven built a one-module project with two tests. macOS (arm64), one machine.</p>
+  <p class="muted-note">Not tested: the workflow file above with real secrets (the hosted-runner job used the same settings with made-up logins), a hosted runner reaching a real server, Maven on a hosted runner, other Maven versions, and secrets that are missing as opposed to empty in a real fork pull request. All Maven runs used Maven 3.9.9. On Maven 3.10.0 an ordinary first-time miss is also logged as <code>[ERROR]</code>, so that line alone does not mean a login problem.</p>
 </main>
 <footer>
   <div>
