@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gradle build cache behind a corporate proxy</title>
+<meta name="description" content="How Gradle's remote build cache behaves behind a proxy: the settings, the loopback trap, a proxy that refuses, and how to tell it from a cache error. Real run.">
+<meta property="og:title" content="Gradle build cache behind a corporate proxy">
+<meta property="og:description" content="How Gradle&#x27;s remote build cache behaves behind a proxy: the settings, the loopback trap, a proxy that refuses, and how to tell it from a cache error. Real run.">
+<meta property="og:url" content="https://fosterstack.com/gradle-build-cache-corporate-proxy/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="FosterStack">
+<link rel="canonical" href="https://fosterstack.com/gradle-build-cache-corporate-proxy/">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<style>
+  :root {
+    --bg: #ffffff; --fg: #16181d; --muted: #5b6472; --line: #e4e7ec;
+    --accent: #0d7a5f; --accent-fg: #ffffff; --card: #f6f8f9; --warn-bg: #fff7ed; --warn-line: #fdba74;
+    --mark: #0f4d66;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #101318; --fg: #e8eaf0; --muted: #98a2b3; --line: #262c36;
+      --accent: #2fbf95; --accent-fg: #08110e; --card: #171c23; --warn-bg: #241a10; --warn-line: #7c4a12;
+      --mark: #e8eaf0;
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 44rem; margin: 0 auto; padding: 0 1.25rem 4rem; }
+  header.site { max-width: 44rem; margin: 0 auto; padding: 1.25rem; display: flex; align-items: baseline; gap: .6rem; }
+  .logo { font-weight: 700; font-size: 1.05rem; letter-spacing: -.01em; }
+  .logo span { color: var(--accent); }
+  .logo .mark { width: 1.2em; height: 1.2em; vertical-align: -.24em; margin-right: .4em; }
+  .tag { color: var(--muted); font-size: .85rem; }
+  .notice {
+    background: var(--warn-bg); border: 1px solid var(--warn-line); border-radius: 8px;
+    padding: .7rem 1rem; font-size: .92rem; margin: 1.5rem 0 2.5rem;
+  }
+  h1 { font-size: 2rem; line-height: 1.2; letter-spacing: -.02em; margin-bottom: 1rem; }
+  .lede { font-size: 1.12rem; color: var(--muted); margin-bottom: 2rem; }
+  h2 { font-size: 1.25rem; margin: 3rem 0 .9rem; letter-spacing: -.01em; }
+  p + p { margin-top: .8rem; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: .8rem; margin-top: 1rem; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1rem 1.1rem; }
+  .card h3 { font-size: .98rem; margin-bottom: .35rem; }
+  .card p { font-size: .9rem; color: var(--muted); }
+  ul.trust { list-style: none; margin-top: .5rem; }
+  ul.trust li { padding: .45rem 0 .45rem 1.6rem; position: relative; }
+  ul.trust li::before { content: "✓"; position: absolute; left: .2rem; color: var(--accent); font-weight: 700; }
+  code, pre { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .88em; }
+  code { background: var(--card); border: 1px solid var(--line); border-radius: 5px; padding: .1em .35em; }
+  pre code { background: none; border: 0; padding: 0; color: inherit; font-size: 1em; }
+  button {
+    padding: .7rem 1.3rem; font-size: 1rem; font-weight: 600; cursor: pointer;
+    background: var(--accent); color: var(--accent-fg); border: 0; border-radius: 8px;
+  }
+  button:disabled { opacity: .6; cursor: default; }
+  table { width: 100%; border-collapse: collapse; font-size: .92rem; margin-top: 1rem; }
+  th, td { text-align: left; padding: .55rem .6rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  pre { background: #0f172a; color: #e2e8f0; padding: .9rem 1rem; border-radius: 8px;
+        overflow-x: auto; font-size: .9rem; line-height: 1.5; }
+  .cta-row { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1.1rem; }
+  .btn { display: inline-block; padding: .55rem 1rem; border-radius: 8px; font-weight: 600;
+         text-decoration: none; background: var(--accent); color: #fff; }
+  .btn-secondary { background: transparent; color: inherit; border: 1px solid #cbd5e1; }
+  .muted-note { color: var(--muted); font-size: .93rem; margin-top: 1.1rem; }
+  footer { border-top: 1px solid var(--line); margin-top: 4rem; padding: 1.5rem 1.25rem 3rem; }
+  footer div { max-width: 44rem; margin: 0 auto; color: var(--muted); font-size: .82rem; }
+  a { color: var(--accent); }
+  table { display: block; max-width: 100%; overflow-x: auto; }
+  code { overflow-wrap: anywhere; }
+  pre code { overflow-wrap: normal; }
+</style>
+</head>
+<body>
+<header class="site">
+  <div class="logo"><svg class="mark" viewBox="0 0 96 96" aria-hidden="true" focusable="false"><rect x="12" y="14" width="72" height="18" rx="5" fill="var(--mark)"/><rect x="12" y="39" width="48" height="18" rx="5" fill="var(--mark)"/><rect x="12" y="64" width="26" height="18" rx="5" fill="var(--accent)"/></svg>foster<span>stack</span></div>
+  <div class="tag">Infrastructure worth keeping — and kept patched.</div>
+</header>
+<main>
+  <h1>Gradle build cache behind a corporate proxy</h1>
+  <p class="lede">Many companies make builds reach the network through a proxy. This page shows how Gradle's remote build cache behaves behind one: the settings, the ways it goes wrong, and how to tell a proxy problem from a cache problem. Everything was run for real with Gradle 9.8.0 and FosterStack Cache 0.2.1.</p>
+
+  <h2>What was tested, and what was not</h2>
+  <ul class="trust">
+    <li><strong>Tested:</strong> a small proxy I wrote for the test (it forwards plain HTTP, tunnels HTTPS with <code>CONNECT</code>, can refuse a host, and logs every request), the cache on a non-loopback address, once over plain HTTP and once over HTTPS through nginx with a self-signed certificate that Java was told to trust.</li>
+    <li><strong>Not tested:</strong> a real corporate proxy product, a proxy that asks for a password (407), a proxy that inspects and re-signs TLS, automatic proxy configuration files, the <code>HTTP_PROXY</code> variables, and Maven's proxy settings.</li>
+  </ul>
+
+  <h2>The settings</h2>
+  <p>Gradle takes proxy settings from Java system properties. Put them in <code>~/.gradle/gradle.properties</code> or the project's <code>gradle.properties</code>, with the <code>systemProp.</code> prefix:</p>
+  <pre><code>systemProp.http.proxyHost=proxy.example.com
+systemProp.http.proxyPort=3128
+systemProp.https.proxyHost=proxy.example.com
+systemProp.https.proxyPort=3128
+systemProp.http.nonProxyHosts=cache.internal.example.com|localhost|127.*</code></pre>
+  <p>Use the <code>https</code> pair for an <code>https://</code> cache URL and the <code>http</code> pair for plain HTTP. The last line lists hosts that should skip the proxy.</p>
+
+  <h2>What I saw</h2>
+  <table>
+    <tr><th>Setup</th><th>Result</th><th>What the proxy logged</th></tr>
+    <tr><td>No proxy settings, cache at <code>&lt;cache-ip&gt;</code></td><td>second build <code>FROM-CACHE</code></td><td>nothing (not used)</td></tr>
+    <tr><td>Proxy settings, same plain-HTTP URL</td><td><code>FROM-CACHE</code></td><td><code>GET http://&lt;cache-ip&gt;:18130/&lt;key&gt;</code>, one per build</td></tr>
+    <tr><td>Proxy settings, but the cache URL is <code>127.0.0.1</code></td><td><code>FROM-CACHE</code></td><td><strong>nothing</strong>: Java skips the proxy for loopback addresses</td></tr>
+    <tr><td>Proxy settings, with the cache's address in <code>nonProxyHosts</code></td><td><code>FROM-CACHE</code></td><td><strong>nothing</strong></td></tr>
+    <tr><td>Proxy settings, HTTPS cache, tunnel allowed</td><td><code>FROM-CACHE</code></td><td><code>CONNECT &lt;cache-ip&gt;:18443</code>, one per build</td></tr>
+    <tr><td>Proxy settings, proxy refuses the cache host</td><td>the build succeeds but without the cache (log below)</td><td>the request, answered 403</td></tr>
+  </table>
+
+  <h2>Three things that catch people</h2>
+  <p><strong>1. Testing against localhost skips the proxy.</strong> With the cache at <code>127.0.0.1</code>, Gradle never used the proxy even though it was configured. A setup that works on your laptop against a local cache proves nothing about the proxy path. Test against the real address.</p>
+  <p><strong>2. A refusing proxy looks like a cache error.</strong> When the proxy answered 403 to the tunnel, Gradle printed:</p>
+  <pre><code>Could not load entry d4f2de693b561fd2c5d60b17a9232d6f from remote build cache: Loading entry from &#x27;https://&lt;cache-ip&gt;:18443/d4f2de693b561fd2c5d60b17a9232d6f&#x27; response status 403: Forbidden</code></pre>
+  <p>That is the same text you would get from the cache refusing a write with the read-only login (see <a href="/gradle-build-cache-http-status-codes/">the status codes</a>). To tell them apart, take Gradle out of it and try the same route with curl:</p>
+  <pre><code>$ curl -sS -x http://proxy.example.com:3128 https://cache.example.com/healthz
+curl: (56) CONNECT tunnel failed, response 403      # the proxy said no
+$ curl -sS --noproxy &#x27;*&#x27; https://cache.example.com/healthz
+ok                                                   # the cache is fine</code></pre>
+  <p>Those two lines are what I got from my test proxy refusing, and the cache answering directly. If the first one fails and the second works, ask whoever runs the proxy to allow the cache's host and port.</p>
+  <p><strong>3. Over HTTPS the proxy only sees the address.</strong> A <code>CONNECT</code> tunnel shows the proxy the host and port and nothing inside, so the password and the cache keys are not visible to it. That also means any rule on the path cannot be applied. This is how the proxy log looked in my run: one <code>CONNECT</code> line per build.</p>
+
+  <h2>Checklist</h2>
+  <ul class="trust">
+    <li>Ask for the cache's host and port to be allowed through the proxy (HTTPS, usually 443).</li>
+    <li>Put the proxy lines in <code>gradle.properties</code>, with the <code>systemProp.</code> prefix, and list internal hosts in <code>nonProxyHosts</code>.</li>
+    <li>Use HTTPS to the cache. See <a href="/build-cache-docker-compose-production/">a production setup with nginx and TLS</a>.</li>
+    <li>If the proxy re-signs TLS, Java will need your company's certificate authority. I did not test that case.</li>
+  </ul>
+
+  <p class="muted-note">Related: <a href="/gradle-remote-cache-not-working/">Gradle remote build cache not working</a> and <a href="/gradle-remote-build-cache-authentication/">authentication and 401 errors</a>.</p>
+  <div class="cta-row">
+    <a class="btn" href="/gradle-build-cache-tutorial/">Gradle build cache tutorial</a>
+    <a class="btn btn-secondary" href="/">FosterStack home</a>
+  </div>
+</main>
+<footer>
+  <div>
+    <p>FosterStack is not affiliated with, endorsed by, or sponsored by Gradle Inc.
+    "Gradle" and "Develocity" are trademarks of Gradle Inc., used here only to identify
+    compatibility. FosterStack contains no Gradle Inc. code; it is a clean-room implementation
+    of the documented remote build cache HTTP protocol. Apache Maven is a trademark of the
+    Apache Software Foundation; the Maven Build Cache Extension is Apache's project, not
+    ours.</p>
+    <p style="margin-top:.6rem">© 2026 FosterStack · <a href="/build-cache-node-end-of-life/">Build Cache Node end of life</a> · <a href="/migrate-build-cache-node/">Migrate</a> · <a href="/build-cache-node-faq/">FAQ</a> · <a href="/jenkins-ci-build-cache/">CI setup</a> · <a href="/how-we-build/">How we build</a> · <a href="/regulated/">For regulated markets</a> · <a href="https://github.com/fosterstack/cache">github.com/fosterstack/cache</a> · <a href="mailto:hello@fosterstack.com">hello@fosterstack.com</a></p>
+  </div>
+</footer>
+</body>
+</html>
