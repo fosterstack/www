@@ -29,6 +29,7 @@ ALLOW_PATTERNS=(
   '^favicon-(16|32)\.png$'
   '^apple-touch-icon\.png$'
   '^\.gitignore$'
+  '^\.well-known/security\.txt$'
   '^\.githooks/pre-commit$'
   '^bin/check-file-allowlist\.sh$'
   '^\.github/workflows/[A-Za-z0-9._-]+\.ya?ml$'

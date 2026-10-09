@@ -20,4 +20,29 @@
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
+  <url>
+    <loc>https://fosterstack.com/migrate-build-cache-node/</loc>
+    <loc>https://fosterstack.com/jenkins-ci-build-cache/</loc>
+    <loc>https://fosterstack.com/build-cache-node-faq/</loc>
+    <loc>https://fosterstack.com/how-we-build/</loc>
+    <loc>https://fosterstack.com/gradle-remote-cache-not-working/</loc>
+    <loc>https://fosterstack.com/verify-replacement-build-cache/</loc>
+    <loc>https://fosterstack.com/long-term-support-build-cache/</loc>
+    <loc>https://fosterstack.com/build-cache-server-sizing/</loc>
+    <loc>https://fosterstack.com/air-gapped-build-cache-install/</loc>
+    <loc>https://fosterstack.com/maven-remote-build-cache-setup/</loc>
+    <loc>https://fosterstack.com/security/</loc>
+    <loc>https://fosterstack.com/gradle-build-cache-docker-compose/</loc>
+    <loc>https://fosterstack.com/gradle-build-cache-kubernetes/</loc>
+    <loc>https://fosterstack.com/changelog/</loc>
+    <loc>https://fosterstack.com/verify-container-image-signature-cosign/</loc>
+    <loc>https://fosterstack.com/remote-build-cache-security/</loc>
+    <loc>https://fosterstack.com/verify-a-release/</loc>
+    <loc>https://fosterstack.com/monitor-build-cache-prometheus-grafana/</loc>
+    <loc>https://fosterstack.com/fips-140-3-build-cache/</loc>
+    <loc>https://fosterstack.com/gradle-build-cache-http-status-codes/</loc>
+    <loc>https://fosterstack.com/reset-gradle-build-cache/</loc>
+    <loc>https://fosterstack.com/gradle-build-cache-tutorial/</loc>
+    <lastmod>2026-10-08</lastmod>
+  </url>
 </urlset>

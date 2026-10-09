@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Build Cache Node end of life: what happens and your options</title>
-<meta name="description" content="The free Develocity Build Cache Node will no longer be distributed or supported after December 31, 2026. What stops, what keeps working, and the three options a team has.">
-<link rel="canonical" href="https://fosterstack.com/build-cache-node-end-of-life/">
+<title>Migrate from Build Cache Node: Gradle and Maven setup</title>
+<meta name="description" content="Replace the Develocity Build Cache Node with a self-hosted cache in about 30 minutes: server command, Gradle and Maven config snippets, and how to check it works.">
+<link rel="canonical" href="https://fosterstack.com/migrate-build-cache-node/">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -78,40 +78,91 @@
   <div class="tag">Infrastructure worth keeping — and kept patched.</div>
 </header>
 <main>
-  <h1>Build Cache Node end of life: what happens and your options</h1>
-  <p class="lede">The free Develocity Build Cache Node will no longer be distributed or supported after December&nbsp;31, 2026. Here is what that means for your builds, and the three things a team can do.</p>
+  <h1>Migrate from Build Cache Node: Gradle and Maven setup</h1>
+  <p class="lede">Stand up a replacement cache, change one URL, check that it works. About 30 minutes for Gradle. There is no data to move.</p>
 
-  <h2>What stops on December 31</h2>
-  <p>Gradle Inc. says the free standalone Build Cache Node "will no longer be distributed, supported or available after December&nbsp;31,&nbsp;2026." In plain words:</p>
-  <ul class="trust">
-    <li>It will no longer be distributed.</li>
-    <li>It will no longer be supported.</li>
-    <li>It will no longer be available.</li>
-  </ul>
-  <p class="muted-note">Source: the vendor's <a href="https://docs.develocity.ai/bcn/21.2/">official notice</a>.</p>
+  <h2>Before you start</h2>
+  <p>A build cache holds copies of things your builds can always rebuild, so there is nothing to export from the old node. Your first build on the new server just fills it. If you have not read why the node is going away, see <a href="/build-cache-node-end-of-life/">Build Cache Node end of life</a>.</p>
 
-  <h2>What keeps working</h2>
-  <p>What happens to a node you already run is for the vendor to say, so read their notice. What holds for any build cache: it only speeds builds up, so if it is slow, empty or down, the worst case is a slower build, not a wrong one.</p>
-  <p>What changes is that the vendor says it will no longer support it.</p>
+  <h2>Step 1: Run the new cache server</h2>
+  <pre><code>docker run -d -p 127.0.0.1:8080:8080 -v fscache-data:/home/nonroot ghcr.io/fosterstack/cache:latest</code></pre>
+  <p>For anything beyond a first look, pin a specific version instead of <code>latest</code>. This command listens on this machine only. For other machines to use it, put an HTTPS proxy in front. Other ways to run it: <a href="https://github.com/fosterstack/cache/blob/main/docs/install.md">bare binary with systemd</a>, <a href="https://github.com/fosterstack/cache/blob/main/docs/kubernetes.md">Kubernetes</a>, or a <a href="https://github.com/fosterstack/cache/blob/main/docs/offline-install.md">disconnected network</a>.</p>
+  <p>If the server can be reached by anyone you do not trust, turn on Basic Auth. Anyone who can write to the cache can change what your later builds use.</p>
 
-  <h2>Your three options</h2>
-  <div class="cards">
-    <div class="card"><h3>1. Stay on the old node</h3><p>Costs nothing today. After the date the vendor will no longer support it, so keeping it safe is on you.</p></div>
-    <div class="card"><h3>2. Move to the vendor's paid platform</h3><p>Check the vendor's own notice, linked above, for what it offers and what it costs.</p></div>
-    <div class="card"><h3>3. Self-host a replacement</h3><p>Same protocol, your servers, no subscription. FosterStack Cache is one such replacement.</p></div>
-  </div>
+  <h2>Step 2: Gradle build cache setup</h2>
+  <p>Turn the cache on, in <code>gradle.properties</code>:</p>
+  <pre><code>org.gradle.caching=true</code></pre>
+  <p>Then point Gradle at the new server in <code>settings.gradle.kts</code>. If you used the old node, you only change the URL:</p>
+  <pre><code>// FosterStack Cache — remote Gradle build cache.
+// https://github.com/fosterstack/cache
+buildCache {
+    remote&lt;HttpBuildCache&gt; {
+        url = uri("https://cache.example.com/")
+        isPush = true
+        credentials {
+            username = "gradle"
+            password = System.getenv("FSCACHE_PASSWORD")
+        }
+    }
+}</code></pre>
+  <p>Or in <code>settings.gradle</code> (Groovy):</p>
+  <pre><code>// FosterStack Cache — remote Gradle build cache.
+// https://github.com/fosterstack/cache
+buildCache {
+    remote(HttpBuildCache) {
+        url = 'https://cache.example.com/'
+        push = true
+        credentials {
+            username = 'gradle'
+            password = System.getenv('FSCACHE_PASSWORD')
+        }
+    }
+}</code></pre>
+  <p>Keep the comment lines: a cache block that points at an unfamiliar host looks like data theft to a reviewer without them. Keep the trailing slash on the URL. Leave the credentials block in even if the server has no password yet; it is ignored then.</p>
 
-  <h2>What FosterStack Cache is today</h2>
-  <ul class="trust">
-    <li>A self-hosted remote build cache for Gradle. It speaks Gradle's own <code>HttpBuildCache</code> protocol, so moving is mostly a URL change.</li>
-    <li>Maven too, through the Apache Maven Build Cache Extension.</li>
-    <li>MIT licensed. One static binary or one container image on GitHub's registry.</li>
-    <li>Releases are signed, and the evidence (SBOM, build provenance, vulnerability statements) is public.</li>
-  </ul>
-  <p>It is early. The paid tiers are not built. Everything you can download today is the free core.</p>
+  <h2>Step 3: Maven build cache setup</h2>
+  <p>Maven uses Apache's Build Cache Extension. FosterStack Cache implements the server side of it.</p>
+  <p>Add the extension in <code>.mvn/extensions.xml</code> (check Maven Central for the current version):</p>
+  <pre><code>&lt;extensions&gt;
+  &lt;extension&gt;
+    &lt;groupId&gt;org.apache.maven.extensions&lt;/groupId&gt;
+    &lt;artifactId&gt;maven-build-cache-extension&lt;/artifactId&gt;
+    &lt;version&gt;1.2.3&lt;/version&gt;
+  &lt;/extension&gt;
+&lt;/extensions&gt;</code></pre>
+  <p>Point it at the server in <code>.mvn/maven-build-cache-config.xml</code>:</p>
+  <pre><code>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;cache xmlns="http://maven.apache.org/BUILD-CACHE-CONFIG/1.2.0"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://maven.apache.org/BUILD-CACHE-CONFIG/1.2.0 https://maven.apache.org/xsd/build-cache-config-1.2.0.xsd"&gt;
+  &lt;configuration&gt;
+    &lt;enabled&gt;true&lt;/enabled&gt;
+    &lt;!-- FosterStack Cache — remote Maven build cache.
+         https://github.com/fosterstack/cache --&gt;
+    &lt;remote enabled="true" saveToRemote="true" id="fosterstack-cache"&gt;
+      &lt;url&gt;https://cache.example.com/&lt;/url&gt;
+    &lt;/remote&gt;
+  &lt;/configuration&gt;
+&lt;/cache&gt;</code></pre>
+  <p>The <code>remote</code> element must be inside <code>configuration</code>, and <code>saveToRemote="true"</code> is what makes the machine upload; without it the server stays empty. If the server uses Basic Auth, add a matching <code>&lt;server&gt;</code> with the same <code>id</code> (<code>fosterstack-cache</code>) in <code>~/.m2/settings.xml</code>. Then run <code>mvn install</code>.</p>
+  <p>The extension itself is Apache's project. If your hit rate looks low, start with the extension's own configuration guide.</p>
+
+  <h2>Step 4: Check that it works</h2>
+  <p>For Gradle, run the build twice:</p>
+  <pre><code>./gradlew build --build-cache</code></pre>
+  <p>On the second run, look for <code>FROM-CACHE</code> next to tasks. Gradle also has a local cache that gives hits even when the remote is broken, so to test the remote itself, clear the local one and run with <code>-i</code>:</p>
+  <pre><code>rm -rf ~/.gradle/caches/build-cache-1
+./gradlew --stop
+./gradlew build --build-cache -i</code></pre>
+  <p>On the server, the hit and miss counters should move:</p>
+  <pre><code>curl -s https://cache.example.com/metrics | grep -E 'fscache_cache_(hits|misses)_total'</code></pre>
+  <p>For Maven, build twice from a clean checkout and look for cache hits in the log for unchanged modules.</p>
+
+  <h2>Step 5: Retire the old node</h2>
+  <p>Once builds hit the new server, stop the old Build Cache Node container.</p>
 
   <h2>Security is the difference</h2>
-  <p>Security is what we are building this product around. The release items below ship in the current release. The supply-chain items describe how we work today, in our own build and CI. You can check each one yourself.</p>
+  <p>Security is what sets this product apart. The release items below ship in the current release. The supply-chain items describe how we work today, in our own build and CI. You can check each one yourself.</p>
   <h3>Signed and verifiable</h3>
   <ul class="trust">
     <li><strong>Signed releases.</strong> Images and the checksums file are signed with Sigstore, with no signing key stored anywhere. <a href="https://github.com/fosterstack/cache/blob/main/docs/verify-images.md">How to verify</a>.</li>
@@ -137,10 +188,12 @@
     <li><strong>Report a problem privately.</strong> See the <a href="/security/">security policy</a>.</li>
   </ul>
 
-  <h2>Next step</h2>
-  <p>Read the <a href="https://github.com/fosterstack/cache/blob/main/docs/migrate-from-bcn.md">migration guide</a> or the <a href="https://github.com/fosterstack/cache">source on GitHub</a>. There is no signup and no form.</p>
+  <h2>What you give up</h2>
+  <p>The old node had a small web page with a purge button. FosterStack Cache has no settings page. You set it with flags and environment variables, and a read-only status page shows size and hit counts. To empty the cache, remove its volume and start again.</p>
+
+  <p class="muted-note">Full details: <a href="https://github.com/fosterstack/cache/blob/main/docs/gradle.md">Gradle docs</a>, <a href="https://github.com/fosterstack/cache/blob/main/docs/maven.md">Maven docs</a>, <a href="https://github.com/fosterstack/cache/blob/main/docs/migrate-from-bcn.md">migration guide on GitHub</a>.</p>
   <div class="cta-row">
-    <a class="btn" href="https://github.com/fosterstack/cache/blob/main/docs/migrate-from-bcn.md">Migration guide</a>
+    <a class="btn" href="https://github.com/fosterstack/cache">FosterStack Cache on GitHub</a>
     <a class="btn btn-secondary" href="/">FosterStack home</a>
   </div>
 </main>

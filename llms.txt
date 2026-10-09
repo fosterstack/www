@@ -12,13 +12,40 @@ distribution, support, or updates after 2026-12-31. Teams running it on open-sou
 Gradle, with no Develocity licence, are orphaned on 2027-01-01. FosterStack Cache
 speaks Gradle's documented `HttpBuildCache` protocol — acceptance-tested against a
 real multi-module Gradle build in CI — and implements the Apache Maven Build Cache
-Extension's remote HTTP mode (Maven acceptance coverage is in progress). Same server,
+Extension's remote HTTP mode. Same server,
 same core.
 
 It is a single static Go binary (`CGO_ENABLED=0`), MIT-licensed, distributed as bare
 binaries and distroless container images. Every release is keylessly signed with
 Sigstore and carries SLSA build provenance, so the exact bytes you deploy are
 verifiable against the CI run that produced them.
+
+## Guides on this site
+
+- [Build Cache Node end of life](https://fosterstack.com/build-cache-node-end-of-life/): what happens and your options.
+- [Migrate from Build Cache Node](https://fosterstack.com/migrate-build-cache-node/): Gradle and Maven setup and how to check it works.
+- [Questions and answers](https://fosterstack.com/build-cache-node-faq/): cost, readiness, security, what is not built.
+- [Jenkins and CI build cache](https://fosterstack.com/jenkins-ci-build-cache/): one shared cache for CI runners.
+- [Gradle remote build cache not working](https://fosterstack.com/gradle-remote-cache-not-working/): six checks when nothing comes from the cache.
+- [Maven remote build cache setup](https://fosterstack.com/maven-remote-build-cache-setup/): extension, config, credentials, checking hits.
+- [Gradle build cache with Docker Compose](https://fosterstack.com/gradle-build-cache-docker-compose/): password, size cap, volume, health checks.
+- [Gradle build cache on Kubernetes](https://fosterstack.com/gradle-build-cache-kubernetes/): one replica, sizing, security context.
+- [Security policy](https://fosterstack.com/security/): how to report a vulnerability, what we sign and publish.
+- [Verify a release yourself](https://fosterstack.com/verify-a-release/): every command with real output from 0.2.1.
+- [FIPS 140-3 build cache](https://fosterstack.com/fips-140-3-build-cache/): run the FIPS image and confirm FIPS mode.
+- [Monitor a build cache](https://fosterstack.com/monitor-build-cache-prometheus-grafana/): metrics, queries, Grafana dashboard.
+- [Gradle build cache HTTP status codes](https://fosterstack.com/gradle-build-cache-http-status-codes/): 401, 403, 404, 413 explained.
+- [Reset a build cache](https://fosterstack.com/reset-gradle-build-cache/): how to empty it.
+- [Is a remote build cache safe](https://fosterstack.com/remote-build-cache-security/): who can write to it.
+- [Changelog](https://fosterstack.com/changelog/): release notes for v0.1.0 and v0.2.1.
+- [Gradle build cache tutorial](https://fosterstack.com/gradle-build-cache-tutorial/): a real first build and FROM-CACHE hit.
+- [Verify a container image signature with cosign](https://fosterstack.com/verify-container-image-signature-cosign/): the two commands and what they prove.
+- [For regulated markets](https://fosterstack.com/regulated/): the FIPS build and the public release evidence.
+- [Server sizing](https://fosterstack.com/build-cache-server-sizing/): CPU, RAM, disk and the size cap.
+- [Air-gapped install](https://fosterstack.com/air-gapped-build-cache-install/): download, verify, transfer, run.
+- [What to check in a replacement build cache](https://fosterstack.com/verify-replacement-build-cache/): eight questions to ask.
+- [Long-term support](https://fosterstack.com/long-term-support-build-cache/): what is supported today.
+- [How FosterStack Cache is built and signed](https://fosterstack.com/how-we-build/): the release steps and what you can verify.
 
 ## Product
 
@@ -49,14 +76,13 @@ verifiable against the CI run that produced them.
 
 ## Status
 
-FosterStack Cache is at v0.1 — early. The cache core, HTTP surface, eviction,
+FosterStack Cache is at v0.2 — early. The cache core, HTTP surface, eviction,
 metrics and the signed release pipeline are shipped and testable today. There is no
 published schedule for what follows; the roadmap below says direction, not dates.
 
 Not yet shipped:
 
-- Production use beyond the project's own CI. Nobody runs this in a real build
-  pipeline yet except the maintainer.
+- Production use beyond the project's own CI.
 - A Helm chart. Deploying to Kubernetes today means applying plain manifests.
 - The paid tiers. Team ($49/mo: multi-user access control, SSO, per-project
   analytics, email support), Business ($199/mo: adds HA/replication, priority
