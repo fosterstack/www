@@ -86,6 +86,7 @@
     Gradle Inc. has deprecated the free Develocity Build Cache Node: it "will no longer be
     distributed, supported or available after December&nbsp;31,&nbsp;2026." The migration path they
     offer requires a commercial Develocity subscription.
+    <a href="/build-cache-node-end-of-life/">What that means and your options</a>.
   </div>
 
   <h1>Your build cache shouldn't die with its vendor.</h1>
@@ -200,6 +201,31 @@ curl localhost:8080/healthz   # -&gt; ok</code></pre>
     without a procurement cycle.
   </p>
 
+  <h2>Guides</h2>
+  <ul class="trust">
+    <li><a href="/build-cache-node-end-of-life/">Build Cache Node end of life: what happens and your options</a></li>
+    <li><a href="/migrate-build-cache-node/">Migrate from Build Cache Node: Gradle and Maven setup</a></li>
+    <li><a href="/jenkins-ci-build-cache/">Jenkins and CI build cache</a></li>
+    <li><a href="/gradle-remote-cache-not-working/">Gradle remote build cache not working</a></li>
+    <li><a href="/maven-remote-build-cache-setup/">Maven remote build cache setup</a></li>
+    <li><a href="/gradle-build-cache-docker-compose/">Gradle build cache with Docker Compose</a></li>
+    <li><a href="/gradle-build-cache-kubernetes/">Gradle build cache on Kubernetes</a></li>
+    <li><a href="/security/">Security policy: how to report a vulnerability</a></li>
+    <li><a href="/build-cache-server-sizing/">How big a server does a build cache need?</a></li>
+    <li><a href="/air-gapped-build-cache-install/">Install on an air-gapped network</a></li>
+    <li><a href="/verify-replacement-build-cache/">What to check in a replacement build cache</a></li>
+    <li><a href="/how-we-build/">How FosterStack Cache is built and signed</a></li>
+    <li><a href="/long-term-support-build-cache/">Long-term support: what is supported today</a></li>
+    <li><a href="/verify-a-release/">Verify a release yourself: signature, provenance, SBOM, VEX</a></li>
+    <li><a href="/fips-140-3-build-cache/">FIPS 140-3 build cache: run the FIPS image and confirm it</a></li>
+    <li><a href="/monitor-build-cache-prometheus-grafana/">Monitor a build cache with Prometheus and Grafana</a></li>
+    <li><a href="/gradle-build-cache-http-status-codes/">Gradle build cache HTTP status codes: 401, 403, 404, 413</a></li>
+    <li><a href="/reset-gradle-build-cache/">How to clear or reset a self-hosted build cache</a></li>
+    <li><a href="/remote-build-cache-security/">Is a remote build cache safe? Who can write to it</a></li>
+    <li><a href="/changelog/">Changelog</a></li>
+    <li><a href="/build-cache-node-faq/">Questions and answers</a></li>
+  </ul>
+
   <h2>Roadmap honesty</h2>
   <p>Gradle and Maven both run against the same server today; we maintain the cache
   server, while the Maven client side is Apache's own Build Cache Extension. A dependency cache —
@@ -220,7 +246,7 @@ curl localhost:8080/healthz   # -&gt; ok</code></pre>
     of the documented remote build cache HTTP protocol. Apache Maven is a trademark of the
     Apache Software Foundation; the Maven Build Cache Extension is Apache's project, not
     ours.</p>
-    <p style="margin-top:.6rem">© 2026 FosterStack · <a href="/regulated/">For regulated markets</a> · <a href="https://github.com/fosterstack/cache">github.com/fosterstack/cache</a> · <a href="mailto:hello@fosterstack.com">hello@fosterstack.com</a></p>
+    <p style="margin-top:.6rem">© 2026 FosterStack · <a href="/build-cache-node-end-of-life/">Build Cache Node end of life</a> · <a href="/migrate-build-cache-node/">Migrate</a> · <a href="/build-cache-node-faq/">FAQ</a> · <a href="/jenkins-ci-build-cache/">CI setup</a> · <a href="/how-we-build/">How we build</a> · <a href="/regulated/">For regulated markets</a> · <a href="https://github.com/fosterstack/cache">github.com/fosterstack/cache</a> · <a href="mailto:hello@fosterstack.com">hello@fosterstack.com</a></p>
   </div>
 </footer>
 </body>
