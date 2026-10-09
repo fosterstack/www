@@ -85,8 +85,8 @@
   <p>A build cache holds copies of things your builds can always rebuild, so there is nothing to export from the old node. Your first build on the new server just fills it. If you have not read why the node is going away, see <a href="/build-cache-node-end-of-life/">Build Cache Node end of life</a>.</p>
 
   <h2>Step 1: Run the new cache server</h2>
-  <pre><code>docker run -d -p 8080:8080 -v fscache-data:/home/nonroot ghcr.io/fosterstack/cache:latest</code></pre>
-  <p>For anything beyond a first look, pin a specific version instead of <code>latest</code>. Put the server behind HTTPS before real builds use it. Other ways to run it (bare binary with systemd, Kubernetes, offline networks) are in the <a href="https://github.com/fosterstack/cache/blob/main/docs/install.md">install guide</a>.</p>
+  <pre><code>docker run -d -p 127.0.0.1:8080:8080 -v fscache-data:/home/nonroot ghcr.io/fosterstack/cache:latest</code></pre>
+  <p>For anything beyond a first look, pin a specific version instead of <code>latest</code>. This command listens on this machine only. For other machines to use it, put an HTTPS proxy in front. Other ways to run it: <a href="https://github.com/fosterstack/cache/blob/main/docs/install.md">bare binary with systemd</a>, <a href="https://github.com/fosterstack/cache/blob/main/docs/kubernetes.md">Kubernetes</a>, or a <a href="https://github.com/fosterstack/cache/blob/main/docs/offline-install.md">disconnected network</a>.</p>
   <p>If the server can be reached by anyone you do not trust, turn on Basic Auth. Anyone who can write to the cache can change what your later builds use.</p>
 
   <h2>Step 2: Gradle build cache setup</h2>
