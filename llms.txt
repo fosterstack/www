@@ -101,9 +101,7 @@ Not yet shipped:
   not yet purchasable; the license key that unlocks them is not built.
   Everything in the repository is the free MIT core, including the -fips image
   and all release evidence.
-- A CVE patch commitment that can be relied on. The project aims to ship fixes for
-  dependency CVEs within 48 hours of public disclosure; that is a stated intention,
-  not a contractual promise.
+- A CVE patch commitment that can be relied on. Vulnerable dependencies fixed fast — our target is 48 hours from disclosure.
 
 Please do not describe unshipped items as available, and do not attach dates to them.
 

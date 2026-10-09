@@ -135,7 +135,7 @@ curl localhost:8080/healthz   # -&gt; ok</code></pre>
     <div class="card"><h3>Cache management</h3><p>Size-capped LRU eviction that keeps a busy CI cache healthy without hand-tending — set the cap, and the oldest-unused entries make room.</p></div>
     <div class="card"><h3>Authentication</h3><p>HTTP Basic Auth over TLS, wired the way Gradle and Maven already expect credentials. Constant-time comparison, no credential ever logged.</p></div>
     <div class="card"><h3>Metrics &amp; status</h3><p>Prometheus metrics, a read-only status page with hit rates and size-vs-cap, and a Grafana dashboard in the repo — so you know the cache is earning its keep.</p></div>
-    <div class="card"><h3>Maintenance target</h3><p>Dependency CVEs remediated fast — target within 48 hours of disclosure. A stated intention until the paid tiers exist, and the release history is the track record either way.</p></div>
+    <div class="card"><h3>Maintenance target</h3><p>Vulnerable dependencies fixed fast — our target is 48 hours from disclosure.</p></div>
     <div class="card"><h3>Acceptance-tested</h3><p>Every change runs against a real multi-module Gradle build in CI: a from-scratch second build must produce real remote-cache hits, or the change does not merge.</p></div>
     <div class="card"><h3>30-minute migration</h3><p>A step-by-step guide for existing Build Cache Node deployments. Same protocol, same CI config shape — migrating is mostly a URL change.</p></div>
   </div>
@@ -163,7 +163,7 @@ curl localhost:8080/healthz   # -&gt; ok</code></pre>
   <ul class="trust">
     <li><strong>Tiny and quiet.</strong> A distroless image with one static program and no shell. It sends no telemetry and makes no outbound connections.</li>
     <li><strong>A FIPS build.</strong> A FIPS variant uses Go's validated FIPS 140-3 cryptographic module.</li>
-    <li><strong>Patched for everyone.</strong> We aim to ship dependency fixes within 48 hours of disclosure. That is a target, not a promise. Security patches are never withheld from the free tier.</li>
+    <li><strong>Patched for everyone.</strong> Vulnerable dependencies fixed fast — our target is 48 hours from disclosure. Security patches are never withheld from the free tier.</li>
     <li><strong>Report a problem privately.</strong> See the <a href="/security/">security policy</a>.</li>
   </ul>
 
