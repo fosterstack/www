@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Faster Gradle builds: skip the tests whose code didn't change</title>
+<title>Faster Gradle builds: skip tests whose code didn't change</title>
 <meta name="description" content="When Gradle takes the test task from a self-hosted build cache and when it runs the tests again, from seven real runs with JUnit on release 0.2.1.">
-<meta property="og:title" content="Faster Gradle builds: skip the tests whose code didn&#x27;t change">
+<meta property="og:title" content="Faster Gradle builds: skip tests whose code didn&#x27;t change">
 <meta property="og:description" content="When Gradle takes the test task from a self-hosted build cache and when it runs the tests again, from seven real runs with JUnit on release 0.2.1.">
 <meta property="og:url" content="https://fosterstack.com/gradle-test-task-from-cache/">
 <meta property="og:type" content="website">
@@ -89,7 +89,7 @@
   <div class="tag">Infrastructure worth keeping — and kept patched.</div>
 </header>
 <main>
-  <h1>Faster Gradle builds: skip the tests whose code didn't change</h1>
+  <h1>Faster Gradle builds: skip tests whose code didn't change</h1>
   <p class="lede">When nothing a test depends on has changed, Gradle takes its passing result from FosterStack Cache instead of running it again, and your build finishes sooner. At FosterStack we prove everything, so here is how we proved it to ourselves: real runs, real numbers, and the cases where the tests rightly ran again.</p>
 
   <h2>The short answer</h2>
