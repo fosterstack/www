@@ -7,16 +7,18 @@
 #
 # Reads file paths, one per line, on stdin. Exits 1 (with the offending
 # paths listed) if any path doesn't match an allowed pattern.
+#
+# EVERYTHING tracked in this repo is served by Cloudflare Pages, dot-prefixed
+# folders included, AND is public on GitHub. (Found Oct 9, 2026: a draft kept in
+# .drafts/ was being served at /.drafts/..., so nothing here may be a private
+# draft.) Dot-prefixed paths are therefore held to their own short list, DOT_OK,
+# on top of ALLOW_PATTERNS, so a broad new pattern can never let one through.
 
 set -euo pipefail
 
 ALLOW_PATTERNS=(
   '^CONTRIBUTING\.md$'
   '^\.github/PULL_REQUEST_TEMPLATE\.md$'
-  # Unpublished drafts: dot-prefixed, excluded from the Pages upload, so
-  # nothing under .drafts/ ever serves. The bcn-removed page waits here
-  # until the watcher verifies the removal.
-  '^\.drafts/([A-Za-z0-9._-]+/)*[A-Za-z0-9._-]+\.html$'
   '^index\.html$'
   '^404\.html$'
   '^README\.md$'
@@ -33,14 +35,37 @@ ALLOW_PATTERNS=(
   '^\.well-known/security\.txt$'
   '^\.githooks/pre-commit$'
   '^bin/check-file-allowlist\.sh$'
+  '^bin/test-check-file-allowlist\.sh$'
   '^\.github/workflows/[A-Za-z0-9._-]+\.ya?ml$'
   '^functions/(api/)?[A-Za-z0-9._-]+\.js$'
   '^[A-Za-z0-9._-]+/index\.html$'   # pre-positioned pages, e.g. bcn-removed/index.html
 )
 
+# The only dot-prefixed paths allowed to exist. .github/ is where GitHub requires
+# the workflow and the PR template; .githooks/ holds the opt-in local hook; both
+# are already public in the repo, so being served adds no exposure. .well-known/
+# security.txt is meant to be public.
+DOT_OK=(
+  '^\.well-known/security\.txt$'
+  '^\.githooks/pre-commit$'
+  '^\.github/PULL_REQUEST_TEMPLATE\.md$'
+  '^\.github/workflows/[A-Za-z0-9._-]+\.ya?ml$'
+  '^\.gitignore$'
+)
+
 blocked=()
 while IFS= read -r path; do
   [ -z "$path" ] && continue
+  if [[ "$path" =~ (^|/)\. ]]; then
+    dot_ok=0
+    for pattern in "${DOT_OK[@]}"; do
+      if [[ "$path" =~ $pattern ]]; then dot_ok=1; break; fi
+    done
+    if [ "$dot_ok" -eq 0 ]; then
+      blocked+=("$path  (dot-prefixed paths are served too; only DOT_OK paths are allowed)")
+      continue
+    fi
+  fi
   ok=0
   for pattern in "${ALLOW_PATTERNS[@]}"; do
     if [[ "$path" =~ $pattern ]]; then

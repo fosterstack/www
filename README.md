@@ -11,11 +11,11 @@ either way, but the hook catches it before a push, not after.
 
 ```
 index.html                    the page (inline CSS/JS, system fonts, zero external assets)
-.drafts/bcn-removed/index.html  pre-positioned migration page (see below) — UNPUBLISHED draft
-_redirects                    /bcn-removed/* -> / until the draft publishes
+_redirects                    /bcn-removed/* -> / until the page is published (see below)
 _headers                      security headers incl. CSP
 .githooks/pre-commit          public-repo hygiene hook (see below)
 bin/check-file-allowlist.sh   the allowlist itself — shared by the hook and CI
+bin/test-check-file-allowlist.sh  its self-test, run in CI
 ```
 
 ## Public-repo hygiene
@@ -34,9 +34,13 @@ Addendum §2 (DECIDED): built ahead of any trigger so FosterStack is in front of
 panic-searches within hours of Gradle actually removing `gradle/build-cache-node` from
 Docker Hub, not days. REVISED Sep 11, 2026: it used to deploy at an unlisted URL behind
 a `noindex` tag; the Sep 10 review pointed out that noindex is a request, not a gate —
-the page claimed a removal that had not happened, at a live URL. It now lives in
-`.drafts/` (dot-prefixed paths are excluded from the Pages upload, so it does not
-deploy), and `/bcn-removed/*` 302s to the homepage in the meantime.
+the page claimed a removal that had not happened, at a live URL. It was then moved to
+`.drafts/`, on the belief that dot-prefixed paths are excluded from the Pages upload.
+CORRECTED Oct 9, 2026: they are NOT; Cloudflare Pages served `/.drafts/bcn-removed/`
+until that folder was removed from the repository. The draft now lives only in the
+private ops repository, `/bcn-removed/*` 302s to the homepage in the meantime, and
+`bin/check-file-allowlist.sh` refuses any dot-prefixed path that is not on its short
+list. Nothing private can be kept in this repository: it is public and all of it is served.
 
 The trigger source is `fosterstack/ops`'s daily Docker Hub watcher
 (`bin/docker-hub-watch.sh`, private repo) — it files a tracking issue when it detects the
@@ -45,7 +49,8 @@ action, not automatic**: verify the finding directly at
 [hub.docker.com/r/gradle/build-cache-node](https://hub.docker.com/r/gradle/build-cache-node)
 first (the watcher is tuned to alert fast, which means it can also alert on a transient API
 hiccup), then remove the `noindex` tag and add a prominent, dated link from `index.html`.
-Full instructions are in an HTML comment at the top of `bcn-removed/index.html`.
+Full instructions are in an HTML comment at the top of the draft page, which is kept in
+the private ops repository (see its handoffs outbox).
 
 ## Deploy checklist (owner, ~15 min, one-time)
 

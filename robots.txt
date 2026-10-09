@@ -1,10 +1,10 @@
 # fosterstack.com
 # Everything published here is meant to be found. (Historical note: an
 # unlisted /bcn-removed/ page used to live here behind a noindex tag; as of
-# Sep 11, 2026 it is unpublished entirely — moved to an undeployed draft
-# path until the incumbent image's removal is verified by the watcher —
-# because noindex is a request to search engines, not a gate. The old URL
-# 302s to the homepage meanwhile; see _redirects.)
+# Sep 11, 2026 it is unpublished — its draft is no longer in this repository —
+# until the incumbent image's removal is verified by the watcher, because
+# noindex is a request to search engines, not a gate. The old URL 302s to the
+# homepage meanwhile; see _redirects.)
 
 User-agent: *
 Allow: /
