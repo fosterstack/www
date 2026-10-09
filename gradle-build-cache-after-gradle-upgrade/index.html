@@ -88,18 +88,18 @@
 </header>
 <main>
   <h1>Why your Gradle build cache goes cold after a Gradle upgrade</h1>
-  <p class="lede">Each Gradle version we tried built and restored only its own cache entries, so after an upgrade the first builds on the new version rebuild instead of restoring. At FosterStack we prove everything, so here is how we proved it to ourselves: three series of real builds across Gradle 9.5.1, 9.7.1 and 9.8.0, and the cache-key inputs that differ.</p>
+  <p class="lede">Know before you upgrade: in our runs a Gradle version restored only the cache entries it had built itself, so the first builds on a new version rebuilt instead of restoring. At FosterStack we prove everything, so here is how we proved it to ourselves: three series of real builds across Gradle 9.5.1, 9.7.1 and 9.8.0, and the cache-key inputs that differ.</p>
 
   <h2>The short answer</h2>
   <ul class="trust">
-    <li>Gradle 9.8.0, 9.7.1 and 9.5.1 did not restore each other's compile results, in either direction, in our runs.</li>
-    <li>Each version restored its own earlier build.</li>
-    <li>What differs in the cache key is Gradle's own task code. The key parts that come from your project were identical.</li>
+    <li>Gradle 9.8.0 and 9.7.1 did not restore each other's compile results, in either direction. 9.8.0 did not restore 9.5.1's either (9.5.1 first only). That is one build per case.</li>
+    <li>Each version restored its own earlier entry when we went back to it.</li>
+    <li>The cache key differed. The values that come from your project were identical; the lines that differ describe Gradle's own task and compiler objects.</li>
   </ul>
 
   <h2>What we ran</h2>
-  <p>The four-module project from <a href="/gradle-build-cache-monorepo/">Gradle build cache for a monorepo</a>, and its <code>:core:compileJava</code> task, against a self-hosted cache (FosterStack Cache 0.2.1). We used Gradle 9.8.0 (installed with Homebrew), and Gradle 9.7.1 and 9.5.1 from the official downloads, each checked against the SHA-256 checksum Gradle publishes. All three ran on the same Java, Temurin 21.0.12.1, so only Gradle differed.</p>
-  <p>There were three series of three builds. Each series started on a new, empty cache server. Every build used a fresh copy of the project with no earlier build output, a new empty Gradle home, and the local build cache off. All builds ran on the same Mac. Each cell below is one build, and every build ended with <code>BUILD SUCCESSFUL</code>.</p>
+  <p>The four-module project from <a href="/gradle-build-cache-monorepo/">Gradle build cache for a monorepo</a>, and its <code>:core:compileJava</code> task, against a self-hosted cache (FosterStack Cache 0.2.1). We used Gradle 9.8.0 (installed with Homebrew), and Gradle 9.7.1 and 9.5.1 from the official downloads, The two downloaded files were each checked against the SHA-256 checksum we fetched with them. All three ran on the same Java, Temurin 21.0.12.1, so only Gradle differed.</p>
+  <p>There were three series of three builds. Each series started on a new, empty cache server. Every build used a fresh copy of the project with no earlier build output, a new empty Gradle home, and the local build cache off. All builds ran on the same Mac. Two earlier attempts at the script had bugs and ran no builds; the table is from the third run. Each cell below is one build, and every build ended with <code>BUILD SUCCESSFUL</code>.</p>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <thead><tr><th>Series</th><th>Build 1</th><th>Build 2 (other Gradle)</th><th>Build 3 (first Gradle again)</th></tr></thead>
     <tbody>
@@ -111,19 +111,19 @@
   <p>"Ran" means Gradle printed <code>:core:compileJava</code> with nothing after it. So the second Gradle version found nothing it could use, and the first version found its own entry again.</p>
 
   <h2>What differs in the cache key</h2>
-  <p>Gradle can print every input it puts into a task's cache key. We ran the compile task under Gradle 9.8.0 and 9.7.1 with this option and compared the lines for <code>:core:compileJava</code>:</p>
+  <p>Gradle can print every input it puts into a task's cache key. In two extra builds, one under Gradle 9.8.0 and one under 9.7.1, with no cache server running (the key is worked out before the cache is contacted), we used this option and compared the lines for <code>:core:compileJava</code>:</p>
 <pre tabindex="0"><code>gradle :core:compileJava -Dorg.gradle.caching.debug=true</code></pre>
   <p>The cache keys came out different (<code>0850668412069d9ad6250e00d6fa0d31</code> for 9.8.0 and <code>b644334977a3e4eb2455429377dc58b9</code> for 9.7.1). The debug output listed 39 input lines for each key. Here is what we found:</p>
   <ul class="trust">
-    <li><strong>The same in both:</strong> the fingerprint of the project's source files (<code>f3429a2c9b16b51bf45944cd89e7ed46</code>), the compiler arguments, the release setting, the encoding, debug and fork settings, the classpath and the output names.</li>
-    <li><strong>Different:</strong> the task's own implementation (<code>org.gradle.api.tasks.compile.JavaCompile_Decorated</code>, with a different hash on each version), and several fingerprints that describe Gradle's own task and compiler classes, such as <code>javaCompiler</code>, <code>modularity</code> and <code>options</code>.</li>
+    <li><strong>The same in both:</strong> the fingerprint of the project's source files (<code>f3429a2c9b16b51bf45944cd89e7ed46</code>), the compiler arguments, the release setting, the encoding, the debug and fork on/off flags, the classpath (empty here) and the output names.</li>
+    <li><strong>Different (11 of the 39 lines):</strong> the task's own implementation (<code>org.gradle.api.tasks.compile.JavaCompile_Decorated</code>, with a different hash on each version) and the fingerprints of Gradle's own option objects, such as <code>javaCompiler</code> (including its <code>languageVersion</code>), <code>modularity</code>, <code>options</code>, <code>options.debugOptions</code> and <code>options.forkOptions</code>.</li>
   </ul>
-  <p>In our runs, then, nothing about the project explained the miss. The key changed with the Gradle version because Gradle's own task code is part of it. We did not test other tasks or other Gradle versions in the debug comparison.</p>
+  <p>In our runs, then, no value from the project explained the miss. The implementation line alone is enough to change the key, and the other differing lines are Gradle's own option objects, not project settings. We compared only the compile task under two Gradle versions.</p>
 
   <h2>What this means for an upgrade</h2>
   <ul class="trust">
-    <li><strong>Expect a cold start on the new version.</strong> In our runs the first build on a different Gradle version rebuilt, and the next build on that version restored.</li>
-    <li><strong>Mixed versions mean mixed entries.</strong> If laptops and CI run different Gradle versions, each version fills and reads its own entries and neither gets hits from the other.</li>
+    <li><strong>Expect a cold start on the new version.</strong> In our runs the first build on a different Gradle version rebuilt, and going back to the first version restored its own entry.</li>
+    <li><strong>Mixed versions meant mixed entries.</strong> For the version pairs above, a version filled and read its own entries and got no hits from the other's.</li>
     <li><strong>Java and Maven were different.</strong> In our other tests, a different Java gave separate Gradle entries (<a href="/gradle-build-cache-hit-rate-low/">Gradle build cache hit rate low</a>, cause 3), while switching Java did restore for Maven (<a href="/maven-build-cache-different-java-versions/">Keep your Maven build cache across Java 21 and Java 27</a>).</li>
   </ul>
   <p>Our advice, not a test result: move CI and everyone who shares the cache to a new Gradle version together, and expect the first builds after the move to rebuild.</p>
