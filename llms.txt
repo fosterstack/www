@@ -38,6 +38,9 @@ verifiable against the CI run that produced them.
 - [Reset a build cache](https://fosterstack.com/reset-gradle-build-cache/): how to empty it.
 - [Is a remote build cache safe](https://fosterstack.com/remote-build-cache-security/): who can write to it.
 - [Changelog](https://fosterstack.com/changelog/): release notes for v0.1.0 and v0.2.1.
+- [Gradle build cache tutorial](https://fosterstack.com/gradle-build-cache-tutorial/): a real first build and FROM-CACHE hit.
+- [Verify a container image signature with cosign](https://fosterstack.com/verify-container-image-signature-cosign/): the two commands and what they prove.
+- [For regulated markets](https://fosterstack.com/regulated/): the FIPS build and the public release evidence.
 - [Server sizing](https://fosterstack.com/build-cache-server-sizing/): CPU, RAM, disk and the size cap.
 - [Air-gapped install](https://fosterstack.com/air-gapped-build-cache-install/): download, verify, transfer, run.
 - [What to check in a replacement build cache](https://fosterstack.com/verify-replacement-build-cache/): eight questions to ask.
