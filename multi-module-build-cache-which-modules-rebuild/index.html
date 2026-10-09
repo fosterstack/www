@@ -131,7 +131,7 @@
     <li><strong>In our Gradle compile runs, the change that cost more was a change to what the module shows to others.</strong> Edits inside method bodies stayed inside the module.</li>
     <li><strong>In both tools, a change in <code>app</code> recompiled (Gradle) or rebuilt (Maven) only <code>app</code>.</strong> That was one run each.</li>
   </ul>
-  <p>Our advice, not a test result: in Maven, expect every edit to a widely shared module to rebuild everything above it, and batch such edits.</p>
+  <p>Our advice, not a test result: in Maven, expect an edit to a widely shared module to rebuild everything above it, and batch such edits.</p>
   <p>We did not test: Gradle's <code>api</code> dependencies (we used <code>implementation</code> only), tests or jar tasks in Gradle, annotation processors, Kotlin, a change to a public constant's value, a change in the middle module, other Gradle or Maven versions, bigger projects, or Linux. The Mac was busy with other jobs during the runs, so we make no claim about build times.</p>
 
   <h2>If nothing is restored</h2>
