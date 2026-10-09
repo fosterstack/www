@@ -99,7 +99,7 @@
 
   <h2>What we ran</h2>
   <p>The cache server speaks plain HTTP, so HTTPS comes from a TLS front end in front of it. For this test the front end was a small TLS proxy we wrote, a stand-in for nginx or any other TLS front end; for a real nginx setup see <a href="/build-cache-docker-compose-production/">production Docker Compose with nginx and TLS</a>. The certificate came from a private test CA. The address was <code>https://127.0.0.1:18443/</code>, and the certificate names that IP address.</p>
-  <p>All six builds ran on the same Mac, each from a fresh copy of the project and a new empty Gradle home, with Java 27 (Homebrew) and the local build cache off. The cache server (with no login) and the test certificate were shared, so runs 3 to 6 read the entry that run 2 stored. We ran the installed <code>gradle</code> command with <code>--no-daemon</code>; Gradle still started a single-use daemon for each build. Every build ended with <code>BUILD SUCCESSFUL</code> except run 5, which is the one that was meant to fail.</p>
+  <p>All six builds ran on the same Mac, each from a fresh copy of the project and a new empty Gradle home, with Java 27 (Homebrew) and the local build cache off. The cache server (with no login) and the test certificate were shared, so runs 3 to 6 read the entry that run 2 stored. We ran the installed <code>gradle</code> command with <code>--no-daemon</code>; Gradle still started a single-use daemon for each build. Every build ended with <code>BUILD SUCCESSFUL</code> except run 5, which is the one that was meant to fail. Runs 1 to 4 ran <code>gradle compileJava</code>; runs 5 and 6 ran <code>gradle test</code>, because they needed Maven Central.</p>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <thead><tr><th>Run</th><th>Trust setting</th><th>Result</th></tr></thead>
     <tbody>
@@ -134,6 +134,7 @@ systemProp.javax.net.ssl.trustStorePassword=changeit</code></pre>
   <p>It is the same PKIX message as in run 1, this time about Maven Central.</p>
   <p>The fix is a store that holds Java's normal list as well. Copy the <code>cacerts</code> file that ships with your Java (it is under <code>lib/security</code> in the Java folder), then add your CA to the copy:</p>
 <pre tabindex="0"><code>cp /path/to/java/lib/security/cacerts truststore-combined.p12
+chmod u+w truststore-combined.p12
 keytool -importcert -alias testca -file ca/ca.crt -keystore truststore-combined.p12 -storepass changeit -noprompt</code></pre>
   <p>The Java default file uses the password <code>changeit</code>, and that is what worked here. The copy does not follow later updates to Java's list, so make the copy again when you update Java. Run 6 used this combined store and passed, with both the Central download and the cache over HTTPS working. Our combined store held 112 certificates: the 111 that came with Java plus ours.</p>
 

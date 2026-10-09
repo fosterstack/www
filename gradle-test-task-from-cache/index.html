@@ -95,9 +95,9 @@
   <h2>The short answer</h2>
   <ul class="trust">
     <li>A fresh copy of the project with the same code got <code>:test FROM-CACHE</code>. The tests were not run.</li>
-    <li>Change the main code or the test code and the tests run again.</li>
+    <li>In our runs 3 and 4, changing the main code or the test code made the tests run again.</li>
     <li>A comment added on the same line recompiled the main code, but the tests still came from the cache.</li>
-    <li>In our two runs, a failing test ran again each time. It was not taken from the cache.</li>
+    <li>In our runs, a failing test ran each time. It was never taken from the cache.</li>
   </ul>
 
   <h2>What we ran</h2>

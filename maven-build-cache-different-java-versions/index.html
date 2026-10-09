@@ -98,7 +98,7 @@
   </ul>
 
   <h2>What we ran</h2>
-  <p>A one-module Maven project, built five times in each of three series, with <code>mvn verify</code> and <code>JAVA_HOME</code> set for each build. We saved <code>mvn -v</code> for every build to confirm which Java ran: Temurin 21.0.12.1 or OpenJDK 27 from Homebrew.</p>
+  <p>A one-module Maven project, built five times in each of three series, with <code>mvn verify</code> and <code>JAVA_HOME</code> set for each build. For series B and C we saved <code>mvn -v</code> for every build to confirm which Java ran (series A has only its summary): Temurin 21.0.12.1 or OpenJDK 27 from Homebrew.</p>
   <ul class="trust">
     <li><strong>Series A:</strong> <code>maven.compiler.release</code> set to 17, first build on Java 21.</li>
     <li><strong>Series B:</strong> no <code>maven.compiler.release</code>, first build on Java 21.</li>
@@ -118,12 +118,12 @@
   <p>"Restored" means the log said <code>Found cached build, restoring</code> and Maven skipped the compile and test steps. Series A, with the release setting, gave the same pattern as series B.</p>
 
   <h2>Which jar you get</h2>
-  <p>In series B all five jars had one checksum, <code>0f4e29a2...</code>, so the jar restored on Java 27 was the jar built on Java 21. In series C all five had another, <code>ddb48271...</code>, the jar built on Java 27. The two jars differ in a single place. The manifest in the first says <code>Build-Jdk-Spec: 21</code> and in the second <code>Build-Jdk-Spec: 27</code>. The compiled class inside was byte-for-byte the same in both (we compared it with <code>cmp</code>).</p>
+  <p>In series B all five jars had one checksum, <code>0f4e29a2...</code>, so the jar restored on Java 27 was the jar built on Java 21. In series C all five had another, <code>ddb48271...</code>, the jar built on Java 27. The files inside the two jars differ in a single place. The manifest in the first says <code>Build-Jdk-Spec: 21</code> and in the second <code>Build-Jdk-Spec: 27</code>. The compiled class inside was byte-for-byte the same in both (we compared it with <code>cmp</code>). Without the release setting the compiler plugin still compiled for Java 8 on both Javas (the log said <code>target 1.8</code>), which is why the class was the same.</p>
 
   <h2>What this means</h2>
   <ul class="trust">
     <li><strong>Switching Java still restored from the cache.</strong> In our runs the extension restored the existing result and did not rebuild on the new Java.</li>
-    <li><strong>The first build decides what everyone gets.</strong> If a Java 21 build fills the cache, a Java 27 build restores a jar that says it was built on Java 21. Here that was harmless, because the class was identical. We did not test a project whose output depends on the Java that compiles it.</li>
+    <li><strong>In our runs, the first build decided what everyone got.</strong> If a Java 21 build fills the cache, a Java 27 build restores a jar that says it was built on Java 21. Here that was harmless, because the class was identical. We did not test a project whose output depends on the Java that compiles it.</li>
     <li><strong>For Gradle it was the other way round.</strong> Our Gradle run on a different Java ran its tasks again and made its own entries; see <a href="/gradle-build-cache-hit-rate-low/">Gradle build cache hit rate low</a>, cause 3.</li>
   </ul>
   <p>Our advice, not a test result: use one Java version for the builds that fill a shared cache, so you know which Java made what you restore.</p>
