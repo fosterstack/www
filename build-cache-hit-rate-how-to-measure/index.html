@@ -88,38 +88,37 @@
 </header>
 <main>
   <h1>How do I know my build cache hit rate?</h1>
-  <p class="lede">You want to know how much of your build comes from the cache. FosterStack Cache gives you two answers, the build's own output for one build and the server's counters for everyone, and they are not the same number.</p>
+  <p class="lede">You want to know how much of your build comes from the cache. Your build log gives one number for one build, and your FosterStack Cache server's counters give another across all builds. They differ, and this page shows why.</p>
 
   <h2>Read one build: count it in the build log</h2>
-  <p>This is the number to use for a single build. For Gradle, run with <code>--info</code> and count two kinds of line:</p>
+  <p>This is the number to use for a single build. For Gradle, run with <code>--info</code> on a clean checkout, as CI does, and count two kinds of line:</p>
 <pre tabindex="0"><code>gradle assemble --info --console=plain &gt; build.log
 grep -c 'Build cache key for task' build.log     # tasks that can be cached
 grep -c '^&gt; Task .* FROM-CACHE$' build.log      # of those, taken from the cache</code></pre>
   <p>Divide the second number by the first. In our runs a cold build gave 0 of 4, a repeat build gave 4 of 4, and a build after one change gave 3 of 4.</p>
-  <p>Gradle also prints a summary line, such as <code>8 actionable tasks: 4 executed, 4 from cache</code>. Do not use it as the hit rate. It counts tasks that can never be cached, such as <code>jar</code>. For our repeat build it said 4 of 8, while all 4 cacheable tasks came from the cache.</p>
-  <p>For Maven, count the modules it restored and compare with the number of modules you have:</p>
+  <p>Gradle also prints a summary line, such as <code>8 actionable tasks: 4 executed, 4 from cache</code>. Do not use it as the hit rate. It also counts tasks that were not cached, such as <code>jar</code>. For our repeat build it said 4 of 8, while all 4 cacheable tasks came from the cache.</p>
+  <p>For Maven, count the modules it restored and compare with the number of modules that build code, not the parent pom:</p>
 <pre tabindex="0"><code>grep -c 'Found cached build, restoring' build.log</code></pre>
   <p>In our runs, with 3 modules, that printed 0 for a cold build, 3 for a repeat build, and 0 after a change in the bottom module.</p>
 
   <h2>Read the server: hits and misses are requests</h2>
   <p>The server counts every lookup it answers. Read the counters, or the same numbers on the status page:</p>
 <pre tabindex="0"><code>curl -s localhost:8080/metrics | grep -E 'fscache_cache_(hits|misses)_total'
-curl -s localhost:8080/statusz</code></pre>
+curl -s localhost:8080/statusz            # add -u user:password if login is on</code></pre>
   <p>The hit rate is hits divided by hits plus misses. These counters run from the start of the server, so for a recent window use the query on <a href="/monitor-build-cache-prometheus-grafana/">Monitor a Gradle build cache with Prometheus and Grafana</a>.</p>
   <p>The server counts requests, not tasks or modules, so it will not match the build log:</p>
   <ul class="trust">
-    <li><strong>Gradle:</strong> our 4 cacheable tasks made 13 requests in a build. Gradle also caches its compiled build scripts, and those lookups count too.</li>
+    <li><strong>Gradle:</strong> our 4 cacheable tasks made 13 requests in a build. Gradle also caches its compiled Kotlin build scripts (<code>.gradle.kts</code>), and those lookups count too.</li>
     <li><strong>Maven:</strong> restoring 3 modules made 6 hits. We saw 2 hits for each restored module.</li>
   </ul>
-  <p>Over our three Gradle builds the builds said 7 of 12, about 58%, and the server said 25 hits in 39 requests, about 64%. Over the three Maven builds the builds said 3 of 9, about 33%, and the server said 6 hits in 12 requests, 50%.</p>
   <p>So use the build log to judge one build, and the server to watch the trend over days. Do not compare the two directly.</p>
 
   <h2>What is a good number?</h2>
-  <p>There is no single good number. It depends on how often your code changes and how your build is split into modules. A cold build is 0% by definition, and a repeat build with no change should be close to 100%. In our runs, after one change in the bottom module, 3 of 4 Gradle tasks still came from the cache and 0 of 3 Maven modules did.</p>
+  <p>There is no single good number. It depends on how often your code changes, and may depend on how your build is split into modules. A first build against an empty server is 0%.</p>
   <p>Measure a few ordinary CI builds with the recipes above, then watch the server's rate over weeks. If it stays low, see <a href="/gradle-build-cache-hit-rate-low/">why the Gradle hit rate is low</a> or <a href="/maven-build-cache-extension-not-restoring/">why the Maven cache is not restoring</a>.</p>
 
   <h2>How we checked</h2>
-  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
+  <div class="table-scroll" role="region" aria-label="Hit rate from the build log and from the server" tabindex="0"><table>
     <thead><tr><th>Build</th><th>Gradle: build log</th><th>Gradle: server</th><th>Maven: build log</th><th>Maven: server</th></tr></thead>
     <tbody>
       <tr><td>1 cold</td><td>0 of 4</td><td>0 hits, 13 misses</td><td>0 of 3</td><td>0 hits, 3 misses</td></tr>
@@ -127,8 +126,9 @@ curl -s localhost:8080/statusz</code></pre>
       <tr><td>3 one change</td><td>3 of 4</td><td>12 hits, 1 miss</td><td>0 of 3</td><td>0 hits, 3 misses</td></tr>
     </tbody>
   </table></div>
+  <p>Over the three builds, Gradle's log said 7 of 12 tasks, about 58%, and its server said 25 hits in 39 requests, about 64%. For Maven, the log said 3 of 9 modules, about 33%, and the server said 6 hits in 12 requests, 50%. Our repeat builds gave 100% in the build log.</p>
   <p class="muted-note">Each tool used one new empty FosterStack Cache 0.2.1 server and three builds. Build 3 changed one method body in the bottom module. The server figures are the change in the counters since the previous build, read from <code>/metrics</code>.</p>
-  <p class="muted-note">Gradle 9.8.0 built a four-module project of 12 small classes per module with <code>assemble</code>. Maven 3.9.9 with Build Cache Extension 1.2.3 ran <code>mvn verify</code> on a three-module chain with all eight plugin versions pinned. Every build used a fresh copy of the project and an empty local build cache; for Gradle the local cache was off and the Gradle home was new. Temurin 21.0.12.1, one Mac (arm64).</p>
+  <p class="muted-note">Gradle 9.8.0 built a four-module project of 12 small classes per module with <code>assemble</code>. Maven 3.9.9 with Build Cache Extension 1.2.3 ran <code>mvn verify</code> on a three-module chain with all eight plugin versions pinned. Every build used a fresh copy of the project. Gradle's local build cache was off and its home folder was new; Maven's local cache was empty. Temurin 21.0.12.1, one Mac (arm64).</p>
   <p class="muted-note">Not tested: other task types, tests, a server shared by many builds, and the Prometheus window queries.</p>
 </main>
 <footer>
