@@ -99,7 +99,7 @@
   </ul>
 
   <h2>What we ran</h2>
-  <p>A four-module project with the cache address set in <code>settings.gradle.kts</code> (shown below). Each run used a fresh copy of the project and an empty Gradle home, so the only shared thing was the cache server. We ran only <code>:core:compileJava</code> and looked at what Gradle printed next to it. Every build ended with <code>BUILD SUCCESSFUL</code>.</p>
+  <p>A four-module project with the cache address set in <code>settings.gradle.kts</code> (shown below). Each run used a fresh copy of the project and an empty Gradle home, so the only Gradle state shared was the cache server. Our first runs started from a project folder that still held build output from an earlier check; we repeated all of them from a clean copy and got the same results. We ran only <code>:core:compileJava</code> and looked at what Gradle printed next to it. Every build ended with <code>BUILD SUCCESSFUL</code>.</p>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <thead><tr><th>How it was switched</th><th>Command</th><th>Result</th></tr></thead>
     <tbody>
