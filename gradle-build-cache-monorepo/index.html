@@ -99,7 +99,7 @@
 
   <h2>What we ran</h2>
   <p>A build with four modules. <code>core</code> has no dependencies. <code>util</code> and <code>api</code> use <code>core</code>. <code>app</code> uses <code>util</code> and <code>api</code>. Each module has 12 small Java classes. The cache server was release 0.2.1 (macOS, arm64), with Gradle 9.8.0.</p>
-  <p>Every run below used a brand-new copy of the project and an empty Gradle home folder, and the local cache was switched off. The only Gradle state the runs shared was the cache server. Our first set of runs started from a project folder that still held build output from an earlier check; we then repeated all six runs from a clean copy and got the same results, down to the same entry count on the server. Each run was <code>gradle build --console=plain --no-daemon</code>, and every build finished with <code>BUILD SUCCESSFUL</code>.</p>
+  <p>Every run below used its own copy of the project folder and an empty Gradle home folder, and the local cache was switched off. The only Gradle state the runs shared was the cache server. An earlier set of runs started from a project folder that still held build output left over from an earlier test; we repeated all six runs from a clean copy and got the same results, down to the same entry count on the server. The table below shows the clean runs. Each run was <code>gradle build --console=plain --no-daemon</code>, and every build finished with <code>BUILD SUCCESSFUL</code>.</p>
 
   <h2>Results: what each module's compile step did</h2>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
@@ -123,7 +123,7 @@
   <ul class="trust">
     <li><strong>Edits inside a method stay local (run 3).</strong> Gradle compares the public shape of a module, not every byte, when it decides whether a module that depends on it must rebuild. A change inside a method body left the other three modules' inputs the same, so they came from the cache.</li>
     <li><strong>Changes to public methods spread (run 5).</strong> All four modules ran. In a big monorepo, a small, stable shared module with few public changes keeps more of the build cached.</li>
-    <li><strong>The first person pays, everyone else downloads (runs 4 and 6).</strong> The edit in run 3 was uploaded once. In run 4 a fresh checkout made the same edit and ran nothing.</li>
+    <li><strong>The first person pays, everyone else downloads (runs 4 and 6).</strong> The edit in run 3 was uploaded once. In run 4 a separate copy of the project made the same edit and ran nothing.</li>
   </ul>
   <p>Only the compile step is shown here, because it is the step that showed the pattern clearly in a small project. The jar steps in this build are not cacheable by default in Gradle, so they ran every time. The project is small, so we are not quoting time saved: the cache pays off as your modules get bigger.</p>
 
