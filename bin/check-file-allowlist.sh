@@ -37,6 +37,7 @@ ALLOW_PATTERNS=(
   '^bin/check-file-allowlist\.sh$'
   '^bin/test-check-file-allowlist\.sh$'
   '^bin/bench-miss-cost\.sh$'
+  '^bin/bench-server-down\.sh$'
   '^\.github/workflows/[A-Za-z0-9_-][A-Za-z0-9._-]*\.ya?ml$'
   '^functions/(api/)?[A-Za-z0-9._-]+\.js$'
   '^[A-Za-z0-9._-]+/index\.html$'   # pre-positioned pages, e.g. bcn-removed/index.html
