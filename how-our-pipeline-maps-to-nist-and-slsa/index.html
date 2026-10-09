@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NIST SP 800-204C, 800-204D and SLSA: Our Release Pipeline</title>
+<meta name="description" content="How the FosterStack Cache release pipeline maps to NIST SP 800-204C and 800-204D, stage by stage, and why we assess v0.2.1 at SLSA Build Level 2, not Level 3.">
+<meta property="og:title" content="NIST SP 800-204C, 800-204D and SLSA: Our Release Pipeline">
+<meta property="og:description" content="How the FosterStack Cache release pipeline maps to NIST SP 800-204C and 800-204D, stage by stage, and why we assess v0.2.1 at SLSA Build Level 2, not Level 3.">
+<meta property="og:url" content="https://fosterstack.com/how-our-pipeline-maps-to-nist-and-slsa/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="FosterStack">
+<link rel="canonical" href="https://fosterstack.com/how-our-pipeline-maps-to-nist-and-slsa/">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<style>
+  :root {
+    --bg: #ffffff; --fg: #16181d; --muted: #5b6472; --line: #e4e7ec;
+    --accent: #0d7a5f; --accent-fg: #ffffff; --card: #f6f8f9; --warn-bg: #fff7ed; --warn-line: #fdba74;
+    --mark: #0f4d66;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #101318; --fg: #e8eaf0; --muted: #98a2b3; --line: #262c36;
+      --accent: #2fbf95; --accent-fg: #08110e; --card: #171c23; --warn-bg: #241a10; --warn-line: #7c4a12;
+      --mark: #e8eaf0;
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 44rem; margin: 0 auto; padding: 0 1.25rem 4rem; }
+  header.site { max-width: 44rem; margin: 0 auto; padding: 1.25rem; display: flex; align-items: baseline; gap: .6rem; }
+  .logo { font-weight: 700; font-size: 1.05rem; letter-spacing: -.01em; }
+  .logo span { color: var(--accent); }
+  .logo .mark { width: 1.2em; height: 1.2em; vertical-align: -.24em; margin-right: .4em; }
+  .tag { color: var(--muted); font-size: .85rem; }
+  .notice {
+    background: var(--warn-bg); border: 1px solid var(--warn-line); border-radius: 8px;
+    padding: .7rem 1rem; font-size: .92rem; margin: 1.5rem 0 2.5rem;
+  }
+  h1 { font-size: 2rem; line-height: 1.2; letter-spacing: -.02em; margin-bottom: 1rem; }
+  .lede { font-size: 1.12rem; color: var(--muted); margin-bottom: 2rem; }
+  h2 { font-size: 1.25rem; margin: 3rem 0 .9rem; letter-spacing: -.01em; }
+  p + p { margin-top: .8rem; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: .8rem; margin-top: 1rem; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1rem 1.1rem; }
+  .card h3 { font-size: .98rem; margin-bottom: .35rem; }
+  .card p { font-size: .9rem; color: var(--muted); }
+  ul.trust { list-style: none; margin-top: .5rem; }
+  ul.trust li { padding: .45rem 0 .45rem 1.6rem; position: relative; }
+  ul.trust li::before { content: "✓"; position: absolute; left: .2rem; color: var(--accent); font-weight: 700; }
+  code, pre { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .88em; }
+  code { background: var(--card); border: 1px solid var(--line); border-radius: 5px; padding: .1em .35em; }
+  pre code { background: none; border: 0; padding: 0; color: inherit; font-size: 1em; }
+  button {
+    padding: .7rem 1.3rem; font-size: 1rem; font-weight: 600; cursor: pointer;
+    background: var(--accent); color: var(--accent-fg); border: 0; border-radius: 8px;
+  }
+  button:disabled { opacity: .6; cursor: default; }
+  table { width: 100%; border-collapse: collapse; font-size: .92rem; margin-top: 1rem; }
+  th, td { text-align: left; padding: .55rem .6rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  pre { background: #0f172a; color: #e2e8f0; padding: .9rem 1rem; border-radius: 8px;
+        overflow-x: auto; font-size: .9rem; line-height: 1.5; }
+  .cta-row { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1.1rem; }
+  .btn { display: inline-block; padding: .55rem 1rem; border-radius: 8px; font-weight: 600;
+         text-decoration: none; background: var(--accent); color: #fff; }
+  .btn-secondary { background: transparent; color: inherit; border: 1px solid #cbd5e1; }
+  .muted-note { color: var(--muted); font-size: .93rem; margin-top: 1.1rem; }
+  footer { border-top: 1px solid var(--line); margin-top: 4rem; padding: 1.5rem 1.25rem 3rem; }
+  footer div { max-width: 44rem; margin: 0 auto; color: var(--muted); font-size: .82rem; }
+  a { color: var(--accent); }
+  table { display: block; max-width: 100%; overflow-x: auto; }
+  code { overflow-wrap: anywhere; }
+  pre code { overflow-wrap: normal; }
+</style>
+</head>
+<body>
+<header class="site">
+  <div class="logo"><svg class="mark" viewBox="0 0 96 96" aria-hidden="true" focusable="false"><rect x="12" y="14" width="72" height="18" rx="5" fill="var(--mark)"/><rect x="12" y="39" width="48" height="18" rx="5" fill="var(--mark)"/><rect x="12" y="64" width="26" height="18" rx="5" fill="var(--accent)"/></svg>foster<span>stack</span></div>
+  <div class="tag">Infrastructure worth keeping — and kept patched.</div>
+</header>
+<main>
+  <h1>How our release pipeline maps to NIST SP 800-204C, 800-204D and SLSA</h1>
+  <p class="lede">This page takes the release pipeline that built FosterStack Cache v0.2.1 and puts each stage next to the NIST practice it maps to. It says where a stage only partly implements a practice, and it says which SLSA Build level we assess v0.2.1 at.</p>
+  <p class="muted-note">Words used here: <strong>SBOM</strong> is a parts list of what is inside a build. <strong>VEX</strong> is a note saying a known flaw does not affect us. <strong>Provenance</strong> is a signed record of how and where something was built. <strong>Digest</strong> is the fingerprint of a file or image. <strong>SLSA</strong> is a public scale of how well a build can be trusted, from Level 1 to Level 4 in its Build track.</p>
+  <p><strong>Guidance we designed against, not a certification we hold.</strong></p>
+
+  <h2>The two NIST documents</h2>
+  <ul>
+    <li><strong>NIST SP 800-204C</strong>, Implementation of DevSecOps for a Microservices-based Application with Service Mesh. We use its pipeline sections, mainly 4.6 "Securing the CI/CD Pipeline" and 4.8 "Security Testing".</li>
+    <li><strong>NIST SP 800-204D</strong>, Strategies for the Integration of Software Supply Chain Security in DevSecOps CI/CD Pipelines. We use sections 4 and 5, mainly 5.1.1 "Secure Build" and 5.2 "Securing Workflows in CD Pipelines".</li>
+  </ul>
+  <p>Parts of both documents are about running services in your own cluster: service mesh, runtime monitoring, deployment by GitOps. That part happens in your environment, not in our release pipeline, so this page does not map it.</p>
+
+  <h2>Stage by stage: what runs, and which practice it maps to</h2>
+  <p>This describes the workflow files as they were at the v0.2.1 tag. "Signs" means the stage writes a statement about its work and signs it with keyless signing tied to that stage's own workflow identity, logged in a public transparency log.</p>
+  <table>
+    <thead>
+      <tr><th>Stage</th><th>What it does in v0.2.1</th><th>NIST practice</th><th>How much</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Source admission</td>
+        <td>Checks the tag and commit signatures against the allowed signers on <code>main</code> (or GitHub's own key for merges made on github.com), that the commit is on <code>main</code>, that every required check passed, and that an approved requirements list exists for the version. Signs.</td>
+        <td>800-204D 5.1.4 "Secure Code Commits" (commit-signing enforcement, COMMIT-REQ-2); 5.1.2 "Secure Pull-Push Operations on Repositories" (automated checks before code is trusted)</td>
+        <td>Partly. There is one maintainer, so no second person reviews or approves a change.</td>
+      </tr>
+      <tr>
+        <td>Build</td>
+        <td>Builds the binaries once on a fresh GitHub-hosted machine with the toolchain pinned, and checks that the dependency files did not change. Writes checksums and an SBOM per archive. Signs a build statement and SLSA provenance.</td>
+        <td>800-204D 5.1.1 "Secure Build"; 800-204C 3.3.3 (SBOM generation and code signing as pipeline tasks)</td>
+        <td>Partly. The signing runs in the same job as the build steps, not in a separate, more trusted process as 5.1.1 asks.</td>
+      </tr>
+      <tr>
+        <td>Image assembly</td>
+        <td>Checks every archive against the signed build statement before opening it. Adds one binary to a base image pinned by digest, with no commands run inside the image. Pushes by digest only, with no version tags, to a separate candidates package. Signs, recording the base digest and binary hashes, plus SLSA provenance.</td>
+        <td>800-204D 4.2: "The inputs and outputs of each build step should be verified"</td>
+        <td>Implements the practice.</td>
+      </tr>
+      <tr>
+        <td>Reproducibility check</td>
+        <td>Assembles the images again on a separate machine. The digests must match, or the release fails. Signs.</td>
+        <td>No direct match in either document.</td>
+        <td>Not mapped. It repeats the image assembly; it does not rebuild the binaries from source.</td>
+      </tr>
+      <tr>
+        <td>Scans</td>
+        <td>Two different scanners with different vulnerability databases, each on its own machine, check the image-assembly and reproducibility statements first, then scan every platform image of every variant. One also scans the archives, the other the Go module files. A finding at any severity blocks the release. For one of the two scanners, a published VEX statement can clear a finding. Each scanner signs its verdict for the exact digests.</td>
+        <td>800-204C 4.8 and 4.8.1 (container image scans, software composition analysis); 800-204D 5.2, DEPLOY_REQ-4 (evidence the image was scanned)</td>
+        <td>Partly. The release pipeline runs no static or dynamic application security testing itself. The signed verdict records a pass, not the full scan report.</td>
+      </tr>
+      <tr>
+        <td>Acceptance tests</td>
+        <td>Run against the exact candidate images: the Linux archives and binaries (macOS archives are checked, not run), the images on both CPU architectures, the image variants, the Gradle and Maven test suites, the Kubernetes setup from our docs, and a test that the server makes no outbound connections. A final job checks that every release-blocking acceptance test in the approved list passed, then signs one statement.</td>
+        <td>800-204C 3.3.1 (tests run in the pipeline; an organisation may choose to stop the pipeline when a test fails); 4.6 (stop further pipeline tasks if a test fails)</td>
+        <td>Implements the practice. The individual test jobs do not sign their own results.</td>
+      </tr>
+      <tr>
+        <td>Release authorization</td>
+        <td>Verifies every earlier statement: signed by the expected stage, naming this commit and these digests, scan verdicts pass, acceptance results complete. Anything missing stops the release. Records each statement's transparency-log entry. Signs the approval.</td>
+        <td>800-204C 4.6: "verify that all required signatures … are present to ensure that no one bypasses the pipeline"; 800-204D 5.1.1 (policy checks that the required attestations are found)</td>
+        <td>Partly. The policy is code in the workflow file, not a separate signed policy document as 5.1.1 describes.</td>
+      </tr>
+      <tr>
+        <td>Promotion and publish</td>
+        <td>Will not start without the signed approval. Copies the approved digests to GitHub's registry and the Docker Hub mirror with no rebuild, and checks the digests did not change. Signs the public images and the checksums file. Uploads the release files, re-checks the image signatures, the signed checksums and every tag the way a customer would, without credentials, then makes the release page public.</td>
+        <td>800-204D 5.2, DEPLOY-REQ-3 (only an artifact made by the approved build process is cleared)</td>
+        <td>Partly. We refuse to publish anything the approved build did not make. Enforcing that at deploy time is up to your own environment.</td>
+      </tr>
+      <tr>
+        <td>Signing, across all stages</td>
+        <td>Keyless signing: a short-lived signing identity per stage, no stored signing key, every signature logged publicly.</td>
+        <td>800-204C 4.6: "signing the release artifact during each required CI/CD stage (preferably multi-party signing)"; 800-204D 5.1.1 (attestations signed, stored tamper-proof)</td>
+        <td>Partly. Not multi-party: every signature is made by automation in one repository, run by one maintainer.</td>
+      </tr>
+      <tr>
+        <td>Evidence bundle</td>
+        <td><code>release-manifest.json</code> lists every digest, the hash of the approved requirements list, per-test results, and the transparency-log entry of every statement the authorization verified. It is attached to each image in GitHub's registry as a signed statement and published with the SBOMs, VEX file and signed checksums.</td>
+        <td>800-204D 4 (record provenance, with a way to verify and authenticate it)</td>
+        <td>Implements the practice. Neither document has a section on VEX.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Which SLSA Build level does v0.2.1 meet?</h2>
+  <p>We assess v0.2.1 at <strong>SLSA Build Level 2</strong>, against the <a href="https://slsa.dev/spec/v1.0/requirements">SLSA v1.0 requirements</a>. We do not claim Build Level 3.</p>
+  <ul class="trust">
+    <li><strong>Consistent build process (L1).</strong> Met. One workflow builds every release. Only a tag push starts it, and the first stage stops any tag not signed by an allowed signer.</li>
+    <li><strong>Provenance exists (L1).</strong> Met. SLSA v1 provenance covers the binary archives, their SBOMs, <code>checksums.txt</code>, and the three container images, naming each digest, the source commit and the workflow run.</li>
+    <li><strong>Provenance is distributed (L1).</strong> Met. It is in GitHub's attestation store, and <code>gh attestation verify</code> returns it.</li>
+    <li><strong>Hosted build platform (L2).</strong> Met. The build ran on GitHub-hosted machines, never on a workstation.</li>
+    <li><strong>Authentic provenance (L2).</strong> Met. The provenance is signed with an identity issued to the building workflow, and you can check the signature and the signing workflow yourself.</li>
+  </ul>
+  <p>Level 3 is not claimed. It requires that the build steps cannot reach the material used to sign the provenance ("Unforgeable" and "Isolated" in the spec). In v0.2.1, the build steps and the provenance signing run in the same job, so that separation is not there. Build Level 3 is planned. It is not part of v0.2.1.</p>
+
+  <h2>What is not met today</h2>
+  <ul>
+    <li>SLSA Build Level 3.</li>
+    <li>Evidence made by a separate, more trusted process than the build itself (800-204D 5.1.1).</li>
+    <li>A second person: one maintainer writes, approves and releases every change. No review by another person, and no multi-party signing (800-204D 5.1.2, 800-204C 4.6).</li>
+    <li>All signing is automated. 800-204D 5.1.3, written for software update systems, points the same way: multiple keys with threshold trust, and automated keys kept out of roles customers rely on.</li>
+    <li>The acceptance test jobs pass their results to the job that signs them; they do not sign or verify statements themselves.</li>
+    <li>No dynamic application security testing, and no static testing inside the release pipeline.</li>
+    <li>The release policy is workflow code, not a separate signed policy document.</li>
+    <li>The reproducibility check covers image assembly, not a second build of the binaries from source.</li>
+    <li>Promoted images are in the public registries a few steps before the final customer-style checks finish. Only the release page waits for those checks.</li>
+    <li>Scan verdicts are signed, but the full scan reports are not published as release files.</li>
+    <li>Checking provenance with <code>gh attestation verify</code> needs a GitHub token. The <code>cosign</code> checks need no account.</li>
+  </ul>
+
+  <h2>Check it yourself</h2>
+  <p>This checks the SLSA provenance of the v0.2.1 image and the workflow that signed it:</p>
+  <pre><code>$ gh attestation verify oci://ghcr.io/fosterstack/cache:0.2.1 \
+  --repo fosterstack/cache \
+  --signer-workflow fosterstack/cache/.github/workflows/stage-image.yml</code></pre>
+  <ul class="trust">
+    <li><a href="/verify-a-release/">Verify a release</a>: every check we ran against v0.2.1, with its real output.</li>
+    <li><a href="https://github.com/fosterstack/cache/actions/runs/35554556056">The v0.2.1 release run</a>: all 16 jobs.</li>
+    <li><a href="https://github.com/fosterstack/cache/releases/tag/v0.2.1">The v0.2.1 release</a>: SBOMs, VEX file, signed checksums and <code>release-manifest.json</code>.</li>
+    <li><a href="https://github.com/fosterstack/cache/blob/v0.2.1/RELEASING.md">RELEASING.md at v0.2.1</a>: the pipeline in the maintainer's words.</li>
+    <li><a href="https://github.com/fosterstack/cache/tree/v0.2.1/.github/workflows">The workflow files at v0.2.1</a>, starting with <a href="https://github.com/fosterstack/cache/blob/v0.2.1/.github/workflows/release.yml">release.yml</a> and <a href="https://github.com/fosterstack/cache/blob/v0.2.1/.github/workflows/stage-authorize.yml">stage-authorize.yml</a>.</li>
+  </ul>
+
+  <p class="muted-note">Section numbers refer to the final published versions of NIST SP 800-204C and NIST SP 800-204D. <strong>Guidance we designed against, not a certification we hold.</strong></p>
+
+  <div class="cta-row">
+    <a class="btn" href="/verify-a-release/">Verify a release</a>
+    <a class="btn btn-secondary" href="/how-we-build/">How we build</a>
+  </div>
+</main>
+
+<footer>
+  <div>
+    <p>FosterStack is not affiliated with, endorsed by, or sponsored by Gradle Inc.
+    "Gradle" and "Develocity" are trademarks of Gradle Inc., used here only to identify
+    compatibility. FosterStack contains no Gradle Inc. code; it is a clean-room implementation
+    of the documented remote build cache HTTP protocol. Apache Maven is a trademark of the
+    Apache Software Foundation; the Maven Build Cache Extension is Apache's project, not
+    ours.</p>
+    <p style="margin-top:.6rem">© 2026 FosterStack · <a href="/build-cache-node-end-of-life/">Build Cache Node end of life</a> · <a href="/migrate-build-cache-node/">Migrate</a> · <a href="/build-cache-node-faq/">FAQ</a> · <a href="/jenkins-ci-build-cache/">CI setup</a> · <a href="/how-we-build/">How we build</a> · <a href="/regulated/">For regulated markets</a> · <a href="https://github.com/fosterstack/cache">github.com/fosterstack/cache</a> · <a href="mailto:hello@fosterstack.com">hello@fosterstack.com</a></p>
+  </div>
+</footer>
+</body>
+</html>
