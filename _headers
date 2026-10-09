@@ -1,3 +1,5 @@
+# Strict-Transport-Security: to reverse it, serve max-age=0 over https and wait out the old max-age (6 months at most).
+# Keep this file the only place it is set; do not also turn on HSTS in the Cloudflare zone settings.
 /*
   X-Content-Type-Options: nosniff
   Strict-Transport-Security: max-age=15552000
