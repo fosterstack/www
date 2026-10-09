@@ -4,7 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Is a remote build cache safe? Who can write to it</title>
-<meta name="description" content="A remote build cache fails safe when it is down, but not when untrusted parties can write to it. Who should hold the read-write login, what the read-only login does, and what push disabled really means.">
+<meta name="description" content="A remote build cache fails safe when down, not when untrusted parties can write to it. Who should hold the read-write login, and what the read-only login does.">
+<meta property="og:title" content="Is a remote build cache safe? Who can write to it">
+<meta property="og:description" content="A remote build cache fails safe when down, not when untrusted parties can write to it. Who should hold the read-write login, and what the read-only login does.">
+<meta property="og:url" content="https://fosterstack.com/remote-build-cache-security/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="FosterStack">
 <link rel="canonical" href="https://fosterstack.com/remote-build-cache-security/">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/favicon.ico" sizes="any">
@@ -70,6 +75,9 @@
   footer { border-top: 1px solid var(--line); margin-top: 4rem; padding: 1.5rem 1.25rem 3rem; }
   footer div { max-width: 44rem; margin: 0 auto; color: var(--muted); font-size: .82rem; }
   a { color: var(--accent); }
+  table { display: block; max-width: 100%; overflow-x: auto; }
+  code { overflow-wrap: anywhere; }
+  pre code { overflow-wrap: normal; }
 </style>
 </head>
 <body>

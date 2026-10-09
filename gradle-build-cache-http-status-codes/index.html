@@ -4,7 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Gradle build cache HTTP status codes: 401, 403, 404 and 413</title>
-<meta name="description" content="What 200, 201, 404, 401, 403 and 413 mean when Gradle talks to a self-hosted build cache server, tested on a real 0.2.1 server: passwords, the read-only login, and the entry size limit.">
+<meta name="description" content="What 200, 201, 404, 401, 403 and 413 mean when Gradle talks to a self-hosted build cache, tested on a real 0.2.1 server: passwords, read-only login, size limit.">
+<meta property="og:title" content="Gradle build cache HTTP status codes: 401, 403, 404 and 413">
+<meta property="og:description" content="What 200, 201, 404, 401, 403 and 413 mean when Gradle talks to a self-hosted build cache, tested on a real 0.2.1 server: passwords, read-only login, size limit.">
+<meta property="og:url" content="https://fosterstack.com/gradle-build-cache-http-status-codes/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="FosterStack">
 <link rel="canonical" href="https://fosterstack.com/gradle-build-cache-http-status-codes/">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/favicon.ico" sizes="any">
@@ -70,6 +75,9 @@
   footer { border-top: 1px solid var(--line); margin-top: 4rem; padding: 1.5rem 1.25rem 3rem; }
   footer div { max-width: 44rem; margin: 0 auto; color: var(--muted); font-size: .82rem; }
   a { color: var(--accent); }
+  table { display: block; max-width: 100%; overflow-x: auto; }
+  code { overflow-wrap: anywhere; }
+  pre code { overflow-wrap: normal; }
 </style>
 </head>
 <body>
@@ -110,8 +118,10 @@ GET the too-large key afterwards                               404
 /statusz, no credentials                                       401</code></pre>
   <p>The health and metrics paths stay open without a password, so monitoring works. The status page does not.</p>
 
-  <h2>401 is the quiet one</h2>
-  <p>Gradle treats a remote cache failure as non-fatal, so a 401 does not break the build and shows nothing at the default log level. The build just never uses the cache. Run with <code>-i</code> to see it. The usual causes are no <code>credentials</code> block, a password that did not reach Gradle's background daemon, or a typo. To test the server directly:</p>
+  <h2>401 does not break the build</h2>
+  <p>Gradle treats a remote cache failure as non-fatal, so a 401 does not fail the build. The build just runs without the cache. In our test with Gradle 9.8.0 on macOS it printed this at the default log level:</p>
+  <pre><code>Could not load entry d4f2de693b561fd2c5d60b17a9232d6f from remote build cache: Loading entry from 'http://127.0.0.1:18099/d4f2de693b561fd2c5d60b17a9232d6f' response status 401: Unauthorized</code></pre>
+  <p>The usual causes are no <code>credentials</code> block, a wrong password, or a typo. Run with <code>-i</code> for more detail. To test the server directly:</p>
   <pre><code>curl -s -o /dev/null -w &#x27;%{http_code}\n&#x27; -u gradle:wrong-password https://cache.example.com/some-key</code></pre>
   <p>A 401 here means the credentials are wrong. A 404 means they are right and the key simply is not stored. More steps are in <a href="/gradle-remote-cache-not-working/">Gradle remote build cache not working</a>.</p>
 

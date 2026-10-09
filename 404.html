@@ -3,14 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Gradle build cache on Kubernetes (no Helm chart yet)</title>
-<meta name="description" content="Run a shared Gradle and Maven build cache on Kubernetes with plain manifests: one replica, update strategy, sizing, security context and in-cluster runners.">
-<meta property="og:title" content="Gradle build cache on Kubernetes (no Helm chart yet)">
-<meta property="og:description" content="Run a shared Gradle and Maven build cache on Kubernetes with plain manifests: one replica, update strategy, sizing, security context and in-cluster runners.">
-<meta property="og:url" content="https://fosterstack.com/gradle-build-cache-kubernetes/">
-<meta property="og:type" content="website">
-<meta property="og:site_name" content="FosterStack">
-<link rel="canonical" href="https://fosterstack.com/gradle-build-cache-kubernetes/">
+<title>Page not found</title>
+<meta name="robots" content="noindex">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -86,42 +80,16 @@
   <div class="tag">Infrastructure worth keeping — and kept patched.</div>
 </header>
 <main>
-  <h1>Gradle build cache on Kubernetes: plain manifests, no Helm chart yet</h1>
-  <p class="lede">Run a shared build cache in your cluster with plain manifests: one Deployment, one volume, one Service. There is no Helm chart yet. It has not been through a beta on a production cluster, so treat it that way.</p>
-
-  <h2>Is there a Helm chart?</h2>
-  <p>Not yet. Today the supported way to deploy on Kubernetes is the plain manifests in the <a href="https://github.com/fosterstack/cache/blob/main/docs/kubernetes.md">Kubernetes guide</a>: a Secret, a volume claim, a Deployment and a Service. Copy them into one file and apply it with <code>kubectl apply -f</code>.</p>
-
-  <h2>Run exactly one replica</h2>
-  <p>Do not scale this out. The cache keeps its index in a database file that one process holds a lock on. A second pod on the same volume does not share the cache; it waits on the lock or fails to start. Two pods on different volumes give you two half-filled caches.</p>
+  <h1>Page not found</h1>
+  <p class="lede">There is nothing at this address. Here are the places most people are looking for.</p>
   <ul class="trust">
-    <li><code>replicas: 1</code>.</li>
-    <li>Update strategy <code>Recreate</code>, not the default rolling update, so the new pod never starts while the old one holds the lock.</li>
-    <li>A volume claim with <code>ReadWriteOnce</code>.</li>
+    <li><a href="/">FosterStack home</a></li>
+    <li><a href="/build-cache-node-end-of-life/">Build Cache Node end of life: what happens and your options</a></li>
+    <li><a href="/migrate-build-cache-node/">Migrate from Build Cache Node: Gradle and Maven setup</a></li>
+    <li><a href="/build-cache-node-faq/">Questions and answers</a></li>
+    <li><a href="/gradle-remote-cache-not-working/">Gradle remote build cache not working</a></li>
+    <li><a href="/security/">Security policy: how to report a vulnerability</a></li>
   </ul>
-  <p>A cache is safe to lose for a moment. If it is down during a rollout, builds miss the cache and run slower, and nothing breaks. High availability across nodes is a paid-tier idea that is not built, so do not improvise it with two replicas.</p>
-
-  <h2>Size it in Kubernetes terms</h2>
-  <ul class="trust">
-    <li>Requests of about 100m CPU and 128Mi memory, and a memory limit of 512Mi.</li>
-    <li>No CPU limit, on purpose. A CPU limit throttles instead of killing, and throttling a cache during a burst is the opposite of what you want.</li>
-    <li>A node with 1 GB does not have 1 GB for you. The smallest practical node on managed Kubernetes is 2 GB.</li>
-    <li>Disk is the real variable. Size the volume from the cache size cap plus some room. See <a href="/build-cache-server-sizing/">server sizing</a>.</li>
-  </ul>
-
-  <h2>Locked down by default</h2>
-  <p>The manifests run as a non-root user with a read-only root file system, drop all capabilities, forbid privilege escalation, and use the runtime default seccomp profile. There is no privileged mode, no host networking and no host path. They satisfy the Pod Security <code>restricted</code> profile. The volume must be writable by user 65532, which is what the <code>fsGroup</code> setting is for.</p>
-
-  <h2>Runners in the same cluster</h2>
-  <p>If your CI runners already run in this cluster, including Jenkins agents, GitHub Actions runner controller and GitLab runners, you need no load balancer and no ingress. Point Gradle at the cluster-internal name, for example <code>http://fscache.fscache-ns.svc.cluster.local/</code>, with <code>isAllowInsecureProtocol = true</code>. Gradle requires that for plain <code>http://</code> addresses. In our test with Gradle 9.8.0, only the literal <code>127.0.0.1</code> was let through without it. Here it is reasonable because the traffic never leaves the cluster network. See <a href="/jenkins-ci-build-cache/">Jenkins and CI build cache</a>.</p>
-
-  <h2>Get the manifests</h2>
-  <p>The four manifests (Secret, volume claim, Deployment, Service) and the steps to reach the cache from outside the cluster are in the <a href="https://github.com/fosterstack/cache/blob/main/docs/kubernetes.md">Kubernetes guide</a> on GitHub. Copy them into one file and apply it.</p>
-
-  <div class="cta-row">
-    <a class="btn" href="https://github.com/fosterstack/cache/blob/main/docs/kubernetes.md">Kubernetes guide</a>
-    <a class="btn btn-secondary" href="/migrate-build-cache-node/">Gradle and Maven setup</a>
-  </div>
 </main>
 <footer>
   <div>
@@ -131,7 +99,7 @@
     of the documented remote build cache HTTP protocol. Apache Maven is a trademark of the
     Apache Software Foundation; the Maven Build Cache Extension is Apache's project, not
     ours.</p>
-    <p style="margin-top:.6rem">© 2026 FosterStack · <a href="/regulated/">For regulated markets</a> · <a href="https://github.com/fosterstack/cache">github.com/fosterstack/cache</a> · <a href="mailto:hello@fosterstack.com">hello@fosterstack.com</a></p>
+    <p style="margin-top:.6rem">© 2026 FosterStack · <a href="/build-cache-node-end-of-life/">Build Cache Node end of life</a> · <a href="/migrate-build-cache-node/">Migrate</a> · <a href="/build-cache-node-faq/">FAQ</a> · <a href="/jenkins-ci-build-cache/">CI setup</a> · <a href="/how-we-build/">How we build</a> · <a href="/regulated/">For regulated markets</a> · <a href="https://github.com/fosterstack/cache">github.com/fosterstack/cache</a> · <a href="mailto:hello@fosterstack.com">hello@fosterstack.com</a></p>
   </div>
 </footer>
 </body>
