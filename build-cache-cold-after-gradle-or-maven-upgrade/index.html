@@ -94,12 +94,12 @@
   <ul class="trust">
     <li><strong>Upgrade CI and every laptop that shares the cache together.</strong> Our advice, not a test result: the first builds should then fill the cache for everyone.</li>
     <li><strong>Expect the first builds on the new version to rebuild,</strong> unless you pin your Maven plugins (next point). They store their results for the builds after them.</li>
-    <li><strong>In Maven, pin the plugin versions your build uses, in your <code>pom.xml</code>.</strong> Our test build used eight; the list is below. With all eight pinned, Maven 3.10.0 and 3.9.9 shared entries in our test.</li>
+    <li><strong>In Maven, pin your plugin versions in your <code>pom.xml</code>.</strong> With all eight of our test plugins pinned (list below), Maven 3.10.0 and 3.9.9 shared entries in our test.</li>
   </ul>
   <p>For Gradle, we saw this: in our three pairs of versions, each version restored only its own entries.</p>
 
   <h2>Pin the Maven plugin versions</h2>
-  <p>Put these inside <code>&lt;build&gt;&lt;plugins&gt;</code>. These are the eight plugins our test build used, at the versions we tested. If your build uses other plugins, pin those too. Use any versions you like, as long as everyone who shares the cache uses the same ones.</p>
+  <p>Put these inside <code>&lt;build&gt;&lt;plugins&gt;</code>. These are the eight plugins our test build used, at the versions we tested. If your build uses other plugins, pin those too. Everyone who shares the cache should use the same versions.</p>
 <pre tabindex="0"><code>&lt;plugin&gt;&lt;artifactId&gt;maven-resources-plugin&lt;/artifactId&gt;&lt;version&gt;3.5.0&lt;/version&gt;&lt;/plugin&gt;
 &lt;plugin&gt;&lt;artifactId&gt;maven-compiler-plugin&lt;/artifactId&gt;&lt;version&gt;3.16.0&lt;/version&gt;&lt;/plugin&gt;
 &lt;plugin&gt;&lt;artifactId&gt;maven-jar-plugin&lt;/artifactId&gt;&lt;version&gt;3.5.1&lt;/version&gt;&lt;/plugin&gt;
