@@ -88,17 +88,17 @@
 </header>
 <main>
   <h1>Maven build cache: let CI write, developers only read</h1>
-  <p class="lede">Anything that can write to your build cache can change what later builds use, so let as few machines write as you can. Give the server a read-write login for CI and a read-only login for developers, and turn saving on only in CI.</p>
+  <p class="lede">Anything that can write to your build cache can change what later builds use. Here is how to give CI a read-write login and developers a read-only one, so only CI can change the cache.</p>
 
   <h2>1. Give the server two logins</h2>
   <p>The server takes one read-write login and a second, read-only login. A client using the read-only login can read cache entries. Any write is refused with a 403.</p>
 <pre tabindex="0"><code>FSCACHE_USERNAME=ci   FSCACHE_PASSWORD=&lt;a long secret&gt; \
 FSCACHE_RO_USERNAME=dev FSCACHE_RO_PASSWORD=&lt;another secret&gt; \
 ./fscache</code></pre>
-  <p>The two usernames must differ. The read-only pair only works next to the read-write pair.</p>
+  <p>The two usernames must differ. The read-only login only works if the read-write login is also set.</p>
 
   <h2>2. One config file for everyone</h2>
-  <p>Put this in <code>.mvn/maven-build-cache-config.xml</code> and commit it. It has no password and no <code>saveToRemote</code>, so it reads from the server and never writes.</p>
+  <p>Put this in <code>.mvn/maven-build-cache-config.xml</code> and commit it. It has no password and no <code>saveToRemote</code>, so on its own it only reads. Step 4 turns saving on for CI.</p>
 <pre tabindex="0"><code>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
 &lt;cache xmlns="http://maven.apache.org/BUILD-CACHE-CONFIG/1.2.0"
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -123,22 +123,22 @@ FSCACHE_RO_USERNAME=dev FSCACHE_RO_PASSWORD=&lt;another secret&gt; \
     &lt;/server&gt;
   &lt;/servers&gt;
 &lt;/settings&gt;</code></pre>
-  <p>Developers use the same file with the read-only login, <code>dev</code> and its password.</p>
+  <p>Developers put the same entry in their own <code>settings.xml</code>, with the login <code>dev</code> and its password.</p>
 
   <h2>4. Turn saving on in CI only</h2>
   <p>CI builds with:</p>
 <pre tabindex="0"><code>mvn -Dmaven.build.cache.remote.save.enabled=true verify</code></pre>
-  <p>Developers run plain <code>mvn verify</code>. Without that flag nothing is saved.</p>
-  <p>If your config file already says <code>saveToRemote="true"</code>, developers add <code>-Dmaven.build.cache.remote.save.enabled=false</code>. That flag won over the file in our runs.</p>
+  <p>Developers run plain <code>mvn verify</code>. Without that flag, and with no <code>saveToRemote</code> in the file, nothing is saved to the server.</p>
+  <p>If your config file already says <code>saveToRemote="true"</code>, developers add <code>-Dmaven.build.cache.remote.save.enabled=false</code>. That flag won over the file in our run.</p>
 
   <h2>If a developer build is set to save anyway</h2>
-  <p>With only the read-only login, the build still succeeds and the server stores nothing. Maven logs this for each file it tries to save:</p>
+  <p>With only the read-only login, the build still succeeds and the server stores nothing. You will see this for each file Maven tries to save:</p>
 <pre tabindex="0"><code>[INFO] Unable to save to remote cache http://.../mtest.jar
 org.apache.http.client.HttpResponseException: status code: 403, reason phrase: Forbidden (403)</code></pre>
   <p>Those stack traces are noise. Switch saving off for developers to remove them.</p>
 
   <h2>If a developer has no login</h2>
-  <p>The server refuses every request without a login, so Maven cannot read the cache. It prints an error line, builds the project itself and succeeds:</p>
+  <p>The server refuses every cache read and write without a login, so Maven cannot read the cache. You will see an error line, and Maven builds the project itself and succeeds:</p>
 <pre tabindex="0"><code>[ERROR] Error downloading cache item: http://.../buildinfo.xml
 [INFO] Remote cache is incomplete or missing, trying local build for demo:mtest</code></pre>
   <p>The developer gets no speed-up, and nothing breaks. If every build looks like this, check the <code>settings.xml</code> login and that its id matches the config.</p>
@@ -162,7 +162,7 @@ org.apache.http.client.HttpResponseException: status code: 403, reason phrase: F
     </tbody>
   </table></div>
   <p class="muted-note">Straight from the server with curl: a PUT with the read-write login returned 201, a PUT with the read-only login 403, a GET with the read-only login 200, and a GET or PUT with no login 401.</p>
-  <p class="muted-note">Setup: Maven 3.9.9, Apache Maven Build Cache Extension 1.2.3, FosterStack Cache 0.2.1, Temurin 21.0.12.1, macOS (arm64). One module with two tests, all eight plugin versions pinned. Each case started with a fresh project copy and an empty local build cache, on a new empty server. The plugin downloads were shared across builds. The passwords were test values.</p>
+  <p class="muted-note">Setup: Maven 3.9.9, Apache Maven Build Cache Extension 1.2.3, FosterStack Cache 0.2.1, Temurin 21.0.12.1, macOS (arm64). One module with two tests, all eight plugin versions pinned. Each group of cases began on a new empty server, with a fresh project copy and an empty local build cache for every build. The last two rows ran on their own server, which a CI build with the file setting had filled with 3 entries first. The server ran on 127.0.0.1 over plain HTTP; the URL in the examples is a placeholder. The plugin downloads were shared across builds. The passwords were test values.</p>
   <p class="muted-note">Not tested: Maven versions other than 3.9.9, a multi-module build, whether Maven keeps reading after a refused save, logins kept anywhere other than <code>settings.xml</code>, and Linux.</p>
 </main>
 <footer>
