@@ -31,6 +31,13 @@ verifiable against the CI run that produced them.
 - [Gradle build cache with Docker Compose](https://fosterstack.com/gradle-build-cache-docker-compose/): password, size cap, volume, health checks.
 - [Gradle build cache on Kubernetes](https://fosterstack.com/gradle-build-cache-kubernetes/): one replica, sizing, security context.
 - [Security policy](https://fosterstack.com/security/): how to report a vulnerability, what we sign and publish.
+- [Verify a release yourself](https://fosterstack.com/verify-a-release/): every command with real output from 0.2.1.
+- [FIPS 140-3 build cache](https://fosterstack.com/fips-140-3-build-cache/): run the FIPS image and confirm FIPS mode.
+- [Monitor a build cache](https://fosterstack.com/monitor-build-cache-prometheus-grafana/): metrics, queries, Grafana dashboard.
+- [Gradle build cache HTTP status codes](https://fosterstack.com/gradle-build-cache-http-status-codes/): 401, 403, 404, 413 explained.
+- [Reset a build cache](https://fosterstack.com/reset-gradle-build-cache/): how to empty it.
+- [Is a remote build cache safe](https://fosterstack.com/remote-build-cache-security/): who can write to it.
+- [Changelog](https://fosterstack.com/changelog/): release notes for v0.1.0 and v0.2.1.
 - [Server sizing](https://fosterstack.com/build-cache-server-sizing/): CPU, RAM, disk and the size cap.
 - [Air-gapped install](https://fosterstack.com/air-gapped-build-cache-install/): download, verify, transfer, run.
 - [What to check in a replacement build cache](https://fosterstack.com/verify-replacement-build-cache/): eight questions to ask.
