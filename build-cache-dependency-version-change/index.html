@@ -99,10 +99,10 @@
   </ul>
 
   <h2>What we ran</h2>
-  <p>A project with two modules. <code>lib</code> has no dependencies. <code>app</code> depends on one library, Gson (<code>com.google.code.gson:gson</code>), and calls it. We changed only the Gson version, from 2.10.1 to 2.11.0, and nothing else. The two builds below used a self-hosted cache (FosterStack Cache 0.2.1, release 0.2.1).</p>
+  <p>A project with two modules. <code>lib</code> has no dependencies. <code>app</code> depends on one library, Gson (<code>com.google.code.gson:gson</code>), and calls it. We changed only the Gson version, from 2.10.1 to 2.11.0, and nothing else. Both series used a self-hosted cache, FosterStack Cache 0.2.1.</p>
   <p>Gradle was 9.8.0, with the compile tasks <code>:lib:compileJava</code> and <code>:app:compileJava</code>. Maven was 3.9.9 with the Apache Maven Build Cache Extension 1.2.3 and <code>mvn verify</code>; all eight default plugin versions were pinned in the POM, because an unpinned plugin version changes the Maven cache key (see <a href="/maven-build-cache-different-maven-versions/">Maven build cache across Maven versions</a>). Both used Java 21 (Temurin 21.0.12.1) on one Mac (arm64).</p>
   <p>Each tool had one series of five builds. The series started on a new, empty cache server. Every build used a fresh copy of the project with no earlier build output. In Maven each build started with an empty local build cache; in Gradle the local build cache was switched off, so only the server could supply results. Gson and what it needs were downloaded once into a shared download folder before the series, so no build waited on the network. Every build ended with <code>BUILD SUCCESSFUL</code> (Gradle) or <code>BUILD SUCCESS</code> (Maven).</p>
-  <div class="table-scroll"><div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
+  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <thead><tr><th>Build</th><th>Gson</th><th>Gradle <code>lib</code></th><th>Gradle <code>app</code></th><th>Maven <code>lib</code></th><th>Maven <code>app</code></th></tr></thead>
     <tbody>
       <tr><td>1 first build</td><td>2.10.1</td><td>ran</td><td>ran</td><td>built</td><td>built</td></tr>
@@ -112,7 +112,7 @@
       <tr><td>5 back to the old version</td><td>2.10.1</td><td>from cache</td><td>from cache</td><td>restored</td><td>restored</td></tr>
     </tbody>
   </table></div>
-  <p>In the Gradle columns, "ran" means the task printed <code>:app:compileJava</code> with nothing after it and "from cache" means <code>FROM-CACHE</code>. In the Maven columns, "restored" means Maven printed <code>Found cached build, restoring</code> for that module and "built" means it did not.</p>
+  <p>In the Gradle columns, "ran" means the task line (for example <code>&gt; Task :app:compileJava</code>) had nothing after it and "from cache" means <code>FROM-CACHE</code>. In the Maven columns, "restored" means Maven printed <code>Found cached build, restoring</code> for that module and "built" means it did not.</p>
 
   <h2>What this means when you update a dependency</h2>
   <ul class="trust">
@@ -121,7 +121,7 @@
     <li><strong>The server kept the new result.</strong> Build 4 restored both modules from it. We ran one machine, one after another, so we did not test several people or CI against developers.</li>
   </ul>
   <p>Our advice, not a test result: bump a version in one change, let one build fill the cache, and then expect later builds to restore.</p>
-  <p>We did not test a dependency that <code>lib</code> and <code>app</code> both use, a module that depends on <code>app</code> (a module downstream of the change), other libraries, other versions, Gradle's wrapper, or Linux. The Mac was busy with other jobs during the runs, so we make no claim about build times.</p>
+  <p>We did not test a dependency that <code>lib</code> and <code>app</code> both use, a module that depends on <code>app</code> (a module downstream of the change), other libraries, other versions, the Gradle wrapper script (<code>gradlew</code>), or Linux. The runs lasted under a minute against a server with no size limit; on a busy server with a limit, old entries can be removed. The Mac was busy with other jobs during the runs, so we make no claim about build times.</p>
 
   <h2>If nothing is restored</h2>
   <p>Work through <a href="/gradle-build-cache-hit-rate-low/">why the Gradle hit rate is low</a> or <a href="/maven-build-cache-extension-not-restoring/">Maven build cache extension not restoring</a>.</p>
