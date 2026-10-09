@@ -83,7 +83,7 @@
 
   <h2>Two kinds of failure</h2>
   <ul class="trust">
-    <li><strong>Down, empty or unreachable.</strong> Builds run slower. Nothing is lost and nothing is wrong. A build cache is safe against this by design.</li>
+    <li><strong>Down, empty or unreachable.</strong> Builds run slower. Nothing is lost and nothing is wrong. A build cache is only slower in this case.</li>
     <li><strong>Serving wrong files.</strong> If something untrusted can write to the cache, it can change what later builds use as task outputs. This is a different class of problem, and it is the one to plan for.</li>
   </ul>
 
@@ -92,7 +92,7 @@
   <ul class="trust">
     <li>Turn on Basic Auth anywhere untrusted parties could reach the port.</li>
     <li>Share the read-write password only with CI and the developers you already trust to change your code.</li>
-    <li>Give everyone else the read-only login. A client using it can read cache entries, and any write gets a 403.</li>
+    <li>Give everyone else the optional read-only login. A client using it can read cache entries, and any write gets a 403.</li>
     <li>Use HTTPS in real deployments. Gradle sends the password with every request.</li>
   </ul>
 
