@@ -114,7 +114,7 @@ curl -s localhost:8080/statusz            # add -u user:password if login is on<
   <p>So use the build log to judge one build, and the server to watch the trend over days. Do not compare the two directly.</p>
 
   <h2>What is a good number?</h2>
-  <p>There is no single good number. It depends on how often your code changes and how your build is split into modules. A first build against an empty server is 0%.</p>
+  <p>There is no single good number. It depends on how often your code changes. A first build against an empty server is 0%.</p>
   <p>Measure a few ordinary CI builds with the recipes above, then watch the server's rate over weeks. If it stays low, see <a href="/gradle-build-cache-hit-rate-low/">why the Gradle hit rate is low</a> or <a href="/maven-build-cache-extension-not-restoring/">why the Maven cache is not restoring</a>.</p>
 
   <h2>How we checked</h2>
