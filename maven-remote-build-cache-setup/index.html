@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Maven remote build cache setup with the Apache Build Cache Extension</title>
-<meta name="description" content="Set up the Apache Maven Build Cache Extension against a self-hosted remote cache: extension file, config file, credentials, and how to check cache hits. Server side built, acceptance testing in progress.">
+<meta name="description" content="Set up the Apache Maven Build Cache Extension against a self-hosted remote cache: extension file, config file, credentials, and how to check cache hits.">
 <link rel="canonical" href="https://fosterstack.com/maven-remote-build-cache-setup/">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/favicon.ico" sizes="any">
@@ -79,7 +79,7 @@
 </header>
 <main>
   <h1>Maven remote build cache setup with the Apache Build Cache Extension</h1>
-  <p class="lede">Share Maven build results across machines using Apache's Build Cache Extension and a self-hosted cache server. About ten minutes. The server side is built; its acceptance testing is still in progress, so treat Maven as newer than Gradle here.</p>
+  <p class="lede">Share Maven build results across machines using Apache's Build Cache Extension and a self-hosted cache server. About ten minutes.</p>
 
   <h2>Who owns what</h2>
   <p>The client is Apache's Maven Build Cache Extension. We maintain the server. If your hit rate looks low, that is usually the extension's own project settings (which files count as inputs, what to skip), not the server. Start with the extension's configuration guide.</p>
