@@ -19,6 +19,7 @@ must_pass "a normal page"                   "gradle-build-cache-tutorial/index.h
 must_pass "the real security.txt"           ".well-known/security.txt"
 must_pass "the timed-runs script"           "bin/bench-miss-cost.sh"
 must_pass "the server-down timed-runs script" "bin/bench-server-down.sh"
+must_fail "near-miss name of the server-down script" "bin/bench-server-down.sh.bak"
 must_fail "another script in bin/"            "bin/other-script.sh"
 must_pass "the hook and the workflow"       ".githooks/pre-commit" ".github/workflows/hygiene.yml" ".github/PULL_REQUEST_TEMPLATE.md" ".gitignore"
 must_fail "a draft page under .drafts/"     ".drafts/bcn-removed/index.html"

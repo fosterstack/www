@@ -61,4 +61,4 @@ jobs:
           persist-credentials: false
 
       - name: timed runs (no cache, cache on and empty, server refused, address that never answers)
-        run: BENCH_N=7 BENCH_LIMIT=300 bash bin/bench-server-down.sh
+        run: BENCH_N=7 BENCH_LIMIT=120 bash bin/bench-server-down.sh

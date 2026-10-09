@@ -84,7 +84,7 @@ PY
 now() { python3 -c 'import time; print(f"{time.time():.3f}")'; }
 
 # run one build with a time limit; never exits the script. Writes "seconds outcome from-cache" to $WORK/last.txt
-# outcome: OK (BUILD SUCCESSFUL) | FAILED (Gradle reported a failure) | TIMEOUT (killed at the limit)
+# outcome: OK (BUILD SUCCESSFUL) | FAILED (Gradle reported a failure) | TIMEOUT (killed at the limit) | CRASHED (ended with neither)
 run_build() { # dir cache(on|off) id
   local dir="$1" cache="$2" id="$3" t0 t1 flag out="$WORK/log-$3.txt" outcome rc pid wpid
   flag="--no-build-cache"; [ "$cache" = on ] && flag="--build-cache"
@@ -95,7 +95,7 @@ run_build() { # dir cache(on|off) id
   rc=0; wait "$pid" || rc=$?
   kill "$wpid" 2>/dev/null || true; wait "$wpid" 2>/dev/null || true
   t1="$(now)"
-  if grep -q 'BUILD SUCCESSFUL' "$out"; then outcome=OK; elif grep -q 'BUILD FAILED' "$out"; then outcome=FAILED; else outcome=TIMEOUT; fi
+  if grep -q 'BUILD SUCCESSFUL' "$out"; then outcome=OK; elif grep -q 'BUILD FAILED' "$out"; then outcome=FAILED; elif [ "$rc" = 143 ] || [ "$rc" = 137 ]; then outcome=TIMEOUT; else outcome=CRASHED; fi
   echo "$(python3 -c "print(f'{$t1 - $t0:.2f}')") $outcome $(grep -c 'compileJava FROM-CACHE' "$out" || true)" > "$WORK/last.txt"
   rm -rf "$WORK/gh-$id"
 }
@@ -113,11 +113,22 @@ start_server() { # datadir
 }
 stop_server() { if [ -n "$SRV_PID" ]; then kill "$SRV_PID" 2>/dev/null || true; wait "$SRV_PID" 2>/dev/null || true; fi; SRV_PID=""; }
 must_be_empty_port() { # nothing may listen on the "down" port
-  if curl -s -o /dev/null --max-time 2 "http://127.0.0.1:$PORT_DOWN/healthz"; then echo "something is listening on $PORT_DOWN; cell C would not be a refused connection" >&2; exit 1; fi
+  local rc=0; curl -s -o /dev/null --max-time 2 "http://127.0.0.1:$PORT_DOWN/healthz" || rc=$?
+  [ "$rc" = 7 ] || { echo "port $PORT_DOWN is not free (curl exit $rc); cell C would not be a refused connection" >&2; exit 1; }
+}
+# the "never answers" address must not answer: any HTTP answer aborts; a timeout is the intended case; print what was seen
+check_blackhole() {
+  local rc=0; curl -s -o /dev/null --max-time 5 "http://$BLACKHOLE:$PORT_HOLE/" || rc=$?
+  case "$rc" in
+    0) echo "something answered at ${BLACKHOLE}:${PORT_HOLE}; cell D would not be a non-answering address" >&2; exit 1;;
+    28) echo "blackhole check: no answer within 5 s (curl 28), as intended";;
+    *) echo "blackhole check: curl exit $rc (7 = refused or no route: cell D then measures a fast failure, not a wait)";;
+  esac
 }
 
 CSV="$WORK/results.csv"; echo "rep,cell,seconds,outcome,compile_tasks_from_cache" > "$CSV"
 must_be_empty_port
+check_blackhole
 for rep in 0 $(seq 1 "$N"); do
   # A: no remote cache
   mkproj "$WORK/pA$rep" "http://127.0.0.1:$PORT_UP/"; run_build "$WORK/pA$rep" off "A$rep"; read -r sA oA fA < "$WORK/last.txt"
@@ -137,7 +148,7 @@ for rep in 0 $(seq 1 "$N"); do
     echo "warm-up done (not recorded): A=$sA B=$sB C=$sC($oC) D=$sD($oD)"; show_cache_lines "C0"; show_cache_lines "D0"
   else
     printf '%s,A,%s,%s,%s\n%s,B,%s,%s,%s\n%s,C,%s,%s,%s\n%s,D,%s,%s,%s\n' "$rep" "$sA" "$oA" "$fA" "$rep" "$sB" "$oB" "$fB" "$rep" "$sC" "$oC" "$fC" "$rep" "$sD" "$oD" "$fD" >> "$CSV"
-    echo "rep $rep: A(no cache)=${sA}s  B(miss)=${sB}s  C(refused)=${sC}s [$oC]  D(no answer)=${sD}s [$oD]"
+    echo "rep $rep: A(no cache)=${sA}s  B(miss)=${sB}s  C(refused)=${sC}s [$oC]  D(no answer)=${sD}s [$oD]" | tee -a "${GITHUB_STEP_SUMMARY:-/dev/null}"
     [ "$rep" = 1 ] && { show_cache_lines "C1"; show_cache_lines "D1"; }
   fi
   rm -rf "$WORK/pA$rep" "$WORK/pB$rep" "$WORK/pC$rep" "$WORK/pD$rep" "$WORK/data$rep"
