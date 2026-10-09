@@ -92,14 +92,14 @@
 
   <h2>The short answer</h2>
   <ul class="trust">
-    <li>Each built module uploaded two files: its jar and a small <code>buildinfo.xml</code>.</li>
-    <li>Each build run also uploaded one <code>build-cache-report.xml</code>.</li>
+    <li>Each built module uploaded two files: its jar (about 5 KB here) and a <code>buildinfo.xml</code> (about 9 KB here).</li>
+    <li>Both of our builds also uploaded one <code>build-cache-report.xml</code>.</li>
     <li>Our three-module build left 7 entries and 44,810 bytes on an empty server.</li>
-    <li>A second build that restored every module still added one entry, the report.</li>
+    <li>A second build that restored every module added just that one entry, the report.</li>
   </ul>
 
   <h2>What we ran</h2>
-  <p>The three-module project from <a href="/maven-build-cache-extension-multi-module/">Maven build cache extension in a multi-module project</a>: <code>core</code>, <code>util</code> and <code>app</code>. We started a new, empty server and ran <code>mvn verify</code> twice, each time from a fresh copy of the project with an empty local build cache. Both builds ended with <code>BUILD SUCCESS</code>. The extension prints a <code>Saved to remote cache</code> line for every file it uploads, and the server's status page (<code>/statusz</code>) gave the counts.</p>
+  <p>The three-module project from <a href="/maven-build-cache-extension-multi-module/">Maven build cache extension in a multi-module project</a>: <code>core</code>, <code>util</code> and <code>app</code>. We started a new, empty server and ran <code>mvn verify</code> twice, each time from a fresh copy of the project with an empty local build cache. Both builds ran on the same Mac and shared one already-filled local Maven repository, offline (<code>-o -B</code>, plus options for the repository and the local cache location). Both ended with <code>BUILD SUCCESS</code>. In our runs the extension printed one <code>Saved to remote cache</code> line for each entry that ended up on the server, and the server's status page (<code>/statusz</code>) gave the counts.</p>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <thead><tr><th>Step</th><th>Entries on the server</th><th>Bytes</th></tr></thead>
     <tbody>
@@ -113,25 +113,27 @@
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <thead><tr><th>File</th><th>How many</th><th>What it is</th></tr></thead>
     <tbody>
-      <tr><td><code>core.jar</code>, <code>util.jar</code>, <code>app.jar</code></td><td>3</td><td>The built jar of each module</td></tr>
-      <tr><td><code>buildinfo.xml</code></td><td>3</td><td>A small record for each module that the next build looks up first</td></tr>
+      <tr><td><code>core.jar</code>, <code>util.jar</code>, <code>app.jar</code></td><td>3</td><td>The built jar of each module (5,028 to 5,340 bytes each)</td></tr>
+      <tr><td><code>buildinfo.xml</code></td><td>3</td><td>A record for each module that the next build looks up first (9,007 to 9,332 bytes each)</td></tr>
       <tr><td><code>build-cache-report.xml</code></td><td>1</td><td>A report about the build run itself</td></tr>
     </tbody>
   </table></div>
   <p>This is a line from the first build:</p>
+<p>The key is shortened to <code>&lt;key&gt;</code> here:</p>
 <pre tabindex="0"><code>[INFO] Saved to remote cache http://127.0.0.1:18180//v1.1/demo/core/&lt;key&gt;/core.jar</code></pre>
 
   <h2>What a restored build adds</h2>
-  <p>The second build restored all three modules and built nothing, and it uploaded one file: <code>build-cache-report.xml</code>. So in our runs the entry count went up by one for every build, even a fully restored one. If you track entry counts, expect that; one report added 1,318 bytes here (46,128 minus 44,810).</p>
+  <p>The second build restored all three modules and built nothing, and it uploaded one file: <code>build-cache-report.xml</code>. So our fully restored build still added one entry, 1,318 bytes (46,128 minus 44,810). We saw two builds, so we cannot say whether every restored build does the same.</p>
+  <p>On the first build, against an empty server, Maven also printed three <code>[ERROR] Error downloading cache item ... buildinfo.xml</code> lines. Those were ordinary misses on an empty cache, and the build succeeded; see <a href="/maven-build-cache-extension-enable-disable/">enable or disable the Maven build cache extension</a>.</p>
 
   <h2>What this means for sizing</h2>
-  <p>The jars are the bulk of the bytes in a real project, so the size of your cache follows the size of your built modules. To choose a size limit, see <a href="/build-cache-server-sizing/">how big a server does a build cache need</a> and <a href="/build-cache-eviction-size-limit/">how the size limit works</a>. The same question for Gradle is on <a href="/what-gradle-stores-in-build-cache/">what Gradle stores in the build cache</a>.</p>
+  <p>In this tiny project the <code>buildinfo.xml</code> files were bigger than the jars: about 9 KB each against about 5 KB, and together 27,661 of the 44,810 bytes. We did not test how that balance changes with large jars, so measure your own project before you pick a limit. To choose a size limit, see <a href="/build-cache-server-sizing/">how big a server does a build cache need</a> and <a href="/build-cache-eviction-size-limit/">how the size limit works</a>. The same question for Gradle is on <a href="/what-gradle-stores-in-build-cache/">what Gradle stores in the build cache</a>.</p>
   <p>We tried one small project with jars of a few kilobytes. We did not test large jars, many versions of the same module, or a project with test reports.</p>
 
   <h2>If you do not see restores</h2>
   <p>See <a href="/maven-build-cache-extension-not-restoring/">Maven build cache not restoring</a>.</p>
 
-  <p class="muted-note">Run on Maven 3.10.0 with maven-build-cache-extension 1.2.3 and FosterStack Cache 0.2.1, macOS (arm64), Java 27.</p>
+  <p class="muted-note">Run on Maven 3.10.0 with maven-build-cache-extension 1.2.3 and FosterStack Cache 0.2.1, macOS (arm64), Java 27 (Homebrew).</p>
 </main>
 
 <footer>
