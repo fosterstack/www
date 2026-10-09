@@ -88,18 +88,18 @@
 </header>
 <main>
   <h1>We upgraded Gradle or Maven and builds got slow</h1>
-  <p class="lede">After you upgrade Gradle or Maven, the first builds on the new version can rebuild instead of restoring from the cache. FosterStack Cache keeps the results of both versions, so the new version fills its own entries and the old ones are still there if you go back.</p>
+  <p class="lede">After you upgrade Gradle or Maven, the first builds on the new version can rebuild instead of restoring from the cache. FosterStack Cache stores the results of each version, and in our runs going back to the old version restored its entries.</p>
 
   <h2>What to do</h2>
   <ul class="trust">
-    <li><strong>Upgrade CI and every laptop that shares the cache at the same time.</strong> Then the first builds fill the cache for everyone.</li>
-    <li><strong>Expect the first builds on the new version to rebuild.</strong> They store their results for the builds after them.</li>
-    <li><strong>In Maven, pin all eight plugin versions in your <code>pom.xml</code>.</strong> Then two Maven versions can share cache entries. The list is below.</li>
+    <li><strong>Upgrade CI and every laptop that shares the cache together.</strong> Our advice, not a test result: the first builds should then fill the cache for everyone.</li>
+    <li><strong>Expect the first builds on the new version to rebuild,</strong> unless you pin your Maven plugins (next point). They store their results for the builds after them.</li>
+    <li><strong>In Maven, pin the plugin versions your build uses, in your <code>pom.xml</code>.</strong> Our test build used eight; the list is below. With all eight pinned, Maven 3.10.0 and 3.9.9 shared entries in our test.</li>
   </ul>
-  <p>For Gradle, all we can say is what we saw: in our three pairs of Gradle versions, each version used its own entries.</p>
+  <p>For Gradle, we saw this: in our three pairs of versions, each version restored only its own entries.</p>
 
   <h2>Pin the Maven plugin versions</h2>
-  <p>Put these inside <code>&lt;build&gt;&lt;plugins&gt;</code>. These are the versions we tested. Use the ones you want, as long as everyone who shares the cache uses the same ones.</p>
+  <p>Put these inside <code>&lt;build&gt;&lt;plugins&gt;</code>. These are the eight plugins our test build used, at the versions we tested. If your build uses other plugins, pin those too. Use any versions you like, as long as everyone who shares the cache uses the same ones.</p>
 <pre tabindex="0"><code>&lt;plugin&gt;&lt;artifactId&gt;maven-resources-plugin&lt;/artifactId&gt;&lt;version&gt;3.5.0&lt;/version&gt;&lt;/plugin&gt;
 &lt;plugin&gt;&lt;artifactId&gt;maven-compiler-plugin&lt;/artifactId&gt;&lt;version&gt;3.16.0&lt;/version&gt;&lt;/plugin&gt;
 &lt;plugin&gt;&lt;artifactId&gt;maven-jar-plugin&lt;/artifactId&gt;&lt;version&gt;3.5.1&lt;/version&gt;&lt;/plugin&gt;
@@ -111,8 +111,8 @@
 
   <h2>Why it happens</h2>
   <ul class="trust">
-    <li><strong>Gradle:</strong> the cache key includes Gradle's own compile task. A different Gradle version gives a different key. In our runs the values from the project were identical, and the lines that differed described Gradle's own task and compiler objects.</li>
-    <li><strong>Maven:</strong> Maven fills in a default version for each plugin you did not pin, and those defaults differ between Maven versions. They end up in the cache key. In our runs the differing defaults included clean, install, deploy and site.</li>
+    <li><strong>Gradle:</strong> the cache key includes the code of Gradle's own compile task, so a different Gradle version gives a different key. In our comparison of 9.7.1 and 9.8.0 the values from the project were identical, and the lines that differed described Gradle's own task and compiler objects.</li>
+    <li><strong>Maven:</strong> Maven fills in a default version for each plugin you did not pin, and some of those defaults differ between Maven versions. They end up in the cache key. In our runs the differing defaults included clean, install, deploy and site.</li>
   </ul>
   <p>If the cache is still cold after you match versions, see <a href="/gradle-build-cache-hit-rate-low/">why the Gradle hit rate is low</a> or <a href="/maven-build-cache-extension-not-restoring/">why the Maven cache is not restoring</a>. The Maven setup is on <a href="/maven-remote-build-cache-setup/">Maven remote build cache setup</a>.</p>
 
@@ -128,7 +128,7 @@
       <tr><td>Maven, all eight pinned (both orders)</td><td>restored</td></tr>
     </tbody>
   </table></div>
-  <p class="muted-note">In all nine series, going back to the first version restored its own entry. One build per cell, a new empty cache server per series, a fresh project copy for every build. Gradle: a four-module project, the <code>:core:compileJava</code> task, Temurin 21.0.12.1. Maven: one module with two tests, <code>mvn verify</code>, Build Cache Extension 1.2.3, OpenJDK 27. FosterStack Cache 0.2.1 on a Mac (arm64). Not tested: other versions, Gradle test or jar tasks, a multi-module Maven build, Linux.</p>
+  <p class="muted-note">In all nine series, going back to the first version restored its own entry. One build per step. Each Maven row is two series, one per order. A new empty cache server per series, a fresh project copy for every build. Gradle: a four-module project, the <code>:core:compileJava</code> task, Temurin 21.0.12.1. Maven: one module with two tests, <code>mvn verify</code>, Build Cache Extension 1.2.3, OpenJDK 27. FosterStack Cache 0.2.1 on a Mac (arm64). Not tested: other versions, a build that uses other Maven plugins, Gradle test or jar tasks, the Gradle wrapper, a multi-module Maven build, Linux.</p>
 </main>
 <footer>
   <div>
