@@ -10,11 +10,13 @@ on:
   workflow_dispatch:
     inputs:
       which:
-        description: Which timed run to start (only used on manual dispatch)
+        description: Which manual run to start (only used on manual dispatch)
         type: choice
         options:
           - miss-cost
           - server-down
+          - android
+          - github-actions
         default: miss-cost
 
 permissions:
@@ -62,3 +64,37 @@ jobs:
 
       - name: timed runs (no cache, cache on and empty, server refused, address that never answers)
         run: BENCH_N=7 BENCH_LIMIT=120 bash bin/bench-server-down.sh
+
+  # Which tasks does the Gradle remote build cache restore in an Android build? Same rules as the other jobs: manual
+  # dispatch only, chosen with the "which" input (compared in this `if` only, never put into a shell command), no
+  # secrets, read-only token not persisted. The script checks the FosterStack Cache and Gradle downloads against pinned
+  # sha256 values; the Android Gradle plugin and the Kotlin compiler it pulls in come from public repositories at run
+  # time (not checksum-pinned, said in the script's own output). It uses the Android SDK already installed on the
+  # runner, does not accept licences or write to the SDK, and measures no times.
+  bench-android:
+    if: github.event_name == 'workflow_dispatch' && inputs.which == 'android'
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Android build, cache stores then restores (no times measured)
+        run: BENCH_LIMIT=600 bash bin/bench-android.sh
+
+  # Proof for the "remote build cache in GitHub Actions" page. Manual dispatch only, chosen with the "which" input
+  # (compared in this `if` only). It starts a FosterStack Cache server ON THIS RUNNER with made-up logins and runs four
+  # Gradle builds that read their cache URL and login from environment variables, as a workflow does with secrets.
+  # No secrets are used. The script checks its downloads against pinned sha256 values.
+  demo-github-actions:
+    if: github.event_name == 'workflow_dispatch' && inputs.which == 'github-actions'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: four builds with the cache settings read from environment variables
+        run: bash bin/demo-github-actions.sh
