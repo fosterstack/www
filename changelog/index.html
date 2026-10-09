@@ -107,6 +107,7 @@
     <p><strong>Note on this release's evidence (added Sep 2026).</strong> v0.1.0 was built and published by the pre-remediation release pipeline: a snapshot build was scanned, and a separate build of the same commit was published, so these published images were not scanned before publication. They have been rescanned since at every severity with the published VEX applied — see the <a href="https://github.com/fosterstack/cache/actions/workflows/rescan-v010.yml">rescan runs</a> for verdicts against the exact published digests. The signatures and provenance on this release are accurate about what they say — which CI run produced which digest — and say nothing about scanning. The next release is the first to carry the full evidence chain: one build, scanned and tested by digest, promoted without a rebuild.</p>
   </blockquote>
   <p><a href="https://github.com/fosterstack/cache/releases/tag/v0.1.0">v0.1.0 on GitHub</a></p>
+  <p><strong>What changed since:</strong> the v0.2.1 release notes point to its <code>release-manifest.json</code> evidence bundle. The release process, as <a href="https://github.com/fosterstack/cache/blob/main/RELEASING.md">RELEASING.md</a> describes it, is "One build, one set of digests, promoted without a rebuild", with every scanner run "against the exact candidate digests".</p>
 
   <p class="muted-note">Related: <a href="/how-we-build/">how releases are built and signed</a> and <a href="/security/">security policy</a>.</p>
   <div class="cta-row">
