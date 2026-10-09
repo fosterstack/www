@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Build Cache Node end of life: what happens and your options</title>
+<meta name="description" content="The free Develocity Build Cache Node will no longer be distributed or supported after December 31, 2026. What stops, what keeps working, and the three options a team has.">
+<link rel="canonical" href="https://fosterstack.com/build-cache-node-end-of-life/">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<style>
+  :root {
+    --bg: #ffffff; --fg: #16181d; --muted: #5b6472; --line: #e4e7ec;
+    --accent: #0d7a5f; --accent-fg: #ffffff; --card: #f6f8f9; --warn-bg: #fff7ed; --warn-line: #fdba74;
+    --mark: #0f4d66;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #101318; --fg: #e8eaf0; --muted: #98a2b3; --line: #262c36;
+      --accent: #2fbf95; --accent-fg: #08110e; --card: #171c23; --warn-bg: #241a10; --warn-line: #7c4a12;
+      --mark: #e8eaf0;
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 44rem; margin: 0 auto; padding: 0 1.25rem 4rem; }
+  header.site { max-width: 44rem; margin: 0 auto; padding: 1.25rem; display: flex; align-items: baseline; gap: .6rem; }
+  .logo { font-weight: 700; font-size: 1.05rem; letter-spacing: -.01em; }
+  .logo span { color: var(--accent); }
+  .logo .mark { width: 1.2em; height: 1.2em; vertical-align: -.24em; margin-right: .4em; }
+  .tag { color: var(--muted); font-size: .85rem; }
+  .notice {
+    background: var(--warn-bg); border: 1px solid var(--warn-line); border-radius: 8px;
+    padding: .7rem 1rem; font-size: .92rem; margin: 1.5rem 0 2.5rem;
+  }
+  h1 { font-size: 2rem; line-height: 1.2; letter-spacing: -.02em; margin-bottom: 1rem; }
+  .lede { font-size: 1.12rem; color: var(--muted); margin-bottom: 2rem; }
+  h2 { font-size: 1.25rem; margin: 3rem 0 .9rem; letter-spacing: -.01em; }
+  p + p { margin-top: .8rem; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: .8rem; margin-top: 1rem; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1rem 1.1rem; }
+  .card h3 { font-size: .98rem; margin-bottom: .35rem; }
+  .card p { font-size: .9rem; color: var(--muted); }
+  ul.trust { list-style: none; margin-top: .5rem; }
+  ul.trust li { padding: .45rem 0 .45rem 1.6rem; position: relative; }
+  ul.trust li::before { content: "✓"; position: absolute; left: .2rem; color: var(--accent); font-weight: 700; }
+  code, pre { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .88em; }
+  code { background: var(--card); border: 1px solid var(--line); border-radius: 5px; padding: .1em .35em; }
+  pre code { background: none; border: 0; padding: 0; color: inherit; font-size: 1em; }
+  button {
+    padding: .7rem 1.3rem; font-size: 1rem; font-weight: 600; cursor: pointer;
+    background: var(--accent); color: var(--accent-fg); border: 0; border-radius: 8px;
+  }
+  button:disabled { opacity: .6; cursor: default; }
+  table { width: 100%; border-collapse: collapse; font-size: .92rem; margin-top: 1rem; }
+  th, td { text-align: left; padding: .55rem .6rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  pre { background: #0f172a; color: #e2e8f0; padding: .9rem 1rem; border-radius: 8px;
+        overflow-x: auto; font-size: .9rem; line-height: 1.5; }
+  .cta-row { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1.1rem; }
+  .btn { display: inline-block; padding: .55rem 1rem; border-radius: 8px; font-weight: 600;
+         text-decoration: none; background: var(--accent); color: #fff; }
+  .btn-secondary { background: transparent; color: inherit; border: 1px solid #cbd5e1; }
+  .muted-note { color: var(--muted); font-size: .93rem; margin-top: 1.1rem; }
+  footer { border-top: 1px solid var(--line); margin-top: 4rem; padding: 1.5rem 1.25rem 3rem; }
+  footer div { max-width: 44rem; margin: 0 auto; color: var(--muted); font-size: .82rem; }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<header class="site">
+  <div class="logo"><svg class="mark" viewBox="0 0 96 96" aria-hidden="true" focusable="false"><rect x="12" y="14" width="72" height="18" rx="5" fill="var(--mark)"/><rect x="12" y="39" width="48" height="18" rx="5" fill="var(--mark)"/><rect x="12" y="64" width="26" height="18" rx="5" fill="var(--accent)"/></svg>foster<span>stack</span></div>
+  <div class="tag">Infrastructure worth keeping — and kept patched.</div>
+</header>
+<main>
+  <h1>Build Cache Node end of life: what happens and your options</h1>
+  <p class="lede">The free Develocity Build Cache Node will no longer be distributed or supported after December&nbsp;31, 2026. Here is what that means for your builds, and the three things a team can do.</p>
+
+  <h2>What stops on December 31</h2>
+  <p>Gradle Inc. says the free standalone Build Cache Node "will no longer be distributed, supported or available after December&nbsp;31,&nbsp;2026." In plain words:</p>
+  <ul class="trust">
+    <li>It will no longer be distributed.</li>
+    <li>It will no longer be supported.</li>
+    <li>It will no longer be available.</li>
+  </ul>
+  <p class="muted-note">Source: the vendor's <a href="https://docs.develocity.ai/bcn/21.2/">official notice</a>.</p>
+
+  <h2>What keeps working</h2>
+  <p>What happens to a node you already run is for the vendor to say, so read their notice. What holds for any build cache: it only speeds builds up, so if it is slow, empty or down, the worst case is a slower build, not a wrong one.</p>
+  <p>What changes is that the vendor says it will no longer support it.</p>
+
+  <h2>Your three options</h2>
+  <div class="cards">
+    <div class="card"><h3>1. Stay on the old node</h3><p>Costs nothing today. After the date the vendor will no longer support it, so keeping it safe is on you.</p></div>
+    <div class="card"><h3>2. Move to the vendor's paid platform</h3><p>Check the vendor's own notice, linked above, for what it offers and what it costs.</p></div>
+    <div class="card"><h3>3. Self-host a replacement</h3><p>Same protocol, your servers, no subscription. FosterStack Cache is one such replacement.</p></div>
+  </div>
+
+  <h2>What FosterStack Cache is today</h2>
+  <ul class="trust">
+    <li>A self-hosted remote build cache for Gradle. It speaks Gradle's own <code>HttpBuildCache</code> protocol, so moving is mostly a URL change.</li>
+    <li>Maven too, through the Apache Maven Build Cache Extension.</li>
+    <li>MIT licensed. One static binary or one container image on GitHub's registry.</li>
+    <li>Releases are signed, and the evidence (SBOM, build provenance, vulnerability statements) is public.</li>
+  </ul>
+  <p>It is early. The paid tiers are not built. Everything you can download today is the free core.</p>
+
+  <h2>Security is the difference</h2>
+  <p>Security is what we are building this product around. The release items below ship in the current release. The supply-chain items describe how we work today, in our own build and CI. You can check each one yourself.</p>
+  <h3>Signed and verifiable</h3>
+  <ul class="trust">
+    <li><strong>Signed releases.</strong> Images and the checksums file are signed with Sigstore, with no signing key stored anywhere. <a href="https://github.com/fosterstack/cache/blob/main/docs/verify-images.md">How to verify</a>.</li>
+    <li><strong>Build provenance.</strong> Every image and binary archive carries a signed statement naming the CI run that built it.</li>
+    <li><strong>A bill of materials.</strong> Every binary archive ships with an SBOM.</li>
+    <li><strong>Published vulnerability statements.</strong> A VEX file with each release says which known vulnerabilities do and do not affect it.</li>
+    <li><strong>Reproducible.</strong> Each image is assembled a second time on a separate machine, and the digests must match or the release fails.</li>
+  </ul>
+  <h3>Supply chain</h3>
+  <ul class="trust">
+    <li><strong>Pinned build steps.</strong> Every GitHub Action our releases use is pinned to an exact commit, and a check in CI enforces it on every change. The container base image is pinned by digest.</li>
+    <li><strong>Hash-checked installs.</strong> Python tooling in our CI is installed with hash checking, so a swapped package is refused.</li>
+    <li><strong>A 7-day wait.</strong> Our CI holds new dependency versions for 7 days before adopting them, and Dependabot has the same cooling-off period.</li>
+    <li><strong>A daily supply-chain check.</strong> Once a day, everything our build and CI pull in (actions, tools, packages) is checked against public advisory databases and malicious-package reports. Any hit opens an issue.</li>
+    <li><strong>Scanned before release.</strong> Two independent scanners with different databases check every release candidate, and any finding blocks the release unless a published VEX statement explains it. <a href="https://github.com/fosterstack/cache/blob/main/RELEASING.md">RELEASING.md</a>.</li>
+    <li><strong>Rescanned every day.</strong> Every published image is scanned again daily, so a new vulnerability in something we shipped raises an issue.</li>
+  </ul>
+  <h3>Small, quiet and patched</h3>
+  <ul class="trust">
+    <li><strong>Tiny and quiet.</strong> A distroless image with one static program and no shell. It sends no telemetry and makes no outbound connections.</li>
+    <li><strong>A FIPS build.</strong> A FIPS variant uses Go's validated FIPS 140-3 cryptographic module.</li>
+    <li><strong>Patched for everyone.</strong> We aim to ship dependency fixes within 48 hours of disclosure. That is a target, not a promise. Security patches are never withheld from the free tier.</li>
+    <li><strong>Report a problem privately.</strong> Use <a href="https://github.com/fosterstack/cache/security/advisories/new">GitHub's private vulnerability report</a>.</li>
+  </ul>
+
+  <h2>Next step</h2>
+  <p>Read the <a href="https://github.com/fosterstack/cache/blob/main/docs/migrate-from-bcn.md">migration guide</a> or the <a href="https://github.com/fosterstack/cache">source on GitHub</a>. There is no signup and no form.</p>
+  <div class="cta-row">
+    <a class="btn" href="https://github.com/fosterstack/cache/blob/main/docs/migrate-from-bcn.md">Migration guide</a>
+    <a class="btn btn-secondary" href="/">FosterStack home</a>
+  </div>
+</main>
+<footer>
+  <div>
+    <p>FosterStack is not affiliated with, endorsed by, or sponsored by Gradle Inc.
+    "Gradle" and "Develocity" are trademarks of Gradle Inc., used here only to identify
+    compatibility. FosterStack contains no Gradle Inc. code; it is a clean-room implementation
+    of the documented remote build cache HTTP protocol. Apache Maven is a trademark of the
+    Apache Software Foundation; the Maven Build Cache Extension is Apache's project, not
+    ours.</p>
+    <p style="margin-top:.6rem">© 2026 FosterStack · <a href="/regulated/">For regulated markets</a> · <a href="https://github.com/fosterstack/cache">github.com/fosterstack/cache</a> · <a href="mailto:hello@fosterstack.com">hello@fosterstack.com</a></p>
+  </div>
+</footer>
+</body>
+</html>
