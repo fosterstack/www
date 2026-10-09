@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Build cache eviction: how the size limit works</title>
-<meta name="description" content="What a self-hosted build cache does when it reaches its size cap: least-recently-used eviction, real numbers from a 0.2.1 server, and what an oversized entry gets.">
-<meta property="og:title" content="Build cache eviction: how the size limit works">
-<meta property="og:description" content="What a self-hosted build cache does when it reaches its size cap: least-recently-used eviction, real numbers from a 0.2.1 server, and what an oversized entry gets.">
-<meta property="og:url" content="https://fosterstack.com/build-cache-eviction-size-limit/">
+<title>Gradle build cache: let CI write, developers only read</title>
+<meta name="description" content="Set up a Gradle build cache where CI uploads and laptops only download, with a read-only login the server enforces. Real run on server 0.2.1 and Gradle 9.8.0.">
+<meta property="og:title" content="Gradle build cache: let CI write, developers only read">
+<meta property="og:description" content="Set up a Gradle build cache where CI uploads and laptops only download, with a read-only login the server enforces. Real run on server 0.2.1 and Gradle 9.8.0.">
+<meta property="og:url" content="https://fosterstack.com/gradle-build-cache-ci-writes-developers-read/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="FosterStack">
-<link rel="canonical" href="https://fosterstack.com/build-cache-eviction-size-limit/">
+<link rel="canonical" href="https://fosterstack.com/gradle-build-cache-ci-writes-developers-read/">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -86,49 +86,56 @@
   <div class="tag">Infrastructure worth keeping — and kept patched.</div>
 </header>
 <main>
-  <h1>Build cache eviction: how the size limit works</h1>
-  <p class="lede">A self-hosted build cache cannot grow forever. FosterStack Cache has a size cap, and when it is reached it removes the entries used least recently. This page shows exactly what that looks like, from a real 0.2.1 server with a deliberately tiny cap.</p>
+  <h1>Gradle build cache: let CI write, developers only read</h1>
+  <p class="lede">Anything that can write to your build cache can change what later builds use. So give the right to write to as few machines as possible. This page sets up a cache where CI uploads and developer laptops only download, and shows the server enforcing it. Everything here was run for real on a 0.2.1 server with Gradle 9.8.0.</p>
 
-  <h2>Setting the cap</h2>
-  <p>Set <code>FSCACHE_MAX_BYTES</code>, in bytes. The default, <code>0</code>, means no limit. Real servers use gigabytes; see <a href="/build-cache-server-sizing/">server sizing</a> for values you can copy. For this test I used 3500 bytes, so that a few small entries fill it:</p>
-  <pre><code>FSCACHE_MAX_BYTES=3500 ./fscache</code></pre>
+  <h2>1. Give the server two logins</h2>
+  <p>The server takes one read-write login and, optionally, a second read-only login. A client using the read-only one can read cache entries, and any write is refused with a 403.</p>
+  <pre><code>FSCACHE_USERNAME=ci   FSCACHE_PASSWORD=&lt;a long secret&gt; \
+FSCACHE_RO_USERNAME=dev FSCACHE_RO_PASSWORD=&lt;another secret&gt; \
+./fscache</code></pre>
+  <p>The two usernames must differ, and the read-only pair only works alongside the read-write pair. Both are in the <a href="https://github.com/fosterstack/cache">configuration table</a>.</p>
 
-  <h2>What happened</h2>
-  <p>I stored three 1,000-byte entries, read one of them, then stored two more. After each step I looked at <code>/statusz</code>, the status page, and tried to read every key back.</p>
+  <h2>2. One Gradle setting for everyone</h2>
+  <p>Developers and CI use the same <code>settings.gradle.kts</code>. Only the environment differs:</p>
+  <pre><code>rootProject.name = &quot;demo&quot;
+
+// FosterStack Cache — remote Gradle build cache.
+// https://github.com/fosterstack/cache
+buildCache {
+    remote&lt;HttpBuildCache&gt; {
+        url = uri(&quot;https://cache.example.com/&quot;)
+        // CI pushes; everyone else only reads
+        isPush = System.getenv(&quot;CI&quot;) != null
+        credentials {
+            username = System.getenv(&quot;FSCACHE_USERNAME&quot;)
+            password = System.getenv(&quot;FSCACHE_PASSWORD&quot;)
+        }
+    }
+}</code></pre>
+  <p>On CI, set <code>CI</code> and the read-write login. On a laptop, leave <code>CI</code> unset and use the read-only login. Setting <code>isPush</code> to false on a laptop is the client choosing not to upload. The read-only login is what makes the server enforce it.</p>
+
+  <h2>3. What happened when I ran it</h2>
+  <p>The server counts what it stores. Each line below is a build of the same small project. (In my test I turned Gradle's local cache off, with <code>local { isEnabled = false }</code> in the same block, so that a hit could only have come from the server. You do not need that line.)</p>
   <table>
-    <tr><th>Step</th><th>Stored afterwards</th><th>Evicted so far</th><th>Which keys could be read</th></tr>
-    <tr><td>Store k1, k2, k3</td><td>3,000 bytes, 3 entries</td><td>0</td><td>all three</td></tr>
-    <tr><td>Read k1</td><td>unchanged</td><td>0</td><td>k1 is now the most recently used</td></tr>
-    <tr><td>Store k4 (would go over 3,500)</td><td>3,000 bytes, 3 entries</td><td>1</td><td>k1, k3, k4. <strong>k2 is gone.</strong></td></tr>
-    <tr><td>Store k5</td><td>3,000 bytes, 3 entries</td><td>2</td><td>k3, k4, k5. <strong>k1 is gone.</strong></td></tr>
+    <tr><th>Who builds</th><th>Result</th><th>Server after</th></tr>
+    <tr><td>A developer first, read-only login, <code>CI</code> unset</td><td><code>:compileJava</code> runs. Nothing to read yet, and nothing uploaded.</td><td>0 entries</td></tr>
+    <tr><td>CI, read-write login, <code>CI=true</code></td><td><code>:compileJava</code> runs, and the result is uploaded.</td><td>1 entry</td></tr>
+    <tr><td>The developer again, read-only login</td><td><code>&gt; Task :compileJava FROM-CACHE</code>, "1 from cache"</td><td>1 entry, 1 hit</td></tr>
   </table>
-  <p>The stored size never went above the cap. Each time something new did not fit, the entry that had gone longest without being used was removed.</p>
-  <p><strong>Reading counts as using.</strong> In the last step k1 went too, even though I had read it earlier. That is because my own checks after storing k4 read k1, k3 and k4 in that order, which made k1 the oldest again. A cache hit keeps an entry alive.</p>
+  <p>The laptop never wrote to the cache, and still got the benefit of CI's work.</p>
 
-  <h2>An entry bigger than the whole cap</h2>
-  <p>I also tried storing 4,000 bytes against the 3,500 cap. The server refused it with a 413 and stored nothing, and nothing else was evicted to make room. The other limit, <code>FSCACHE_MAX_BODY_BYTES</code>, is separate and defaults to 1 GiB per entry. See <a href="/gradle-build-cache-http-status-codes/">the status codes page</a>.</p>
+  <h2>If a laptop is set up to push anyway</h2>
+  <p>I then made a code change, so there was something new to upload, and built with <code>CI=true</code> but only the read-only login. The build still succeeded. With <code>-i</code> Gradle logged:</p>
+  <pre><code>Could not store entry d4f2de693b561fd2c5d60b17a9232d6f in remote build cache: Storing entry at &#x27;http://127.0.0.1:18098/d4f2de693b561fd2c5d60b17a9232d6f&#x27; response status 403: Forbidden
+The remote build cache was disabled during the build due to errors.</code></pre>
+  <p>The server stored nothing: it stayed at 1 entry. The same change built by CI with the read-write login was stored (2 entries). So a misconfigured laptop cannot add to the cache, and its build is not broken by that. Note that Gradle switches the remote cache off for the rest of that build once a store fails, so a laptop in this state also stops reading from it for that build.</p>
 
-  <h2>Watching it on a real cache</h2>
-  <p>The same numbers are in <code>/statusz</code> as <code>store_bytes</code>, <code>max_bytes</code>, <code>store_entries</code> and <code>evicted_entries</code>, and in the Prometheus metrics (<code>fscache_evicted_entries_total</code> and <code>fscache_store_bytes</code>). A rising eviction count together with a hit rate that never climbs means the cap is too small for your build. See <a href="/monitor-build-cache-prometheus-grafana/">monitoring</a>.</p>
+  <h2>What this does not give you</h2>
+  <p>There is no per-person identity yet. Everyone who holds the read-write login is the same writer to the server, so keep it to CI. See <a href="/remote-build-cache-security/">who can write to a remote build cache</a> and <a href="/gradle-build-cache-http-status-codes/">the HTTP status codes</a>.</p>
 
-  <h2>Try it yourself</h2>
-  <pre><code>FSCACHE_ADDR=127.0.0.1:8080 FSCACHE_DATA_DIR=./data FSCACHE_MAX_BYTES=3500 ./fscache &amp;
-until curl -s localhost:8080/healthz &gt;/dev/null; do sleep 0.2; done   # wait until it is up
-
-put() { head -c 1000 /dev/zero | curl -s -o /dev/null -w &quot;PUT $1 %{http_code}\n&quot; -X PUT --data-binary @- localhost:8080/$1; }
-get() { curl -s -o /dev/null -w &quot;$1=%{http_code} &quot; localhost:8080/$1; }
-put k1; put k2; put k3
-get k1; echo
-put k4
-for k in k1 k2 k3 k4; do get $k; done; echo
-curl -s localhost:8080/statusz | grep -E &#x27;store_bytes|evicted&#x27;
-
-# the output of the middle line in my run:
-# k1=200 k2=404 k3=200 k4=200</code></pre>
-
-  <p class="muted-note">Related: <a href="/reset-gradle-build-cache/">how to clear a build cache</a> and <a href="/migrate-build-cache-node/">Gradle and Maven setup</a>.</p>
   <div class="cta-row">
-    <a class="btn" href="/build-cache-server-sizing/">Server sizing</a>
+    <a class="btn" href="/jenkins-ci-build-cache/">Jenkins and CI build cache</a>
     <a class="btn btn-secondary" href="/">FosterStack home</a>
   </div>
 </main>

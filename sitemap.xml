@@ -49,4 +49,8 @@
     <loc>https://fosterstack.com/build-cache-eviction-size-limit/</loc>
     <lastmod>2026-10-08</lastmod>
   </url>
+  <url>
+    <loc>https://fosterstack.com/gradle-build-cache-ci-writes-developers-read/</loc>
+    <lastmod>2026-10-08</lastmod>
+  </url>
 </urlset>
