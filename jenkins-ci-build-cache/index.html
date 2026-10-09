@@ -115,7 +115,7 @@ buildCache {
 
   <h2>Check that CI is really using the cache</h2>
   <p>Run the same build twice on two different agents. The second should show <code>FROM-CACHE</code> next to tasks. A runner's local cache can hide a broken remote, so run once with <code>-i</code>, which prints remote errors. Gradle treats a broken remote as non-fatal, so it fails silently otherwise. On the server, the hit and miss counters at <code>/metrics</code> should move.</p>
-  <p>Maven on CI follows the same pattern with the extension and a <code>&lt;server&gt;</code> entry for the password. The server side for Maven is built; its acceptance testing is still in progress. See the <a href="/migrate-build-cache-node/">Gradle and Maven setup page</a>.</p>
+  <p>Maven on CI follows the same pattern with the extension and a <code>&lt;server&gt;</code> entry for the password. See the <a href="/migrate-build-cache-node/">Gradle and Maven setup page</a>.</p>
 
   <div class="cta-row">
     <a class="btn" href="/migrate-build-cache-node/">Gradle and Maven setup</a>
