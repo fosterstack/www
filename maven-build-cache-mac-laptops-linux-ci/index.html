@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Share Your Maven Build Cache Between Macs and Linux CI</title>
-<meta name="description" content="Can Mac laptops and Linux CI share a Maven build cache? Two series of real builds with Maven 3.9.9 on macOS and in a Linux container, release 0.2.1.">
+<meta name="description" content="Can Mac laptops and Linux CI share a Maven build cache? Two series of real builds with Maven 3.9.9 on macOS and in a Linux container, on FosterStack Cache 0.2.1.">
 <meta property="og:title" content="Share Your Maven Build Cache Between Macs and Linux CI">
-<meta property="og:description" content="Can Mac laptops and Linux CI share a Maven build cache? Two series of real builds with Maven 3.9.9 on macOS and in a Linux container, release 0.2.1.">
+<meta property="og:description" content="Can Mac laptops and Linux CI share a Maven build cache? Two series of real builds with Maven 3.9.9 on macOS and in a Linux container, on FosterStack Cache 0.2.1.">
 <meta property="og:url" content="https://fosterstack.com/maven-build-cache-mac-laptops-linux-ci/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="FosterStack">
@@ -88,13 +88,13 @@
 </header>
 <main>
   <h1>Share Your Maven Build Cache Between Macs and Linux CI</h1>
-  <p class="lede">Mac laptops and Linux CI can share one Maven build cache when the Maven version and the plugin versions match: in our runs a build cached on one was restored on the other, in both directions, even with a different Java patch version. At FosterStack we prove everything, so here is how we proved it to ourselves: two series of real builds with the same Maven on a Mac and in a Linux container, and the cache checksum that came out identical on both.</p>
+  <p class="lede">Mac laptops and Linux CI can share one Maven build cache when the plugin versions are pinned (we used the same Maven 3.9.9 on both): in our runs a build cached on one was restored on the other, in both directions, even with a different Java patch version. At FosterStack we prove everything, so here is how we proved it to ourselves: two series of real builds with the same Maven on a Mac and in a Linux container, and the cache checksum that came out identical on both.</p>
 
   <h2>The short answer</h2>
   <ul class="trust">
     <li>A Maven build cached on macOS was restored in a Linux container, and a build cached in the container was restored on macOS.</li>
     <li>All six builds computed the same cache checksum, <code>940026026f2e7813</code>.</li>
-    <li>The Java patch version differed (21.0.12.1 on the Mac, 21.0.7 in the container) and the key did not change.</li>
+    <li>The operating system and the Java patch version differed together (21.0.12.1 on the Mac, 21.0.7 in the container) and the key did not change, for one small project.</li>
   </ul>
 
   <h2>What we ran</h2>
@@ -106,7 +106,7 @@
       <tr><td>Linux container</td><td>Linux (arm64)</td><td>3.9.9, from the <code>maven:3.9.9-eclipse-temurin-21</code> image</td><td>Eclipse Adoptium 21.0.7</td></tr>
     </tbody>
   </table></div>
-  <p>Both report the same Maven build (<code>8e8579a9e76f</code>). The Mac's download was checked against the SHA-512 checksum Apache publishes. The container ran under Docker Desktop 4.87 on the same Mac as the cache server. Every build used a fresh copy of the project and an empty local build cache. Each side kept one local Maven repository for its builds (one on the Mac, one mounted into the containers), and a first throwaway build with the cache turned off had filled each. Each series started on a new, empty cache server. Every build ended with <code>BUILD SUCCESS</code>, and each cell below is one build.</p>
+  <p>Both report the same Maven build (<code>8e8579a9e76f</code>). We recorded the Maven and Java versions right after the runs, from the same Mac and the same image tag. The Linux container stood in for a CI runner; it was not one. The Mac's download was checked against the SHA-512 checksum Apache publishes. The container ran under Docker Desktop 4.87 on the same Mac as the cache server. Every build used a fresh copy of the project and an empty local build cache. Each side kept one local Maven repository for its builds (one on the Mac, one mounted into the containers), and a first throwaway build with the cache turned off had filled each. The project folder and the cache address also differed between the two sides (a long folder and <code>127.0.0.1</code> on the Mac, <code>/work/one</code> and <code>host.docker.internal</code> in the container), and neither changed the checksum. Each series started on a new, empty cache server. Every build ended with <code>BUILD SUCCESS</code>, and each cell below is one build.</p>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <thead><tr><th>Series</th><th>Build 1</th><th>Build 2 (other platform)</th><th>Build 3 (first platform again)</th></tr></thead>
     <tbody>
@@ -118,7 +118,7 @@
 
   <h2>What this means for laptops and CI</h2>
   <ul class="trust">
-    <li><strong>In our runs the operating system and a different Java patch version did not change the cache key.</strong> We saw this for one small project, with the Maven and plugin versions held the same.</li>
+    <li><strong>In our runs the operating system and a different Java patch version did not change the cache key.</strong> The two changed together in the same builds, so we cannot tell them apart. We saw this for one small project, with the Maven and plugin versions held the same.</li>
     <li><strong>What did change it in our other tests:</strong> the Maven version together with unpinned plugin defaults (<a href="/maven-build-cache-different-maven-versions/">Share your Maven build cache across Maven versions</a>). Switching between Java 21 and Java 27 did not (<a href="/maven-build-cache-different-java-versions/">Keep your Maven build cache across Java 21 and Java 27</a>).</li>
     <li><strong>The same pattern held for Gradle</strong> across Macs and Linux, with the Gradle and Java versions the same: <a href="/gradle-build-cache-mac-laptops-linux-ci/">Share Your Gradle Build Cache Between Macs and Linux CI</a>.</li>
   </ul>
