@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maven build cache extension not restoring: the causes</title>
+<meta name="description" content="Maven build cache extension builds again instead of restoring from the remote? Causes with real log lines: config placement, saveToRemote, 401 and the local cache.">
+<meta property="og:title" content="Maven build cache extension not restoring: the causes">
+<meta property="og:description" content="Maven build cache extension builds again instead of restoring from the remote? Causes with real log lines: config placement, saveToRemote, 401 and the local cache.">
+<meta property="og:url" content="https://fosterstack.com/maven-build-cache-extension-not-restoring/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="FosterStack">
+<link rel="canonical" href="https://fosterstack.com/maven-build-cache-extension-not-restoring/">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<style>
+  :root {
+    --bg: #ffffff; --fg: #16181d; --muted: #5b6472; --line: #e4e7ec;
+    --accent: #0d7a5f; --accent-fg: #ffffff; --card: #f6f8f9; --warn-bg: #fff7ed; --warn-line: #fdba74;
+    --mark: #0f4d66;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #101318; --fg: #e8eaf0; --muted: #98a2b3; --line: #262c36;
+      --accent: #2fbf95; --accent-fg: #08110e; --card: #171c23; --warn-bg: #241a10; --warn-line: #7c4a12;
+      --mark: #e8eaf0;
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 44rem; margin: 0 auto; padding: 0 1.25rem 4rem; }
+  header.site { max-width: 44rem; margin: 0 auto; padding: 1.25rem; display: flex; align-items: baseline; gap: .6rem; }
+  .logo { font-weight: 700; font-size: 1.05rem; letter-spacing: -.01em; }
+  .logo span { color: var(--accent); }
+  .logo .mark { width: 1.2em; height: 1.2em; vertical-align: -.24em; margin-right: .4em; }
+  .tag { color: var(--muted); font-size: .85rem; }
+  .notice {
+    background: var(--warn-bg); border: 1px solid var(--warn-line); border-radius: 8px;
+    padding: .7rem 1rem; font-size: .92rem; margin: 1.5rem 0 2.5rem;
+  }
+  h1 { font-size: 2rem; line-height: 1.2; letter-spacing: -.02em; margin-bottom: 1rem; }
+  .lede { font-size: 1.12rem; color: var(--muted); margin-bottom: 2rem; }
+  h2 { font-size: 1.25rem; margin: 3rem 0 .9rem; letter-spacing: -.01em; }
+  p + p { margin-top: .8rem; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: .8rem; margin-top: 1rem; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1rem 1.1rem; }
+  .card h3 { font-size: .98rem; margin-bottom: .35rem; }
+  .card p { font-size: .9rem; color: var(--muted); }
+  ul.trust { list-style: none; margin-top: .5rem; }
+  ul.trust li { padding: .45rem 0 .45rem 1.6rem; position: relative; }
+  ul.trust li::before { content: "✓"; position: absolute; left: .2rem; color: var(--accent); font-weight: 700; }
+  code, pre { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .88em; }
+  code { background: var(--card); border: 1px solid var(--line); border-radius: 5px; padding: .1em .35em; }
+  pre code { background: none; border: 0; padding: 0; color: inherit; font-size: 1em; }
+  button {
+    padding: .7rem 1.3rem; font-size: 1rem; font-weight: 600; cursor: pointer;
+    background: var(--accent); color: var(--accent-fg); border: 0; border-radius: 8px;
+  }
+  button:disabled { opacity: .6; cursor: default; }
+  table { width: 100%; border-collapse: collapse; font-size: .92rem; margin-top: 1rem; }
+  th, td { text-align: left; padding: .55rem .6rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  pre { background: #0f172a; color: #e2e8f0; padding: .9rem 1rem; border-radius: 8px;
+        overflow-x: auto; font-size: .9rem; line-height: 1.5; }
+  .cta-row { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1.1rem; }
+  .btn { display: inline-block; padding: .55rem 1rem; border-radius: 8px; font-weight: 600;
+         text-decoration: none; background: var(--accent); color: #fff; }
+  .btn-secondary { background: transparent; color: inherit; border: 1px solid #cbd5e1; }
+  .muted-note { color: var(--muted); font-size: .93rem; margin-top: 1.1rem; }
+  footer { border-top: 1px solid var(--line); margin-top: 4rem; padding: 1.5rem 1.25rem 3rem; }
+  footer div { max-width: 44rem; margin: 0 auto; color: var(--muted); font-size: .82rem; }
+  a { color: var(--accent); }
+  table { display: block; max-width: 100%; overflow-x: auto; }
+  code { overflow-wrap: anywhere; }
+  pre code { overflow-wrap: normal; }
+</style>
+</head>
+<body>
+<header class="site">
+  <div class="logo"><svg class="mark" viewBox="0 0 96 96" aria-hidden="true" focusable="false"><rect x="12" y="14" width="72" height="18" rx="5" fill="var(--mark)"/><rect x="12" y="39" width="48" height="18" rx="5" fill="var(--mark)"/><rect x="12" y="64" width="26" height="18" rx="5" fill="var(--accent)"/></svg>foster<span>stack</span></div>
+  <div class="tag">Infrastructure worth keeping — and kept patched.</div>
+</header>
+<main>
+  <h1>Maven build cache extension not restoring: the causes</h1>
+  <p class="lede">You set up the Apache Maven Build Cache Extension against a self-hosted cache and the second build still compiles everything. Each cause below was reproduced for real, with Maven 3.10.0, extension 1.2.3 and a 0.2.1 server with a password. Find your symptom in the logs, then the fix.</p>
+
+  <h2>First, what a healthy build looks like</h2>
+  <p>The first build stores its result, and it looks alarming because a miss is logged as an error:</p>
+  <pre><code>[INFO] Attempting to restore project demo:demo from build cache
+[ERROR] Error downloading cache item: https://cache.example.com//v1.1/demo/demo/ebb9bceba2f7a6bc/buildinfo.xml
+[INFO] Saved to remote cache https://cache.example.com//v1.1/demo/demo/ebb9bceba2f7a6bc/demo.jar
+[INFO] Saved to remote cache https://cache.example.com//v1.1/demo/demo/ebb9bceba2f7a6bc/buildinfo.xml
+[INFO] BUILD SUCCESS</code></pre>
+  <p>That <code>[ERROR]</code> line is only the server saying it does not have the entry yet. What matters is the <code>Saved to remote cache</code> lines after it. After deleting <code>target</code> and the extension's local cache folder, the second build:</p>
+  <pre><code>[INFO] Attempting to restore project demo:demo from build cache
+[INFO] Found cached build, restoring demo:demo from cache by checksum ebb9bceba2f7a6bc
+[INFO] BUILD SUCCESS</code></pre>
+  <p>You must delete the local folder to prove the remote works, because the extension keeps its own local cache and will use it first.</p>
+
+  <h2>Symptom 1: Maven stops with "Unrecognised tag: 'remote'"</h2>
+  <pre><code>Cannot initialize cache because xml config is not valid or not available
+Unable to parse cache xml element: Unrecognised tag: &#x27;remote&#x27; ...</code></pre>
+  <p><strong>Cause:</strong> the <code>remote</code> element is outside <code>configuration</code>. <strong>Fix:</strong> move it inside, as in the working file below. Nothing built, and the server saw nothing.</p>
+
+  <h2>Symptom 2: the build succeeds, but the server stays empty</h2>
+  <p>There are no <code>Saved to remote cache</code> lines, the second build says "Remote cache is incomplete or missing", and the server's status page shows <code>store_entries: 0</code>.</p>
+  <p><strong>Cause:</strong> without <code>saveToRemote="true"</code> the extension reads from the server and never uploads. <strong>Fix:</strong> add it on the machines that should upload, usually CI.</p>
+
+  <h2>Symptom 3: "HTTP Status: 401" in the log, and still no uploads</h2>
+  <pre><code>org.eclipse.aether.spi.connector.transport.http.HttpTransporterException: HTTP Status: 401</code></pre>
+  <p>The build still ends in <code>BUILD SUCCESS</code>, the server stays empty, and the lines <code>Saved to remote cache</code> are missing. I got exactly this from two different mistakes:</p>
+  <ul class="trust">
+    <li>the <code>id</code> of the <code>&lt;server&gt;</code> in <code>settings.xml</code> did not match the <code>id</code> on the <code>remote</code> element, and</li>
+    <li>the ids matched but the password was wrong.</li>
+  </ul>
+  <p><strong>Fix:</strong> make the two ids identical and check the password. Maven 3.10 may also print a warning about the credentials being used for an address without a matching repository entry. In my working setup the build behaved the same either way.</p>
+
+  <h2>The working configuration</h2>
+  <pre><code>&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;
+&lt;cache xmlns=&quot;http://maven.apache.org/BUILD-CACHE-CONFIG/1.2.0&quot;
+       xmlns:xsi=&quot;http://www.w3.org/2001/XMLSchema-instance&quot;
+       xsi:schemaLocation=&quot;http://maven.apache.org/BUILD-CACHE-CONFIG/1.2.0 https://maven.apache.org/xsd/build-cache-config-1.2.0.xsd&quot;&gt;
+  &lt;configuration&gt;
+    &lt;enabled&gt;true&lt;/enabled&gt;
+    &lt;remote enabled=&quot;true&quot; saveToRemote=&quot;true&quot; id=&quot;fosterstack-cache&quot;&gt;
+      &lt;url&gt;https://cache.example.com/&lt;/url&gt;
+    &lt;/remote&gt;
+  &lt;/configuration&gt;
+&lt;/cache&gt;</code></pre>
+  <p>With a password on the server, <code>~/.m2/settings.xml</code> needs a matching <code>&lt;server&gt;</code> entry with <code>&lt;id&gt;fosterstack-cache&lt;/id&gt;</code>. The full walk-through is in <a href="/maven-remote-build-cache-setup/">Maven build cache extension: remote server setup</a>.</p>
+
+  <h2>Check the server's side</h2>
+  <p>The status page counts what arrived. After the healthy first build it showed <code>store_entries: 3</code>, and after the restoring build <code>cache_hits: 2</code>. If those stay at zero while your builds run, the problem is between Maven and the server, not in the project. See <a href="/gradle-build-cache-http-status-codes/">the HTTP status codes</a>.</p>
+
+  <p class="muted-note">I did not test other Maven versions, or extension 1.2.0.</p>
+  <div class="cta-row">
+    <a class="btn" href="/maven-remote-build-cache-setup/">Maven remote cache setup</a>
+    <a class="btn btn-secondary" href="/">FosterStack home</a>
+  </div>
+</main>
+<footer>
+  <div>
+    <p>FosterStack is not affiliated with, endorsed by, or sponsored by Gradle Inc.
+    "Gradle" and "Develocity" are trademarks of Gradle Inc., used here only to identify
+    compatibility. FosterStack contains no Gradle Inc. code; it is a clean-room implementation
+    of the documented remote build cache HTTP protocol. Apache Maven is a trademark of the
+    Apache Software Foundation; the Maven Build Cache Extension is Apache's project, not
+    ours.</p>
+    <p style="margin-top:.6rem">© 2026 FosterStack · <a href="/build-cache-node-end-of-life/">Build Cache Node end of life</a> · <a href="/migrate-build-cache-node/">Migrate</a> · <a href="/build-cache-node-faq/">FAQ</a> · <a href="/jenkins-ci-build-cache/">CI setup</a> · <a href="/how-we-build/">How we build</a> · <a href="/regulated/">For regulated markets</a> · <a href="https://github.com/fosterstack/cache">github.com/fosterstack/cache</a> · <a href="mailto:hello@fosterstack.com">hello@fosterstack.com</a></p>
+  </div>
+</footer>
+</body>
+</html>
