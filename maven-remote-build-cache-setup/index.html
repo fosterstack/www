@@ -148,7 +148,7 @@
 [INFO] Saved to remote cache https://cache.example.com//v1.1/demo/demo/ebb9bceba2f7a6bc/buildinfo.xml
 [INFO] BUILD SUCCESS
 [INFO] Saved to remote cache https://cache.example.com//v1.1/demo/demo/9d9dcaf9-3b6b-40fb-9cb5-da97c975eab5/build-cache-report.xml</code></pre>
-  <p>The line starting <code>[ERROR] Error downloading cache item</code> is the normal first-time miss, the server saying it does not have that entry yet. The build then ran for real and saved its result to the server. The server's status page showed it:</p>
+  <p>The line starting <code>[ERROR] Error downloading cache item</code> is the normal first-time miss, the server saying it does not have that entry yet. Maven 3.9.9 logs an ordinary miss as <code>[INFO] Cache item not found</code> instead, so the line differs by Maven version (we saw both in our version tests). The build then ran for real and saved its result to the server. The server's status page showed it:</p>
   <pre tabindex="0"><code>$ curl -s -u maven:demo-pass localhost:8080/statusz | grep -E &#x27;&quot;store_entries&quot;|&quot;cache_hits&quot;|&quot;cache_misses&quot;&#x27;
   &quot;store_entries&quot;: 3,
   &quot;cache_hits&quot;: 0,

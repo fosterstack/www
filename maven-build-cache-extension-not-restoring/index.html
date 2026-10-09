@@ -90,7 +90,7 @@
   <p class="lede">You set up the Apache Maven Build Cache Extension against a self-hosted cache and the second build still compiles everything. Each cause below was reproduced for real, with Maven 3.10.0, extension 1.2.3 and a 0.2.1 server with a password. Find your symptom in the logs, then the fix.</p>
 
   <h2>First, what a healthy build looks like</h2>
-  <p>The first build stores its result, and it looks alarming because a miss is logged as an error:</p>
+  <p>The first build stores its result, and it looks alarming because Maven 3.10.0 logs a miss as an error (Maven 3.9.9 logs it as <code>[INFO] Cache item not found</code>):</p>
   <pre tabindex="0"><code>[INFO] Attempting to restore project demo:demo from build cache
 [ERROR] Error downloading cache item: https://cache.example.com//v1.1/demo/demo/ebb9bceba2f7a6bc/buildinfo.xml
 [INFO] Saved to remote cache https://cache.example.com//v1.1/demo/demo/ebb9bceba2f7a6bc/demo.jar
