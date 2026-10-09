@@ -138,9 +138,10 @@ org.apache.http.client.HttpResponseException: status code: 403, reason phrase: F
   <p>Those stack traces are noise. Switch saving off for developers to remove them.</p>
 
   <h2>If a developer has no login</h2>
-  <p>The server refuses every cache read and write without a login, so Maven cannot read the cache. On Maven 3.9.9 you will see an error line, and Maven builds the project itself and succeeds. Maven 3.10.0 logs the same error line for an ordinary first-time miss, so on that version the line alone does not show a login problem.</p>
+  <p>The server refuses every cache read and write without a login, so Maven cannot read the cache. On Maven 3.9.9 you will see an error line, and Maven builds the project itself and succeeds:</p>
 <pre tabindex="0"><code>[ERROR] Error downloading cache item: http://.../buildinfo.xml
 [INFO] Remote cache is incomplete or missing, trying local build for demo:mtest</code></pre>
+  <p>Maven 3.10.0 logs the same error line for an ordinary first-time miss, so on that version the line alone does not show a login problem.</p>
   <p>The developer gets no speed-up, and nothing breaks. If every build looks like this, check the <code>settings.xml</code> login and that its id matches the config.</p>
 
   <h2>What this does not give you</h2>
