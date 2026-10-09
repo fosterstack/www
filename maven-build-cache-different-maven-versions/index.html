@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Share your Maven build cache across Maven versions</title>
-<meta name="description" content="Can different Maven versions share a build cache? Yes, if every plugin version is pinned: six series of real builds with Maven 3.10.0 and 3.9.9, release 0.2.1.">
+<meta name="description" content="Can different Maven versions share a build cache? Yes, once eight plugin versions are pinned: six series of real builds, Maven 3.10.0 and 3.9.9, release 0.2.1.">
 <meta property="og:title" content="Share your Maven build cache across Maven versions">
-<meta property="og:description" content="Can different Maven versions share a build cache? Yes, if every plugin version is pinned: six series of real builds with Maven 3.10.0 and 3.9.9, release 0.2.1.">
+<meta property="og:description" content="Can different Maven versions share a build cache? Yes, once eight plugin versions are pinned: six series of real builds, Maven 3.10.0 and 3.9.9, release 0.2.1.">
 <meta property="og:url" content="https://fosterstack.com/maven-build-cache-different-maven-versions/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="FosterStack">
@@ -88,12 +88,12 @@
 </header>
 <main>
   <h1>Share your Maven build cache across Maven versions</h1>
-  <p class="lede">Pin every plugin version and laptops and CI on different Maven versions can share cache hits; leave some unpinned and, in our test, each Maven version rebuilt on its own. At FosterStack we prove everything, so here is how we proved it to ourselves: six series of real builds in both directions, and the checksums that explain it.</p>
+  <p class="lede">Pin the eight plugin versions our build uses, including clean, install, deploy and site, and two machines on different Maven versions can share cache hits; leave some unpinned and, in our test, each Maven version rebuilt on its own. At FosterStack we prove everything, so here is how we proved it to ourselves: six series of real builds in both directions, and the checksums that explain it.</p>
 
   <h2>The short answer</h2>
   <ul class="trust">
-    <li>With only some plugin versions pinned, Maven 3.10.0 and Maven 3.9.9 did not restore each other's builds, in either direction.</li>
-    <li>The cause was default plugin versions that differ between the two Maven versions: clean, install, deploy and site. None of them runs in <code>mvn verify</code>.</li>
+    <li>With only some plugin versions pinned, Maven 3.10.0 and Maven 3.9.9 did not restore each other's builds, in either direction, in our two runs of each.</li>
+    <li>The cause was default plugin versions that differ between the two Maven versions, including clean, install, deploy and site. None of those four ran in our <code>mvn verify</code> builds; the log shows only resources, compiler, surefire and jar.</li>
     <li>With all eight plugin versions pinned, each Maven version restored the other's build, and both computed the same checksum.</li>
   </ul>
 
@@ -105,7 +105,7 @@
     <li><strong>Level 2:</strong> also resources 3.5.0, compiler 3.16.0 and jar 3.5.1.</li>
     <li><strong>Level 3:</strong> also clean 3.5.0, install 3.2.0, deploy 3.2.0 and site 3.22.0. That is all eight.</li>
   </ul>
-  <p>Each level was run twice, once with Maven 3.10.0 first and once with 3.9.9 first. Each series started on a new, empty cache server, and every build used a fresh copy of the project and an empty local build cache. All builds ran on the same Mac and shared one local Maven repository, so the plugin files were downloaded once. Every build ended with <code>BUILD SUCCESS</code>. Each cell below is one build.</p>
+  <p>Each level was run twice, once with Maven 3.10.0 first and once with 3.9.9 first. Each series started on a new, empty cache server, and every build used a fresh copy of the project and an empty local build cache. All builds ran on the same Mac. Levels 1 and 2 came from one script run and Level 3 from a second one; within each script run the builds shared one local Maven repository, which a first throwaway build under each Maven version had filled with plugin files. Every build ended with <code>BUILD SUCCESS</code>. Each cell below is one build.</p>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <thead><tr><th>Plugins pinned</th><th>First Maven</th><th>Build 1</th><th>Build 2 (other Maven)</th><th>Build 3 (first Maven again)</th></tr></thead>
     <tbody>
@@ -131,7 +131,7 @@
   </table></div>
 
   <h2>Why they differed</h2>
-  <p>We asked each Maven version for the project's effective POM (<code>mvn help:effective-pom</code>, Level 2 project). The plugin versions that differ between the two are these defaults, none of which runs in <code>mvn verify</code>:</p>
+  <p>We asked each Maven version for the effective POM of the Level 2 project (<code>mvn help:effective-pom</code>). The plugin versions that differ between the two are these defaults, none of which ran in our <code>mvn verify</code> builds:</p>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <thead><tr><th>Plugin</th><th>Maven 3.10.0</th><th>Maven 3.9.9</th></tr></thead>
     <tbody>
@@ -141,10 +141,10 @@
       <tr><td>site</td><td>3.22.0</td><td>3.12.1</td></tr>
     </tbody>
   </table></div>
-  <p>The resources, compiler, jar and surefire versions were the same in both. Maven 3.9.9's effective POM also listed four plugins that 3.10.0's did not (antrun, assembly, dependency and release), and pinning those was not needed: the checksums matched at Level 3 without it. The build record the extension stores for each build contains the effective POM. When we compared the two Level 2 records, the only differences were the build time, the jar's hash, the checksum and the effective POM itself; the first plugin version that differs in it is clean, 3.5.0 against 3.2.0.</p>
+  <p>At Level 2 the resources, compiler, jar and surefire versions were the same in both, because we had pinned them. At Level 1 the stored build records show three more differences: resources 3.5.0 against 3.3.1, jar 3.5.1 against 3.4.1 and compiler 3.16.0 against 3.13.0, so seven versions differed there. Maven 3.9.9's effective POM also listed four plugins that 3.10.0's did not (antrun, assembly, dependency and release), and pinning those was not needed: the checksums matched at Level 3 without it. The build record the extension stores for each build contains the effective POM. When we compared the two Level 2 records, the only differences were the build time, the jar's hash, the checksum and the effective POM itself; the first plugin version that differs in it is clean, 3.5.0 against 3.2.0.</p>
 
   <h2>How to pin them</h2>
-  <p>This is what we added for Level 3, inside <code>&lt;build&gt;&lt;plugins&gt;</code> in the project's <code>pom.xml</code>. The surefire plugin was already pinned to 3.5.2.</p>
+  <p>This is what we added to the Level 1 project for Level 3, inside <code>&lt;build&gt;&lt;plugins&gt;</code> in the project's <code>pom.xml</code>. The surefire plugin was already pinned to 3.5.2.</p>
 <pre tabindex="0"><code>&lt;plugin&gt;&lt;artifactId&gt;maven-resources-plugin&lt;/artifactId&gt;&lt;version&gt;3.5.0&lt;/version&gt;&lt;/plugin&gt;
 &lt;plugin&gt;&lt;artifactId&gt;maven-compiler-plugin&lt;/artifactId&gt;&lt;version&gt;3.16.0&lt;/version&gt;&lt;/plugin&gt;
 &lt;plugin&gt;&lt;artifactId&gt;maven-jar-plugin&lt;/artifactId&gt;&lt;version&gt;3.5.1&lt;/version&gt;&lt;/plugin&gt;
@@ -156,11 +156,11 @@
 
   <h2>What this means for a shared cache</h2>
   <ul class="trust">
-    <li><strong>Pinning every plugin version made two Maven versions share one set of entries.</strong> That includes the plugins that do not run in your normal build.</li>
+    <li><strong>Pinning all eight plugin versions made two Maven versions share one set of entries.</strong> That includes the four that did not run in our build. We did not test a build that uses other plugins.</li>
     <li><strong>Without it, two Maven versions meant two sets of entries.</strong> The server stored both and neither side got hits from the other.</li>
-    <li><strong>Java did not matter in our other test.</strong> Switching between Java 21 and Java 27 on one Maven version did restore; see <a href="/maven-build-cache-different-java-versions/">Keep your Maven build cache across Java 21 and Java 27</a>.</li>
+    <li><strong>Switching Java 21 to 27 did not matter in our other test.</strong> It did restore on one Maven version; see <a href="/maven-build-cache-different-java-versions/">Keep your Maven build cache across Java 21 and Java 27</a>.</li>
   </ul>
-  <p>Maven 3.9.9 printed a few Java warnings about a restricted method on Java 27 (from a library it ships with). The builds still succeeded. We did not test other Maven versions (3.8 or 4), other extension versions, a multi-module project, or Linux.</p>
+  <p>Both Maven versions printed Java warnings about deprecated or restricted methods on Java 27, from libraries they load. The builds still succeeded. We did not test other Maven versions (3.8 or 4), other extension versions, a multi-module project, or Linux.</p>
 
   <h2>If nothing is restored</h2>
   <p>See <a href="/maven-build-cache-extension-not-restoring/">Maven build cache not restoring</a>. The setup is on <a href="/maven-remote-build-cache-setup/">Maven remote build cache setup</a>.</p>
