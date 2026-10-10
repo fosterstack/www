@@ -76,6 +76,7 @@ echo "node image (pinned by digest): ${NODE_IMAGE}"
 echo "manifests: the Secret, PVC, Deployment and Service blocks of docs/kubernetes.md at the v0.2.2 tag of fosterstack/cache (file sha256 ${GUIDE_SHA} checked), applied as written with two replacements: the image tag X.Y.Z becomes ${VER}, and the password CHANGE-ME becomes a test value; they are applied in the namespace ${NS} (the guide's in-cluster example uses it), which enforces the Pod Security 'restricted' profile"
 echo "FosterStack Cache ${VER} image: pulled, compared with the pinned digest ${IMG_022}, verified with cosign by digest, then loaded into the cluster with 'kind load docker-image' (the cluster itself pulls nothing from the internet at run time except kind's node image, pulled by the runner's Docker)"
 echo "invented by this script (the guide shows none): the Gradle project (rootProject.name, build.gradle.kts, App.java) and the build from outside through the guide's own port-forward; the variant Deployment without FSCACHE_DATA_DIR used to test the guide's warning"
+echo "limits of this cluster: kind is ONE node with the default local-path StorageClass, so a second pod can mount the same ReadWriteOnce volume (on a multi-node cluster the failure would be a Multi-Attach error instead); the replica test uses 'kubectl scale'; the user ids are read from the pod spec, not from the running process; the fsGroup requirement ('without it the pod crash-loops') is NOT tested, and kind's volumes may be writable anyway"
 echo "NOT tested here: a real cloud cluster, a StorageClass other than kind's default, the LoadBalancer Service, Gateway API and Ingress examples, in-cluster runners and the in-cluster DNS name, node sizing, the Kyverno policy, upgrades (Recreate rollouts)"
 echo "a runner times commands, not people"
 
@@ -131,9 +132,10 @@ expect k-cluster "Set kubectl context to \"kind-${CLUSTER}\""
 [ "$RC" = 0 ] || { echo "FAILURES $FAILS"; exit 1; }
 kubectl config use-context "kind-${CLUSTER}" >/dev/null
 run k-load "$W" <<EOF
-kind load docker-image ${IMG}:${VER} --name ${CLUSTER}
+kind load docker-image ${IMG}:${VER} --name ${CLUSTER} || { docker save ${IMG}:${VER} -o ${W}/cache-image.tar && kind load image-archive ${W}/cache-image.tar --name ${CLUSTER}; }
 EOF
 expect k-load
+[ "$RC" = 0 ] || { fail "the verified image could not be loaded into the cluster: nothing is applied (the cluster would pull the tag from the registry, unverified)"; echo "FAILURES $FAILS"; exit 1; }
 kubectl create namespace "$NS" >/dev/null && kubectl label namespace "$NS" pod-security.kubernetes.io/enforce=restricted pod-security.kubernetes.io/enforce-version=latest >/dev/null
 kubectl config set-context --current --namespace="$NS" >/dev/null     # so the guide's commands run as written (no -n)
 
@@ -151,6 +153,9 @@ kubectl get pods -l app.kubernetes.io/name=fscache
 EOF
 expect k-ready "successfully rolled out" "condition met" "1/1"
 kubectl get events --field-selector reason=FailedCreate 2>/dev/null | grep -qi "PodSecurity" && fail "a PodSecurity admission event was recorded"
+# the node used the image that was loaded (verified), not one pulled from the registry
+if kubectl get events --field-selector reason=Pulling 2>/dev/null | grep -qi "fosterstack/cache"; then fail "the cluster PULLED the cache image from the registry instead of using the loaded, verified one"; fi
+kubectl get events --field-selector reason=Pulled 2>/dev/null | grep -qi "already present on machine" && echo "OBS the node used the cache image that was loaded into it ('already present on machine'), not one pulled from the registry" || fail "no 'already present on machine' event: cannot show that the loaded image was used"
 # the PVC is bound
 check_eq "PVC phase" "$(jp pvc fscache-data -o jsonpath='{.status.phase}')" "Bound"
 
@@ -171,13 +176,16 @@ check_eq "memory limit" "$(jp deploy fscache -o jsonpath='{.spec.template.spec.c
 check_eq "CPU limit (none, on purpose)" "$(jp deploy fscache -o jsonpath='{.spec.template.spec.containers[0].resources.limits.cpu}')" ""
 check_eq "liveness probe path" "$(jp deploy fscache -o jsonpath='{.spec.template.spec.containers[0].livenessProbe.httpGet.path}')" "/healthz"
 check_eq "readiness probe path" "$(jp deploy fscache -o jsonpath='{.spec.template.spec.containers[0].readinessProbe.httpGet.path}')" "/healthz"
-for f in privileged hostNetwork hostPath; do grep -q "$f" "$W/manifests.yaml" && fail "the manifests contain '$f', but the page says there is none"; done
-echo "OBS no privileged, hostNetwork or hostPath anywhere in the four manifests"
-# the running pod really runs as the user the page says
-run k-user "$W" <<'EOF'
+for f in privileged hostNetwork hostPID hostIPC hostPath; do
+  kubectl get deploy fscache -o yaml 2>/dev/null | grep -qi "$f" && fail "the live Deployment contains '$f', but the page says there is no privileged mode, host networking or host path"
+  grep -qi "$f" "$W/manifests.yaml" && fail "the manifests contain '$f'"
+done
+echo "OBS the live Deployment and the four manifests contain no privileged, hostNetwork, hostPID, hostIPC or hostPath"
+# the pod spec the kubelet runs (user and group ids come from the spec; the process itself is not inspected: the image has no shell)
+run k-pod-spec "$W" <<'EOF'
 kubectl get pod -l app.kubernetes.io/name=fscache -o jsonpath='{.items[0].spec.securityContext.runAsUser}:{.items[0].spec.securityContext.fsGroup}'
 EOF
-expect k-user "65532:65532"
+expect k-pod-spec "65532:65532"
 
 # ---------- the guide's port-forward smoke test, as written ----------
 start_pf || { echo "FAILURES $FAILS"; exit 1; }
@@ -189,6 +197,7 @@ curl -s -u gradle:${PASS} -X PUT --data-binary 'hello' \\
 curl -s -u gradle:${PASS} localhost:8080/testkey123            # -> hello
 curl -s -o /dev/null -w '%{http_code}\\n' localhost:8080/testkey123  # -> 401 without them
 EOF
+S="$(curl -s --max-time 10 localhost:8080/healthz)"; [ "$S" = ok ] && echo "OBS /healthz answers exactly 'ok' (liveness: it says the process is up, nothing about the disk; the PUT and GET below are what show the volume works)" || fail "/healthz answered '${S}', not exactly ok"
 expect k-smoke "ok" "fscache_cache_hits_total" "fscache_cache_misses_total" "hello" "401"
 echo "OBS the guide's smoke-test block printed (| = end of line): $(tr '\n' '|' < "$W/k-smoke.out" | cut -c1-200)"
 
@@ -257,9 +266,14 @@ kubectl get pods -l app.kubernetes.io/name=fscache
 EOF
 expect k-scale2
 READY2="$(kubectl get pods -l app.kubernetes.io/name=fscache -o jsonpath='{range .items[*]}{.status.containerStatuses[0].ready}{"\n"}{end}' 2>/dev/null | grep -c '^true$')"
-if [ "$READY2" -ge 2 ]; then fail "the page says a second pod on the same volume blocks on the lock or fails to start, but both pods are Ready"; else echo "OBS with replicas: 2 only ${READY2} of 2 pods is Ready after 45 s, as the page says (the second blocks on the lock or fails to start)"; fi
 SECOND="$(kubectl get pods -l app.kubernetes.io/name=fscache -o jsonpath='{range .items[*]}{.metadata.name}{" "}{.status.containerStatuses[0].ready}{"\n"}{end}' 2>/dev/null | awk '$2!="true"{print $1}' | head -1)"
-[ -n "$SECOND" ] && echo "OBS the second pod ($SECOND) says: $(kubectl logs "$SECOND" 2>&1 | tail -2 | tr '\n' '|' | cut -c1-300)"
+if [ "$READY2" = 1 ] && [ -n "$SECOND" ]; then echo "OBS with replicas: 2 exactly 1 of 2 pods is Ready after 45 s, as the page says (the second blocks on the lock or fails to start)"; else fail "with replicas: 2 the page says the second pod does not share the cache; expected exactly 1 pod Ready, found ${READY2} ready (second pod: '${SECOND}')"; fi
+if [ -n "$SECOND" ]; then
+  PH2="$(kubectl get pod "$SECOND" -o jsonpath='{.status.phase}' 2>/dev/null)"
+  [ "$PH2" = Running ] || fail "the second pod is not Ready because of something other than the lock: its phase is '${PH2}' (Pending, an image error or no room would not be the lock)"
+  L2="$( { kubectl logs "$SECOND" 2>&1; kubectl logs "$SECOND" --previous 2>&1; } | tr '\n' '|' | cut -c1-400)"
+  case "$L2" in *"open: timeout"*) echo "OBS the second pod ($SECOND) failed on the metadata lock: ${L2}";; *) fail "the second pod is not Ready, but its log does not show the metadata lock timeout (${L2})";; esac
+fi
 kubectl scale deploy/fscache --replicas=1 >/dev/null; kubectl rollout status deploy/fscache --timeout=180s >/dev/null 2>&1
 
 # ---------- the guide's warning: without FSCACHE_DATA_DIR ----------
@@ -281,8 +295,10 @@ ND_READY="$(kubectl get pods -l app.kubernetes.io/name=fscache -o jsonpath='{ran
 ND_POD="$(kubectl get pods -l app.kubernetes.io/name=fscache --sort-by=.metadata.creationTimestamp -o jsonpath='{.items[-1:].metadata.name}' 2>/dev/null)"
 echo "OBS without FSCACHE_DATA_DIR: ${ND_READY} pod(s) Ready; the newest pod ${ND_POD} says: $(kubectl logs "$ND_POD" 2>&1 | tail -3 | tr '\n' '|' | cut -c1-320)"
 if [ "$ND_READY" -ge 1 ]; then
+  fail "without FSCACHE_DATA_DIR and with the guide's readOnlyRootFilesystem the pod became Ready; the previous run showed it does not start (this run's assertion follows that observation)"
   start_pf && { curl -s --max-time 10 -u "gradle:${PASS}" -X PUT --data-binary 'gone' localhost:8080/lostkey >/dev/null; stop_pf; kubectl delete pod -l app.kubernetes.io/name=fscache --wait=true >/dev/null 2>&1; kubectl rollout status deploy/fscache --timeout=180s >/dev/null 2>&1; start_pf && echo "OBS without FSCACHE_DATA_DIR, after a pod delete 'lostkey' reads: HTTP $(curl -s -o /dev/null -w '%{http_code}' -u "gradle:${PASS}" localhost:8080/lostkey)"; }
 else
+  kubectl logs "$ND_POD" 2>&1 | grep -q "read-only file system" || fail "without FSCACHE_DATA_DIR the pod is not Ready, but its log does not show the read-only file system error"
   echo "OBS FINDING? the guide says that without FSCACHE_DATA_DIR the server 'appears to work and silently loses everything on every restart' (the data goes to the pod's writable layer); with the guide's own readOnlyRootFilesystem: true the pod is not Ready instead (above), so it does not appear to work"
 fi
 stop_pf
