@@ -90,7 +90,7 @@
   <p class="lede">Check our signature, build provenance, SBOM and vulnerability statements with commands you run yourself, using <code>cosign</code> and the <code>gh</code> tool. You can confirm that our release workflow signed a container image and that GitHub's CI built it. No account is needed, except for the <code>gh attestation</code> steps (5 to 7), which need a GitHub login or token.</p>
 
   <h2>What you need</h2>
-  <p><code>cosign</code>, the <code>gh</code> tool (for the build-provenance steps), and <code>jq</code>. Set the version and your platform once:</p>
+  <p><code>cosign</code>, the <code>gh</code> tool (for the build-provenance steps), and <code>jq</code>. Get them from their own pages: <a href="https://docs.sigstore.dev/cosign/system_config/installation/">cosign</a>, <a href="https://cli.github.com/">gh</a> and <a href="https://jqlang.org/download/">jq</a>. In our timed run we used cosign 3.1.3, gh 2.102.0 and jq 1.6; we make no claim about other versions. Set the version and your platform once:</p>
   <pre tabindex="0"><code>$ VER=0.2.2
 PLATFORM=linux_arm64   # or linux_amd64, darwin_arm64, darwin_amd64</code></pre>
   <p>To check another release, set <code>VER</code> to its number, for example <code>VER=0.2.1</code>. To check the latest release, set <code>VER</code> from GitHub with this command in place of the first line above:</p>
