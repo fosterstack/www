@@ -94,10 +94,10 @@
   <ul class="trust">
     <li><strong>Source files were not stored. Class files were.</strong> The compile entry held class files and nothing else from our code. A comment was gone, but a string constant was inside the class file.</li>
     <li><strong>Test output was stored.</strong> The line our test printed was in four files of the stored test result: the raw output, the HTML report and the XML report with its raw copy.</li>
-    <li><strong>A task's output is stored as the task wrote it.</strong> A value a task used only as an input went into the key, not into the entry. A value the task wrote into its output file was in the entry, in plain text.</li>
+    <li><strong>A task's output is stored as the task wrote it.</strong> A value a task used only as an input went into the key, which is a hash of the inputs, and not into the entry. A value the task wrote into its output file was in the entry, in plain text.</li>
     <li><strong>Resource files and jars were not stored.</strong> Gradle logged <code>Not worth caching</code> for <code>processResources</code> and <code>jar</code>, so our resource file with a fake secret was in no entry.</li>
     <li><strong>Anyone with a login can fetch an entry if they know its key.</strong> The read-only login fetched one. No login and a wrong password got a <code>401</code>. We found no way to list keys over HTTP.</li>
-    <li><strong>The build machine's host name was in the test report. Paths and the user name were not.</strong> The host name was in the XML report, once. Each entry also holds a small metadata file with a build id, a time, the Gradle version and the task name.</li>
+    <li><strong>The build machine's host name was in the test report. Paths and the user name were not.</strong> The host name was in the XML report. Each entry also holds a small metadata file with a build id, a time, the Gradle version and the task name.</li>
   </ul>
 
   <h2>What to do</h2>
@@ -113,7 +113,7 @@
   <p>What each task stores is on <a href="/what-gradle-stores-in-build-cache/">know what your Gradle build cache stores</a>. Who can change entries is on <a href="/can-someone-poison-our-build-cache/">can someone poison our shared build cache</a>.</p>
 
   <h2>How we checked</h2>
-  <p>FosterStack Cache 0.2.1 on a Mac (arm64) with a login turned on. Gradle 9.8.0 and Java 21 built a small project twice, each time from a fresh copy, with the local build cache off. Every secret was made up. We stopped the server, opened every file in its data folder with <code>gunzip</code> and <code>tar</code>, and searched each entry, and each file inside it, for each fake secret. Each row is one run.</p>
+  <p>FosterStack Cache 0.2.1 on a Mac (arm64) with a login turned on. Gradle 9.8.0 and Java 21 built a small project twice, each time from a fresh copy, with the local build cache off. Every secret was made up. We stopped the server, opened every file in its data folder with <code>gunzip</code> and <code>tar</code>, and searched each entry, and each file inside it, for each fake secret. Each row is what we found in these two builds.</p>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <thead><tr><th>What we put in</th><th>Where it showed up in the stored entries</th></tr></thead>
     <tbody>
@@ -121,7 +121,7 @@
       <tr><td>A fake key in a Java comment</td><td>In no entry</td></tr>
       <tr><td>The <code>.java</code> files themselves</td><td>Not in any entry</td></tr>
       <tr><td>A resource file with a fake secret, packaged into the jar</td><td>In no entry. <code>processResources</code> and <code>jar</code> were not cached</td></tr>
-      <tr><td>Text printed by a test</td><td>In the test entry, in four files: <code>output-events.bin</code> (twice, once in the results folder and once in the XML folder), the HTML report and the XML report</td></tr>
+      <tr><td>Text printed by a test</td><td>In the test entry, in four files: <code>output-events.bin</code> (twice, once in the results folder and once in the XML folder), the HTML report and the XML report. It was also inside the test's class file in the test compile entry, because the text was a string in the test source</td></tr>
       <tr><td>A fake secret as a string in <code>build.gradle.kts</code>, passed to a task as an input</td><td>In no entry. The task wrote only its length</td></tr>
       <tr><td>An environment variable, declared as a task input</td><td>In no entry. The task wrote only its length. We changed the value and built again: the task ran and stored a second entry under a different key</td></tr>
       <tr><td>An environment variable the task reads but does not declare</td><td>In no entry. We changed it from 25 to 33 characters and built again: the task came <code>FROM-CACHE</code> with the old result, <code>length=25</code></td></tr>
@@ -129,8 +129,8 @@
       <tr><td>A <code>gradle.properties</code> value used as a declared input</td><td>In no entry. The task wrote only its length</td></tr>
       <tr><td>The cache password, as a string in <code>settings.gradle.kts</code></td><td>In no entry, not in the server's index file and not in the server log</td></tr>
       <tr><td>The project folder, the home folder and the user name</td><td>In no entry</td></tr>
-      <tr><td>The host name of the build machine</td><td>In the test entry, once, in the <code>hostname</code> attribute of the XML report. In no other entry</td></tr>
-      <tr><td>The entry files on disk</td><td>Gzip-compressed tar archives, not encrypted. A 32-character hex key names each one, in a folder named for its first two characters. On this Mac the files were readable only by their owner (<code>0600</code>)</td></tr>
+      <tr><td>The host name of the build machine</td><td>In the test entry, in the <code>hostname</code> attribute of the XML report. In no other entry</td></tr>
+      <tr><td>The entry files on disk</td><td>Gzip-compressed tar archives, not encrypted. A 32-character hex key names each one, in a folder named for its first two characters. On this Mac the files were readable only by their owner (<code>0600</code>), which the server's code asks for</td></tr>
       <tr><td>The metadata file in each entry</td><td>Build id, creation time, execution time, Gradle version, task name and type. Nothing else</td></tr>
       <tr><td>Read-only login, <code>GET</code> of a stored key</td><td><code>200</code>, 1,982 bytes. <code>HEAD</code> gave <code>200</code>, <code>PUT</code> gave <code>403</code>, an unknown key gave <code>404</code></td></tr>
       <tr><td>No login, and a wrong password, <code>GET</code> of a stored key</td><td><code>401</code> both times</td></tr>
