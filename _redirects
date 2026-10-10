@@ -1,3 +1,8 @@
+# PREVIEW TEST ONLY: never merged
+/zz-redirect-test-a/ /security/ 301
+/zz-redirect-test-b/ /security/#supported 301
+/zz-redirect-test-c /security/ 301
+/zz-redirect-test-d/ /how-we-build/ 301
 # /bcn-removed/ is unpublished until the incumbent's image is verifiably gone
 # (the bcn-watch trigger). The draft page is NOT kept in this repo: everything
 # tracked here is public and is served, dot-prefixed folders included. Until
