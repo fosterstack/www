@@ -23,6 +23,7 @@ on:
           - mac-linux
           - howto-pages-2
           - howto-pages-3
+          - k8s-page
         default: miss-cost
 
 permissions:
@@ -175,6 +176,26 @@ jobs:
 
       - name: follow the pages' commands as written and check what they promise
         run: bash bin/bench-howto-pages-3.sh
+
+  # The Kubernetes page: the cache repo's four manifests (docs/kubernetes.md at the v0.2.2 tag, file checked by sha256) applied as
+  # written in a kind cluster (Kubernetes in Docker) in a namespace that enforces the Pod Security restricted profile; ready, the
+  # /healthz probe, the guide's port-forward smoke test, a Gradle build from outside with a server hit, the volume surviving a pod
+  # delete, a second replica, and the warning about FSCACHE_DATA_DIR. Same rules as the other jobs: manual dispatch only, chosen
+  # with the "which" input (compared in this `if` only), no token and no secret, read-only token not persisted. kind, kubectl,
+  # cosign and Gradle are checked against pinned sha256 values; the kind node image and the cache image are pinned by digest, the
+  # cache image is verified with cosign and loaded into the cluster, so the cluster pulls nothing at run time. Docker and Java 21
+  # are the runner's own.
+  bench-k8s-page:
+    if: github.event_name == 'workflow_dispatch' && inputs.which == 'k8s-page'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: apply the guide's manifests in a kind cluster and check what the page says
+        run: bash bin/bench-k8s-page.sh
 
   # Does a build result stored from Linux restore on a Mac, and the other way round (the claim of the laptop page)? Manual
   # dispatch only, chosen with the "which" input (compared in each `if` only). Two chains of two jobs: a Linux job builds against a
