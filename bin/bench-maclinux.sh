@@ -68,7 +68,7 @@ export JAVA_HOME="$W/tools/jdk/${JDK_HOME_SUB}"
 [ -x "$JAVA_HOME/bin/java" ] || { echo "no usable Java at $JAVA_HOME" >&2; exit 1; }
 export PATH="$W/tools/bin:$JAVA_HOME/bin:$PATH"
 command -v sha256sum >/dev/null 2>&1 || { printf '#!/bin/sh\nexec shasum -a 256 "$@"\n' > bin/sha256sum; chmod +x bin/sha256sum; }
-unset GH_TOKEN GITHUB_TOKEN
+unset GH_TOKEN GITHUB_TOKEN; export GH_CONFIG_DIR="$W/gh-empty-config"; mkdir -p "$GH_CONFIG_DIR"   # gh runs with no login, here and on the runners
 for t in gh cosign gradle curl python3 tar; do command -v "$t" >/dev/null || { echo "missing tool: $t" >&2; exit 1; }; done
 
 echo "== DISCLOSURE"
@@ -114,6 +114,7 @@ if [ "$ROLE" = restore ]; then
   tar -xzf "$IN/cache-data.tgz" -C "$W/unpack" || { fail "could not unpack the handed-over data folder"; echo "FAILURES $FAILS"; exit 1; }
   [ -d "$W/unpack/data" ] && [ -f "$W/unpack/entries.txt" ] || { fail "the handed-over file does not hold a data folder and entries.txt"; echo "FAILURES $FAILS"; exit 1; }
   rm -rf "${DATA:?}"; mv "$W/unpack/data" "$DATA"; EXPECT_ENTRIES="$(tr -d ' \n' < "$W/unpack/entries.txt")"
+  case "$EXPECT_ENTRIES" in ''|*[!0-9]*) fail "the handed-over entry count is not a number ('${EXPECT_ENTRIES}')"; echo "FAILURES $FAILS"; exit 1;; esac
   echo "OBS handed over: $(find "$DATA" -type f | wc -l | tr -d ' ') files from the other operating system's server; its server held ${EXPECT_ENTRIES} entries when it was stopped"
 fi
 curl -sf --max-time 5 "localhost:${PORT}/healthz" >/dev/null 2>&1 && { echo "something already answers on port ${PORT}: not starting" >&2; exit 1; }
@@ -262,6 +263,7 @@ export HOME="$ORIGHOME"; unset MAVEN_OPTS
 # ---------- hand the data folder over (store role) ----------
 FINAL="$(statusz)"; stop_server
 if [ "$ROLE" = store ]; then
+  case "$(num "$FINAL" entries)" in ''|*[!0-9]*) fail "the server's final entry count could not be read (${FINAL}), so nothing is handed over";; esac
   mkdir -p "$W/pack"; cp -R "$DATA" "$W/pack/data"; printf '%s\n' "$(num "$FINAL" entries)" > "$W/pack/entries.txt"
   tar -czf "$OUT/cache-data.tgz" -C "$W/pack" data entries.txt || fail "could not pack the server's data folder"
   echo "OBS packed the server's data folder: $(find "$DATA" -type f | wc -l | tr -d ' ') files, $(wc -c < "$OUT/cache-data.tgz" | tr -d ' ') bytes (the only thing that leaves this job)"
