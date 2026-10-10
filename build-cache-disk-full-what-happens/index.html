@@ -92,7 +92,7 @@
 
   <h2>The short answer</h2>
   <ul class="trust">
-    <li><strong>New uploads failed with a 500.</strong> The server logged <code>no space left on device</code> each time. It counted them as <code>PUT</code> requests with status 500.</li>
+    <li><strong>New uploads failed with a 500.</strong> The server logged <code>no space left on device</code> each time. It counted them in the <code>fscache_http_requests_total</code> metric, as <code>PUT</code> requests with status 500.</li>
     <li><strong>Reads kept working.</strong> Entries already stored came back with a 200. A build restored 4 of 4 cacheable tasks from the cache while the disk was full.</li>
     <li><strong>A build that needed to store got one warning.</strong> Gradle printed <code>Could not store entry</code>, then turned the remote cache off for the rest of that build. The build still passed.</li>
     <li><strong>The server stayed up.</strong> <code>/healthz</code> still answered ok, so it does not tell you the disk is full.</li>
@@ -109,7 +109,7 @@
   </ul>
 
   <h2>How we checked</h2>
-  <p>FosterStack Cache 0.2.1 on a Mac (arm64), no password and no size cap, unless the table says so. We made a real 8 MiB disk image with APFS, mounted it without admin rights, and put the data folder on it. Gradle 9.8.0 and Java 21 built a four-module project with a new Gradle home each time, no reused daemon and the local build cache off. Each row is one run, and we did not repeat them.</p>
+  <p>FosterStack Cache 0.2.1 on a Mac (arm64), no password, and no size cap unless a row says so. We made a real 8 MiB disk image with APFS, mounted it, and put the data folder on it. Gradle 9.8.0 and Java 21 built a four-module project with a new Gradle home each time, no reused daemon and the local build cache off. Each row is one run, and we did not repeat them.</p>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <thead><tr><th>What we did</th><th>What happened</th></tr></thead>
     <tbody>
@@ -123,12 +123,12 @@
       <tr><td>Deleted a 1 MiB file outside the data folder</td><td>A 1 KiB upload and three 256 KiB uploads were accepted. The next two got <code>500</code>. No restart</td></tr>
       <tr><td>Changed build again, with room</td><td><code>BUILD SUCCESSFUL</code> and no warning</td></tr>
       <tr><td>Stopped the server and started it on a full volume with its old data</td><td>It started. <code>/healthz</code> answered ok, <code>/statusz</code> showed 127 entries, a stored entry read <code>200</code>, a new upload got <code>500</code></td></tr>
-      <tr><td>Started it with a new, empty data folder on a full volume</td><td>It exited and never answered. The log held <code>fscache: fatal</code> and <code>open metadata store</code></td></tr>
+      <tr><td>Started it with a new, empty data folder on a full volume (a 4 MiB size cap was set)</td><td>It exited and never answered. The log held <code>fscache: fatal</code> and <code>open metadata store</code></td></tr>
       <tr><td>Size cap 4 MiB, 40 uploads of 256 KiB (10 MiB in all)</td><td>All 40 accepted. 24 entries removed. Stored size stayed at 4,194,304 bytes</td></tr>
       <tr><td>Size cap 20 MiB, the same 40 uploads</td><td>25 accepted, 15 got <code>500</code>. Nothing was removed</td></tr>
     </tbody>
   </table></div>
-  <p class="muted-note">We found no leftover temporary files in the data folder after the failed uploads. On this small APFS volume, uploads started to fail while <code>df</code> still showed about 1 MiB free, so do not plan around the last megabyte.</p>
+  <p class="muted-note">We found no leftover temporary files in the data folder after the first failed uploads. On this small APFS volume, uploads started to fail while <code>df</code> still showed about 1 MiB free, so do not plan around the last megabyte.</p>
   <p class="muted-note">Not tested: Docker or Kubernetes volumes, file systems other than APFS, Linux, Maven, a very large single upload, a full inode table, a disk quota, other releases, and a disk that fills while many builds upload at once.</p>
 </main>
 <footer>
