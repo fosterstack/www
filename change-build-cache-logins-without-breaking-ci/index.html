@@ -115,7 +115,7 @@
   <ul class="trust">
     <li><strong>Server first, CI later (3 jobs run in between):</strong> 3 jobs got a 401.</li>
     <li><strong>CI first, server later (2 jobs run in between):</strong> 2 jobs got a 401.</li>
-    <li><strong>The four steps above (1 CI job ran in between, and it restored 4 of 4):</strong> 1 job got a 401, a job we deliberately left on the old login until the end. The developers' old read-only login, tried directly, also got a 401.</li>
+    <li><strong>The four steps above (3 CI jobs ran in between, and all restored 4 of 4):</strong> 1 job got a 401, a job we deliberately left on the old login until the end. The developers' old read-only login, tried directly, also got a 401.</li>
   </ul>
 
   <h2>If it goes wrong</h2>
