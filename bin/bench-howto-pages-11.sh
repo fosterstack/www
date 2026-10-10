@@ -323,8 +323,8 @@ abstract class Plain : DefaultTask() {
 fun TaskContainer.greet(name: String, value: Provider<String>, file: String = name + ".txt") =
     register<Greet>(name) { label.set(value); out.set(layout.buildDirectory.file(file)) }
 
-tasks.greet("greetEnv", providers.environmentVariable("GREET_LABEL").orElse("none"))
-tasks.greet("greetProp", providers.gradleProperty("greetLabel").orElse("none"))
+tasks.greet("greetEnv", providers.environmentVariable("GREET_LABEL").orElse("env-default"))
+tasks.greet("greetProp", providers.gradleProperty("greetLabel").orElse("prop-default"))
 tasks.greet("greetAbs", provider { layout.projectDirectory.asFile.absolutePath })
 tasks.greet("greetStable", provider { "stable" })
 tasks.register<CopyNotes>("copyNotes") {
@@ -363,19 +363,23 @@ scenario_k() {
   # the page's own commands, as written
   cp "$W/q-kb1.out" "$W/run1.log"; cp "$W/q-kb2.out" "$W/run2.log"
   ( cd "$W" && grep -E '^(Appending|Build cache key for task)' run1.log > run1.keys && grep -E '^(Appending|Build cache key for task)' run2.log > run2.keys && diff run1.keys run2.keys >/dev/null ) && echo "OBS K the page's grep and diff commands ran; the unchanged repeat gives no diff (exit 0)" || fail "K the page's grep/diff commands on two unchanged builds did not give an empty diff"
+  echo "OBS K debug: key lines in build 2: $(wc -l < "$W/kb2.keys" | tr -d ' ')"; grep -m4 -n 'Appending' "$W/q-kb2.out" | cut -c1-200 | sed 's/^/OBS K debug:   /'
   # --- one change at a time, each against the unchanged repeat
   kd_project "$D/p" 2 "notes one"; kdrun kc1 "$D/p"
   want "row 'A Java source file': tasks that ran" "$(ranset kc1)" "compileJava"
+  kdiff kb2 kc1 | head -n 8 | cut -c1-200 | sed 's/^/OBS K debug (source change, diff):   /'
   kdiff kb2 kc1 | grep -q "stableSources" && echo "OBS K the lines that differed include the stableSources fingerprint" || fail "K row 'A Java source file': the page says the stableSources fingerprint differed"
   kd_project "$D/p" 1 "notes one"; kdrun kc2 "$D/p" GREET_LABEL=changed
   want "row 'An environment variable the task reads': tasks that ran" "$(ranset kc2)" "greetEnv"
+  kdiff kb2 kc2 | head -n 8 | cut -c1-200 | sed 's/^/OBS K debug (env change, diff):   /'
   kdiff kb2 kc2 | grep -q "Appending input value fingerprint for 'label' to build cache key" && echo "OBS K the differing line is the 'label' value fingerprint, as the page shows" || fail "K row 'environment variable': the page says the 'label' value fingerprint differed"
   kd_project "$D/p" 1 "notes one"; kdrun kc3 "$D/p" PROP=-PgreetLabel=changed
   want "row 'A Gradle property, on the command line': tasks that ran" "$(ranset kc3)" "greetProp"
-  kd_project "$D/p" 1 "notes one"; printf 'greetLabel=changed\n' >> "$D/c3b/gradle.properties"; kdrun kc3b "$D/p"
+  kd_project "$D/p" 1 "notes one"; printf 'greetLabel=changed\n' >> "$D/p/gradle.properties"; kdrun kc3b "$D/p"
   want "row 'A Gradle property, in gradle.properties': tasks that ran" "$(ranset kc3b)" "greetProp"
   kd_project "$D/p" 1 "notes two"; kdrun kc4 "$D/p"
   want "row 'The contents of an input file': tasks that ran" "$(ranset kc4)" "copyNotes"
+  kdiff kb2 kc4 | head -n 8 | cut -c1-200 | sed 's/^/OBS K debug (input file change, diff):   /'
   kdiff kb2 kc4 | grep -q "'src'" && echo "OBS K the differing line names the 'src' file fingerprint" || fail "K row 'input file': the page says the 'src' file fingerprint differed"
   kd_project "$D/moved/inner" 1 "notes one"; kdrun kc5 "$D/moved/inner"
   want "row 'The project moved to another folder': tasks that ran" "$(ranset kc5)" "greetAbs"
@@ -416,7 +420,7 @@ scenario_g() {
   echo; echo "== G  (what-gradle-stores-in-build-cache: Gradle)"
   local D="$W/g" GH="$W/g-home" m t; mkdir -p "$D"; rm -rf "$GH"; mkdir -p "$GH"
   start_server g1 "$QPORT" "" "" || return
-  q_project "$D/p1" none
+  q_project "$D/p1" none; printf '// root project: no plugins\n' > "$D/p1/build.gradle.kts"
   run g1 "$D/p1" <<EOF
 export GRADLE_USER_HOME="$GH" JAVA_HOME="$JDK21_HOME" PATH="$JDK21_HOME/bin:\$PATH"
 gradle build -i --console=plain --no-daemon
@@ -438,7 +442,7 @@ EOF
   stop_server
   # a second run with the same Gradle home against a new empty server: the script entries are not stored again
   start_server g2 "$QPORT" "" "" || return
-  q_project "$D/p2" none
+  q_project "$D/p2" none; printf '// root project: no plugins\n' > "$D/p2/build.gradle.kts"
   run g2 "$D/p2" <<EOF
 export GRADLE_USER_HOME="$GH" JAVA_HOME="$JDK21_HOME" PATH="$JDK21_HOME/bin:\$PATH"
 gradle build -i --console=plain --no-daemon
