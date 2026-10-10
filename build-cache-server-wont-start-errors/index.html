@@ -94,24 +94,25 @@
   <ul class="trust">
     <li><strong>A rejected setting stops the server before it touches the data folder.</strong> The line names the variable and the value. Sizes must be whole numbers of bytes, so <code>10GB</code> is refused.</li>
     <li><strong>A problem with the address or the data folder stops it a moment later.</strong> A busy port, a folder it cannot write to and a data path that is a file each gave a clear line.</li>
-    <li><strong>A second server on the same data folder waits about 5 seconds, then exits.</strong> The first one kept serving.</li>
-    <li><strong>Some mistakes do not stop the server.</strong> A misspelled setting name was ignored without a warning, and an emptied index file was not an error.</li>
+    <li><strong>A second server on the same data folder waits about 5 seconds, then exits.</strong> It ends with the same fatal line and code 1. The first one kept serving.</li>
+    <li><strong>Some mistakes do not stop the server.</strong> A misspelled setting name was ignored without a warning, and an emptied index file was accepted without a warning, so lost entries go unnoticed.</li>
   </ul>
 
   <h2>Find your error</h2>
-  <p>The first column is what we saw in the log. The other two columns are our advice, not a test result. <code>PATH</code> stands for a folder on our test machine and <code>PORT</code> for the port we used.</p>
+  <p>The first column is what we saw in the log. The other two columns are our advice, not a test result. <code>DIR</code> stands for a folder on our test machine and <code>PORT</code> for the port we used.</p>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <thead><tr><th>The last line of the log</th><th>What it means</th><th>What to do</th></tr></thead>
     <tbody>
       <tr><td><code>serve: listen tcp 127.0.0.1:PORT: bind: address already in use</code></td><td>Another program, or another copy of the server, already listens on that address.</td><td>Stop it, or give this server another <code>FSCACHE_ADDR</code>.</td></tr>
       <tr><td><code>serve: listen tcp: address VALUE: missing port in address</code>, also <code>invalid port</code> and <code>unknown port</code></td><td><code>FSCACHE_ADDR</code> is not a host and a port. We tried <code>garbage</code>, <code>127.0.0.1</code>, <code>18702</code>, <code>:99999</code>, <code>:-1</code> and <code>127.0.0.1:abc</code>.</td><td>Write it as <code>:8080</code> or <code>127.0.0.1:8080</code>.</td></tr>
-      <tr><td><code>write shutdown marker: open PATH/.unclean-shutdown: permission denied</code></td><td>The data folder exists, but the user running the server cannot write to it.</td><td>Give that user write access. In a container, see <a href="/build-cache-permission-denied-data-directory/">permission denied on the data folder</a>.</td></tr>
-      <tr><td><code>write shutdown marker: mkdir PATH: permission denied</code>, or <code>mkdir data: permission denied</code></td><td>The server could not create the data folder. With no <code>FSCACHE_DATA_DIR</code> it uses <code>./data</code>, in the folder you started it from.</td><td>Create the folder first, or set <code>FSCACHE_DATA_DIR</code> to a path you can write.</td></tr>
-      <tr><td><code>check shutdown marker: stat PATH/.unclean-shutdown: not a directory</code></td><td><code>FSCACHE_DATA_DIR</code> points at a file.</td><td>Point it at a folder.</td></tr>
+      <tr><td><code>write shutdown marker: open DIR/.unclean-shutdown: permission denied</code></td><td>The data folder exists, but the user running the server cannot write to it.</td><td>Give that user write access. In a container, see <a href="/build-cache-permission-denied-data-directory/">permission denied on the data folder</a>.</td></tr>
+      <tr><td><code>write shutdown marker: mkdir DIR: permission denied</code>, or <code>mkdir data: permission denied</code></td><td>The server could not create the data folder. With no <code>FSCACHE_DATA_DIR</code> it uses <code>./data</code>, in the folder you started it from.</td><td>Create the folder first, or set <code>FSCACHE_DATA_DIR</code> to a path you can write.</td></tr>
+      <tr><td><code>check shutdown marker: stat DIR/.unclean-shutdown: not a directory</code></td><td><code>FSCACHE_DATA_DIR</code> points at a file.</td><td>Point it at a folder.</td></tr>
       <tr><td><code>open metadata store: metadata: open: timeout</code>, after about 5 seconds</td><td>Another server already holds this data folder.</td><td>Stop the other server. See <a href="/run-two-build-cache-servers/">can I run two build cache servers</a>.</td></tr>
       <tr><td><code>open metadata store: metadata: open: invalid database</code></td><td>The index file <code>meta.db</code> in the data folder is damaged. We overwrote it with random bytes.</td><td>Restore the folder from a backup, or start with a new, empty folder. See <a href="/back-up-and-restore-build-cache/">back up and restore a build cache</a>.</td></tr>
-      <tr><td><code>open metadata store: metadata: open: open PATH/meta.db: permission denied</code></td><td>The server's user cannot read and write the index file. We had made it read-only.</td><td>Fix the file's owner or mode.</td></tr>
-      <tr><td><code>FSCACHE_MAX_BYTES="10GB" is not a valid byte count (whole non-negative decimal number)</code></td><td>Sizes are whole numbers of bytes. A unit, a decimal point, an exponent, a space, letters after the number and a negative number were all refused.</td><td>Write <code>10737418240</code> for 10 GiB, not <code>10GB</code>.</td></tr>
+      <tr><td><code>open metadata store: metadata: open: open DIR/meta.db: permission denied</code></td><td>The server's user cannot read and write the index file. We had made it read-only.</td><td>Fix the file's owner or mode.</td></tr>
+      <tr><td><code>FSCACHE_MAX_BYTES="10GB" is not a valid byte count (whole non-negative decimal number)</code></td><td>Sizes are whole numbers of bytes. A unit, a decimal point, an exponent, a space and letters after the number were all refused.</td><td>Write <code>10737418240</code> for 10 GiB, not <code>10GB</code>.</td></tr>
+      <tr><td><code>FSCACHE_MAX_BYTES="-1" is negative; a byte count cannot be</code></td><td>A negative size. <code>FSCACHE_MAX_CONCURRENT_UPLOADS="-1"</code> gets the same line.</td><td>Use a whole number, or <code>0</code> for no limit.</td></tr>
       <tr><td><code>FSCACHE_USERNAME and FSCACHE_PASSWORD must both be set or both be empty</code>, and the same line for <code>FSCACHE_RO_USERNAME</code> and <code>FSCACHE_RO_PASSWORD</code></td><td>Only one half of a login pair is set.</td><td>Set both halves, or neither.</td></tr>
       <tr><td><code>FSCACHE_RO_USERNAME and FSCACHE_RO_PASSWORD require FSCACHE_USERNAME and FSCACHE_PASSWORD</code></td><td>A read-only pair is set without the read-write pair.</td><td>Set the read-write pair as well.</td></tr>
       <tr><td><code>FSCACHE_RO_USERNAME must differ from FSCACHE_USERNAME</code></td><td>Both pairs use the same username.</td><td>Choose another read-only username. See <a href="/change-build-cache-logins-without-breaking-ci/">change the build cache logins</a>.</td></tr>
@@ -138,7 +139,7 @@
   </ul>
 
   <h2>How we checked</h2>
-  <p>FosterStack Cache 0.2.1 on a Mac (arm64). Each case was one start with a clean environment that held only the setting under test, watched for 3 seconds. Every failed start exited with code 1, and all of them in under a second except the shared folder. A server we stopped with a normal stop exited with code 0.</p>
+  <p>FosterStack Cache 0.2.1 on a Mac (arm64). Each case was one start with a clean environment that held only the address, the data folder and the setting under test, watched for 3 seconds with a check every quarter of a second. Every failed start exited with code 1, and all of them in under a second except the shared folder. A server we stopped with a normal stop exited with code 0.</p>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <thead><tr><th>What we did</th><th>What the server did</th></tr></thead>
     <tbody>
