@@ -79,10 +79,10 @@ echo "runner: $(uname -sr); cpus: $(nproc 2>/dev/null || sysctl -n hw.ncpu); ima
 echo "java: $("$JDK21_HOME/bin/java" -version 2>&1 | head -1)   gradle: $(gradle --version 2>/dev/null | grep -E '^Gradle ' | head -1)   cosign: $(cosign version 2>/dev/null | grep -i GitVersion | head -1)   docker: $(docker --version)"
 if [ "$LOCAL" = 1 ]; then echo "tools: LOCAL tools in use, nothing checked (a developer's dry run: do not quote these times)"; else
   echo "tools: Gradle ${GR_VER} and cosign ${COSIGN_VER} are downloaded and checked against pinned checksums before use; Java 21 and Docker are the runner's own"; fi
-echo "release under test: FosterStack Cache ${VER}, downloaded with no login and verified (cosign + sha256) before it runs; every server listens on 127.0.0.1 only"
+echo "release under test: FosterStack Cache ${VER}, downloaded with no login and verified (cosign + sha256) before it runs; the cache servers listen on all interfaces of the runner (the page needs a non-loopback address), the test proxy on 127.0.0.1 only"
 echo "NOT checksum-pinned: the Maven build-cache extension 1.2.3 and the Maven plugin jars (their eight versions are pinned in the pom, the files come from Maven Central); the Maven on the runner is its own (version printed)"
 echo "invented by this script (the page shows its settings, not its files): the Gradle and Maven projects (one class), made-up passwords, the test proxy bin/bench-proxy.py, a TLS front and a self-signed certificate for the HTTPS rows, the keystore that makes Java trust it"
-echo "differences from the page's own runs: Linux amd64 (the page: macOS arm64), release ${VER} (the page: 0.2.1), Java 21; the proxy and the HTTPS front are ours, as the page says ('we wrote a small proxy'); the page used nginx for HTTPS, this script a TLS front written in Python; ports differ"
+echo "differences from the page's own runs: Linux amd64 (the page: macOS arm64), release ${VER} (the page: 0.2.1), Java 21; the proxy and the HTTPS front are ours, as the page says ('we wrote a small proxy'); the page used nginx for HTTPS, this script a TLS front written in Python; the proxy host is 127.0.0.1:18131 (the page: proxy.example.com:3128); the Maven nonProxyHosts line is the page's, except in the row that puts the cache's address in it"
 echo "Gradle builds use a new empty Gradle home and a fresh project copy each, no daemon, Gradle's own local cache switched off; Maven builds use an emptied ~/.m2/build-cache"
 echo "NOT tested here (as on the page): a real corporate proxy product, a proxy that asks for a password (407), TLS inspection, proxy configuration files, the HTTP_PROXY variables, HTTPS through a proxy for Maven"
 echo "page commands run with 'bash -o pipefail'; a runner times commands, not people"
@@ -380,7 +380,8 @@ PYEOF
   start_proxy "$X/proxy-g2.log"
   grow g2 102 "http://${HOSTIP}:${XGP}/" "$PROX"
   qcheck "Gradle, proxy settings, same plain-HTTP URL: second build" xg2-2 "cache" compileJava
-  n="$(plog "GET http://${HOSTIP}:${XGP}/" "$X/proxy-g2.log")"; [ "$n" -ge 2 ] && echo "OBS X Gradle, proxy settings: the proxy logged $n 'GET http://${HOSTIP}:${XGP}/<key>' lines over the two builds" || fail "X Gradle, proxy settings: the page says the proxy logged a GET per build; it logged $n"
+  n="$(plog "GET http://${HOSTIP}:${XGP}/" "$X/proxy-g2.log")"; echo "OBS X Gradle, proxy settings: the proxy log has $n GET lines and $(plog "PUT http://${HOSTIP}:${XGP}/" "$X/proxy-g2.log") PUT lines for the cache over the two builds"
+  want "Gradle, proxy settings: GET lines for the cache in the proxy log, one per build, two builds" "$n" 2
   grep -E "^GET http://${HOSTIP}:${XGP}/[0-9a-f]{32}$" "$X/proxy-g2.log" > /dev/null && echo "OBS X ...the lines have the form GET http://<cache-ip>:<port>/<32-character key>, as the page shows" || fail "X the proxy log has no line of the form 'GET http://<cache-ip>:<port>/<key>'"
   start_proxy "$X/proxy-g3.log"
   grow g3 103 "http://127.0.0.1:${XGP}/" "$PROX"
@@ -399,17 +400,14 @@ PYEOF
   grow g6 106 "https://${HOSTIP}:${XTP}/" "${PROX}\n${TRUST}"
   qcheck "Gradle, proxy refuses the cache host: the builds ran without the cache" xg6-2 "ran" compileJava
   for n in 1 2; do expect "q-xg6-$n" "BUILD SUCCESSFUL" "Could not load entry" "response status 403: Forbidden"; done
-  grep -F "Could not load entry" "$W/q-xg6-1.out" 2>/dev/null | head -n 1 | cut -c1-260 | sed 's/^/OBS X the log line: /'
+  grep -qE "^Could not load entry [0-9a-f]{32} from remote build cache: Loading entry from 'https://${HOSTIP}:${XTP}/[0-9a-f]{32}' response status 403: Forbidden$" "$W/q-xg6-1.out" && echo "OBS X the log line has the shape the page shows: Could not load entry <key> from remote build cache: Loading entry from 'https://<cache-ip>:<port>/<key>' response status 403: Forbidden" || fail "X the 403 line does not have the shape the page shows: $(grep -F 'Could not load entry' "$W/q-xg6-1.out" | head -n 1 | cut -c1-260)"
   grep -qF "The remote build cache was disabled during the build due to errors" "$W/q-xg6-1.out" && echo "OBS X ...then the remote cache was disabled for that build" || fail "X the page says the build went on without the cache after the warning"
   want "Gradle, refusing proxy: the proxy answered 403 (CONNECT lines with 403)" "$(plog "CONNECT ${HOSTIP}:${XTP} 403" "$X/proxy-g6.log" | awk '{print ($1>=1)?"yes":"no"}')" yes
   # --- the curl check from the page
-  run x-curl "$X" <<EOF
-curl -sS -x http://127.0.0.1:${XPP} --cacert "$X/cert.pem" https://${HOSTIP}:${XTP}/healthz
-echo "--- direct:"
-curl -sS --noproxy '*' --cacert "$X/cert.pem" https://${HOSTIP}:${XTP}/healthz
-echo
-EOF
-  NOZERO=1 expect x-curl "curl: (56) CONNECT tunnel failed, response 403" "--- direct:" "ok"
+  curl -sS -x "http://127.0.0.1:${XPP}" --cacert "$X/cert.pem" "https://${HOSTIP}:${XTP}/healthz" > "$X/curl1.out" 2> "$X/curl1.err"; n=$?
+  [ "$(cat "$X/curl1.err")" = "curl: (56) CONNECT tunnel failed, response 403" ] && [ "$n" = 56 ] && echo "OBS X the curl check through the refusing proxy: 'curl: (56) CONNECT tunnel failed, response 403' (exit 56), as the page shows" || fail "X the curl check through the refusing proxy: the page shows 'curl: (56) CONNECT tunnel failed, response 403'; got exit $n and '$(cat "$X/curl1.err")'"
+  curl -sS --noproxy '*' --cacert "$X/cert.pem" "https://${HOSTIP}:${XTP}/healthz" > "$X/curl2.out" 2> "$X/curl2.err"; n=$?
+  [ "$(cat "$X/curl2.out")" = ok ] && [ "$n" = 0 ] && echo "OBS X the curl check with --noproxy '*': 'ok', as the page shows" || fail "X the curl check with --noproxy: the page shows 'ok'; got exit $n and '$(cat "$X/curl2.out")'"
   stop_proxy; stop_tls; stop_server
   # --- Maven
   local M="$W/x/mvnhome"; mkdir -p "$M/.m2"
@@ -497,9 +495,11 @@ EOF
   m_project "$X/m1-1" 201 "http://${HOSTIP}:${XMP}/"; L1=0
   mbuild m1-1 "$X/m1-1"; L1="$(wc -l < "$X/proxy-m1.log" | tr -d ' ')"
   m_project "$X/m1-2" 201 "http://${HOSTIP}:${XMP}/"; mbuild m1-2 "$X/m1-2"
-  want "Maven, build 1 (stores): what the proxy logged for the cache" "$(mseq "$X/proxy-m1.log" 0 | cut -d, -f1-5 | head -c 400)" "GET buildinfo.xml,GET buildinfo.xml,PUT demo.jar,PUT buildinfo.xml,PUT build-cache-report.xml"
+  want "Maven, build 1 (stores): what the proxy logged for the cache" "$(head -n "$L1" "$X/proxy-m1.log" | grep -E "${HOSTIP}:${XMP}/" | sed -E 's#^(GET|PUT) http://[^/]+/v1\.1/demo/demo/[^/]+/([^ ]+).*$#\1 \2#' | paste -sd, -)" "GET buildinfo.xml,GET buildinfo.xml,PUT demo.jar,PUT buildinfo.xml,PUT build-cache-report.xml"
   want "Maven, build 2 (restores): what the proxy logged for the cache" "$(tail -n +"$((L1+1))" "$X/proxy-m1.log" | grep -E "${HOSTIP}:${XMP}/" | sed -E 's#^(GET|PUT) http://[^/]+/v1\.1/demo/demo/[^/]+/([^ ]+).*$#\1 \2#' | paste -sd, -)" "GET buildinfo.xml,GET buildinfo.xml,GET demo.jar,PUT build-cache-report.xml"
+  echo "OBS X Maven's own traffic through the proxy (not shown on the page): $(grep -cE 'CONNECT|repo' "$X/proxy-m1.log" || true) lines that do not name the cache"
   grep -qF "Found cached build, restoring demo:demo from cache" "$W/x-m1-2.out" && echo "OBS X Maven, build 2: 'Found cached build, restoring demo:demo from cache'" || fail "X Maven, build 2: the page says it logged 'Found cached build, restoring demo:demo from cache'"
+  case "$(mvn --version 2>/dev/null | head -n 1)" in *"Maven 3.10"*) ;; *) echo "OBS X SKIPPED: the page's Maven 3.10.0 note was not checked; the runner's Maven is $(mvn --version 2>/dev/null | head -n 1)";; esac
   case "$(mvn --version 2>/dev/null | head -n 1)" in *"Maven 3.10"*) grep -qF "Error downloading cache item" "$W/x-m1-1.out" && echo "OBS X Maven 3.10: an ordinary first miss also logs 'Error downloading cache item', as the page says" || fail "X the page says Maven 3.10.0 logs 'Error downloading cache item' on an ordinary first miss; build 1 did not";; esac
   # row m2: the cache URL is 127.0.0.1 and the proxy is configured: Maven still uses the proxy
   m_project "$X/m2-1" 202 "http://127.0.0.1:${XMP}/"; mbuild m2-1 "$X/m2-1"; L2="$(wc -l < "$X/proxy-m1.log" | tr -d ' ')"
