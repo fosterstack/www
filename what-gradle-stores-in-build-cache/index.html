@@ -180,7 +180,7 @@ Stored cache entry for Kotlin DSL script compilation (Project/TopLevel/stage2) w
   <p>The Maven runs above were on a Mac with 0.2.1. We ran the three-module build again on a GitHub-hosted Linux machine with FosterStack Cache 0.2.2, Maven 3.10.0 and Java 21.</p>
   <ul class="trust">
     <li>The first build against an empty server saved 7 entries: 3 jars, 3 <code>buildinfo.xml</code> files and 1 <code>build-cache-report.xml</code>, with three <code>[ERROR] Error downloading cache item ... buildinfo.xml</code> lines for the misses.</li>
-    <li>The sizes were different: the 3 jars came to 10,077 bytes in all (the Mac run: 5 KB each), the 3 <code>buildinfo.xml</code> files to 27,781 bytes (about the same as before), and the server held 39,311 bytes (the Mac run: 44,810). The <code>buildinfo.xml</code> files were again bigger than the jars. We counted the entries by asking the server for each file; the sizes added up to the server's number.</li>
+    <li>The 3 jars came to 10,077 bytes in all (about 3.4 KB each; the Mac run: about 5 KB each). The 3 <code>buildinfo.xml</code> files came to 27,781 bytes, about the same as on the Mac. The server held 39,311 bytes (the Mac run: 44,810). The <code>buildinfo.xml</code> files were again bigger than the jars. We downloaded each saved file from the server to measure it, and the sizes added up to the server's number.</li>
     <li>A second build from a fresh copy restored all three modules and added one entry, the report, of 1,318 bytes, the same size as on the Mac.</li>
   </ul>
   <p class="muted-note"><a href="https://github.com/fosterstack/www/actions/runs/38070836344">The run and its log are public</a>.</p>
