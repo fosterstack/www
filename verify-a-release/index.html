@@ -87,7 +87,7 @@
 </header>
 <main>
   <h1>Verify a FosterStack Cache release yourself</h1>
-  <p class="lede">Check our signature, build provenance, SBOM and vulnerability statements with commands you run yourself. That includes checking that a container image was signed by our release workflow and built by GitHub's CI, using <code>cosign</code> and the <code>gh</code> tool. No account is needed except where we say so.</p>
+  <p class="lede">Check our signature, build provenance, SBOM and vulnerability statements with commands you run yourself, using <code>cosign</code> and the <code>gh</code> tool. You can confirm that our release workflow signed a container image and that GitHub's CI built it. No account is needed, except for the <code>gh attestation</code> steps (5 to 7), which need a GitHub login or token.</p>
 
   <h2>What you need</h2>
   <p><code>cosign</code>, the <code>gh</code> tool (for the build-provenance steps), and <code>jq</code>. Set the version and your platform once:</p>
