@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Change the Build Cache Logins Without Breaking CI</title>
-<meta name="description" content="Changing the cache logins does not fail CI builds. Jobs with the old login run without the cache. Here is the order that keeps the cache working, with a real run.">
+<meta name="description" content="In our runs, changing the cache logins did not fail builds. Old-login jobs ran without the cache. Here is an order that keeps the cache working, from a real run.">
 <meta property="og:title" content="Change the Build Cache Logins Without Breaking CI">
-<meta property="og:description" content="Changing the cache logins does not fail CI builds. Jobs with the old login run without the cache. Here is the order that keeps the cache working, with a real run.">
+<meta property="og:description" content="In our runs, changing the cache logins did not fail builds. Old-login jobs ran without the cache. Here is an order that keeps the cache working, from a real run.">
 <meta property="og:url" content="https://fosterstack.com/change-build-cache-logins-without-breaking-ci/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="FosterStack">
@@ -88,45 +88,45 @@
 </header>
 <main>
   <h1>How do I change the cache logins without breaking CI?</h1>
-  <p class="lede">Changing the logins on your FosterStack Cache server does not fail your builds. A job that still sends the old login runs without the cache and prints a warning. To keep the cache working for jobs you have not updated yet, restart the server with your old read-write login as its read-only login, then update CI.</p>
+  <p class="lede">In our runs, changing the logins on your FosterStack Cache server did not fail any build. The old login is refused at once, so a job that still sends it builds without the cache and prints a warning. To keep those jobs using the cache while you update CI, restart the server with your old read-write login set as its read-only login.</p>
 
   <h2>What happens when you change a login</h2>
   <ul class="trust">
     <li><strong>The old login stops working at once.</strong> The server reads its logins when it starts. In our runs the old login was refused (401) right after the restart.</li>
-    <li><strong>The build still succeeds.</strong> A job with the old login built everything locally, restored nothing, and warned. Gradle also printed that it disabled the remote cache for the rest of that build.</li>
+    <li><strong>In our runs the build still succeeded.</strong> A job with the old login built everything locally, restored nothing, and warned. Gradle also printed that it disabled the remote cache for the rest of that build.</li>
     <li><strong>The stored results stay.</strong> After the restart, a job with the new login restored all four cached entries.</li>
-    <li><strong>The server holds one read-write login and one read-only login.</strong> It cannot hold two read-write logins, so the old and new passwords never work side by side.</li>
+    <li><strong>The server holds one read-write login and one read-only login.</strong> Per the README it takes one pair of each, so the old and new logins cannot both store results.</li>
   </ul>
 
   <h2>The order that keeps the cache working</h2>
-  <p>Our advice, not a test result. We ran each step below, and the table at the end shows what we saw.</p>
+  <p>Our advice, not a test result. We ran steps 2 and 4 and the checks in the table at the end. Steps 1 and 3 are advice, and so is the simple way below.</p>
   <ol>
-    <li><strong>Pick a new username as well as a new password for the read-write login.</strong> The read-only and read-write usernames must differ, and step 2 needs both names.</li>
+    <li><strong>Pick a new username as well as a new password for the read-write login.</strong> The read-only and read-write usernames must differ. In step 2 your old read-write username becomes the read-only username, so the new one has to be different.</li>
     <li><strong>Restart the server with the new read-write login, and with your old read-write login as the read-only login.</strong> Set <code>FSCACHE_USERNAME</code> and <code>FSCACHE_PASSWORD</code> to the new pair. Set <code>FSCACHE_RO_USERNAME</code> and <code>FSCACHE_RO_PASSWORD</code> to the old read-write pair. A job that still has the old login can now restore results. It cannot store new ones.</li>
-    <li><strong>Update the secrets in CI.</strong> Jobs that start after that use the new login and store results again.</li>
+    <li><strong>Update the secrets in CI.</strong> Jobs that start after that use the new login and can store results again.</li>
     <li><strong>Restart the server once more with the read-only login you want from now on.</strong> This ends the old login. A job that still has it runs without the cache.</li>
   </ol>
-  <p>Developers' old read-only login stops working at step 2. The server has only one read-only slot, and the old read-write login holds it until step 4. Developers have no working login in between. If that matters, use the simple way below.</p>
+  <p>Developers' old read-only login stops working at step 2. The server takes only one read-only login, and until step 4 it is your old read-write login. Developers have no working login in between. If that matters, use the simple way below.</p>
   <p>If you can pause CI for a few minutes, the simple way works too. Restart the server with the new logins and update the CI secrets in the same window. Jobs that run in between lose the cache and still pass.</p>
   <p>Changing only the read-only password is the easy case. The read-write login is not touched, and CI keeps storing results.</p>
   <p>A restart also means a moment when the server does not answer. See <a href="/build-cache-server-down-what-happens/">what happens to my build when the cache server is down</a> and <a href="/build-cache-survives-restart/">does the build cache survive a restart</a>.</p>
 
   <h2>Is the order really needed?</h2>
-  <p>Not to keep builds green. Every build in our runs succeeded, in every order. The order only decides how many jobs run without the cache. We counted jobs that got a 401 in three orders:</p>
+  <p>Not to keep builds green. Every build in our runs succeeded, in every order. The order only decides how many jobs run without the cache. We counted CI jobs that got a 401 in three orders:</p>
   <ul class="trust">
     <li><strong>Server first, CI later (3 jobs run in between):</strong> 3 jobs got a 401.</li>
     <li><strong>CI first, server later (2 jobs run in between):</strong> 2 jobs got a 401.</li>
-    <li><strong>The four steps above:</strong> 1 job got a 401, a job we deliberately left on the old login until the end.</li>
+    <li><strong>The four steps above (1 CI job ran in between, and it restored 4 of 4):</strong> 1 job got a 401, a job we deliberately left on the old login until the end. The developers' old read-only login, tried directly, also got a 401.</li>
   </ul>
 
   <h2>If it goes wrong</h2>
   <p>The warning to search for in a Gradle log is <code>response status 401: Unauthorized</code>. It means the job sent a login the server does not accept. Check the secret, then check the username as well as the password. A wrong username with the right password was refused too. See <a href="/gradle-build-cache-http-status-codes/">Gradle build cache HTTP status codes</a> and <a href="/gradle-remote-build-cache-authentication/">Gradle remote build cache authentication</a>.</p>
-  <p>The server did not print any password in its log, in <code>/statusz</code> or in <code>/metrics</code>. <code>/statusz</code> only says whether login is on.</p>
+  <p>The server did not print any password in its log, in <code>/statusz</code> or in <code>/metrics</code>. About logins, <code>/statusz</code> only says whether login is on.</p>
   <p>For how to give CI the read-write login and developers the read-only one, see <a href="/gradle-build-cache-ci-writes-developers-read/">let CI write and developers read</a> and <a href="/github-actions-remote-build-cache/">use a remote build cache in GitHub Actions</a>.</p>
 
   <h2>How we checked</h2>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
-    <thead><tr><th>Login the job sent</th><th>Server state</th><th>What happened</th></tr></thead>
+    <thead><tr><th>Login sent</th><th>Server state</th><th>What happened</th></tr></thead>
     <tbody>
       <tr><td>Read-write, then read-write again</td><td>Old logins</td><td>First build stored, second restored 4 of 4</td></tr>
       <tr><td>Read-only</td><td>Old logins</td><td>Restored 4 of 4</td></tr>
@@ -134,16 +134,16 @@
       <tr><td>New read-write, new read-only</td><td>Restarted with new passwords</td><td>Both restored 4 of 4</td></tr>
       <tr><td>Old read-write</td><td>Old read-write login set as read-only</td><td>Restored 4 of 4. A direct write got 403</td></tr>
       <tr><td>New read-write</td><td>Same</td><td>Restored 4 of 4, writes allowed</td></tr>
-      <tr><td>Old read-only (developers)</td><td>Same</td><td>401, because the read-only slot now holds another login</td></tr>
-      <tr><td>Wrong username with right password, or right username with wrong password</td><td>Any</td><td>401 on read and write</td></tr>
-      <tr><td>Read-only username with the read-write password, or the reverse</td><td>Any</td><td>401 on read and write</td></tr>
-      <tr><td>No login</td><td>Any</td><td>401. The health check at <code>/healthz</code> answered 200</td></tr>
+      <tr><td>Old read-only (developers), a direct request</td><td>Same</td><td>401, because the read-only slot now holds another login</td></tr>
+      <tr><td>Wrong username with right password, or right username with wrong password</td><td>New logins</td><td>401 on read and write</td></tr>
+      <tr><td>Read-only username with the read-write password, or the reverse</td><td>New logins</td><td>401 on read and write</td></tr>
+      <tr><td>No login</td><td>New logins</td><td>401. The health check at <code>/healthz</code> answered 200</td></tr>
       <tr><td>Old read-only password after changing only the read-only pair</td><td>Read-write pair unchanged</td><td>401. The read-write build still restored 4 of 4</td></tr>
     </tbody>
   </table></div>
   <p>The server also refused to start with identical read-only and read-write usernames, and with a read-only login but no read-write login. Both exit with an error that says why.</p>
   <p class="muted-note">What: FosterStack Cache 0.2.1 and Gradle 9.8.0 with Java 21 on a Mac (arm64), one machine. Each build used a fresh copy of a four-module project, a new Gradle home, no daemon and the compile tasks only. The cache address and login reached the build only as environment variables. All logins were made up for the test. 23 builds ran, and every one succeeded.</p>
-  <p class="muted-note">Limits: the table shows Gradle. We did not run Maven for this page. The builds in the bridge steps found everything in the cache, so no job tried to store a result with a read-only login. Earlier, in <a href="/build-cache-server-down-what-happens/">our server-down runs</a>, a refused store (403) was a warning and the build still succeeded. We changed logins only by restarting the server and did not look for another way. The counts of 401 jobs come from one scripted run of each order, not a statistic.</p>
+  <p class="muted-note">Limits: the table shows Gradle. We did not run Maven for this page. The builds in the bridge steps found everything in the cache, so no job tried to store a result with a read-only login. Earlier, in <a href="/build-cache-server-down-what-happens/">our server-down runs</a>, a refused store (403) was a warning and the build still succeeded. We changed logins only by restarting the server. The v0.2.1 source has no reload signal, and we did not test Maven, a restart while a build was running, or real CI runners. The counts of 401 jobs come from one scripted run of each order, not a statistic.</p>
 </main>
 <footer>
   <div>
