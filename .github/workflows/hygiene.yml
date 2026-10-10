@@ -18,6 +18,7 @@ on:
           - android
           - github-actions
           - verify-release
+          - setup-pages
         default: miss-cost
 
 permissions:
@@ -96,6 +97,23 @@ jobs:
         env:
           TOKEN_FOR_STEPS_5_TO_7: ${{ github.token }}
         run: bash bin/bench-verify-release.sh
+
+  # How long do the commands on /first-15-minutes-build-cache/ and /maven-remote-build-cache-setup/ take, and does each page say what
+  # really happens? Manual dispatch only, chosen with the "which" input (compared in this `if` only, never put into a shell command).
+  # It runs on the fresh runner VM itself, with no token and no secret (the release files download without a login), contents: read.
+  # Gradle, Maven and cosign are downloaded and checked against pinned checksums; the Maven build-cache extension and the Maven plugins
+  # come from Maven Central at run time (not checksum-pinned, said in the script's own output). The script times commands, not people.
+  bench-setup-pages:
+    if: github.event_name == 'workflow_dispatch' && inputs.which == 'setup-pages'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: follow the two setup pages' commands as written, timed, twice
+        run: bash bin/bench-setup-pages.sh
 
   # Which tasks does the Gradle remote build cache restore in an Android build? Same rules as the other jobs: manual
   # dispatch only, chosen with the "which" input (compared in this `if` only, never put into a shell command), no
