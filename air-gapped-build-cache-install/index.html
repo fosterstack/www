@@ -109,7 +109,7 @@ cosign verify-blob \
 
 # 2. Prove your archive matches it
 sha256sum -c &lt;(grep "fscache_X.Y.Z_linux_amd64.tar.gz" checksums.txt | grep -v sbom)</code></pre>
-  <p>The <code>grep -v sbom</code> leaves out the line for the SBOM file, which this list does not carry across. Without it, <code>sha256sum</code> reports that file as missing and exits with an error.</p>
+  <p><code>grep -v sbom</code> drops the SBOM line, because that file is not carried across. Without it, <code>sha256sum</code> reports the file as missing and fails.</p>
   <p>Both steps matter. The checksum alone only shows the archive matches a file you carried beside it. The signature is what ties that file to us.</p>
 
   <h2>Install on the isolated side</h2>
@@ -125,21 +125,9 @@ docker run -d -p 127.0.0.1:8080:8080 -v fscache-data:/home/nonroot ghcr.io/foste
   <h2>How we checked</h2>
   <p>We followed this page on a GitHub-hosted Linux machine with FosterStack Cache 0.2.2.</p>
   <ul class="trust">
-    <li>The two verify steps printed <code>Verified OK</code> and <code>fscache_0.2.2_linux_amd64.tar.gz: OK</code>. Our first version of step 2, without <code>grep -v sbom</code>, exited with an error because it also matched the SBOM line. We fixed the line above.</li>
-    <li>An archive with one changed byte failed step 2 with <code>fscache_0.2.2_linux_amd64.tar.gz: FAILED</code>.</li>
-    <li>The unpacked <code>fscache</code> file is a statically linked program.</li>
-    <li>We ran the server in a network namespace that had only a loopback interface. It started, answered <code>/healthz</code>, and stored and returned an entry. We did not capture network traffic, and we did not test a machine with no network at all.</li>
-    <li>For containers we used <code>docker pull</code> and <code>docker save</code> in place of <code>crane pull</code>. Then <code>docker load -i</code> and the <code>docker run</code> line above (with a <code>--name</code> added so we could remove the container) gave a server that answered <code>/healthz</code> on <code>127.0.0.1:8080</code>.</li>
-  </ul>
-  <p class="muted-note">Not tested: <code>crane pull</code>, verifying the image with <code>cosign verify</code>, the systemd service, and later upgrades. <a href="https://github.com/fosterstack/www/actions/runs/38074962799">The run and its log are public</a>.</p>
-  <h2>How we checked</h2>
-  <p>We followed this page on a GitHub-hosted Linux machine with FosterStack Cache 0.2.2.</p>
-  <ul class="trust">
-    <li>The two verify steps printed <code>Verified OK</code> and <code>fscache_0.2.2_linux_amd64.tar.gz: OK</code>. Our first version of step 2, without <code>grep -v sbom</code>, exited with an error because it also matched the SBOM line. We fixed the line above.</li>
-    <li>An archive with one changed byte failed step 2 with <code>fscache_0.2.2_linux_amd64.tar.gz: FAILED</code>.</li>
-    <li>The unpacked <code>fscache</code> file is a statically linked program.</li>
-    <li>We ran the server in a network namespace that had only a loopback interface. It started, answered <code>/healthz</code>, and stored and returned an entry. We did not capture network traffic, and we did not test a machine with no network at all.</li>
-    <li>For containers we used <code>docker pull</code> and <code>docker save</code> in place of <code>crane pull</code>. Then <code>docker load -i</code> and the <code>docker run</code> line above (with a <code>--name</code> added so we could remove the container) gave a server that answered <code>/healthz</code> on <code>127.0.0.1:8080</code>.</li>
+    <li>The two verify steps printed <code>Verified OK</code> and <code>fscache_0.2.2_linux_amd64.tar.gz: OK</code>. An archive with a few bytes added failed step 2 with <code>fscache_0.2.2_linux_amd64.tar.gz: FAILED</code>.</li>
+    <li>We unpacked the archive and checked that <code>fscache</code> is a statically linked program. We then ran it in a network namespace that had only a loopback interface: it started, answered <code>/healthz</code>, and stored and returned an entry. That is not a real air gap. We did not record network traffic, and we did not test a machine with no network at all.</li>
+    <li>For containers we used <code>docker pull</code> and <code>docker save</code> in place of <code>crane pull</code>. Then <code>docker load -i</code> and the <code>docker run</code> line above gave a server that answered <code>/healthz</code> on <code>127.0.0.1:8080</code>.</li>
   </ul>
   <p class="muted-note">Not tested: <code>crane pull</code>, verifying the image with <code>cosign verify</code>, the systemd service, and later upgrades. <a href="https://github.com/fosterstack/www/actions/runs/38074962799">The run and its log are public</a>.</p>
   <p class="muted-note">Related: <a href="/how-we-build/">how releases are built and signed</a> and <a href="/build-cache-server-sizing/">server sizing</a>.</p>
