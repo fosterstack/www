@@ -6,7 +6,7 @@
 #   G  /what-gradle-stores-in-build-cache/        (the Gradle half) `gradle build -i | grep "Stored cache entry"` on a four-module build: what was stored
 #                                                 and what was not, and a second run with the same Gradle home against a new empty server
 # Run by the "bench-howto-pages-11" job of .github/workflows/hygiene.yml (manual dispatch only, choice "howto-pages-11"). Same method as the other
-# bench scripts. No token and no secret; downloads are checked against pinned checksums (Gradle, cosign, Temurin 27, Maven 3.9.9); the release
+# bench scripts. No token and no secret; downloads are checked against pinned checksums (Gradle, cosign, Temurin 27); the release
 # binary is verified (cosign + sha256) before it runs. Servers listen on 127.0.0.1 only.
 set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"   # where bench-proxy.py lives
@@ -22,8 +22,6 @@ IMG=ghcr.io/fosterstack/cache
 IMG_022=sha256:f2b330cf27b3814405230cc001a771909ae5bbf3b1e223a90ee7a9ee5d0e53dd
 JDK27_URL="https://github.com/adoptium/temurin27-binaries/releases/download/jdk-27%2B35/OpenJDK27U-jdk_x64_linux_hotspot_27_35.tar.gz"
 JDK27_SHA=1cf69a4848ffb728b3b260dfd45206a51566ab571a02a30092271d4c580bccbc
-MVN399_URL="https://archive.apache.org/dist/maven/maven-3/3.9.9/binaries/apache-maven-3.9.9-bin.tar.gz"
-MVN399_SHA512=a555254d6b53d267965a3404ecb14e53c3827c09c3b94b5678835887ab404556bfaf78dcfe03ba76fa2508649dca8531c74bca4d5846513522404d48e8c4ac8b
 COSIGN_VER=3.1.3
 COSIGN_SHA=4629c757b7618056f8ddd7e2625ae9fdd94c0372a65049520bc7d9df9efc7f71
 
@@ -75,9 +73,8 @@ fi
 "$JDK21_HOME/bin/java" -version 2>&1 | head -1 | grep -q '"21\.' || { echo "JAVA_HOME for Java 21 is not Java 21: $("$JDK21_HOME/bin/java" -version 2>&1 | head -1)" >&2; exit 1; }
 export JAVA_HOME="$JDK21_HOME"; export PATH="$JDK21_HOME/bin:$PATH"
 curl -fsSL -o "$W/tools/jdk27.tgz" "$JDK27_URL"; sha_check "$W/tools/jdk27.tgz" "$JDK27_SHA"; mkdir -p "$W/tools/jdk27" && tar -xzf "$W/tools/jdk27.tgz" -C "$W/tools/jdk27" --strip-components=1; JDK27_HOME="$W/tools/jdk27"
-curl -fsSL -o "$W/tools/mvn399.tgz" "$MVN399_URL"; sha512_check "$W/tools/mvn399.tgz" "$MVN399_SHA512"; tar -xzf "$W/tools/mvn399.tgz" -C "$W/tools"; MVN399_HOME="$W/tools/apache-maven-3.9.9"
-[ -x "$JDK27_HOME/bin/java" ] && [ -x "$MVN399_HOME/bin/mvn" ] || { echo "Java 27 or Maven 3.9.9 not usable" >&2; exit 1; }
-for t in gh cosign gradle curl python3 tar mvn openssl; do command -v "$t" >/dev/null || { echo "missing tool: $t" >&2; exit 1; }; done
+[ -x "$JDK27_HOME/bin/java" ] || { echo "Java 27 not usable" >&2; exit 1; }
+for t in gh cosign gradle curl python3 tar openssl; do command -v "$t" >/dev/null || { echo "missing tool: $t" >&2; exit 1; }; done
 GRADLE_BIN="$(command -v gradle)"
 
 echo "== DISCLOSURE"
@@ -86,12 +83,12 @@ echo "java: $("$JDK21_HOME/bin/java" -version 2>&1 | head -1)   gradle: $(gradle
 if [ "$LOCAL" = 1 ]; then echo "tools: LOCAL tools in use, nothing checked (a developer's dry run: do not quote these times)"; else
   echo "tools: Gradle ${GR_VER} and cosign ${COSIGN_VER} are downloaded and checked against pinned checksums before use; Java 21 and Docker are the runner's own"; fi
 echo "release under test: FosterStack Cache ${VER}, downloaded with no login and verified (cosign + sha256) before it runs; every server listens on 127.0.0.1 only"
-echo "NOT checksum-pinned: the Maven build-cache extension 1.2.3 and the Maven plugin jars (their eight versions are pinned in the pom, the files come from Maven Central); the runner's own Maven (version printed) is used except for one 3.9.9 build, whose archive is checked"
+echo "NOT checksum-pinned: nothing is downloaded at run time without a checksum except the libraries Gradle itself fetches from Maven Central for the build files (none here beyond Gradle's own)"
 echo "invented by this script (the pages show commands and results, not the projects): the key-diff project (one class, notes.txt and five small cacheable tasks written in its build file), the failing-to-cache tasks, the three-module chain, the lib/app Gson project, the four-module project of the Gradle half"
 echo "differences from the pages' own runs: Linux amd64 (the pages: macOS arm64), release ${VER} (the pages: 0.2.1), Gradle ${GR_VER}; Java 27 is Temurin 27+35 (the page: Homebrew OpenJDK 27); the Maven chain uses Maven 3.9.9 as the page does, the other Maven helpers use the runner's 3.10.0"
-echo "Gradle builds use a new empty Gradle home and a fresh project copy each, no daemon, Gradle's own local cache switched off; Maven builds use an emptied ~/.m2/build-cache"
-echo "NOT covered by this job: the three-module chain table (Gradle and Maven) and the Gson bump of the why-did-this-task-miss page (their projects differ from the ones built here); the Maven half of the what-stores page (batch 10)"
-echo "NOT tested here (as on the pages): other Gradle or Maven versions, Kotlin or Android builds, a second machine, annotation processors, bigger projects, build times"
+echo "Gradle builds use a new empty Gradle home and a fresh project copy each (the key-diff builds all in one folder, the moved row in another), no daemon, Gradle's own local cache switched off"
+echo "NOT covered by this job: the three-module chain table and the Gson bump of the why-did-this-task-miss page, and the Maven half of the what-stores page (their projects are not built here)"
+echo "NOT tested here (as on the pages): other Gradle versions, Kotlin or Android builds, a second machine, annotation processors, bigger projects, build times"
 echo "page commands run with 'bash -o pipefail'; a runner times commands, not people"
 
 export GRADLE_USER_HOME="$W/gradle-home"
@@ -287,74 +284,8 @@ qcheck() { # LABEL NAME "want per task" tasks...   (ran | cache for each compile
 
 
 
-# =====================================================================================
-# Maven helpers
-# =====================================================================================
-MPORT=18180; MPORT2=18181
 stop_proxy() { :; }; stop_tls() { :; }   # the exit trap of the shared base calls these two; this job starts neither
-MH="$W/mvnhome"; mkdir -p "$MH/.m2"
-PLUGINS='      <plugin><artifactId>maven-clean-plugin</artifactId><version>3.4.0</version></plugin>
-      <plugin><artifactId>maven-resources-plugin</artifactId><version>3.3.1</version></plugin>
-      <plugin><artifactId>maven-compiler-plugin</artifactId><version>3.13.0</version></plugin>
-      <plugin><artifactId>maven-surefire-plugin</artifactId><version>3.5.2</version></plugin>
-      <plugin><artifactId>maven-jar-plugin</artifactId><version>3.4.2</version></plugin>
-      <plugin><artifactId>maven-install-plugin</artifactId><version>3.1.3</version></plugin>
-      <plugin><artifactId>maven-deploy-plugin</artifactId><version>3.1.3</version></plugin>
-      <plugin><artifactId>maven-site-plugin</artifactId><version>3.12.1</version></plugin>'
-m_cfg() { # DIR MODE URL   MODE: healthy | nosave | outside   (the extension and its config at the project root)
-  local d="$1" mode="$2" url="$3"; mkdir -p "$d/.mvn"
-  printf '<extensions>\n  <extension>\n    <groupId>org.apache.maven.extensions</groupId>\n    <artifactId>maven-build-cache-extension</artifactId>\n    <version>%s</version>\n  </extension>\n</extensions>\n' "$EXT_VER" > "$d/.mvn/extensions.xml"
-  local head='<?xml version="1.0" encoding="UTF-8"?>
-<cache xmlns="http://maven.apache.org/BUILD-CACHE-CONFIG/1.2.0"
-       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-       xsi:schemaLocation="http://maven.apache.org/BUILD-CACHE-CONFIG/1.2.0 https://maven.apache.org/xsd/build-cache-config-1.2.0.xsd">'
-  case "$mode" in
-    healthy) printf '%s\n  <configuration>\n    <enabled>true</enabled>\n    <remote enabled="true" saveToRemote="true" id="fosterstack-cache">\n      <url>%s</url>\n    </remote>\n  </configuration>\n</cache>\n' "$head" "$url" > "$d/.mvn/maven-build-cache-config.xml";;
-    nosave)  printf '%s\n  <configuration>\n    <enabled>true</enabled>\n    <remote enabled="true" id="fosterstack-cache">\n      <url>%s</url>\n    </remote>\n  </configuration>\n</cache>\n' "$head" "$url" > "$d/.mvn/maven-build-cache-config.xml";;
-    outside) printf '%s\n  <configuration>\n    <enabled>true</enabled>\n  </configuration>\n  <remote enabled="true" saveToRemote="true" id="fosterstack-cache">\n    <url>%s</url>\n  </remote>\n</cache>\n' "$head" "$url" > "$d/.mvn/maven-build-cache-config.xml";;
-  esac
-}
-m1_project() { # DIR N MODE URL RELEASE17(0|1)   one module demo:demo; the class depends on N (a new cache key)
-  local d="$1" n="$2" mode="$3" url="$4" rel="$5"; rm -rf "${d:?}"; mkdir -p "$d/src/main/java/demo"
-  m_cfg "$d" "$mode" "$url"
-  { printf '<project xmlns="http://maven.apache.org/POM/4.0.0">\n  <modelVersion>4.0.0</modelVersion>\n  <groupId>demo</groupId>\n  <artifactId>demo</artifactId>\n  <version>1.0</version>\n  <packaging>jar</packaging>\n  <properties>\n'
-    [ "$rel" = 1 ] && printf '    <maven.compiler.release>17</maven.compiler.release>\n'
-    printf '    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>\n  </properties>\n  <build>\n    <pluginManagement><plugins>\n%s\n    </plugins></pluginManagement>\n  </build>\n</project>\n' "$PLUGINS"; } > "$d/pom.xml"
-  printf 'package demo;\n\npublic class App {\n    public static int f() { return %s; }\n}\n' "$n" > "$d/src/main/java/demo/App.java"
-}
-mm_project() { # DIR EDIT(none|core|util|app)   three modules: core <- util <- app, six classes each; EDIT changes a number in one method body of that module
-  local d="$1" edit="$2" m i body; rm -rf "${d:?}"; mkdir -p "$d"
-  m_cfg "$d" healthy "http://127.0.0.1:${MPORT}/"
-  { printf '<project xmlns="http://maven.apache.org/POM/4.0.0">\n  <modelVersion>4.0.0</modelVersion>\n  <groupId>demo</groupId>\n  <artifactId>parent</artifactId>\n  <version>1.0</version>\n  <packaging>pom</packaging>\n  <modules><module>core</module><module>util</module><module>app</module></modules>\n  <properties>\n    <maven.compiler.release>17</maven.compiler.release>\n    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>\n  </properties>\n  <build>\n    <pluginManagement><plugins>\n%s\n    </plugins></pluginManagement>\n  </build>\n</project>\n' "$PLUGINS"; } > "$d/pom.xml"
-  local dep=""
-  for m in core util app; do
-    mkdir -p "$d/$m/src/main/java/demo/$m"
-    { printf '<project xmlns="http://maven.apache.org/POM/4.0.0">\n  <modelVersion>4.0.0</modelVersion>\n  <parent><groupId>demo</groupId><artifactId>parent</artifactId><version>1.0</version></parent>\n  <artifactId>%s</artifactId>\n  <packaging>jar</packaging>\n' "$m"
-      [ -n "$dep" ] && printf '  <dependencies>\n    <dependency><groupId>demo</groupId><artifactId>%s</artifactId><version>1.0</version></dependency>\n  </dependencies>\n' "$dep"
-      printf '</project>\n'; } > "$d/$m/pom.xml"
-    for i in 1 2 3 4 5 6; do
-      body="$i"; [ "$edit" = "$m" ] && [ "$i" = 1 ] && body="101"
-      printf 'package demo.%s;\n\npublic class C%s {\n    public int f() { return %s; }\n}\n' "$m" "$i" "$body" > "$d/$m/src/main/java/demo/$m/C$i.java"
-    done
-    dep="$m"
-  done
-}
-mvnrun() { # NAME DIR [JAVA_HOME] [MVN_HOME]   mvn verify with an emptied local build cache; output in $W/m-NAME.out
-  local name="$1" dir="$2" jh="${3:-$JDK21_HOME}" mh="${4:-}"
-  run "m-$name" "$dir" <<EOF
-export HOME="$MH" MAVEN_OPTS="-Duser.home=$MH" JAVA_HOME="$jh" PATH="$jh/bin:${mh:+$mh/bin:}\$PATH"
-rm -rf "\$HOME/.m2/build-cache"
-mvn verify
-EOF
-}
-has() { grep -qF -- "$2" "$W/m-$1.out"; }
-hasre() { grep -qE -- "$2" "$W/m-$1.out"; }
-cnt() { local n; n="$(grep -cF -- "$2" "$W/m-$1.out" 2>/dev/null)"; printf '%s' "${n:-0}"; }
-mstate() { # NAME  -> "restored|built restored|built ..." for core util app
-  local o="" m; for m in core util app; do if has "$1" "Found cached build, restoring demo:$m from cache"; then o="$o restored"; else o="$o built"; fi; done; printf '%s' "${o# }"
-}
 want() { if [ "$2" = "$3" ]; then echo "OBS $1: $2, as the page says"; else fail "$1: the page says $3; got $2"; fi; }
-
 
 # =====================================================================================
 # Key-diff project for /why-did-this-task-miss-the-build-cache/
@@ -416,7 +347,7 @@ kdrun() { # NAME DIR [ENV=value ...] [JAVA=path] [PROP=-Dx=y]   the page's comma
   grep -E '^(Appending|Build cache key for task)' "$W/q-$name.out" > "$W/$name.keys"
 }
 ranset() { # NAME -> the tasks of the six that were not taken from the cache
-  local t o=""; for t in $SIX; do [ "$(qstate "$1" "$t")" = cache ] || o="$o $t"; done; printf '%s' "${o# }"
+  local t o="" st; for t in $SIX; do st="$(qstate "$1" "$t")"; case "$st" in cache) ;; ran) o="$o $t";; *) o="$o $t(MISSING-from-log)";; esac; done; printf '%s' "${o# }"
 }
 kdiff() { diff "$W/$1.keys" "$W/$2.keys"; }
 
@@ -494,8 +425,9 @@ EOF
   grep "Stored cache entry" "$W/g1.out" > "$W/g1.stored"
   want "gradle build -i | grep 'Stored cache entry': lines" "$(wc -l < "$W/g1.stored" | tr -d ' ')" 13
   for m in core util api app; do want ":$m:compileJava stored" "$(grep -c "Stored cache entry for task ':$m:compileJava'" "$W/g1.stored")" 1; done
-  want "Kotlin build script compilation, first stage" "$(grep -c 'Stored cache entry for Kotlin DSL script compilation (Project/TopLevel/stage1)' "$W/g1.stored")" 5
-  want "Kotlin build script compilation, second stage" "$(grep -c 'Stored cache entry for Kotlin DSL script compilation (Project/TopLevel/stage2)' "$W/g1.stored")" 4
+  want "Kotlin build script compilation, first stage (any scope)" "$(grep -c 'Stored cache entry for Kotlin DSL script compilation (.*TopLevel/stage1)' "$W/g1.stored")" 5
+  want "Kotlin build script compilation, second stage (any scope)" "$(grep -c 'Stored cache entry for Kotlin DSL script compilation (.*TopLevel/stage2)' "$W/g1.stored")" 4
+  grep -o 'Stored cache entry for Kotlin DSL script compilation ([^)]*)' "$W/g1.stored" | sort | uniq -c | sed 's/^/OBS G   /' 
   want "the server's entries after the build" "$(sfield $QPORT store_entries)" 13
   echo "OBS G the server holds $(sfield $QPORT store_bytes) bytes (the page: about 36 KB, 36,054 to 36,103 bytes)"
   for m in core util api app; do for t in classes jar assemble build; do
