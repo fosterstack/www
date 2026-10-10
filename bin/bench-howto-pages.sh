@@ -646,7 +646,8 @@ EOF
   head -c 1100000 /dev/urandom > "$D/f1mb"; head -c 2100000 /dev/urandom > "$D/f2mb"; head -c 20000000 /dev/urandom > "$D/f20mb"
   check_code "E prod: upload of about 1 MB with nginx's default settings" 413 $CA -u "gradle:${COMPOSE_PASS}" -X PUT --data-binary @"$D/f1mb" $B/big1
   check_code "E prod: upload of about 2 MB with nginx's default settings" 413 $CA -u "gradle:${COMPOSE_PASS}" -X PUT --data-binary @"$D/f2mb" $B/big2
-  if curl -s --max-time 120 $CA -u "gradle:${COMPOSE_PASS}" -X PUT --data-binary @"$D/f1mb" $B/big1 | grep -qiF "nginx"; then echo "OBS E prod: the 413 body comes from nginx, not from the cache"; else fail "E prod: the page says the 413 comes from nginx, but its body does not say nginx"; fi
+  S="$(curl -s --max-time 120 $CA -u "gradle:${COMPOSE_PASS}" -X PUT --data-binary @"$D/f1mb" $B/big1)"
+  if printf '%s' "$S" | grep -qiF "nginx"; then echo "OBS E prod: the 413 body comes from nginx, not from the cache"; else fail "E prod: the page says the 413 comes from nginx, but its body does not say nginx"; fi
   cat "$D/prod/nginx.conf.page" > "$D/prod/nginx.conf"       # in place, so the bind mount sees it
   docker compose -p prod exec -T proxy nginx -s reload >/dev/null 2>&1 || fail "E prod: nginx did not reload with the page's file"
   sleep 1
