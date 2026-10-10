@@ -31,6 +31,7 @@ on:
           - howto-pages-7
           - howto-pages-8
           - howto-pages-9
+          - howto-pages-10
         default: miss-cost
 
 permissions:
@@ -510,6 +511,23 @@ jobs:
 
       - name: follow the page's commands as written and check what it promises
         run: bash bin/bench-howto-pages-9.sh
+
+  # End-to-end runs of three Maven pages (the multi-module table, the causes of "not restoring" with the Java 21 / Java 27 series, and the
+  # Maven half of "what does the cache store"). Same rules as the other howto jobs: manual dispatch only, chosen with the "which" input
+  # (compared in this `if` only), no token and no secret, read-only token not persisted. Downloads (Gradle, cosign, Temurin 27, Maven 3.9.9)
+  # are checked against pinned checksums; the release binary is verified (cosign and sha256) before it runs; the Maven extension and the
+  # plugin jars come from Maven Central at run time (said in the output). Every server listens on 127.0.0.1 only.
+  bench-howto-pages-10:
+    if: github.event_name == 'workflow_dispatch' && inputs.which == 'howto-pages-10'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: follow the pages' commands as written and check what they promise
+        run: bash bin/bench-howto-pages-10.sh
 
   # Does a build result stored from Linux restore on a Mac, and the other way round (the claim of the laptop page)? Manual
   # dispatch only, chosen with the "which" input (compared in each `if` only). Two chains of two jobs: a Linux job builds against a
