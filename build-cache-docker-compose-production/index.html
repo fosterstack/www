@@ -120,10 +120,10 @@ volumes:
   </ul>
 
   <h2>Check it works, with no Gradle project</h2>
-  <pre tabindex="0"><code>curl -s localhost:8080/healthz                                   # ok
-curl -s -X PUT --data-binary 'hello' localhost:8080/testkey123   # 201
-curl -s localhost:8080/testkey123                                # hello</code></pre>
-  <p>Add <code>-u gradle:your-password</code> to those calls once you have set a password.</p>
+  <pre tabindex="0"><code>curl -s localhost:8080/healthz; echo                                                       # ok
+curl -s -o /dev/null -w '%{http_code}\n' -X PUT --data-binary 'hello' localhost:8080/testkey123   # 201
+curl -s localhost:8080/testkey123; echo                                                    # hello</code></pre>
+  <p>These are for a server with no password, such as the <code>docker run</code> above. If you have set a password, as the Compose file does, <code>/healthz</code> still answers <code>ok</code>, but the other two calls need <code>-u gradle:your-password</code> or they print <code>unauthorized</code> (the PUT answers 401).</p>
 
   <h2>Point Gradle at it</h2>
   <p>Use the settings from our <a href="/migrate-build-cache-node/">Gradle and Maven setup</a> page, and turn caching on with <code>org.gradle.caching=true</code>. If nothing comes from the cache, work through <a href="/gradle-remote-cache-not-working/">Gradle remote build cache not working</a>.</p>
@@ -178,11 +178,14 @@ volumes:
     }
 }</code></pre>
   <p>The <code>client_max_body_size</code> line matters. See How we checked, below.</p>
+  <p>The Compose file expects <code>certs/cert.pem</code> and <code>certs/key.pem</code>. To try it on one machine, make a test certificate that is good for two days:</p>
+  <pre tabindex="0"><code>mkdir -p certs &amp;&amp; openssl req -x509 -newkey rsa:2048 -nodes -days 2 -subj "/CN=localhost" -addext "subjectAltName=DNS:localhost,IP:127.0.0.1" -keyout certs/key.pem -out certs/cert.pem</code></pre>
+  <p>On a real server, use a certificate from an authority your clients trust.</p>
 
   <h2>Gradle over HTTPS</h2>
   <p>In our runs, with a certificate Gradle does not trust, the build still succeeds, but without the cache, and prints:</p>
   <pre tabindex="0"><code>Could not load entry d4f2de693b561fd2c5d60b17a9232d6f from remote build cache: (certificate_unknown) PKIX path building failed: sun.security.provider.certpath.SunCertPathBuilderException: unable to find valid certification path to requested target</code></pre>
-  <p>For my self-signed test certificate I made Java trust it:</p>
+  <p>For our self-signed test certificate we made Java trust it:</p>
   <pre tabindex="0"><code>keytool -importcert -alias fsprod -file certs/cert.pem -keystore trust.jks -storepass changeit -noprompt
 
 # gradle.properties
@@ -192,7 +195,7 @@ systemProp.javax.net.ssl.trustStorePassword=changeit</code></pre>
 
   <h2>How we checked</h2>
   <ul class="trust">
-    <li><strong>Tested:</strong> the two production files above, with Docker Compose on a Mac, nginx 1.29 as the proxy, a <strong>self-signed</strong> certificate for <code>localhost</code>, and a real Gradle build over HTTPS.</li>
+    <li><strong>Tested:</strong> the two production files above, with Docker Compose on a Mac, nginx 1.29 as the proxy, a <strong>self-signed</strong> certificate for <code>localhost</code>, and a real Gradle build over HTTPS. We repeated every check in the table below, and the commands above, on a GitHub-hosted Linux machine with release 0.2.2 and the image verified with cosign before it ran: the same results. <a href="https://github.com/fosterstack/www/actions/runs/38034105775">The run and its log are public</a>.</li>
     <li><strong>Not tested:</strong> a certificate from a public authority or automatic renewal, a public server on port 443, other proxies or load balancers, Kubernetes ingress, and long-running use.</li>
   </ul>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
