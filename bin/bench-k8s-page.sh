@@ -118,6 +118,8 @@ parts=[pick('Secret','fscache-auth'),pick('PersistentVolumeClaim','fscache-data'
 text='---\n'.join(p if p.endswith('\n') else p+'\n' for p in parts)
 assert text.count('X.Y.Z')==1 and text.count('CHANGE-ME')==1,(text.count('X.Y.Z'),text.count('CHANGE-ME'))
 text=text.replace('X.Y.Z',ver).replace('CHANGE-ME',pw)
+images=re.findall(r'^\s*image:\s*(\S+)',text,re.M)
+assert images==['ghcr.io/fosterstack/cache:'+ver],('the guide must name exactly the verified image',images)   # a changed guide cannot make the cluster pull another image
 open(out,'w').write(text)
 print('manifests: %d lines, 4 documents'%text.count('\n'))
 PYEOF
