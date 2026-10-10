@@ -90,6 +90,7 @@ echo "NOT checksum-pinned: the Maven build-cache extension 1.2.3 and the Maven p
 echo "invented by this script (the pages show their configuration, not their projects): the Java classes of the one-module and three-module projects, made-up passwords and keys"
 echo "differences from the pages' own runs: Linux amd64 (the pages: macOS arm64), release ${VER} (the pages: 0.2.1), Maven 3.10.0 on the runner as on the pages; the page's Java 27 is Temurin 27+35 here (the page: OpenJDK 27 from Homebrew); builds run offline-capable only after the first build has filled the shared Maven repository (the pages: an already-filled local repository)"
 echo "Gradle builds use a new empty Gradle home and a fresh project copy each, no daemon, Gradle's own local cache switched off; Maven builds use an emptied ~/.m2/build-cache"
+echo "differences from the what-stores page: the Maven half here runs on Java 21 (the page's Maven numbers came from a Mac run; its Java is not the point of that half)"
 echo "differences from the not-restoring page: the page ran its symptom runs against a server with a password; here only the 401 symptom uses one (the others use a server without a login); the builds are not offline"
 echo "NOT tested here (as on the pages): other Maven or extension versions, other Java vendors, projects whose build settings change with the Java version, Windows, large jars"
 echo "page commands run with 'bash -o pipefail'; a runner times commands, not people"
