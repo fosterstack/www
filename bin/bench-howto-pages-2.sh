@@ -14,7 +14,6 @@
 # No token and no secret: the release downloads without a login. Tools (Gradle, Maven 3.10.0, JDK 27, cosign) are downloaded and checked
 # against pinned checksums; Docker and Compose are the runner's own, and the cache image is verified with cosign before it is run. NOT
 # pinned (said again in the output): the Maven build-cache extension, the Maven plugins and JUnit from Maven Central.
-# then used for the whole run (both are logged).
 set -uo pipefail
 
 VER=0.2.2                                    # the release the pages name
@@ -25,8 +24,6 @@ GR_URL="https://services.gradle.org/distributions/gradle-${GR_VER}-all.zip"
 GR_SHA=46ac66d47f30f3dacfdf306e0b714a91a34fb94a22ba0a744b280933f47bc0cf
 MVN310_URL="https://archive.apache.org/dist/maven/maven-3/3.10.0/binaries/apache-maven-3.10.0-bin.tar.gz"
 MVN310_SHA512=908b1501bfb420bf7c8affb855534a9c407fd6099367bfb9f2f2dcb8e9799102bffb84518cde74c679bd76870247c6528683abdd620581bffa90f95d92d175aa
-MVN399_URL="https://archive.apache.org/dist/maven/maven-3/3.9.9/binaries/apache-maven-3.9.9-bin.tar.gz"
-MVN399_SHA512=a555254d6b53d267965a3404ecb14e53c3827c09c3b94b5678835887ab404556bfaf78dcfe03ba76fa2508649dca8531c74bca4d5846513522404d48e8c4ac8b
 JDK27_URL="https://github.com/adoptium/temurin27-binaries/releases/download/jdk-27%2B35/OpenJDK27U-jdk_x64_linux_hotspot_27_35.tar.gz"
 JDK27_SHA=1cf69a4848ffb728b3b260dfd45206a51566ab571a02a30092271d4c580bccbc
 COSIGN_VER=3.1.3
@@ -97,12 +94,13 @@ echo "java 21: $("$JDK21_HOME/bin/java" -version 2>&1 | head -1)   java 27: $("$
 echo "gradle: $(gradle --version 2>/dev/null | grep -E '^Gradle ' | head -1)   maven 3.10.0: $("$MVN310_HOME/bin/mvn" --version 2>/dev/null | head -1)   cosign: $(cosign version 2>/dev/null | grep -i GitVersion | head -1)   docker: $(docker --version)"
 if [ "$LOCAL" = 1 ]; then echo "tools: LOCAL tools in use, nothing checked (a developer's dry run: do not quote these times)"; else
   echo "tools: Gradle ${GR_VER}, Maven 3.10.0, JDK 27 (Temurin 27+35) and cosign ${COSIGN_VER} are downloaded and checked against pinned checksums before use; Java 21, Docker and Compose are the runner's own"; fi
-echo "NOT pinned: the Maven build-cache extension ${EXT_VER}, the Maven plugins, JUnit (5.11.0 for scenario F's project, 5.11.4 for Maven), and the Gradle wrapper's distribution (checked against the pinned sha256 by the wrapper itself)"
+echo "NOT checksum-pinned: the Maven build-cache extension ${EXT_VER}, the Maven plugin jars (their eight versions are pinned in the pom, the files come from Maven Central), JUnit (5.11.0 for scenario F's project, 5.11.4 for Maven); the Gradle wrapper's distribution IS checked against the pinned sha256 by the wrapper itself"
 echo "release under test: FosterStack Cache ${VER}, downloaded with no login and verified (cosign + sha256) before it runs; the image for scenario K is verified by digest with cosign before it runs"
 echo "invented by this script (the pages show none): the Gradle and Maven projects and their small sources, test passwords, and for F the TLS front end: a small Python proxy (the page says it used a small proxy it wrote), the test CA and server certificate made with the page's own openssl commands, and the build.gradle.kts with a JUnit test"
 echo "values replaced: https://cache.example.com/ by http://127.0.0.1:PORT/ (H) or https://127.0.0.1:18443/ (F); /path/to/... by real paths; the page's Java for F is the pinned Temurin 27 (the page used Homebrew Java 27)"
 echo "Gradle's own local cache is switched off in the runs that count hits (as the pages' own runs did) unless a step says otherwise; developer builds run with CI unset"
-echo "NOT tested here: how a long-running Gradle daemon picks up the trust settings, a certificate that names another host, an expired certificate, Windows"
+echo "NOT tested here: how a long-running Gradle daemon picks up the trust settings, a certificate that names another host, an expired certificate, Windows; the migrate page's old Build Cache Node rows and its rollback (there is no old node here)"
+echo "scenario H tests the CORRECTED procedure of the migrate page: its text said to run the build twice and look for FROM-CACHE, but a second build with nothing changed prints UP-TO-DATE, so the script runs ./gradlew clean between builds and records the UP-TO-DATE fact as an OBS line (the page is fixed after this run); Maven runs in a recreated project, not a clean checkout, and the comment lines inside the page's XML are left out"
 echo "page commands run with 'bash -o pipefail'; a runner times commands, not people"
 
 export GRADLE_USER_HOME="$W/gradle-home"
@@ -529,10 +527,10 @@ EOF
   expect h-clear "BUILD SUCCESSFUL" "> Task :compileJava FROM-CACHE" "Build cache key for task ':compileJava' is"
   H1="$(metric fscache_cache_hits_total)"
   echo "OBS H: fscache_cache_hits_total before the cache-clearing commands ${H0} / after ${H1}"
-  [ "$H1" -gt "$H0" ] 2>/dev/null && echo "OBS H: the hit counter moved, as the page says" || fail "H: the page says the hit counter should move after the cache-clearing commands, but it did not (${H0} -> ${H1})"
+  [ "$H1" -gt "$H0" ] 2>/dev/null && echo "OBS H: the hit counter moved (the page says the hit and miss counters should move: a hit is what to look for here)" || fail "H: the page says the counters should move after the cache-clearing commands, but the hit counter did not (${H0} -> ${H1})"
   # the page's /metrics command, as written (no login) and with the login
   S="$(curl -s --max-time 30 "http://127.0.0.1:${P}/metrics" | grep -E 'fscache_cache_(hits|misses)_total' | tr '\n' ' ')"
-  [ -n "$S" ] && echo "OBS H: the page's curl .../metrics | grep (no login needed) printed: ${S}" || fail "H: the page's command 'curl -s .../metrics | grep -E fscache_cache_(hits|misses)_total' printed nothing"
+  case "$S" in *fscache_cache_hits_total*fscache_cache_misses_total*) echo "OBS H: the page's curl .../metrics | grep (no login needed) printed both counters";; *) fail "H: the page's /metrics command did not print both fscache_cache_hits_total and fscache_cache_misses_total: ${S}";; esac
   # the same, with the clean the first-15 page uses between builds, to see the server do the work
   hproj "$D/k2" "" kts; cp -R "$D/k1/gradle" "$D/k1/gradlew" "$D/k2/" 2>/dev/null
   run h-clean-build "$D/k2" <<EOF
@@ -566,7 +564,7 @@ EOF
   expect h-cachepath "BUILD SUCCESSFUL" "> Task :compileJava"; HA="$(statusz "$P" gradle "$PW")"
   grep -qF "> Task :compileJava FROM-CACHE" "$W/h-cachepath.out" || fail "H: with the URL kept with /cache/ the second build should come from the cache"
   [ "$(entries_of "$HA")" -gt "$(entries_of "$HB")" ] 2>/dev/null && echo "OBS H: the URL with /cache/ made its own entries (${HB} -> ${HA}), as the page says" || fail "H: the page says entries under a different path are separate, but the entry count did not grow (${HB} -> ${HA})"
-  "$GRADLE_BIN" --stop >/dev/null 2>&1 || true
+  HOME="$HH" GRADLE_USER_HOME="$HH/.gradle" "$GRADLE_BIN" --stop >/dev/null 2>&1 || true
   # --- credentials block with a server that has no password is ignored (the page says leave it in)
   stop_server
   start_server h2 "$P" "" "" || return
@@ -579,7 +577,7 @@ gradle build --build-cache
 EOF
   expect h-nopass "BUILD SUCCESSFUL" "> Task :compileJava FROM-CACHE"
   echo "OBS H: with a credentials block and a server that has no password, the build still used the cache (the page says the block is ignored then)"
-  "$GRADLE_BIN" --stop >/dev/null 2>&1 || true
+  HOME="$HH" GRADLE_USER_HOME="$HH/.gradle" "$GRADLE_BIN" --stop >/dev/null 2>&1 || true
   stop_server
   # --- Maven (Maven 3.10.0): extension and config from the page, mvn install twice from a clean checkout
   mvn_env
