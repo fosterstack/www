@@ -50,8 +50,8 @@ stop_server() {
   local i
   if [ -n "$SERVER_PID" ]; then
     pkill -P "$SERVER_PID" 2>/dev/null; kill "$SERVER_PID" 2>/dev/null; wait "$SERVER_PID" 2>/dev/null; SERVER_PID=""
-    for i in $(seq 1 100); do curl -sf "localhost:${SERVER_PORT}/healthz" >/dev/null 2>&1 || break; sleep 0.1; done
-    curl -sf "localhost:${SERVER_PORT}/healthz" >/dev/null 2>&1 && fail "the server on port ${SERVER_PORT} did not stop"
+    for i in $(seq 1 100); do curl -sf --max-time 5 "localhost:${SERVER_PORT}/healthz" >/dev/null 2>&1 || break; sleep 0.1; done
+    curl -sf --max-time 5 "localhost:${SERVER_PORT}/healthz" >/dev/null 2>&1 && fail "the server on port ${SERVER_PORT} did not stop"
   fi
 }
 COMPOSE_PROJECTS=""; CONTAINERS=""
@@ -98,6 +98,8 @@ echo "NOT pinned: the Maven build-cache extension ${EXT_VER} and the Maven plugi
 echo "release under test: FosterStack Cache ${VER}, downloaded from its GitHub release with no login (binary for scenarios C and D) and from ghcr.io (images for E, verified with cosign)"
 echo "invented by this script (the pages show none): the Gradle project's rootProject.name, build.gradle.kts (plugins { java }) and a small App.java; the Maven pom (junit-jupiter 5.11.4, two tests, plugin versions pinned or not as each scenario says), App.java and tests; the self-signed certificate for localhost (the production page does not show how it is made); test passwords"
 echo "values replaced in the pages' files: the example host https://cache.example.com/ by 127.0.0.1 or localhost URLs, <a long secret> by test passwords, /path/to/trust.jks by the real path; for scenario E the page's own port mappings and password change-me are used as written, so the quick-start stack listens on all interfaces of this runner for a few minutes behind that password"
+echo "also invented or added by this script: the random upload files of 1.1, 2.1 and 20 MB; the page's nginx.conf is first run WITHOUT its client_max_body_size line (nginx's own default, to see the 413) and then replaced in place by the page's file and reloaded; the Gradle commands are 'gradle compileJava --build-cache' (the pages' tables are about compileJava); the cache servers of scenarios C and D are started with the page's login variables plus FSCACHE_ADDR=127.0.0.1:PORT, so the page's own server block is not run as written; scenario D first builds a warm-up project so that the Gradle home already holds the compiled build script (the page's tables count only the task's entry)"
+echo "NOT tested here (the pages promise them): that a different Gradle version changes the key, that the server accepts an entry up to 1 GiB, that Gradle stops reading from the remote cache for the rest of a build after a refused store, and the Mac/Linux claim (a separate job)"
 echo "Gradle's own local cache is switched off in the Gradle runs (local { isEnabled = false }), as the page's own run did, so that a hit can only come from the server; the runner sets CI=true, so developer builds run with CI unset"
 echo "page commands run with 'bash -o pipefail'; a runner times commands, not people"
 
@@ -125,16 +127,16 @@ absent() { # NAME text...  (none of the texts may be in the output)
 count() { grep -cF -- "$2" "$W/$1.out" || true; }
 statusz() { # port user pass [curl options...] -> entries/hits/misses
   local port="$1" u="$2" p="$3"; shift 3
-  curl -s "$@" -u "$u:$p" "${SCHEME:-http}://localhost:$port/statusz" | python3 -c "import sys,json;d=json.load(sys.stdin);print('entries=%s hits=%s misses=%s' % (d['store_entries'],d['cache_hits'],d['cache_misses']))" 2>/dev/null || echo "statusz-unreadable"
+  curl -s --max-time 30 "$@" -u "$u:$p" "${SCHEME:-http}://localhost:$port/statusz" | python3 -c "import sys,json;d=json.load(sys.stdin);print('entries=%s hits=%s misses=%s' % (d['store_entries'],d['cache_hits'],d['cache_misses']))" 2>/dev/null || echo "statusz-unreadable"
 }
 entries_of() { case "$1" in *entries=*) printf '%s' "$1" | sed -E 's/.*entries=([0-9]+).*/\1/';; *) printf 'unreadable';; esac; }
 hits_of() { case "$1" in *hits=*) printf '%s' "$1" | sed -E 's/.*hits=([0-9]+).*/\1/';; *) printf 'unreadable';; esac; }
-wait_up() { local i; for i in $(seq 1 400); do curl -sf "localhost:$1/healthz" >/dev/null 2>&1 && return 0; sleep 0.05; done; return 1; }
+wait_up() { local i; for i in $(seq 1 400); do curl -sf --max-time 5 "localhost:$1/healthz" >/dev/null 2>&1 && return 0; sleep 0.05; done; return 1; }
 check_entries() { # LABEL STATUSZ-TEXT WANT
   local got; got="$(entries_of "$2")"
   if [ "$got" = "$3" ]; then echo "OBS $1: server has $got entries, as the page says"; else fail "$1: the page says $3 entries on the server; the server says '$2'"; fi
 }
-http_code() { curl -s -o /dev/null -w '%{http_code}' "$@"; }
+http_code() { curl -s --max-time 120 -o /dev/null -w '%{http_code}' "$@"; }
 check_code() { # LABEL WANT curl-args...
   local label="$1" want="$2"; shift 2; local got; got="$(http_code "$@")"
   if [ "$got" = "$want" ]; then echo "OBS $label: HTTP $got, as the page says"; else fail "$label: the page says HTTP $want; the server answered $got"; fi
@@ -357,12 +359,13 @@ EOF
 scenario_d() {
   echo; echo "== D  (gradle-build-cache-ci-writes-developers-read)"
   local D="$W/d" P=8083 S
-  mkdir -p "$D"
+  mkdir -p "$D/warm/src/main/java/demo"
+  printf 'rootProject.name = "demo"\n' > "$D/warm/settings.gradle.kts"; printf 'plugins { java }\n' > "$D/warm/build.gradle.kts"; gradle_code "$D/warm" 0
+  run d-gradle-warmup "$D/warm" <<'WARMEOF'
+gradle compileJava --no-build-cache
+WARMEOF
+  expect d-gradle-warmup "BUILD SUCCESSFUL"
   # --- the server with two logins, as the page starts it (read-only login optional)
-FSCACHE_USERNAME=${RW_USER}   FSCACHE_PASSWORD=${RW_PASS} \\
-FSCACHE_RO_USERNAME=${RO_USER} FSCACHE_RO_PASSWORD=${RO_PASS} \\
-./fscache
-EOF
   start_server d-gradle "$P" "$RW_USER" "$RW_PASS" FSCACHE_RO_USERNAME="$RO_USER" FSCACHE_RO_PASSWORD="$RO_PASS" || return
   echo "OBS the server was started with FSCACHE_USERNAME/PASSWORD and FSCACHE_RO_USERNAME/PASSWORD as the page's block shows (plus FSCACHE_ADDR=127.0.0.1:${P} so it listens on this machine only)"
   # --- curl facts from the end of the page
@@ -452,6 +455,7 @@ EOF
   expect d-maven-r4 "BUILD SUCCESS" "Unable to save to remote cache"
   [ "$(count d-maven-r4 'Unable to save to remote cache')" = 3 ] || fail "D Maven row 4: the page says 3 saves refused; the output has $(count d-maven-r4 'Unable to save to remote cache') 'Unable to save to remote cache' lines"
   grep -qE "status code: 403, reason phrase: Forbidden \(403\)" "$W/d-maven-r4.out" || fail "D Maven row 4: the page's 'status code: 403, reason phrase: Forbidden (403)' line is not in the output"
+  grep -qE "Unable to save to remote cache .*mtest.*\.jar" "$W/d-maven-r4.out" || fail "D Maven row 4: no 'Unable to save to remote cache ...mtest...jar' line, as the page shows"
   check_entries "D Maven row 4 (developer, read-only, new code, saving on: refused)" "$MS" 3
   mvn_case r5 rw on 2 0; expect d-maven-r5 "BUILD SUCCESS"; check_entries "D Maven row 5 (CI, same new code, saving on)" "$MS" 6
   stop_server
@@ -459,6 +463,7 @@ EOF
   start_server d-maven3 "$P" "$RW_USER" "$RW_PASS" FSCACHE_RO_USERNAME="$RO_USER" FSCACHE_RO_PASSWORD="$RO_PASS" || { mvn_env_off; return; }
   mvn_case g3setup rw on 1 0; expect d-maven-g3setup "BUILD SUCCESS"; check_entries "D Maven row 6, setup (CI build of the original code)" "$MS" 3
   mvn_case r6 none "" 1 0
+  grep -qE "Error downloading cache item: .*buildinfo\.xml" "$W/d-maven-r6.out" || fail "D Maven row 6: no 'Error downloading cache item: ...buildinfo.xml' line, as the page shows"
   expect d-maven-r6 "BUILD SUCCESS" "Error downloading cache item" "Remote cache is incomplete or missing, trying local build for demo:mtest"
   check_entries "D Maven row 6 (developer, no login, same code: built, error logged)" "$MS" 3
   stop_server
@@ -470,6 +475,7 @@ EOF
   mvn_case r8 ro "" 2 1
   expect d-maven-r8 "BUILD SUCCESS" "Unable to save to remote cache"
   [ "$(count d-maven-r8 'Unable to save to remote cache')" = 3 ] || fail "D Maven row 8: the page says 3 saves refused; the output has $(count d-maven-r8 'Unable to save to remote cache') lines"
+  grep -qE "status code: 403, reason phrase: Forbidden \(403\)" "$W/d-maven-r8.out" || fail "D Maven row 8: the page's 'status code: 403, reason phrase: Forbidden (403)' line is not in the output"
   check_entries "D Maven row 8 (saveToRemote true in the file, no flag: 3 refused)" "$MS" 3
   stop_server
   # the page's note about Maven 3.10.0: an ordinary first-time miss logs the same error line (valid login, empty server)
@@ -494,11 +500,12 @@ scenario_e() {
   local D="$W/e" CACHE_IMG="ghcr.io/fosterstack/cache" S rc
   mkdir -p "$D"
   # images: resolved ONCE; the page's mutable tags are pulled here, logged by digest, and verified with cosign
-  docker pull -q "$CACHE_IMG:${VER}" >/dev/null && docker pull -q "$CACHE_IMG:latest" >/dev/null && docker pull -q nginx:1.29-alpine >/dev/null || { fail "E: could not pull the images"; return; }
+  pull() { local n; for n in 1 2 3; do docker pull -q "$1" >/dev/null 2>&1 && return 0; sleep 5; done; return 1; }
+  pull "$CACHE_IMG:${VER}" && pull "$CACHE_IMG:latest" && pull nginx:1.29-alpine || { fail "E: could not pull the images"; return; }
   local D022 DLAT DNGX
   D022="$(docker inspect --format '{{index .RepoDigests 0}}' "$CACHE_IMG:${VER}")"; DLAT="$(docker inspect --format '{{index .RepoDigests 0}}' "$CACHE_IMG:latest")"; DNGX="$(docker inspect --format '{{index .RepoDigests 0}}' nginx:1.29-alpine)"
   echo "OBS images: ${CACHE_IMG}:${VER} = ${D022}"; echo "OBS images: ${CACHE_IMG}:latest = ${DLAT}"; echo "OBS images: nginx:1.29-alpine (the page's tag, resolved once) = ${DNGX}"
-  [ "$D022" = "$DLAT" ] && echo "OBS the page's :latest is ${VER}" || echo "OBS FINDING? ${CACHE_IMG}:latest is not the ${VER} image"
+  if [ "$D022" = "$DLAT" ]; then echo "OBS the page's :latest is ${VER}"; else fail "E: ${CACHE_IMG}:latest is not the ${VER} image this script verifies, so no image is run (update VER for the new release)"; return; fi
   run e-cosign-verify "$D" <<EOF
 cosign verify ${D022} \\
  --certificate-identity-regexp="^https://github.com/fosterstack/cache/.github/workflows/stage-promote.yml@refs/tags/v${VER}\$" \\
@@ -526,7 +533,7 @@ EOF
   docker exec "$CID" sh -c true >/dev/null 2>&1 && fail "E: the page says the image has no shell, but 'sh' ran in it" || echo "OBS E: no shell in the image (docker exec sh fails), as the page says"
   docker rm -f "$CID" >/dev/null 2>&1; docker volume rm fscache-data >/dev/null 2>&1
   # the same bare mapping the page warns about is checked on the Compose stack below
-  # --- "Quick start: the Compose file", word for word except the image pinned to the digest resolved above
+  # --- "Quick start: the Compose file", word for word (its :latest is the local image, checked above to be the cosign-verified 0.2.2 image)
   cat > "$D/compose-quick.yaml" <<'EOF'
 services:
   fscache:
@@ -554,6 +561,7 @@ curl -s localhost:8080/healthz                                   # ok
 curl -s -X PUT --data-binary 'hello' localhost:8080/testkey123   # 201
 curl -s localhost:8080/testkey123                                # hello
 EOF
+  [ "$RC" = 0 ] || fail "E quick start: the page's three curl lines exited $RC"
   echo "OBS E quick start, the page's three lines with the password set: $(tr '\n' '|' < "$W/e-quick-check.out")"
   head -c 2 "$W/e-quick-check.out" | grep -qx "ok" || fail "E quick start: /healthz did not print ok with the password set"
   grep -q "hello" "$W/e-quick-check.out" && fail "E quick start: with a password set, the page's unauthenticated PUT/GET lines should not store or return hello, but hello came back"
@@ -638,7 +646,7 @@ EOF
   head -c 1100000 /dev/urandom > "$D/f1mb"; head -c 2100000 /dev/urandom > "$D/f2mb"; head -c 20000000 /dev/urandom > "$D/f20mb"
   check_code "E prod: upload of about 1 MB with nginx's default settings" 413 $CA -u "gradle:${COMPOSE_PASS}" -X PUT --data-binary @"$D/f1mb" $B/big1
   check_code "E prod: upload of about 2 MB with nginx's default settings" 413 $CA -u "gradle:${COMPOSE_PASS}" -X PUT --data-binary @"$D/f2mb" $B/big2
-  grep -qiF "nginx" <(curl -s $CA -u "gradle:${COMPOSE_PASS}" -X PUT --data-binary @"$D/f1mb" $B/big1) && echo "OBS E prod: the 413 body comes from nginx, not from the cache" || echo "OBS E prod: the 413 body does not mention nginx"
+  if curl -s --max-time 120 $CA -u "gradle:${COMPOSE_PASS}" -X PUT --data-binary @"$D/f1mb" $B/big1 | grep -qiF "nginx"; then echo "OBS E prod: the 413 body comes from nginx, not from the cache"; else fail "E prod: the page says the 413 comes from nginx, but its body does not say nginx"; fi
   cat "$D/prod/nginx.conf.page" > "$D/prod/nginx.conf"       # in place, so the bind mount sees it
   docker compose -p prod exec -T proxy nginx -s reload >/dev/null 2>&1 || fail "E prod: nginx did not reload with the page's file"
   sleep 1
@@ -651,7 +659,7 @@ EOF
   run e-gradle-untrusted "$D/hg1" <<'EOF'
 gradle compileJava --build-cache
 EOF
-  expect e-gradle-untrusted "BUILD SUCCESSFUL" "(certificate_unknown)" "PKIX path building failed" "unable to find valid certification path to requested target"
+  expect e-gradle-untrusted "BUILD SUCCESSFUL" "Could not load entry" "from remote build cache" "(certificate_unknown)" "PKIX path building failed" "unable to find valid certification path to requested target"
   "$GRADLE_BIN" --stop >/dev/null 2>&1 || true
   run e-keytool "$D/prod" <<'EOF'
 keytool -importcert -alias fsprod -file certs/cert.pem -keystore trust.jks -storepass changeit -noprompt
