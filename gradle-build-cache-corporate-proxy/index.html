@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Gradle build cache behind a corporate proxy</title>
-<meta name="description" content="How Gradle's remote build cache behaves behind a proxy: the settings, the loopback trap, a proxy that refuses, and how to tell it from a cache error. Real run.">
-<meta property="og:title" content="Gradle build cache behind a corporate proxy">
-<meta property="og:description" content="How Gradle&#x27;s remote build cache behaves behind a proxy: the settings, the loopback trap, a proxy that refuses, and how to tell it from a cache error. Real run.">
+<title>Build cache behind a corporate proxy: Gradle and Maven</title>
+<meta name="description" content="Gradle and Maven behind a corporate proxy: the settings, the loopback difference, a refusing proxy, and telling it from a cache error. Gradle 9.8.0, Maven 3.10.0.">
+<meta property="og:title" content="Build cache behind a corporate proxy: Gradle and Maven">
+<meta property="og:description" content="Gradle and Maven behind a corporate proxy: the settings, the loopback difference, a refusing proxy, and telling it from a cache error. Gradle 9.8.0, Maven 3.10.0.">
 <meta property="og:url" content="https://fosterstack.com/gradle-build-cache-corporate-proxy/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="FosterStack">
@@ -49,6 +49,7 @@
   p + p { margin-top: .8rem; }
   .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: .8rem; margin-top: 1rem; }
   .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1rem 1.1rem; }
+  main h3 { font-size: 1.05rem; margin: 2rem 0 .6rem; }
   .card h3 { font-size: .98rem; margin-bottom: .35rem; }
   .card p { font-size: .9rem; color: var(--muted); }
   ul.trust { list-style: none; margin-top: .5rem; }
@@ -87,16 +88,21 @@
   <div class="tag">Infrastructure worth keeping — and kept patched.</div>
 </header>
 <main>
-  <h1>Gradle build cache behind a corporate proxy</h1>
-  <p class="lede">Many companies make builds reach the network through a proxy. This page shows how Gradle's remote build cache behaves behind one: the settings, the ways it goes wrong, and how to tell a proxy problem from a cache problem. Everything was run for real with Gradle 9.8.0 and FosterStack Cache 0.2.1.</p>
+  <h1>Build cache behind a corporate proxy: Gradle and Maven</h1>
+  <p class="lede">Many companies make builds reach the network through a proxy. This page shows how the remote build cache behaves behind one, in Gradle and in Maven: the settings, the ways it goes wrong, and how to tell a proxy problem from a cache problem.</p>
+  <p>In our runs Maven behaved differently from Gradle: it did not skip the proxy for loopback addresses. See <a href="#maven-build-cache-corporate-proxy">the Maven section</a>.</p>
 
-  <h2>What was tested, and what was not</h2>
+  <h2>Checklist for Gradle</h2>
+  <p>Our advice, not a test result:</p>
   <ul class="trust">
-    <li><strong>Tested:</strong> a small proxy I wrote for the test (it forwards plain HTTP, tunnels HTTPS with <code>CONNECT</code>, can refuse a host, and logs every request), the cache on a non-loopback address, once over plain HTTP and once over HTTPS through nginx with a self-signed certificate that Java was told to trust.</li>
-    <li><strong>Not tested:</strong> a real corporate proxy product, a proxy that asks for a password (407), a proxy that inspects and re-signs TLS, automatic proxy configuration files, and the <code>HTTP_PROXY</code> variables. Maven is covered on <a href="/maven-build-cache-corporate-proxy/">its own page</a>, where it behaves differently: for example it does not skip the proxy for loopback addresses.</li>
+    <li>Ask for the cache's host and port to be allowed through the proxy (HTTPS).</li>
+    <li>Put the proxy lines in <code>gradle.properties</code>, with the <code>systemProp.</code> prefix, and list internal hosts in <code>nonProxyHosts</code>.</li>
+    <li>Use HTTPS to the cache. See <a href="/build-cache-docker-compose-production/">a production setup with nginx and TLS</a>.</li>
+    <li>If the proxy re-signs TLS, Java will need your company's certificate authority.</li>
   </ul>
 
-  <h2>The settings</h2>
+  <h2>Gradle build cache behind a corporate proxy</h2>
+  <h3>The settings</h3>
   <p>Gradle takes proxy settings from Java system properties. Put them in <code>~/.gradle/gradle.properties</code> or the project's <code>gradle.properties</code>, with the <code>systemProp.</code> prefix:</p>
   <pre tabindex="0"><code>systemProp.http.proxyHost=proxy.example.com
 systemProp.http.proxyPort=3128
@@ -105,8 +111,8 @@ systemProp.https.proxyPort=3128
 systemProp.http.nonProxyHosts=cache.internal.example.com|localhost|127.*</code></pre>
   <p>Use the <code>https</code> pair for an <code>https://</code> cache URL and the <code>http</code> pair for plain HTTP. The last line lists hosts that should skip the proxy.</p>
 
-  <h2>What I saw</h2>
-  <p>For the plain-HTTP rows I set <code>isAllowInsecureProtocol = true</code>, which Gradle requires for non-loopback <code>http://</code>. That is for the test rig only; use HTTPS for real.</p>
+  <h3>What we saw</h3>
+  <p>For the plain-HTTP rows we set <code>isAllowInsecureProtocol = true</code>, which Gradle requires for non-loopback <code>http://</code>. That is for the test rig only; use HTTPS for real. In our runs:</p>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <tr><th>Setup</th><th>Result</th><th>What the proxy logged</th></tr>
     <tr><td>No proxy settings, cache at <code>&lt;cache-ip&gt;</code></td><td>second build <code>FROM-CACHE</code></td><td>nothing (not used)</td></tr>
@@ -117,30 +123,85 @@ systemProp.http.nonProxyHosts=cache.internal.example.com|localhost|127.*</code><
     <tr><td>Proxy settings, proxy refuses the cache host</td><td>the build succeeds but without the cache (log below)</td><td>the request, answered 403</td></tr>
   </table></div>
 
-  <h2>Three things that catch people</h2>
-  <p><strong>1. Testing against localhost skips the proxy.</strong> With the cache at <code>127.0.0.1</code>, Gradle never used the proxy even though it was configured. A setup that works on your laptop against a local cache proves nothing about the proxy path. Test against the real address.</p>
-  <p><strong>2. A refusing proxy looks like a cache error.</strong> When the proxy answered 403 to the tunnel, Gradle printed:</p>
+  <h3 id="gradle-three-things">Three things that catch people</h3>
+  <p><strong>1. Testing against localhost skips the proxy.</strong> In our runs, with the cache at <code>127.0.0.1</code>, Gradle never used the proxy even though it was configured. A setup that works on your laptop against a local cache proves nothing about the proxy path. Test against the real address.</p>
+  <p><strong>2. A refusing proxy looks like a cache error.</strong> In our runs, when the proxy answered 403 to the tunnel, Gradle printed:</p>
   <pre tabindex="0"><code>Could not load entry d4f2de693b561fd2c5d60b17a9232d6f from remote build cache: Loading entry from &#x27;https://&lt;cache-ip&gt;:18443/d4f2de693b561fd2c5d60b17a9232d6f&#x27; response status 403: Forbidden</code></pre>
   <p>That is the same text you would get from the cache refusing a write with the read-only login (see <a href="/gradle-remote-build-cache-authentication/#gradle-build-cache-http-status-codes">the status codes</a>). To tell them apart, take Gradle out of it and try the same route with curl:</p>
   <pre tabindex="0"><code>$ curl -sS -x http://proxy.example.com:3128 https://cache.example.com/healthz
 curl: (56) CONNECT tunnel failed, response 403      # the proxy said no
 $ curl -sS --noproxy &#x27;*&#x27; https://cache.example.com/healthz
 ok                                                   # the cache server answered</code></pre>
-  <p>I substituted example hostnames in those commands; the two output lines are the real ones, from my test proxy refusing and from the cache answering directly. If the first one fails and the second works, ask whoever runs the proxy to allow the cache's host and port.</p>
-  <p><strong>3. Over HTTPS the proxy only sees the address.</strong> A <code>CONNECT</code> tunnel shows the proxy the host and port and nothing inside, so the password and the cache keys are not visible to it. That also means any rule on the path cannot be applied. This is how the proxy log looked in my run: one <code>CONNECT</code> line per build.</p>
+  <p>We substituted example hostnames in those commands; the two output lines are the real ones, from our test proxy refusing and from the cache answering directly. If the first one fails and the second works, ask whoever runs the proxy to allow the cache's host and port.</p>
+  <p><strong>3. Over HTTPS the proxy only sees the address.</strong> A <code>CONNECT</code> tunnel shows the proxy the host and port and nothing inside, so the password and the cache keys are not visible to it. That also means any rule on the path cannot be applied. This is how the proxy log looked in our run: one <code>CONNECT</code> line per build.</p>
 
-  <h2>Checklist</h2>
+  <h2 id="maven-build-cache-corporate-proxy">Maven build cache extension behind a corporate proxy</h2>
+  <p>Maven has its own proxy settings, and the Apache Build Cache Extension follows them.</p>
+  <h3>The settings</h3>
+  <p>In <code>~/.m2/settings.xml</code>, next to the cache's password entry:</p>
+  <pre tabindex="0"><code>&lt;settings&gt;
+  &lt;servers&gt;
+    &lt;server&gt;
+      &lt;id&gt;fosterstack-cache&lt;/id&gt;
+      &lt;username&gt;maven&lt;/username&gt;
+      &lt;password&gt;your-password-or-CI-secret&lt;/password&gt;
+    &lt;/server&gt;
+  &lt;/servers&gt;
+  &lt;proxies&gt;
+    &lt;proxy&gt;
+      &lt;id&gt;corp&lt;/id&gt;
+      &lt;active&gt;true&lt;/active&gt;
+      &lt;protocol&gt;http&lt;/protocol&gt;
+      &lt;host&gt;proxy.example.com&lt;/host&gt;
+      &lt;port&gt;3128&lt;/port&gt;
+      &lt;nonProxyHosts&gt;cache.internal.example.com|localhost&lt;/nonProxyHosts&gt;
+    &lt;/proxy&gt;
+  &lt;/proxies&gt;
+&lt;/settings&gt;</code></pre>
+  <p>The cache itself is set up as in <a href="/maven-remote-build-cache-setup/">the Maven setup</a>. The server <code>id</code> must still match the remote's.</p>
+
+  <h3>What went through the proxy</h3>
+  <p>In our runs, with the proxy configured, <strong>all</strong> of the extension's cache traffic went through it: the lookups, the download that restores a build, and the uploads. This is what the proxy logged for two builds, the first filling the cache and the second restoring from it (the proxy also saw Maven's own traffic to <code>repository.apache.org</code>, which is not shown):</p>
+  <pre tabindex="0"><code>build 1 (stores)
+GET http://&lt;cache-ip&gt;:18132/v1.1/demo/demo/&lt;id&gt;/buildinfo.xml
+GET http://&lt;cache-ip&gt;:18132/v1.1/demo/demo/&lt;id&gt;/buildinfo.xml
+PUT http://&lt;cache-ip&gt;:18132/v1.1/demo/demo/&lt;id&gt;/demo.jar
+PUT http://&lt;cache-ip&gt;:18132/v1.1/demo/demo/&lt;id&gt;/buildinfo.xml
+PUT http://&lt;cache-ip&gt;:18132/v1.1/demo/demo/&lt;id&gt;/build-cache-report.xml
+
+build 2 (restores)
+GET http://&lt;cache-ip&gt;:18132/v1.1/demo/demo/&lt;id&gt;/buildinfo.xml
+GET http://&lt;cache-ip&gt;:18132/v1.1/demo/demo/&lt;id&gt;/buildinfo.xml
+GET http://&lt;cache-ip&gt;:18132/v1.1/demo/demo/&lt;id&gt;/demo.jar
+PUT http://&lt;cache-ip&gt;:18132/v1.1/demo/demo/&lt;id&gt;/build-cache-report.xml</code></pre>
+  <p>The second build logged <code>Found cached build, restoring demo:demo from cache</code>.</p>
+
+  <h3>Other cases</h3>
+  <p>In our runs:</p>
+  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
+    <tr><th>Setup</th><th>What happened</th></tr>
+    <tr><td>Proxy configured, cache URL is <code>127.0.0.1</code></td><td><strong>Still went through the proxy</strong> (4 requests logged). Unlike Gradle, Maven does not skip the proxy for loopback.</td></tr>
+    <tr><td>Proxy configured, the cache's address in <code>&lt;nonProxyHosts&gt;</code></td><td>Nothing reached the proxy. The build still restored from the cache.</td></tr>
+    <tr><td>Proxy refuses the cache's host</td><td>Nothing was stored or restored. The build succeeded without the cache, and logged <code>Error downloading cache item</code> with <code>HTTP Status: 403</code>.</td></tr>
+    <tr><td>Proxy not running at all</td><td>The lookup failed with <code>Connect to 127.0.0.1:18131 ... Connection refused</code>. The build succeeded without the cache, and nothing was uploaded.</td></tr>
+  </table></div>
+
+  <h3>Things that catch people</h3>
   <ul class="trust">
-    <li>Ask for the cache's host and port to be allowed through the proxy (HTTPS).</li>
-    <li>Put the proxy lines in <code>gradle.properties</code>, with the <code>systemProp.</code> prefix, and list internal hosts in <code>nonProxyHosts</code>.</li>
-    <li>Use HTTPS to the cache. See <a href="/build-cache-docker-compose-production/">a production setup with nginx and TLS</a>.</li>
-    <li>If the proxy re-signs TLS, Java will need your company's certificate authority. I did not test that case.</li>
+    <li><strong>A local test can fail because of the proxy.</strong> If you try the cache on <code>127.0.0.1</code> with a proxy configured in <code>settings.xml</code>, Maven sends it to the proxy, which may not be able to reach your machine's loopback. List it in <code>&lt;nonProxyHosts&gt;</code>.</li>
+    <li><strong>A refusing proxy looks like a cache error.</strong> The 403 comes from the proxy, not from the cache. To check, run the same request from the build machine with and without the proxy; see <a href="#gradle-three-things">the curl check in the Gradle section</a>.</li>
+    <li><strong>Failure does not break the build.</strong> In our runs, a build behind a blocking proxy just stopped using the cache, so look for <code>Error downloading cache item</code> and for missing <code>Saved to remote cache</code> lines. On Maven 3.10.0 an ordinary first miss also logs the first line, so read it together with the missing second one.</li>
   </ul>
 
-  <p class="muted-note">Related: <a href="/gradle-remote-cache-not-working/">Gradle remote build cache not working</a> and <a href="/gradle-remote-build-cache-authentication/">authentication and 401 errors</a>.</p>
+  <h2>How we checked</h2>
+  <p><strong>Gradle run.</strong> Gradle 9.8.0 and FosterStack Cache 0.2.1. We wrote a small proxy for the test: it forwards plain HTTP, tunnels HTTPS with <code>CONNECT</code>, can refuse a host, and logs every request. The cache was on a non-loopback address, once over plain HTTP and once over HTTPS through nginx with a self-signed certificate that Java was told to trust.</p>
+  <p><strong>Maven run.</strong> Maven 3.10.0, extension 1.2.3 and FosterStack Cache 0.2.1. We wrote a small proxy for the test, which forwards plain HTTP, can refuse a host, and logs every request (we made it close each connection after one request so that none go unlogged). The cache was on a non-loopback address, over plain HTTP, with a password.</p>
+  <p class="muted-note">Not tested in Gradle: a real corporate proxy product, a proxy that asks for a password (407), a proxy that inspects and re-signs TLS, automatic proxy configuration files, and the <code>HTTP_PROXY</code> variables. Not tested in Maven: HTTPS through a proxy, a proxy that asks for a password, other Maven or extension versions, and any real proxy product.</p>
+
+  <p class="muted-note">Related: <a href="/gradle-remote-cache-not-working/">Gradle remote build cache not working</a>, <a href="/gradle-remote-build-cache-authentication/">authentication and 401 errors</a> and <a href="/maven-build-cache-extension-not-restoring/">Maven build cache extension not restoring</a>.</p>
   <div class="cta-row">
     <a class="btn" href="/first-15-minutes-build-cache/#gradle-build-cache-tutorial">Gradle build cache tutorial</a>
-    <a class="btn btn-secondary" href="/">FosterStack home</a>
+    <a class="btn btn-secondary" href="/maven-remote-build-cache-setup/">Maven remote cache setup</a>
   </div>
 </main>
 <footer>

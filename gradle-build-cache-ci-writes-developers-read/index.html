@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Gradle build cache: let CI write, developers only read</title>
-<meta name="description" content="Set up a Gradle build cache where CI uploads and laptops only download, with a read-only login the server enforces. Real run on server 0.2.1 and Gradle 9.8.0.">
-<meta property="og:title" content="Gradle build cache: let CI write, developers only read">
-<meta property="og:description" content="Set up a Gradle build cache where CI uploads and laptops only download, with a read-only login the server enforces. Real run on server 0.2.1 and Gradle 9.8.0.">
+<title>Let CI write, developers only read: Gradle and Maven cache</title>
+<meta name="description" content="Let only CI write to the Gradle or Maven build cache and give developers a read-only login the server enforces. Real runs on FosterStack Cache 0.2.1.">
+<meta property="og:title" content="Let CI write, developers only read: Gradle and Maven cache">
+<meta property="og:description" content="Let only CI write to the Gradle or Maven build cache and give developers a read-only login the server enforces. Real runs on FosterStack Cache 0.2.1.">
 <meta property="og:url" content="https://fosterstack.com/gradle-build-cache-ci-writes-developers-read/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="FosterStack">
@@ -49,6 +49,7 @@
   p + p { margin-top: .8rem; }
   .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: .8rem; margin-top: 1rem; }
   .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1rem 1.1rem; }
+  main h3 { font-size: 1.05rem; margin: 2rem 0 .6rem; }
   .card h3 { font-size: .98rem; margin-bottom: .35rem; }
   .card p { font-size: .9rem; color: var(--muted); }
   ul.trust { list-style: none; margin-top: .5rem; }
@@ -87,8 +88,8 @@
   <div class="tag">Infrastructure worth keeping — and kept patched.</div>
 </header>
 <main>
-  <h1>Gradle build cache: let CI write, developers only read</h1>
-  <p class="lede">Anything that can write to your build cache can change what later builds use. So give the right to write to as few machines as possible. This page sets up a cache where CI uploads and developer laptops only download, and shows the server enforcing it. Everything here was run for real on a 0.2.1 server with Gradle 9.8.0.</p>
+  <h1>Let CI write, developers only read the build cache</h1>
+  <p class="lede">Anything that can write to your build cache can change what later builds use, so give the right to write to as few machines as possible. This page sets up a cache where CI uploads and developers only download, in Gradle and in Maven, with a read-only login the server enforces.</p>
 
   <h2>1. Give the server two logins</h2>
   <p>The server takes one read-write login and, optionally, a second read-only login. A client using the read-only one can read cache entries, and any write is refused with a 403.</p>
@@ -97,7 +98,8 @@ FSCACHE_RO_USERNAME=dev FSCACHE_RO_PASSWORD=&lt;another secret&gt; \
 ./fscache</code></pre>
   <p>The two usernames must differ, and the read-only pair only works alongside the read-write pair. Both are in the <a href="https://github.com/fosterstack/cache">configuration table</a>.</p>
 
-  <h2>2. One Gradle setting for everyone</h2>
+  <h2>Gradle: let CI write, developers only read</h2>
+  <h3>One Gradle setting for everyone</h3>
   <p>Developers and CI use the same <code>settings.gradle.kts</code>. Only the environment differs:</p>
   <pre tabindex="0"><code>rootProject.name = &quot;demo&quot;
 
@@ -116,8 +118,67 @@ buildCache {
 }</code></pre>
   <p>On CI, set <code>CI</code> and the read-write login. On a laptop, leave <code>CI</code> unset and use the read-only login. Setting <code>isPush</code> to false on a laptop is the client choosing not to upload. The read-only login is what makes the server enforce it.</p>
 
-  <h2>3. What happened when I ran it</h2>
-  <p>The server counts what it stores. Each line below is a build of the same small project. (In my test I turned Gradle's local cache off, with <code>local { isEnabled = false }</code> in the same block, so that a hit could only have come from the server. You do not need that line.)</p>
+  <h3>If a laptop is set up to push anyway</h3>
+  <p>In our run we made a code change, so there was something new to upload, and built with <code>CI=true</code> but only the read-only login. The build still succeeded. With <code>-i</code> Gradle logged:</p>
+  <pre tabindex="0"><code>Could not store entry d4f2de693b561fd2c5d60b17a9232d6f in remote build cache: Storing entry at &#x27;http://127.0.0.1:18098/d4f2de693b561fd2c5d60b17a9232d6f&#x27; response status 403: Forbidden
+The remote build cache was disabled during the build due to errors.</code></pre>
+  <p>The server stored nothing: it stayed at 1 entry. The same change built by CI with the read-write login was stored (2 entries). So a misconfigured laptop cannot add to the cache, and its build is not broken by that. Note that Gradle switches the remote cache off for the rest of that build once a store fails, so a laptop in this state also stops reading from it for that build.</p>
+
+  <h2 id="maven-build-cache-let-ci-write-developers-read">Maven: let CI write, developers only read</h2>
+  <h3>One config file for everyone</h3>
+  <p>Put this in <code>.mvn/maven-build-cache-config.xml</code> and commit it. It has no password and no <code>saveToRemote</code>, so on its own it only reads. Turning saving on for CI comes below.</p>
+  <pre tabindex="0"><code>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;cache xmlns="http://maven.apache.org/BUILD-CACHE-CONFIG/1.2.0"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://maven.apache.org/BUILD-CACHE-CONFIG/1.2.0 https://maven.apache.org/xsd/build-cache-config-1.2.0.xsd"&gt;
+  &lt;configuration&gt;
+    &lt;enabled&gt;true&lt;/enabled&gt;
+    &lt;remote enabled="true" id="fosterstack-cache"&gt;
+      &lt;url&gt;https://cache.example.com/&lt;/url&gt;
+    &lt;/remote&gt;
+  &lt;/configuration&gt;
+&lt;/cache&gt;</code></pre>
+  <p>The extension itself is set up in <code>.mvn/extensions.xml</code>; see <a href="/maven-remote-build-cache-setup/">Maven build cache extension: remote server setup</a>.</p>
+
+  <h3>Each side gets its own login</h3>
+  <p>The login goes in <code>settings.xml</code>, in a server entry whose id matches the id in the config. CI uses the read-write login:</p>
+  <pre tabindex="0"><code>&lt;settings&gt;
+  &lt;servers&gt;
+    &lt;server&gt;
+      &lt;id&gt;fosterstack-cache&lt;/id&gt;
+      &lt;username&gt;ci&lt;/username&gt;
+      &lt;password&gt;your-CI-secret&lt;/password&gt;
+    &lt;/server&gt;
+  &lt;/servers&gt;
+&lt;/settings&gt;</code></pre>
+  <p>Developers put the same entry in their own <code>settings.xml</code>, with the login <code>dev</code> and its password.</p>
+
+  <h3>Turn saving on in CI only</h3>
+  <p>CI builds with:</p>
+  <pre tabindex="0"><code>mvn -Dmaven.build.cache.remote.save.enabled=true verify</code></pre>
+  <p>Developers run plain <code>mvn verify</code>. Without that flag, and with no <code>saveToRemote</code> in the file, nothing is saved to the server.</p>
+  <p>If your config file already says <code>saveToRemote="true"</code>, developers add <code>-Dmaven.build.cache.remote.save.enabled=false</code>. That flag won over the file in our run.</p>
+
+  <h3>If a developer build is set to save anyway</h3>
+  <p>In our runs, with only the read-only login, the build still succeeded and the server stored nothing. You will see this for each file Maven tries to save:</p>
+  <pre tabindex="0"><code>[INFO] Unable to save to remote cache http://.../mtest.jar
+org.apache.http.client.HttpResponseException: status code: 403, reason phrase: Forbidden (403)</code></pre>
+  <p>Those stack traces are noise. Switch saving off for developers to remove them.</p>
+
+  <h3>If a developer has no login</h3>
+  <p>The server refuses every cache read and write without a login, so Maven cannot read the cache. On Maven 3.9.9 you will see an error line, and Maven builds the project itself and succeeds:</p>
+  <pre tabindex="0"><code>[ERROR] Error downloading cache item: http://.../buildinfo.xml
+[INFO] Remote cache is incomplete or missing, trying local build for demo:mtest</code></pre>
+  <p>Maven 3.10.0 logs the same error line for an ordinary first-time miss, so on that version the line alone does not show a login problem.</p>
+  <p>The developer gets no speed-up, and nothing breaks. If every build looks like this, check the <code>settings.xml</code> login and that its id matches the config.</p>
+
+  <h2>What this does not give you</h2>
+  <p>There is no per-person identity. Everyone who holds the read-write login is the same writer to the server, so keep it to CI. See <a href="/can-someone-poison-our-build-cache/#remote-build-cache-security">who can write to a remote build cache</a> and <a href="/gradle-remote-build-cache-authentication/#gradle-build-cache-http-status-codes">the HTTP status codes</a>. To see why laptops then reuse CI's work, see <a href="/laptop-builds-reuse-ci-build-cache/">your laptop builds reuse what CI already built</a>.</p>
+  <p>Our advice, not a test result: use HTTPS, keep the CI password in your CI secret store and never in the repository.</p>
+
+  <h2>How we checked</h2>
+  <h3>Gradle run</h3>
+  <p>FosterStack Cache 0.2.1 and Gradle 9.8.0. The server counts what it stores. Each line below is a build of the same small project. In our run we turned Gradle's local cache off, with <code>local { isEnabled = false }</code> in the same block, so that a hit could only have come from the server. You do not need that line.</p>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <tr><th>Who builds</th><th>Result</th><th>Server after</th></tr>
     <tr><td>A developer first, read-only login, <code>CI</code> unset</td><td><code>:compileJava</code> runs. Nothing to read yet, and nothing uploaded.</td><td>0 entries</td></tr>
@@ -126,14 +187,24 @@ buildCache {
   </table></div>
   <p>The laptop never wrote to the cache, and still got the benefit of CI's work.</p>
 
-  <h2>If a laptop is set up to push anyway</h2>
-  <p>I then made a code change, so there was something new to upload, and built with <code>CI=true</code> but only the read-only login. The build still succeeded. With <code>-i</code> Gradle logged:</p>
-  <pre tabindex="0"><code>Could not store entry d4f2de693b561fd2c5d60b17a9232d6f in remote build cache: Storing entry at &#x27;http://127.0.0.1:18098/d4f2de693b561fd2c5d60b17a9232d6f&#x27; response status 403: Forbidden
-The remote build cache was disabled during the build due to errors.</code></pre>
-  <p>The server stored nothing: it stayed at 1 entry. The same change built by CI with the read-write login was stored (2 entries). So a misconfigured laptop cannot add to the cache, and its build is not broken by that. Note that Gradle switches the remote cache off for the rest of that build once a store fails, so a laptop in this state also stops reading from it for that build.</p>
-
-  <h2>What this does not give you</h2>
-  <p>There is no per-person identity yet. Everyone who holds the read-write login is the same writer to the server, so keep it to CI. See <a href="/can-someone-poison-our-build-cache/#remote-build-cache-security">who can write to a remote build cache</a> and <a href="/gradle-remote-build-cache-authentication/#gradle-build-cache-http-status-codes">the HTTP status codes</a>.</p>
+  <h3>Maven run</h3>
+  <p>We ran each case below against a real server with both logins.</p>
+  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
+    <thead><tr><th>Who builds</th><th>Setting</th><th>Result</th><th>Entries on the server after</th></tr></thead>
+    <tbody>
+      <tr><td>CI, read-write login</td><td>saving not turned on</td><td>built, nothing saved</td><td>0</td></tr>
+      <tr><td>CI, read-write login</td><td>saving on</td><td>built, 3 files saved</td><td>3</td></tr>
+      <tr><td>Developer, read-only login, same code</td><td>saving not turned on</td><td>restored from the cache</td><td>3</td></tr>
+      <tr><td>Developer, read-only login, new code</td><td>saving on</td><td>built, 3 saves refused with 403, build succeeded</td><td>3 (unchanged)</td></tr>
+      <tr><td>CI, same new code</td><td>saving on</td><td>built, 3 files saved</td><td>6</td></tr>
+      <tr><td>Developer, no login, same code</td><td>saving not turned on</td><td>built, download error logged, build succeeded</td><td>3 (unchanged)</td></tr>
+      <tr><td>Developer, read-only login, new code</td><td>config file says <code>saveToRemote="true"</code>, flag <code>false</code></td><td>built, no save attempted</td><td>3 (unchanged)</td></tr>
+      <tr><td>Developer, read-only login, new code</td><td>config file says <code>saveToRemote="true"</code>, no flag</td><td>built, 3 saves refused with 403, build succeeded</td><td>3 (unchanged)</td></tr>
+    </tbody>
+  </table></div>
+  <p class="muted-note">Straight from the server with curl: a PUT with the read-write login returned 201, a PUT with the read-only login 403, a GET with the read-only login 200, and a GET or PUT with no login 401.</p>
+  <p class="muted-note">Setup: Maven 3.9.9, Apache Maven Build Cache Extension 1.2.3, FosterStack Cache 0.2.1, Temurin 21.0.12.1, macOS (arm64). One module with two tests, all eight plugin versions pinned. Each group of cases began on a new empty server, with a fresh project copy and an empty local build cache for every build. Rows 4 to 6 each ran after a CI build of the original code, not listed here, had put 3 entries on their server. The last two rows ran on their own server, which a CI build with the file setting had filled with 3 entries first. The server ran on 127.0.0.1 over plain HTTP; the URL in the examples is a placeholder. The plugin downloads were shared across builds. The passwords were test values.</p>
+  <p class="muted-note">Not tested: Maven versions other than 3.9.9 (the first-miss line on 3.10.0 comes from our version tests, not from these runs), a multi-module build, whether Maven keeps reading after a refused save, logins kept anywhere other than <code>settings.xml</code>, and Linux.</p>
 
   <div class="cta-row">
     <a class="btn" href="/jenkins-ci-build-cache/">Jenkins and CI build cache</a>

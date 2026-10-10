@@ -108,7 +108,7 @@
     <li><strong>Give CI the read-write login and everyone else the read-only one.</strong> See <a href="/gradle-build-cache-ci-writes-developers-read/">let CI write and developers read</a> and <a href="/can-someone-poison-our-build-cache/">can someone poison our shared build cache</a>.</li>
     <li><strong>Size the cap for all projects together.</strong> See <a href="/build-cache-server-sizing/">how big a server a build cache needs</a> and <a href="/build-cache-eviction-size-limit/">how the size limit works</a>.</li>
   </ul>
-  <p>Gradle and Maven builds can use the same server too. See <a href="/one-build-cache-server-gradle-and-maven/">one build cache server for Gradle and Maven</a>.</p>
+  <p>Gradle and Maven builds can use the same server too. See <a href="/maven-remote-build-cache-setup/#one-build-cache-server-gradle-and-maven">one build cache server for Gradle and Maven</a>.</p>
 
   <h2>How we checked</h2>
   <p>FosterStack Cache 0.2.1 and Gradle 9.8.0 with Java 21 on a Mac (arm64), one machine. Project A has three classes, project B has four different ones, and project C is an exact copy of A in a different folder. Each build ran <code>compileJava</code> and <code>jar</code> with a new Gradle home, Gradle's <code>--no-daemon</code> flag and the local build cache off. The cache address and login reached the build only as environment variables. All logins were made up for the test. Each row is one run.</p>

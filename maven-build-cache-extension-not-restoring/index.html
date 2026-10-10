@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Maven build cache extension not restoring: the causes</title>
-<meta name="description" content="Maven build cache extension builds again instead of restoring from the remote? Causes with real log lines: config placement, saveToRemote, 401 and the local cache.">
+<meta name="description" content="Maven build cache extension builds again instead of restoring from the remote? Causes with real log lines, and whether switching Java 21 to 27 breaks restores.">
 <meta property="og:title" content="Maven build cache extension not restoring: the causes">
-<meta property="og:description" content="Maven build cache extension builds again instead of restoring from the remote? Causes with real log lines: config placement, saveToRemote, 401 and the local cache.">
+<meta property="og:description" content="Maven build cache extension builds again instead of restoring from the remote? Causes with real log lines, and whether switching Java 21 to 27 breaks restores.">
 <meta property="og:url" content="https://fosterstack.com/maven-build-cache-extension-not-restoring/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="FosterStack">
@@ -47,6 +47,8 @@
   .lede { font-size: 1.12rem; color: var(--muted); margin-bottom: 2rem; }
   h2 { font-size: 1.25rem; margin: 3rem 0 .9rem; letter-spacing: -.01em; }
   p + p { margin-top: .8rem; }
+  main h3 { font-size: 1.05rem; margin: 2rem 0 .6rem; }
+  .table-scroll { max-width: 100%; overflow-x: auto; }
   .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: .8rem; margin-top: 1rem; }
   .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1rem 1.1rem; }
   .card h3 { font-size: .98rem; margin-bottom: .35rem; }
@@ -87,7 +89,7 @@
 </header>
 <main>
   <h1>Maven build cache extension not restoring: the causes</h1>
-  <p class="lede">You set up the Apache Maven Build Cache Extension against a self-hosted cache and the second build still compiles everything. Each cause below was reproduced for real, with Maven 3.10.0, extension 1.2.3 and a 0.2.1 server with a password. Find your symptom in the logs, then the fix.</p>
+  <p class="lede">You set up the Apache Maven Build Cache Extension against a self-hosted cache and the second build still compiles everything. Each cause below was reproduced for real. Find your symptom in the logs, then the fix.</p>
 
   <h2>First, what a healthy build looks like</h2>
   <p>The first build stores its result, and it looks alarming because Maven 3.10.0 logs a miss as an error (Maven 3.9.9 logs it as <code>[INFO] Cache item not found</code>):</p>
@@ -96,7 +98,7 @@
 [INFO] Saved to remote cache https://cache.example.com//v1.1/demo/demo/ebb9bceba2f7a6bc/demo.jar
 [INFO] Saved to remote cache https://cache.example.com//v1.1/demo/demo/ebb9bceba2f7a6bc/buildinfo.xml
 [INFO] BUILD SUCCESS</code></pre>
-  <p>That <code>[ERROR]</code> line is only the server saying it does not have the entry yet. What matters is the <code>Saved to remote cache</code> lines after it. After deleting <code>target</code> and the extension's local cache folder, the second build:</p>
+  <p>That <code>[ERROR]</code> line is only the server saying it does not have the entry. What matters is the <code>Saved to remote cache</code> lines after it. After deleting <code>target</code> and the extension's local cache folder, the second build:</p>
   <pre tabindex="0"><code>[INFO] Attempting to restore project demo:demo from build cache
 [INFO] Found cached build, restoring demo:demo from cache by checksum ebb9bceba2f7a6bc
 [INFO] BUILD SUCCESS</code></pre>
@@ -113,12 +115,23 @@ Unable to parse cache xml element: Unrecognised tag: &#x27;remote&#x27; ...</cod
 
   <h2>Symptom 3: "HTTP Status: 401" in the log, and still no uploads</h2>
   <pre tabindex="0"><code>org.eclipse.aether.spi.connector.transport.http.HttpTransporterException: HTTP Status: 401</code></pre>
-  <p>The build still ends in <code>BUILD SUCCESS</code>, the server stays empty, and the lines <code>Saved to remote cache</code> are missing. I got exactly this from two different mistakes:</p>
+  <p>The build still ends in <code>BUILD SUCCESS</code>, the server stays empty, and the lines <code>Saved to remote cache</code> are missing. In our runs we got exactly this from two different mistakes:</p>
   <ul class="trust">
     <li>the <code>id</code> of the <code>&lt;server&gt;</code> in <code>settings.xml</code> did not match the <code>id</code> on the <code>remote</code> element, and</li>
     <li>the ids matched but the password was wrong.</li>
   </ul>
-  <p><strong>Fix:</strong> make the two ids identical and check the password. Maven 3.10 may also print a warning about the credentials being used for an address without a matching repository entry. In my working setup the build behaved the same either way.</p>
+  <p><strong>Fix:</strong> make the two ids identical and check the password. Maven 3.10 may also print a warning about the credentials being used for an address without a matching repository entry. In our working setup the build behaved the same either way.</p>
+
+  <h2 id="maven-build-cache-different-java-versions">Maven build cache and different Java versions: Java 21 and Java 27</h2>
+  <p>This is not a failure. It is the question of whether switching Java makes a cached build stop restoring.</p>
+  <ul class="trust">
+    <li>In our runs, a build cached on one Java was restored on the other, in both directions. Nothing was rebuilt.</li>
+    <li>In our runs, the jar you get is the one the first build made. The manifest inside it names that Java: <code>Build-Jdk-Spec: 21</code> or <code>Build-Jdk-Spec: 27</code>.</li>
+    <li>Gradle behaved differently in our other run: a different Java ran its tasks again and made its own entries. See <a href="/gradle-remote-cache-not-working/#gradle-build-cache-hit-rate-low">Gradle build cache hit rate low</a>, cause 3.</li>
+    <li><strong>In our runs, the first build decided what everyone got.</strong> If a Java 21 build fills the cache, a Java 27 build restores a jar that says it was built on Java 21. Here that was harmless, because the class was identical. We did not test a project whose output depends on the Java that compiles it.</li>
+  </ul>
+  <p>Our advice, not a test result: use one Java version for the builds that fill a shared cache, so you know which Java made what you restore.</p>
+  <p>For a multi-module project, see <a href="/maven-build-cache-extension-multi-module/">Maven build cache extension in a multi-module project</a>.</p>
 
   <h2>The working configuration</h2>
   <pre tabindex="0"><code>&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;
@@ -137,7 +150,31 @@ Unable to parse cache xml element: Unrecognised tag: &#x27;remote&#x27; ...</cod
   <h2>Check the server's side</h2>
   <p>The status page counts what arrived. After the healthy first build it showed <code>store_entries: 3</code>, and after the restoring build <code>cache_hits: 2</code>. If those stay at zero while your builds run, the problem is between Maven and the server, not in the project. See <a href="/gradle-remote-build-cache-authentication/#gradle-build-cache-http-status-codes">the HTTP status codes</a>.</p>
 
-  <p class="muted-note">I did not test other Maven versions, or extension 1.2.0.</p>
+  <h2>How we checked</h2>
+  <h3>Symptom runs</h3>
+  <p>Each cause above was reproduced with Maven 3.10.0, extension 1.2.3 and a 0.2.1 server with a password.</p>
+  <h3>Java runs</h3>
+  <p>A one-module Maven project, built five times in each of three series, with <code>mvn verify</code> and <code>JAVA_HOME</code> set for each build. For series B and C we saved <code>mvn -v</code> for every build to confirm which Java ran (series A has only its summary): Temurin 21.0.12.1 or OpenJDK 27 from Homebrew.</p>
+  <ul class="trust">
+    <li><strong>Series A:</strong> <code>maven.compiler.release</code> set to 17, first build on Java 21.</li>
+    <li><strong>Series B:</strong> no <code>maven.compiler.release</code>, first build on Java 21.</li>
+    <li><strong>Series C:</strong> no <code>maven.compiler.release</code>, first build on Java 27.</li>
+  </ul>
+  <p>Every build used a fresh copy of the project and an empty local build cache. All builds ran on the same Mac, shared one already-filled local Maven repository (offline), and shared the cache server. Each series started on an empty server. Every build ended with <code>BUILD SUCCESS</code>.</p>
+  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
+    <thead><tr><th>Build</th><th>Series B: Java</th><th>Series B: result</th><th>Series C: Java</th><th>Series C: result</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>21</td><td>Built</td><td>27</td><td>Built</td></tr>
+      <tr><td>2</td><td>21</td><td>Restored</td><td>27</td><td>Restored</td></tr>
+      <tr><td>3</td><td>27</td><td>Restored</td><td>21</td><td>Restored</td></tr>
+      <tr><td>4</td><td>27</td><td>Restored</td><td>21</td><td>Restored</td></tr>
+      <tr><td>5</td><td>21</td><td>Restored</td><td>27</td><td>Restored</td></tr>
+    </tbody>
+  </table></div>
+  <p>"Restored" means the log said <code>Found cached build, restoring</code> and Maven skipped the compile and test steps. Series A, with the release setting, gave the same pattern as series B.</p>
+  <p>In series B all five jars had one checksum, <code>0f4e29a2...</code>, so the jar restored on Java 27 was the jar built on Java 21. In series C all five had another, <code>ddb48271...</code>, the jar built on Java 27. The files inside the two jars differ in a single place. The manifest in the first says <code>Build-Jdk-Spec: 21</code> and in the second <code>Build-Jdk-Spec: 27</code>. The compiled class inside was byte-for-byte the same in both (we compared it with <code>cmp</code>). Without the release setting the compiler plugin still compiled for Java 8 on both Javas (the log said <code>target 1.8</code>), which is why the class was the same.</p>
+  <p>The Java runs used Maven 3.10.0 with maven-build-cache-extension 1.2.3 and FosterStack Cache 0.2.1, on macOS (arm64), with Temurin 21.0.12.1 and OpenJDK 27 (Homebrew).</p>
+  <p class="muted-note">Not tested: other Maven versions, other extension versions including 1.2.0, other Java vendors, a project whose build settings change with the Java version (for example, profiles that switch on by JDK), and Linux or Windows.</p>
   <div class="cta-row">
     <a class="btn" href="/maven-remote-build-cache-setup/">Maven remote cache setup</a>
     <a class="btn btn-secondary" href="/">FosterStack home</a>

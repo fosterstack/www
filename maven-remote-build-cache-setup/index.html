@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Maven build cache extension: remote server setup</title>
-<meta name="description" content="Set up the Apache Maven Build Cache Extension against a self-hosted remote cache: extension file, config file, credentials, and how to check cache hits.">
-<meta property="og:title" content="Maven build cache extension: remote server setup">
-<meta property="og:description" content="Set up the Apache Maven Build Cache Extension against a self-hosted remote cache: extension file, config file, credentials, and how to check cache hits.">
+<title>Maven remote build cache setup, on/off, and with Gradle</title>
+<meta name="description" content="Set up the Apache Maven Build Cache Extension against a self-hosted remote cache, switch it on and off, and use one server for Gradle and Maven. Real runs on 0.2.1.">
+<meta property="og:title" content="Maven remote build cache setup, on/off, and with Gradle">
+<meta property="og:description" content="Set up the Apache Maven Build Cache Extension against a self-hosted remote cache, switch it on and off, and use one server for Gradle and Maven. Real runs on 0.2.1.">
 <meta property="og:url" content="https://fosterstack.com/maven-remote-build-cache-setup/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="FosterStack">
@@ -77,6 +77,8 @@
   a { color: var(--accent); }
   code { overflow-wrap: anywhere; }
   pre code { overflow-wrap: normal; }
+  .table-scroll { max-width: 100%; overflow-x: auto; }
+  main h3 { font-size: 1.05rem; margin: 2rem 0 .6rem; }
   :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 </style>
 </head>
@@ -148,7 +150,7 @@
 [INFO] Saved to remote cache https://cache.example.com//v1.1/demo/demo/ebb9bceba2f7a6bc/buildinfo.xml
 [INFO] BUILD SUCCESS
 [INFO] Saved to remote cache https://cache.example.com//v1.1/demo/demo/9d9dcaf9-3b6b-40fb-9cb5-da97c975eab5/build-cache-report.xml</code></pre>
-  <p>The line starting <code>[ERROR] Error downloading cache item</code> is the normal first-time miss, the server saying it does not have that entry yet. Maven 3.9.9 logs an ordinary miss as <code>[INFO] Cache item not found</code> instead, so the line differs by Maven version (we saw both in our version tests). The build then ran for real and saved its result to the server. The server's status page showed it:</p>
+  <p>The line starting <code>[ERROR] Error downloading cache item</code> is the normal first-time miss, the server saying it does not have that entry. Maven 3.9.9 logs an ordinary miss as <code>[INFO] Cache item not found</code> instead, so the line differs by Maven version (we saw both in our version tests). The build then ran for real and saved its result to the server. The server's status page showed it:</p>
   <pre tabindex="0"><code>$ curl -s -u maven:demo-pass localhost:8080/statusz | grep -E &#x27;&quot;store_entries&quot;|&quot;cache_hits&quot;|&quot;cache_misses&quot;&#x27;
   &quot;store_entries&quot;: 3,
   &quot;cache_hits&quot;: 0,
@@ -164,7 +166,106 @@ mvn package
   <p>Maven 3.10 also prints a warning that the credentials for <code>fosterstack-cache</code> are being used for an address with no matching repository entry. In our run the build worked regardless.</p>
   <p>If you see no hit, check that the <code>id</code> in the password file matches, that <code>saveToRemote</code> is on for the machine that built first, and that the second run starts from a clean checkout.</p>
 
-  <p class="muted-note">Mixed Gradle and Maven shop? Both can use the same server. See <a href="/migrate-build-cache-node/">Gradle and Maven setup</a>. For CI runners, see <a href="/jenkins-ci-build-cache/">Jenkins and CI build cache</a>.</p>
+  <h2 id="maven-build-cache-extension-enable-disable">Enable or disable the Maven build cache extension</h2>
+  <p>The Apache Maven Build Cache Extension has command-line switches to turn it off, skip the lookup, stop talking to the server, or stop uploading. In our runs, each did this:</p>
+  <ul class="trust">
+    <li><code>-Dmaven.build.cache.enabled=false</code> turns the cache off for that build.</li>
+    <li><code>-Dmaven.build.cache.skipCache=true</code> ignores stored results and builds fully.</li>
+    <li><code>-Dmaven.build.cache.remote.enabled=false</code> stops all contact with the server.</li>
+    <li><code>-Dmaven.build.cache.remote.save.enabled=false</code> lets the build download but never upload.</li>
+  </ul>
+  <p><strong>Our advice, not a test result:</strong> which one to use.</p>
+  <ul class="trust">
+    <li><strong>A suspect build:</strong> <code>enabled=false</code> rules the cache out completely.</li>
+    <li><strong>Make sure you build fresh:</strong> <code>skipCache=true</code>, for example for a release build.</li>
+    <li><strong>Working offline or off the VPN:</strong> <code>remote.enabled=false</code>, so Maven does not wait on a server it cannot reach.</li>
+    <li><strong>Developers read, CI writes:</strong> <code>remote.save.enabled=false</code> on developer machines. The same idea for Gradle is on <a href="/gradle-build-cache-ci-writes-developers-read/">CI writes, developers read</a>. A read-only login on the server enforces it.</li>
+  </ul>
+  <p>The same job for Gradle is on <a href="/gradle-build-cache-enable-disable/">enable or disable the Gradle build cache</a>.</p>
+  <p>If you see the <code>[ERROR] Error downloading cache item</code> line on a cache that you know holds the result, check the address, the login and the proxy: see <a href="/maven-build-cache-extension-not-restoring/">Maven build cache not restoring</a>.</p>
+
+  <h2 id="one-build-cache-server-gradle-and-maven">One build cache server for Gradle and Maven</h2>
+  <p>If your company builds some projects with Gradle and others with Maven, you do not need two cache servers. FosterStack Cache serves both, with one login.</p>
+
+  <h3>The repository</h3>
+  <pre tabindex="0"><code>mixed-repo/
+  gradle-app/    settings.gradle.kts, build.gradle.kts, gradle.properties, src/
+  maven-app/     pom.xml, settings.xml, src/, .mvn/extensions.xml, .mvn/maven-build-cache-config.xml</code></pre>
+  <p>Two small Java apps, built by two different tools.</p>
+
+  <h3>One server, one login</h3>
+  <pre tabindex="0"><code>FSCACHE_USERNAME=build FSCACHE_PASSWORD=&lt;a long secret&gt; ./fscache</code></pre>
+  <p>Both tools send that same login, each in its own way. The secret comes from one environment variable, <code>FSCACHE_PASSWORD</code>.</p>
+
+  <h3>The Gradle side</h3>
+  <p><code>gradle-app/settings.gradle.kts</code>, with <code>org.gradle.caching=true</code> in <code>gradle.properties</code>:</p>
+  <pre tabindex="0"><code>rootProject.name = &quot;gradle-app&quot;
+
+// FosterStack Cache — remote Gradle build cache.
+// https://github.com/fosterstack/cache
+buildCache {
+    remote&lt;HttpBuildCache&gt; {
+        url = uri(&quot;https://cache.example.com/&quot;)
+        isPush = true
+        credentials {
+            username = &quot;build&quot;
+            password = System.getenv(&quot;FSCACHE_PASSWORD&quot;)
+        }
+    }
+}</code></pre>
+
+  <h3>The Maven side</h3>
+  <p><code>maven-app/.mvn/maven-build-cache-config.xml</code> has the same <code>remote</code> block as step 2 above. In <code>maven-app/settings.xml</code>, the server <code>id</code> must match the remote's. In our run, Maven filled in the password from the same environment variable:</p>
+  <pre tabindex="0"><code>&lt;settings&gt;
+  &lt;servers&gt;
+    &lt;server&gt;
+      &lt;id&gt;fosterstack-cache&lt;/id&gt;
+      &lt;username&gt;build&lt;/username&gt;
+      &lt;password&gt;${env.FSCACHE_PASSWORD}&lt;/password&gt;
+    &lt;/server&gt;
+  &lt;/servers&gt;
+&lt;/settings&gt;</code></pre>
+
+  <h2>How we checked</h2>
+  <p><strong>Setup run (step 4).</strong> Maven 3.10.0, extension 1.2.3, a 0.2.1 server and a one-file project, as described in step 4.</p>
+  <p><strong>Switch run.</strong> A small Maven project with the extension set up as described in steps 1 to 3. Every build used a fresh copy of the project and an empty local build cache, so the only shared thing was the server. All seven builds ended with <code>BUILD SUCCESS</code>. Maven 3.10.0, maven-build-cache-extension 1.2.3 and FosterStack Cache 0.2.1, macOS (arm64).</p>
+  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
+    <thead><tr><th>Build</th><th>Added to the command</th><th>Result</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>nothing (empty server)</td><td>Compiled, and saved the result to the server</td></tr>
+      <tr><td>2</td><td>nothing (another machine)</td><td>Restored from the cache, no compile</td></tr>
+      <tr><td>3</td><td><code>-Dmaven.build.cache.enabled=false</code></td><td>Compiled. The cache was off</td></tr>
+      <tr><td>4</td><td><code>-Dmaven.build.cache.skipCache=true</code></td><td>Compiled, although a result was stored</td></tr>
+      <tr><td>5</td><td><code>-Dmaven.build.cache.remote.enabled=false</code></td><td>Compiled. It did not ask the server at all</td></tr>
+      <tr><td>6</td><td><code>-Dmaven.build.cache.remote.save.enabled=false</code> (empty server)</td><td>Compiled. The server still had 0 entries</td></tr>
+      <tr><td>7</td><td>same as 6, again</td><td>Compiled again, because nothing was ever stored</td></tr>
+    </tbody>
+  </table></div>
+  <p>What Maven prints for the first two switches:</p>
+<pre tabindex="0"><code>enabled=false:
+[INFO] Cache disabled by command line flag, project will be built fully and not cached
+
+skipCache=true:
+[INFO] Project demo:demo is marked as requiring force rebuild, will skip lookup in build cache</code></pre>
+  <p>In our run, with <code>remote.enabled=false</code> there was no download attempt in the log. With <code>remote.save.enabled=false</code> the build still looked in the server, found nothing, and built locally.</p>
+  <p><strong>Mixed run.</strong> A repository with a Gradle app and a Maven app, both pointed at one 0.2.1 server, on Gradle 9.8.0, Maven 3.10.0 and extension 1.2.3. Each app was built twice. For Gradle, we ran <code>gradle clean</code> in between. For Maven, we deleted <code>target</code> and the extension's local cache folder, so the only copy left was on the server. (We also turned Gradle's local cache off.)</p>
+  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
+    <tr><th>Build</th><th>Result</th><th>Server afterwards</th></tr>
+    <tr><td>Gradle, first</td><td><code>:compileJava</code> ran</td><td>1 entry</td></tr>
+    <tr><td>Gradle, second</td><td><code>&gt; Task :compileJava FROM-CACHE</code>, "1 from cache"</td><td>1 hit</td></tr>
+    <tr><td>Maven, first</td><td>built, then three lines of <code>Saved to remote cache</code></td><td>4 entries in all</td></tr>
+    <tr><td>Maven, second</td><td><code>Found cached build, restoring demo:maven-app from cache</code></td><td>3 hits in all</td></tr>
+  </table></div>
+  <p>The counts are the server's own, from its status page. Gradle stores its work under keys of a single long hex number. The Maven extension stores its files under a path. Here is what the server held on disk afterwards:</p>
+  <pre tabindex="0"><code>blobs/8a/8a2fb682ab19c1d434fd2d1ee3e8b27a                              (Gradle)
+blobs/v1.1/demo/maven-app/3aa3eaca44f8d0fa/ma/maven-app.jar            (Maven)
+blobs/v1.1/demo/maven-app/3aa3eaca44f8d0fa/bu/buildinfo.xml            (Maven)
+blobs/v1.1/demo/maven-app/e17172d0-.../bu/build-cache-report.xml       (Maven)
+blobs/v1.1/demo/maven-app/14c158a7-.../bu/build-cache-report.xml       (Maven)</code></pre>
+  <p>They sit side by side in one store, under one size cap, watched by one set of metrics. See <a href="/build-cache-server-sizing/">server sizing</a> and <a href="/is-the-build-cache-server-healthy-what-to-alert-on/#monitor-build-cache-prometheus-grafana">monitoring</a>.</p>
+  <p class="muted-note">Not tested: anything about speed (the apps in the mixed run are tiny, and the point was that one server handled both tools), and Gradle, Maven or extension versions other than those named above.</p>
+
+  <p class="muted-note">Mixed Gradle and Maven shop? Both can use the same server: see <a href="#one-build-cache-server-gradle-and-maven">one server for Gradle and Maven</a>, <a href="/migrate-build-cache-node/">Gradle and Maven setup</a> and the <a href="/first-15-minutes-build-cache/#gradle-build-cache-tutorial">Gradle build cache tutorial</a>. For CI runners, see <a href="/jenkins-ci-build-cache/">Jenkins and CI build cache</a>.</p>
   <div class="cta-row">
     <a class="btn" href="/migrate-build-cache-node/">Gradle and Maven setup</a>
     <a class="btn btn-secondary" href="/">FosterStack home</a>

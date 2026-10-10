@@ -200,7 +200,7 @@ FSCACHE_ADDR=127.0.0.1:18152 FSCACHE_DATA_DIR=$PWD/data-new-copied fscache</code
   <p>Look for <code>Found cached build, restoring</code> in the Maven output. You may also see <code>Saved to remote cache</code> lines on a build that restored. In our run these were a small report file that the extension saves each time, not a rebuild. If a build prints <code>Compiling</code> instead of <code>Found cached build</code>, it did not find a stored result.</p>
 
   <h3>Credentials and other settings</h3>
-  <p>If the new server has logins, Maven reads them from the <code>&lt;server&gt;</code> entry in <code>settings.xml</code> whose id matches the <code>id</code> on the <code>&lt;remote&gt;</code> line. See <a href="/maven-remote-build-cache-setup/">Maven remote build cache setup</a> for that, and <a href="/maven-build-cache-corporate-proxy/">behind a corporate proxy</a> if your builds go through one. To move Gradle builds too, see <a href="/one-build-cache-server-gradle-and-maven/">one server for Gradle and Maven</a>.</p>
+  <p>If the new server has logins, Maven reads them from the <code>&lt;server&gt;</code> entry in <code>settings.xml</code> whose id matches the <code>id</code> on the <code>&lt;remote&gt;</code> line. See <a href="/maven-remote-build-cache-setup/">Maven remote build cache setup</a> for that, and <a href="/gradle-build-cache-corporate-proxy/#maven-build-cache-corporate-proxy">behind a corporate proxy</a> if your builds go through one. To move Gradle builds too, see <a href="/maven-remote-build-cache-setup/#one-build-cache-server-gradle-and-maven">one server for Gradle and Maven</a>.</p>
 
   <h2>How we checked</h2>
   <ul class="trust">
