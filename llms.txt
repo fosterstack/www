@@ -39,7 +39,7 @@ verifiable against the CI run that produced them.
 - [Use a Remote Build Cache in GitHub Actions](https://fosterstack.com/github-actions-remote-build-cache/): the cache address and logins as GitHub secrets, a read-only pull-request variant, and a hosted-runner demo.
 - [Is My Build Cache Server Healthy? What to Alert On](https://fosterstack.com/is-the-build-cache-server-healthy-what-to-alert-on/): how to tell the cache server is healthy and what to alert on, from tested failures.
 - [Can I Restart the Cache Server While Builds Run?](https://fosterstack.com/restart-build-cache-server-while-builds-run/): what a running build sees when the cache server is stopped and restarted, from real runs.
-- [Change the Build Cache Logins Without Breaking CI](https://fosterstack.com/change-build-cache-logins-without-breaking-ci/): the order to change the cache logins so CI keeps working, from a real run.
+- [Change the Build Cache Logins Without Breaking CI](https://fosterstack.com/change-build-cache-logins-without-breaking-ci/): the order to change the cache logins so CI jobs keep using the cache, from real runs.
 - [Jenkins and CI build cache](https://fosterstack.com/jenkins-ci-build-cache/): one shared cache for CI runners.
 - [Gradle remote build cache not working](https://fosterstack.com/gradle-remote-cache-not-working/): six checks when nothing comes from the cache.
 - [Maven remote build cache setup](https://fosterstack.com/maven-remote-build-cache-setup/): extension, config, credentials, checking hits.
