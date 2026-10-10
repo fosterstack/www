@@ -110,7 +110,7 @@
   <p><strong>Our advice, not a test result.</strong> Measure your own project before you pick a limit. The server's status page (<code>/statusz</code>) shows the entry count and the size in bytes. To see how it changes as you build, see <a href="/is-the-build-cache-server-healthy-what-to-alert-on/">is my build cache server healthy, and what to alert on</a>. To pick a size limit, see <a href="/build-cache-server-sizing/">how big a server does a build cache need</a> and <a href="/build-cache-eviction-size-limit/">how the size limit works</a>.</p>
 
   <h2>Gradle: what one build stored</h2>
-  <h3>What the 13 entries were</h3>
+  <h3>What the 13 entries were (Mac run)</h3>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <thead><tr><th>Stored</th><th>Entries</th></tr></thead>
     <tbody>
@@ -177,21 +177,21 @@ Stored cache entry for Kotlin DSL script compilation (Project/TopLevel/stage2) w
   <p class="muted-note">Run on Gradle 9.8.0 with FosterStack Cache 0.2.1, macOS (arm64), Java 27.</p>
   <p class="muted-note">Run on Maven 3.10.0 with maven-build-cache-extension 1.2.3 and FosterStack Cache 0.2.1, macOS (arm64), Java 27 (Homebrew).</p>
   <h3>Second run: Linux, 0.2.2 (the Gradle half)</h3>
-  <p>We ran the four-module Gradle build again on a GitHub-hosted Linux machine with FosterStack Cache 0.2.2, Gradle 9.8.0 and Java 21. The build files were ones we wrote again, because they are not shown here, so the totals differ a little from the Mac run.</p>
+  <p>We ran the four-module Gradle build again on a GitHub-hosted Linux machine with FosterStack Cache 0.2.2, Gradle 9.8.0 and Java 21. We wrote the build files again, because they are not shown here, so the counts differ a little from the Mac run: 12 entries here, 13 there.</p>
   <ul class="trust">
     <li><code>gradle build -i</code> printed 12 <code>Stored cache entry</code> lines, not 13: one <code>compileJava</code> entry for each of the four modules, 5 entries for the first stage of build script compilation and 3 for the second. The server held 12 entries and 29,821 bytes.</li>
     <li>The <code>classes</code>, <code>jar</code>, <code>assemble</code> and <code>build</code> tasks of the four modules stored nothing and never came from the cache.</li>
     <li>A second run with the same Gradle home against a new empty server stored only the 4 <code>compileJava</code> entries: 4 entries and 8,386 bytes.</li>
   </ul>
+  <p class="muted-note">The Gradle half: <a href="https://github.com/fosterstack/www/actions/runs/38073731609">the run and its log are public</a>.</p>
   <h3>Second run: Linux, 0.2.2 (the Maven half)</h3>
-  <p>The Maven runs above were on a Mac with 0.2.1. We ran the three-module build again on the same kind of machine with FosterStack Cache 0.2.2, Maven 3.10.0 and Java 21.</p>
+  <p>The Maven runs above were on a Mac with 0.2.1. We ran the three-module build again on a GitHub-hosted Linux machine with FosterStack Cache 0.2.2, Maven 3.10.0 and Java 21.</p>
   <ul class="trust">
     <li>The first build against an empty server saved 7 entries: 3 jars, 3 <code>buildinfo.xml</code> files and 1 <code>build-cache-report.xml</code>, with three <code>[ERROR] Error downloading cache item ... buildinfo.xml</code> lines for the misses.</li>
     <li>The 3 jars came to 10,077 bytes in all (about 3.4 KB each; the Mac run: about 5 KB each). The 3 <code>buildinfo.xml</code> files came to 27,781 bytes, about the same as on the Mac. The server held 39,311 bytes (the Mac run: 44,810). The <code>buildinfo.xml</code> files were again bigger than the jars. We downloaded each saved file from the server to measure it, and the sizes added up to the server's number.</li>
     <li>A second build from a fresh copy restored all three modules and added one entry, the report, of 1,318 bytes, the same size as on the Mac.</li>
   </ul>
   <p class="muted-note"><a href="https://github.com/fosterstack/www/actions/runs/38070836344">The run and its log are public</a>.</p>
-  <p class="muted-note">The Gradle half: <a href="https://github.com/fosterstack/www/actions/runs/38073731609">the run and its log are public</a>.</p>
 </main>
 
 <footer>
