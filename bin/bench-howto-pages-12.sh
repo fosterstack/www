@@ -82,7 +82,7 @@ if [ "$LOCAL" = 1 ]; then echo "tools: LOCAL tools in use, nothing checked (a de
 echo "release under test: FosterStack Cache ${VER}, downloaded with no login and verified (cosign + sha256) before it runs; every server listens on 127.0.0.1 only"
 echo "NOT checksum-pinned: the Maven build-cache extension 1.2.3, the Maven plugin jars (their eight versions are pinned in the poms, the files come from Maven Central), the JUnit 5.11.0 libraries (Maven Central), and the container image ghcr.io/fosterstack/cache:${VER} (pulled by tag; the page verifies it with cosign, which this job does not do); the runner's own Maven (version printed) is used"
 echo "invented by this script (the pages show their build files only in part): the one-class Calc project and its JUnit tests, the three small Gradle projects A, B and C, made-up logins"
-echo "differences from the pages' own runs: Linux amd64 (the pages: macOS arm64), release ${VER} (the pages: 0.2.1), Gradle ${GR_VER}, Java 21 (the test-task page: Java 27); the air-gapped page's crane pull is replaced by docker pull and docker save; the no-route test uses a network namespace with only a loopback interface"
+echo "differences from the pages' own runs: Linux amd64 (the pages: macOS arm64), release ${VER} (the pages: 0.2.1), Gradle ${GR_VER}, Java 21 (the test-task page: Java 27); the air-gapped page's crane pull is replaced by docker pull and docker save, and its docker run line gets a --name so the container can be removed; the no-route test uses a network namespace with only a loopback interface"
 echo "Gradle builds in scenario S use a new empty Gradle home and a fresh project copy each, no daemon, Gradle's own local cache off; scenario T shares one Gradle home between its runs (the test libraries are downloaded once, as on the page); every Maven build uses a fresh copy and an emptied ~/.m2/build-cache"
 echo "NOT tested here (as on the pages): tests that read the clock or the network, several modules, many projects at once, real project sizes, Maven in the several-projects page, verifying the container image with cosign, a machine with no network at all (only a network namespace with a loopback interface)"
 echo "page commands run with 'bash -o pipefail'; a runner times commands, not people"
@@ -282,7 +282,6 @@ qcheck() { # LABEL NAME "want per task" tasks...   (ran | cache for each compile
 
 
 stop_proxy() { :; }; stop_tls() { :; }   # the exit trap of the shared base calls these two; this job starts neither
-want() { if [ "$2" = "$3" ]; then echo "OBS $1: $2, as the page says"; else fail "$1: the page says $3; got $2"; fi; }
 
 # =====================================================================================
 # Maven helpers
@@ -480,15 +479,15 @@ scenario_s() {
   sproj "$D/a" A; sbuild sa "$D/a" "$U1" "$RWU" "$RWP"; expect s-sa "BUILD SUCCESSFUL"
   want "A: compile task" "$(sstate sa)" ran
   want "A: entries on the server afterwards" "$(sfield $SPORT store_entries)" 2
-  h0="$(sfield $SPORT cache_hits)"; want "A: restored from the server (cache hits)" "$h0" 0
+  h0="$(sfield $SPORT cache_hits)"; case "$h0" in ''|*[!0-9]*) fail "S the server's /statusz could not be read with the login (got '$h0')"; stop_server; return;; esac; want "A: restored from the server (cache hits)" "$h0" 0
   sproj "$D/b" B; sbuild sb "$D/b" "$U1" "$RWU" "$RWP"; expect s-sb "BUILD SUCCESSFUL"
   want "B, different code: compile task" "$(sstate sb)" ran
   want "B: entries on the server afterwards" "$(sfield $SPORT store_entries)" 3
-  h1="$(sfield $SPORT cache_hits)"; want "B: restored from the server (the compiled build script)" "$((h1-h0))" 1
+  h1="$(sfield $SPORT cache_hits)"; case "$h1" in ''|*[!0-9]*) h1=0;; esac; want "B: restored from the server (the compiled build script)" "$((h1-h0))" 1
   sproj "$D/c" A; sbuild sc "$D/c" "$U1" "$RWU" "$RWP"; expect s-sc "BUILD SUCCESSFUL"
   want "C, a copy of A in another folder: compile task" "$(sstate sc)" cache
   want "C: entries on the server afterwards" "$(sfield $SPORT store_entries)" 3
-  h2="$(sfield $SPORT cache_hits)"; want "C: restored from the server (A's compile result and the build script)" "$((h2-h1))" 2
+  h2="$(sfield $SPORT cache_hits)"; case "$h2" in ''|*[!0-9]*) h2=0;; esac; want "C: restored from the server (A's compile result and the build script)" "$((h2-h1))" 2
   ka="$(skey sa)"; kb="$(skey sb)"
   [ -n "$ka" ] && [ -n "$kb" ] && [ "$ka" != "$kb" ] && echo "OBS S the compile keys of A and B differ; A's key in the copy C: same as A's (C restored it)" || fail "S could not read two different compile keys from the logs of A and B"
   # --- direct requests: the key is the request path
@@ -519,7 +518,7 @@ scenario_s() {
   want "C on team 1's server: compile task" "$(sstate tc)" cache
   # second server on another port (start_server keeps one server pid: keep team 1's alive by hand)
   local SAVE_PID="$SERVER_PID"
-  start_server s3 "$SPORT2" "$T2U" "$T2P" || { SERVER_PID="$SAVE_PID"; stop_server; return; }
+  start_server s3 "$SPORT2" "$T2U" "$T2P" || { SERVER_PID="$SAVE_PID"; SERVER_PORT="$SPORT"; stop_server; return; }
   local PID2="$SERVER_PID"
   sproj "$D/td" A; sbuild td "$D/td" "$U2" "$T1U" "$T1P"; expect s-td "BUILD SUCCESSFUL"
   want "C on team 2's server, sending team 1's login: compile task" "$(sstate td)" ran
@@ -535,7 +534,7 @@ scenario_s() {
   want "the same build again on team 2's server: compile task" "$(sstate tf)" cache
   want "team 1's login on team 2's server, A's key" "$(scode -u "$T1U:$T1P" "${U2}${KT1}")" 401
   want "team 2's login on team 1's server, A's key" "$(scode -u "$T2U:$T2P" "${U1}${KT1}")" 401
-  kill "$PID2" 2>/dev/null; wait "$PID2" 2>/dev/null; SERVER_PID="$PID1"; stop_server
+  kill "$PID2" 2>/dev/null; wait "$PID2" 2>/dev/null; SERVER_PID="$PID1"; SERVER_PORT="$SPORT"; stop_server
   # --- one small size cap
   SFA_18160="$RWU:$RWP"
   start_server s4 "$SPORT" "$RWU" "$RWP" FSCACHE_MAX_BYTES=5000 || return
@@ -579,8 +578,8 @@ EOF
   echo "OBS A the page's verify line as first published (no 'grep -v sbom') exited $asis; its output: $(tr '\n' ' ' < "$W/a-asis.out" | cut -c1-260)"
   cp "$D/connected/fscache_${VER}_linux_amd64.tar.gz" "$D/isolated/"
   # a wrong archive must fail the second step
-  cp "$D/connected/checksums.txt" "$D/connected/bad-checksums.txt"; printf 'tampered' >> "$D/connected/fscache_${VER}_linux_amd64.tar.gz"
-  ( cd "$D/connected" && sha256sum -c <(grep "fscache_${VER}_linux_amd64.tar.gz" checksums.txt | grep -v sbom) >/dev/null 2>&1 ) && fail "A a tampered archive passed the checksum step" || echo "OBS A a tampered archive fails 'sha256sum -c', as the page's 'both steps matter' implies"
+  printf 'tampered' >> "$D/connected/fscache_${VER}_linux_amd64.tar.gz"
+  ( cd "$D/connected" && sha256sum -c <(grep "fscache_${VER}_linux_amd64.tar.gz" checksums.txt | grep -v sbom) ) > "$W/a-tamper.out" 2>&1 && fail "A a tampered archive passed the checksum step" || { grep -qF "tar.gz: FAILED" "$W/a-tamper.out" && echo "OBS A a tampered archive fails 'sha256sum -c' with '...tar.gz: FAILED', so the checksum step does catch it" || fail "A the tampered archive did not fail with 'tar.gz: FAILED' (output: $(tr '\n' ' ' < "$W/a-tamper.out" | cut -c1-200))"; }
   # the isolated side: unpack and look at it
   run a-unpack "$D/isolated" <<EOF
 tar -xzf "fscache_${VER}_linux_amd64.tar.gz"
@@ -606,13 +605,14 @@ NONET
   run a-nonet "$D/isolated" <<EOF
 sudo -n unshare -n bash "$D/isolated/nonet.sh" "$D/isolated"; sudo -n chown -R "\$(id -u):\$(id -g)" "$D/isolated"
 EOF
-  if grep -qF "interfaces: lo" "$W/a-nonet.out" && grep -qE "^healthz: ok" "$W/a-nonet.out" && grep -qxF "get: hello" "$W/a-nonet.out"; then
+  if grep -qxE "interfaces: lo ?" "$W/a-nonet.out" && grep -qE "^healthz: ok" "$W/a-nonet.out" && grep -qxF "get: hello" "$W/a-nonet.out"; then
     echo "OBS A with only a loopback interface (no route anywhere) the server started, answered /healthz, stored and returned an entry: no outbound call was needed"
   else fail "A the server did not work in a network namespace with only a loopback interface (log: $(tr '\n' ' ' < "$W/a-nonet.out" | cut -c1-300))"; fi
   # containers: the page's load and run (crane pull is replaced by docker pull and docker save)
   docker pull -q "ghcr.io/fosterstack/cache:${VER}" >/dev/null 2>&1 && docker save -o "$D/isolated/fscache-${VER}.tar" "ghcr.io/fosterstack/cache:${VER}" && docker rmi -f "ghcr.io/fosterstack/cache:${VER}" >/dev/null 2>&1
   if [ -s "$D/isolated/fscache-${VER}.tar" ]; then
     curl -sf --max-time 2 http://127.0.0.1:8080/healthz >/dev/null 2>&1 && { fail "A something already answers on port 8080: the container step is not run"; return; }
+    CONTAINERS="air-gapped-test"
     run a-docker "$D/isolated" <<EOF
 docker load -i fscache-${VER}.tar
 docker run -d --name air-gapped-test -p 127.0.0.1:8080:8080 -v fscache-data:/home/nonroot ghcr.io/fosterstack/cache:${VER}
