@@ -16,7 +16,8 @@
 #     distribution is checked against a pinned sha256, and each case starts with an empty GRADLE_USER_HOME / local Maven build cache
 set -uo pipefail
 
-VER=0.2.2
+VER="${BENCH_VER:-0.2.2}"   # the release the pages name; a scheduled proof run passes the newest release tag (checked by the workflow, and again here)
+[[ "$VER" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "bad release version: $VER" >&2; exit 2; }
 PORT=18495
 GR_VER=9.8.0
 GR_URL="https://services.gradle.org/distributions/gradle-${GR_VER}-all.zip"
