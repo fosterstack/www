@@ -88,7 +88,7 @@
 </header>
 <main>
   <h1>Use your Gradle build cache over HTTPS with a private CA</h1>
-  <p class="lede">With the right trust store, Gradle uses a cache behind HTTPS with your own certificate authority, and in our runs the cache hits worked. We ran real builds with a private CA and saw the exact error without it. With the standard Java settings we used, a trust store holding only our CA replaced Java's normal list, which broke our downloads from Maven Central until we put the normal list back in the store.</p>
+  <p class="lede">With the right trust store, Gradle uses a cache behind HTTPS with your own certificate authority, and in our runs the cache hits worked. We ran real builds with a private CA and saw the exact error without it. With the standard Java settings we used, a trust store that held only our CA made Java ignore its normal list of trusted CAs. Our downloads from Maven Central then failed, until we put the normal list into the store as well.</p>
 
   <h2>The short answer</h2>
   <ul class="trust">
