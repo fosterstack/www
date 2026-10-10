@@ -205,9 +205,9 @@ PUT http://&lt;cache-ip&gt;:18132/v1.1/demo/demo/&lt;id&gt;/build-cache-report.x
   <ul class="trust">
     <li>Gradle without proxy settings: nothing reached the proxy. With proxy settings and a plain-HTTP cache address, the requests went through the proxy.</li>
     <li>Gradle with the cache at <code>127.0.0.1</code>, or its address in <code>nonProxyHosts</code>: nothing reached the proxy, and the second build was still <code>FROM-CACHE</code>.</li>
-    <li>Gradle with an HTTPS cache through the proxy: one <code>CONNECT</code> line per build and nothing else, so the proxy saw no request inside the tunnel.</li>
-    <li>Gradle with a proxy that refuses the cache host: both builds succeeded without the cache. The warning ended in <code>response status 403: Forbidden</code>, like the one shown above, and the remote cache was then disabled for that build. The two curl commands printed <code>curl: (56) CONNECT tunnel failed, response 403</code> and <code>ok</code>.</li>
-    <li>One difference from the Mac run: with proxy settings, each Gradle build made two <code>GET</code> requests to the cache, not one. The first build also made one <code>PUT</code>.</li>
+    <li>Gradle with an HTTPS cache through the proxy: one <code>CONNECT</code> line per build and no <code>GET</code> or <code>PUT</code> lines, so the proxy saw no request inside the tunnel.</li>
+    <li>Gradle with a proxy that refuses the cache host: both builds succeeded without the cache, and each logged a warning ending in <code>response status 403: Forbidden</code>, like the one shown above. The first build then said the remote cache was disabled. The two curl commands printed <code>curl: (56) CONNECT tunnel failed, response 403</code> and <code>ok</code>.</li>
+    <li>One difference from the Mac run: with proxy settings, each Gradle build made two <code>GET</code> requests to the cache, not one, and the two builds made one <code>PUT</code> between them.</li>
     <li>Maven: the proxy log of the first and second builds matched the two lists above.</li>
     <li>Maven with the cache at <code>127.0.0.1</code> and the proxy configured: it still used the proxy (4 requests for the restoring build).</li>
     <li>Maven with the cache's address in <code>nonProxyHosts</code>: nothing reached the proxy, and the build restored from the cache.</li>
