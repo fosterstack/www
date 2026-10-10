@@ -204,7 +204,7 @@ jobs:
       <tr><td>Pull request: read-only login, push off, one file changed</td><td>The unchanged module came from the cache, the changed one ran, nothing was stored</td><td>Built (the one module changed); nothing stored</td></tr>
       <tr><td>Read-only login with push on</td><td>Build succeeded. <code>Could not store entry ... response status 403: Forbidden</code>, then <code>The remote build cache was disabled during the build due to errors.</code> Nothing stored</td><td>Build succeeded. <code>Unable to save to remote cache ...</code> with a 403 stack trace, 3 times. Nothing stored</td></tr>
       <tr><td>No variables at all, or all of them empty (fork pull request)</td><td>Build succeeded without the cache. No cache warning was printed</td><td>Build succeeded without the cache (no flags passed)</td></tr>
-      <tr><td>Address set, login empty (Gradle), missing, or a wrong password</td><td>Build succeeded. <code>Could not load entry ... response status 401: Unauthorized</code></td><td>Build succeeded. <code>[ERROR] Error downloading cache item</code></td></tr>
+      <tr><td>Address set, login empty (Gradle), missing, or a wrong password</td><td>Build succeeded. <code>Could not load entry ... response status 401: Unauthorized</code></td><td>Build succeeded. <code>[ERROR] Error downloading cache item</code> (Maven 3.9.9)</td></tr>
       <tr><td>Cache flags passed with an empty address</td><td>Not applicable</td><td>Maven stopped with an internal error: <code>NoTransporterException: Cannot access  using the registered transporter factories</code></td></tr>
     </tbody>
   </table></div>

@@ -101,7 +101,7 @@
   <h2>What to do</h2>
   <p>Our advice, not a test result:</p>
   <ul class="trust">
-    <li><strong>Search your build logs for the warning.</strong> A build that quietly stopped using the cache looks like a slow build. In Gradle, look for <code>Could not load entry</code> or <code>Could not store entry</code>. In Maven, look for <code>Error downloading cache item</code> and <code>Unable to save to remote cache</code>.</li>
+    <li><strong>Search your build logs for the warning.</strong> A build that quietly stopped using the cache looks like a slow build. In Gradle, look for <code>Could not load entry</code> or <code>Could not store entry</code>. In Maven, look for <code>Error downloading cache item</code> and <code>Unable to save to remote cache</code>. On Maven 3.10.0 an ordinary first miss also logs the first line, so read it together with the second.</li>
     <li><strong>Check the cache address.</strong> A server that is down on a machine you can reach refuses the connection at once, and that showed no clear extra time in our timed runs (we tested this on the same machine). An address that drops packets makes the build wait for the timeout. Make sure the address in your build is the right one.</li>
     <li><strong>Shorten the timeout on CI.</strong> Gradle reads two system properties, <code>org.gradle.internal.http.connectionTimeout</code> and <code>org.gradle.internal.http.socketTimeout</code>, both 30000 milliseconds by default. Maven reads <code>aether.connector.connectTimeout</code>, 10000 milliseconds by default.</li>
   </ul>

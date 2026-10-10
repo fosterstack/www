@@ -106,8 +106,8 @@
     <tr><th>Metric</th><th>Type</th><th>What it tells you</th></tr>
     <tr><td><code>fscache_cache_hits_total</code></td><td>counter</td><td>Requests answered from the cache</td></tr>
     <tr><td><code>fscache_cache_misses_total</code></td><td>counter</td><td>Requests for something not stored</td></tr>
-    <tr><td><code>fscache_store_bytes</code></td><td>gauge</td><td>How much is stored now</td></tr>
-    <tr><td><code>fscache_store_entries</code></td><td>gauge</td><td>How many entries are stored</td></tr>
+    <tr><td><code>fscache_store_bytes</code></td><td>gauge</td><td>How much is stored now. Reads 0 after a restart until the next upload</td></tr>
+    <tr><td><code>fscache_store_entries</code></td><td>gauge</td><td>How many entries are stored. Reads 0 after a restart until the next upload</td></tr>
     <tr><td><code>fscache_evicted_entries_total</code></td><td>counter</td><td>Entries removed to stay under the size cap</td></tr>
     <tr><td><code>fscache_http_requests_total</code></td><td>counter</td><td>Requests, by method and status</td></tr>
     <tr><td><code>fscache_http_request_duration_seconds</code></td><td>histogram</td><td>How long requests take</td></tr>

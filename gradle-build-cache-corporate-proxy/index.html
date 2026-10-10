@@ -125,7 +125,7 @@ systemProp.http.nonProxyHosts=cache.internal.example.com|localhost|127.*</code><
   <pre tabindex="0"><code>$ curl -sS -x http://proxy.example.com:3128 https://cache.example.com/healthz
 curl: (56) CONNECT tunnel failed, response 403      # the proxy said no
 $ curl -sS --noproxy &#x27;*&#x27; https://cache.example.com/healthz
-ok                                                   # the cache is fine</code></pre>
+ok                                                   # the cache server answered</code></pre>
   <p>I substituted example hostnames in those commands; the two output lines are the real ones, from my test proxy refusing and from the cache answering directly. If the first one fails and the second works, ask whoever runs the proxy to allow the cache's host and port.</p>
   <p><strong>3. Over HTTPS the proxy only sees the address.</strong> A <code>CONNECT</code> tunnel shows the proxy the host and port and nothing inside, so the password and the cache keys are not visible to it. That also means any rule on the path cannot be applied. This is how the proxy log looked in my run: one <code>CONNECT</code> line per build.</p>
 

@@ -100,7 +100,7 @@
   <p class="muted-note">These are starting points from our deployment guide. Your build graph decides the rest. It is hard to be limited by CPU, because the busy path is reading and writing stored files, not computing.</p>
 
   <h2>Set a size cap</h2>
-  <p>Choose how much cache you want, set it with <code>FSCACHE_MAX_BYTES</code>, and make the disk about 20% bigger. When the cache reaches the cap it removes the least recently used entries and never grows past it. The extra room covers file system overhead and uploads in progress.</p>
+  <p>Choose how much cache you want, set it with <code>FSCACHE_MAX_BYTES</code>, and make the disk about 20% bigger. When the cache reaches the cap it removes the least recently used entries right after each upload until it is back under the cap. The extra room covers file system overhead and uploads in progress.</p>
   <p><strong>The value is in bytes.</strong> It is easy to be wrong by a factor of 1024, so copy one:</p>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <tr><th>Cap</th><th><code>FSCACHE_MAX_BYTES</code></th></tr>
