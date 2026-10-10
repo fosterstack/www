@@ -27,6 +27,7 @@ on:
           - ga-page
           - howto-pages-4
           - howto-pages-5
+          - howto-pages-6
         default: miss-cost
 
 permissions:
@@ -437,6 +438,24 @@ jobs:
 
       - name: follow the pages' commands as written and check what they promise
         run: bash bin/bench-howto-pages-5.sh
+
+  # End-to-end runs of two more pages (the monorepo page's two tables, the Docker CI page's fresh containers). Same rules as the other howto
+  # jobs: manual dispatch only, chosen with the "which" input (compared in this `if` only), no token and no secret, read-only token not
+  # persisted. Gradle and cosign are checked against pinned checksums; the release binary is verified (cosign and sha256) before it runs.
+  # The gradle container image is resolved to a digest at run time and that digest is used. The cache server of the Docker page listens on
+  # all interfaces of this runner, behind a made-up password, so that a container can reach it (the runner has no inbound traffic and is
+  # thrown away after the job).
+  bench-howto-pages-6:
+    if: github.event_name == 'workflow_dispatch' && inputs.which == 'howto-pages-6'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: follow the pages' commands as written and check what they promise
+        run: bash bin/bench-howto-pages-6.sh
 
   # Does a build result stored from Linux restore on a Mac, and the other way round (the claim of the laptop page)? Manual
   # dispatch only, chosen with the "which" input (compared in each `if` only). Two chains of two jobs: a Linux job builds against a
