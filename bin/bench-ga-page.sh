@@ -173,6 +173,8 @@ EOF
   echo "release under test: FosterStack Cache ${VER}, downloaded with no login and verified (cosign + sha256) before it was started; Gradle ${GR_VER} (sha256 pinned, wrapper distribution checked by the wrapper); cosign ${COSIGN_VER} (sha256 pinned)"
   echo "NOT checksum-pinned: the Maven build-cache extension ${EXT_VER}, the Maven plugin jars (versions pinned in the pom, files from Maven Central), JUnit 5.11.4, the runner's own Maven"
   echo "replaced in the page's workflow step: secrets.X -> env.TEST_X (made-up logins in the job's env), github.event_name == 'push' -> env.TEST_EVENT == 'push' (a manual dispatch is neither a push nor a pull request); working-directory for the Maven step; the Gradle project (two modules) and the Maven project are generated; each case starts with an empty GRADLE_USER_HOME (the wrapper distribution is copied back) and an empty local Maven build cache, so a hit can only come from the server"
+  echo "NOT exercised from the page's workflow file: its name, the on: triggers (push to main, pull_request), the workflow-level permissions: contents: read (this job inherits the bench workflow's own), the job name, and the fact that the checkout there is the project itself (here it is this repository; the Gradle and Maven projects are written in afterwards)"
+  echo "the Maven results depend on the runner's own Maven version (the page's tests used 3.9.9): the 'flags with an empty address' case is only asserted on Maven 3.9.x; on another version it is reported"
   echo "instrumentation: a Gradle init script logs each task's outcome to a file (no change to the page's step) and MAVEN_ARGS=-l writes Maven's log to a file"
   echo "NOT tested here: real secrets, a runner reaching a server on another network, a real fork pull request, other Maven versions"
   snap > "$T/last"; echo "server at the start: entries/hits/misses = $(cat "$T/last")"
@@ -187,7 +189,7 @@ event)
 fresh)
   case "${2:-}" in
     gradle)
-      cd "$WS"; rm -rf "$T/gh" lib/build app/build build .gradle; mkdir -p "$T/gh/init.d"; cp -R "$T/dists/dists" "$T/gh/wrapper/" 2>/dev/null || { mkdir -p "$T/gh/wrapper"; cp -R "$T/dists/dists" "$T/gh/wrapper/"; }
+      cd "$WS"; rm -rf "$T/gh" lib/build app/build build .gradle; mkdir -p "$T/gh/init.d" "$T/gh/wrapper"; cp -R "$T/dists/dists" "$T/gh/wrapper/"
       cp "$T/init/log-tasks.gradle" "$T/gh/init.d/"; : > "$T/tasks.log"
       printf 'package demo;\n\npublic class App {\n    public static void main(String[] args) {\n        System.out.println(Lib.name() + " app 1");\n    }\n}\n' > app/src/main/java/demo/App.java ;;
     maven)
@@ -227,6 +229,7 @@ expect)
                   [ "$DE" = 0 ] && [ "$DH" = 0 ] && [ "$((M1-M0))" = 0 ] || fail "Maven fork pull request: the server saw requests (entries $DE, hits $DH, misses $((M1-M0)))" ;;
     *) echo "unknown expectation" >&2; exit 2 ;;
   esac
+  case "${2:-}" in mvn-*) echo "---- Maven's log of this case (last 70 lines) ----"; tail -n 70 "$ML"; echo "---- end of Maven's log ----";; gradle-*) echo "---- Gradle task outcomes of this case ----"; cat "$LOG"; echo "---- end ----";; esac
   echo "$E1 $H1 $M1" > "$T/last"; echo "checked: ${2}"
   ;;
 extra)
@@ -240,6 +243,7 @@ extra)
   case "${2:-}" in
     gradle-403)  read -r E0 _ _ <<< "$(snap)"; printf 'package demo;\n\npublic class App {\n    public static void main(String[] args) {\n        System.out.println(Lib.name() + " app 3");\n    }\n}\n' > app/src/main/java/demo/App.java
                  gradle_extra g403 "$RO_USER" "$RO_PASS" true "$URL"; read -r E1 _ _ <<< "$(snap)"
+                 case "$E0$E1" in *[!0-9]*|'') fail "read-only login with push on: the server's entry count could not be read ($E0 / $E1)";; esac
                  grep -q "BUILD SUCCESSFUL" "$T/g403.out" || fail "read-only login with push on: the build should still succeed"
                  grep -q "response status 403: Forbidden" "$T/g403.out" || fail "read-only login with push on: no 'response status 403: Forbidden' line"
                  grep -q "The remote build cache was disabled during the build due to errors." "$T/g403.out" || fail "read-only login with push on: no 'remote build cache was disabled' line"
@@ -252,18 +256,37 @@ extra)
                  grep -q "response status 401: Unauthorized" "$T/gempty.out" || fail "empty login with an address set: no 401 line"; echo "checked: gradle-empty-login"; snap > "$T/last" ;;
     mvn-empty-url) cd "$WS/mproj"; rm -rf "$HOME/.m2/build-cache" target
                  MAVEN_ARGS= CACHE_USER="$RW_USER" CACHE_PASSWORD="$RW_PASS" mvn -B -s .mvn/ci-settings.xml -Dmaven.build.cache.remote.enabled=true -Dmaven.build.cache.remote.url="" -Dmaven.build.cache.remote.save.enabled=false verify > "$T/mempty.out" 2>&1; echo "extra mvn-empty-url: exit $?"
-                 grep -q "NoTransporterException" "$T/mempty.out" || fail "flags with an empty address: no NoTransporterException (the page says Maven stops with an internal error)"; echo "checked: mvn-empty-url" ;;
+                 MV="$(mvn -v 2>/dev/null | head -1)"; echo "Maven here: ${MV}"
+                 case "$MV" in
+                   *"Apache Maven 3.9."*) grep -q "NoTransporterException" "$T/mempty.out" && echo "OBS flags with an empty address: Maven stopped with NoTransporterException, as the page says" || fail "flags with an empty address: no NoTransporterException on ${MV} (the page says Maven stops with an internal error)" ;;
+                   *) echo "OBS flags with an empty address on ${MV} (not 3.9.x): $(grep -m1 -E 'NoTransporter|ERROR|BUILD' "$T/mempty.out" | cut -c1-200)" ;;
+                 esac
+                 tail -n 25 "$T/mempty.out"; echo "checked: mvn-empty-url" ;;
+    mvn-403)     cd "$WS/mproj"; rm -rf "$HOME/.m2/build-cache" target; printf 'package demo;\n\npublic class App {\n    public static String hello() { return "hello 3"; }\n}\n' > src/main/java/demo/App.java
+                 read -r E0 _ _ <<< "$(snap)"
+                 MAVEN_ARGS= CACHE_USER="$RO_USER" CACHE_PASSWORD="$RO_PASS" mvn -B -s .mvn/ci-settings.xml -Dmaven.build.cache.remote.enabled=true -Dmaven.build.cache.remote.url="$URL" -Dmaven.build.cache.remote.save.enabled=true verify > "$T/m403.out" 2>&1; echo "extra mvn-403: exit $?"
+                 read -r E1 _ _ <<< "$(snap)"
+                 grep -q "BUILD SUCCESS" "$T/m403.out" || fail "Maven, read-only login with saving on: the build should still succeed"
+                 [ "$(grep -c 'Unable to save to remote cache' "$T/m403.out")" -ge 1 ] || fail "Maven, read-only login with saving on: no 'Unable to save to remote cache' line"
+                 grep -qE "status code: 403, reason phrase: Forbidden" "$T/m403.out" || fail "Maven, read-only login with saving on: no 403 Forbidden line"
+                 [ "$E1" = "$E0" ] || fail "Maven, read-only login with saving on: the server stored entries ($E0 -> $E1)"
+                 echo "OBS 'Unable to save to remote cache' lines: $(grep -c 'Unable to save to remote cache' "$T/m403.out") (the page says 3)"; echo "checked: mvn-403"; snap > "$T/last" ;;
+    mvn-missing-login) cd "$WS/mproj"; rm -rf "$HOME/.m2/build-cache" target; printf 'package demo;\n\npublic class App {\n    public static String hello() { return "hello 1"; }\n}\n' > src/main/java/demo/App.java
+                 ( unset CACHE_USER CACHE_PASSWORD; MAVEN_ARGS= mvn -B -s .mvn/ci-settings.xml -Dmaven.build.cache.remote.enabled=true -Dmaven.build.cache.remote.url="$URL" -Dmaven.build.cache.remote.save.enabled=false verify > "$T/mmissing.out" 2>&1 ); echo "extra mvn-missing-login: exit $?"
+                 grep -q "BUILD SUCCESS" "$T/mmissing.out" || fail "Maven with a missing login: the build should still succeed"
+                 grep -q "Error downloading cache item" "$T/mmissing.out" || fail "Maven with a missing login: no 'Error downloading cache item' line"; echo "checked: mvn-missing-login"; snap > "$T/last" ;;
     mvn-wrong-password) cd "$WS/mproj"; rm -rf "$HOME/.m2/build-cache" target
                  MAVEN_ARGS= CACHE_USER="$RW_USER" CACHE_PASSWORD="wrong-password" mvn -B -s .mvn/ci-settings.xml -Dmaven.build.cache.remote.enabled=true -Dmaven.build.cache.remote.url="$URL" -Dmaven.build.cache.remote.save.enabled=false verify > "$T/mwrong.out" 2>&1; echo "extra mvn-wrong-password: exit $?"
                  grep -q "BUILD SUCCESS" "$T/mwrong.out" || fail "Maven with a wrong password: the build should still succeed"
                  grep -q "Error downloading cache item" "$T/mwrong.out" || fail "Maven with a wrong password: no 'Error downloading cache item' line"; echo "checked: mvn-wrong-password"; snap > "$T/last" ;;
     *) echo "unknown extra" >&2; exit 2 ;;
   esac
+  case "${2:-}" in mvn-*) for f in mempty m403 mmissing mwrong; do [ -f "$T/$f.out" ] && { echo "---- tail of $f.out ----"; tail -n 15 "$T/$f.out"; }; done ;; esac
   ;;
 finish)
   curl -s --max-time 5 -o /dev/null "localhost:${PORT}/healthz"; pkill -f "$T/rel/fscache" 2>/dev/null || true
   if [ -s "$FAILS_FILE" ]; then echo "FAILURES $(wc -l < "$FAILS_FILE")"; cat "$FAILS_FILE"; echo "== AT LEAST ONE CHECK FAILED"; exit 1; fi
-  echo "FAILURES 0"; echo "== ALL CHECKS PASSED"
+  echo "FAILURES 0"; echo "== NO CHECK FAILED (a failed or skipped earlier step still turns the job red)"
   ;;
 *) echo "usage: $0 setup|event|fresh|mutate|expect|extra|finish" >&2; exit 2 ;;
 esac

@@ -392,6 +392,10 @@ jobs:
         run: bash bin/bench-ga-page.sh extra mvn-empty-url
       - name: wrong password
         run: bash bin/bench-ga-page.sh extra mvn-wrong-password
+      - name: read-only login with saving on
+        run: bash bin/bench-ga-page.sh extra mvn-403
+      - name: missing login
+        run: bash bin/bench-ga-page.sh extra mvn-missing-login
 
       - name: result
         if: always()
