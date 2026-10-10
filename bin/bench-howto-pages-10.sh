@@ -482,7 +482,8 @@ scenario_w() {
   want "first build: '[ERROR] Error downloading cache item ... buildinfo.xml' lines (Maven 3.10.0 logs the misses so)" "$(grep -c '^\[ERROR\] Error downloading cache item.*buildinfo\.xml' "$W/m-w1.out")" 3
   tot=0; sj=0; sb=0
   for u in $(grep -oE 'Saved to remote cache [^ ]+' "$W/m-w1.out" | awk '{print $5}'); do
-    info="$(curl -sL --max-time 30 -o /dev/null -w '%{http_code} %{size_download}' "$u")"; sz="${info#* }"; tot=$((tot+sz))
+    u="$(printf '%s' "$u" | sed -E 's#([^:])//+#\1/#g')"   # the log prints a doubled slash after the host; the server refuses an empty path segment (400 'invalid key'), so ask for the single-slash form
+    info="$(curl -s --max-time 30 -o /dev/null -w '%{http_code} %{size_download}' "$u")"; sz="${info#* }"; tot=$((tot+sz))
     [ "${info%% *}" = 200 ] || fail "W fetching a saved entry ($u) answered ${info%% *}, not 200"
     case "$u" in *.jar) sj=$((sj+sz));; *buildinfo.xml) sb=$((sb+sz));; esac
   done
