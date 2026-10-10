@@ -94,7 +94,7 @@
   <h3>Gradle</h3>
   <ul class="trust">
     <li>Each <code>compileJava</code> task stored one entry.</li>
-    <li>The compiled build scripts stored entries too, which is why there are more entries than compile tasks. On a Gradle home that had already compiled the build scripts, they were not stored again.</li>
+    <li>Gradle also compiled the build scripts, and those compiled scripts were stored as entries. That is why there are more entries than compile tasks. If your Gradle home had already compiled the scripts, they were not stored again.</li>
     <li>The jar, classes, assemble and build tasks stored nothing in our run.</li>
     <li>The 13 entries from a four-module build took about 36 KB.</li>
   </ul>

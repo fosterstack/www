@@ -105,7 +105,7 @@
     <li><strong>An edit that does not change the compiled output can still skip the tests (run 5).</strong> The comment made Gradle compile the main code again, but the compiled output evidently did not change, because the test task found its stored result. We only tried a comment on the same line; a comment that adds lines can change the compiled output, and we did not test that.</li>
     <li><strong>A failing test was not skipped.</strong> In runs 6 and 7 the test task ran and failed each time. In run 7, a fresh copy of the same broken code ran the tests again and reported <code>2 tests completed, 1 failed</code>.</li>
   </ul>
-  <p>We did not test tests that read the clock, the network or files outside the project. If a test result depends on something Gradle does not see, a stored pass could be reused when it should not. That is a decision about your tests, not about the cache.</p>
+  <p>We did not test tests that read the clock, the network or files outside the project. Gradle cannot see those inputs, so a stored pass could be reused when it should not. That is a decision about your tests, not about the cache.</p>
   <p>Our advice, not a test result: if the test task does not come from the cache, work through <a href="/gradle-remote-cache-not-working/#gradle-build-cache-hit-rate-low">why the hit rate is low</a>. For a multi-module build, see <a href="/gradle-build-cache-monorepo/">Gradle build cache for a monorepo</a>.</p>
 
   <h2 id="maven-build-cache-skip-tests">Does Maven skip tests that already passed?</h2>
@@ -119,7 +119,7 @@
     <li><strong>A passing build was reusable, a failing one was not.</strong> In Maven runs 5 and 6 the tests ran and failed each time. A fresh copy of the same broken code did not get a restored result.</li>
     <li><strong>Each change we made rebuilt the module and ran all its tests.</strong> Maven run 3 changed one line of main code and both tests ran again. Maven run 4 added a test and all three ran. We did not try a comment-only edit or a change to a non-source file.</li>
   </ul>
-  <p>We did not test a project with several modules here. For that, see <a href="/maven-build-cache-extension-multi-module/">Maven build cache extension in a multi-module project</a>. We also did not test tests that read the clock, the network or files outside the project: if a test result depends on something Maven does not see, a restored pass could stand when it should not. That is a decision about your tests, not about the cache.</p>
+  <p>We did not test a project with several modules here. For that, see <a href="/maven-build-cache-extension-multi-module/">Maven build cache extension in a multi-module project</a>. We also did not test tests that read the clock, the network or files outside the project: Maven cannot see those inputs, so a restored pass could stand when it should not. That is a decision about your tests, not about the cache.</p>
   <p>Our advice, not a test result: to run the tests every time, turn the cache off or skip the lookup for that build. The switches, and what each did in a real run, are on <a href="/maven-remote-build-cache-setup/#maven-build-cache-extension-enable-disable">enable or disable the Maven build cache extension</a>. If nothing is restored, see <a href="/maven-build-cache-extension-not-restoring/">Maven build cache not restoring</a>. The setup is on <a href="/maven-remote-build-cache-setup/">Maven remote build cache setup</a>.</p>
 
   <h2>How we checked</h2>

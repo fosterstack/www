@@ -96,7 +96,7 @@
     <li><strong>Server not running, or gone since the last build:</strong> the build succeeded in Gradle and in Maven. Everything was built locally, and a warning was printed.</li>
     <li><strong>Wrong password (401):</strong> the same. The build succeeded and warned.</li>
     <li><strong>Read-only login that tries to store a result (403):</strong> in Gradle the build succeeded and warned. We did not run this one in Maven.</li>
-    <li><strong>An address that never answers:</strong> the build still succeeded. In our timed Gradle runs it first waited about 30 seconds, which took a 13-second build to 44 seconds. Maven also waited; we did not time it. A refused connection, where nothing listens at the address, showed no clear extra time.</li>
+    <li><strong>An address that never answers:</strong> the build still succeeded. In our timed Gradle runs it first waited about 30 seconds, which took a 13-second build to 44 seconds. Maven also waited; we did not time it. If the address answered with &ldquo;connection refused&rdquo;, we saw no clear extra time.</li>
   </ul>
   <p>The warnings look different. Gradle printed one warning and then a line saying the remote cache was disabled. Maven printed an <code>[ERROR]</code> line, and then a Java stack trace for each upload it could not make, even though the build succeeded.</p>
   <h2>What to do</h2>
@@ -149,7 +149,7 @@
       <tr><td>Cache on, address that never answers</td><td>43.46 s</td><td>43.98 s</td><td>44.22 s</td><td>succeeded, 7 of 7</td></tr>
     </tbody>
   </table></div>
-  <p>At the median, an address that never answers added 30.61 s. That matches Gradle's 30-second default connect timeout, so each of those builds waited about one timeout. A refused connection was not clearly different from no cache: 13.83 s against 13.37 s at the median, and the ranges overlap.</p>
+  <p>At the median, an address that never answers added 30.61 s. That matches Gradle's 30-second default connect timeout, so each of those builds waited about one timeout. A &ldquo;connection refused&rdquo; answer was not clearly different from no cache at all: 13.83 s against 13.37 s at the median, and the ranges overlap.</p>
   <p class="muted-note">Timed runs: a GitHub-hosted machine, Ubuntu 24 image 20261004.327.1, 4 vCPUs (AMD EPYC 9V74), 16 GB. <a href="https://github.com/fosterstack/www/actions/runs/37997462984">The run and its log are public</a>, and the script is <a href="/bin/bench-server-down.sh">bin/bench-server-down.sh</a>. Gradle 9.8.0, Java 21.0.12.1, FosterStack Cache 0.2.1, a project of 4 modules with 150 generated classes each, compile tasks only.</p>
   <p class="muted-note">How: the four setups ran in turn, seven times, after one dropped warm-up round. Every build used a fresh copy of the project, a new empty Gradle home and no daemon, so each time includes Gradle's start-up. The "never answers" address was 10.255.255.1, which gave no answer within 5 seconds before the run. We did not time Maven.</p>
   <p class="muted-note">In every Gradle case the last line of the build said the remote cache was disabled during the build due to errors, and in the builds we printed the failure appeared once. In Maven the one-module project made four attempts: one download and three uploads.</p>
