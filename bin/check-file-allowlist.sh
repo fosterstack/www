@@ -58,6 +58,7 @@ ALLOW_PATTERNS=(
   '^bin/bench-howto-pages-8\.sh$'
   '^bin/bench-howto-pages-9\.sh$'
   '^bin/bench-howto-pages-10\.sh$'
+  '^bin/bench-howto-pages-11\.sh$'
   '^bin/bench-proxy\.py$'
   '^\.github/workflows/[A-Za-z0-9_-][A-Za-z0-9._-]*\.ya?ml$'
   '^functions/(api/)?[A-Za-z0-9._-]+\.js$'
