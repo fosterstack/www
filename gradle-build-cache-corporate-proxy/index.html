@@ -90,7 +90,7 @@
 <main>
   <h1>Build cache behind a corporate proxy: Gradle and Maven</h1>
   <p class="lede">Many companies make builds reach the network through a proxy. This page shows how the remote build cache behaves behind one, in Gradle and in Maven: the settings, the ways it goes wrong, and how to tell a proxy problem from a cache problem.</p>
-  <p>In our runs Maven behaved differently from Gradle: it did not skip the proxy for loopback addresses. See <a href="#maven-build-cache-corporate-proxy">the Maven section</a>.</p>
+  <p>In our runs Maven behaved differently from Gradle: it did not skip the proxy for loopback addresses. If you test on 127.0.0.1 with Maven, list it in <code>nonProxyHosts</code>: see <a href="#maven-build-cache-corporate-proxy">the Maven section</a>.</p>
 
   <h2>Checklist for Gradle</h2>
   <p>Our advice, not a test result:</p>
