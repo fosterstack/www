@@ -29,6 +29,7 @@ on:
           - howto-pages-5
           - howto-pages-6
           - howto-pages-7
+          - howto-pages-8
         default: miss-cost
 
 permissions:
@@ -474,6 +475,22 @@ jobs:
 
       - name: follow the pages' commands as written and check what they promise
         run: bash bin/bench-howto-pages-7.sh
+
+  # End-to-end runs of the page about restarting the cache server while builds run. Same rules as the other howto jobs: manual dispatch only,
+  # chosen with the "which" input (compared in this `if` only), no token and no secret, read-only token not persisted. Gradle and cosign are
+  # checked against pinned checksums; the release binary is verified (cosign and sha256) before it runs; every server listens on 127.0.0.1
+  # only. The job is slow on purpose (builds with four 8-second tasks, stops and kills of the server, 20 and 40 MiB uploads at 2 MiB/s).
+  bench-howto-pages-8:
+    if: github.event_name == 'workflow_dispatch' && inputs.which == 'howto-pages-8'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: follow the page's commands as written and check what it promises
+        run: bash bin/bench-howto-pages-8.sh
 
   # Does a build result stored from Linux restore on a Mac, and the other way round (the claim of the laptop page)? Manual
   # dispatch only, chosen with the "which" input (compared in each `if` only). Two chains of two jobs: a Linux job builds against a
