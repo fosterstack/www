@@ -89,8 +89,16 @@
 <main>
   <h1>How our release pipeline maps to NIST SP 800-204C, 800-204D and SLSA</h1>
   <p class="lede">This page takes the release pipeline that built FosterStack Cache v0.2.2 and puts each stage next to the NIST practice it maps to. It says where a stage only partly implements a practice, and it says which SLSA Build level we assess v0.2.2 at: Level 2, not Level 3.</p>
-  <p class="muted-note">Words used here: <strong>SBOM</strong> is a parts list of what is inside a build. <strong>VEX</strong> is a note on whether a known flaw affects us. <strong>Provenance</strong> is a signed record of how and where something was built. <strong>Digest</strong> is the fingerprint of a file or image. <strong>SLSA</strong> is a public scale for how far you can trust the way software was built. Its Build track has Levels 1 to 3.</p>
   <p><strong>This is guidance we followed when designing the pipeline. It is not a certification.</strong></p>
+  <p class="muted-note">Words used here:</p>
+  <ul class="muted-note">
+    <li><strong>SBOM</strong>: a parts list of what is inside a build.</li>
+    <li><strong>VEX</strong>: a note on whether a known flaw affects us.</li>
+    <li><strong>Provenance</strong>: a signed record of how and where something was built.</li>
+    <li><strong>Digest</strong>: the fingerprint of a file or image.</li>
+    <li><strong>SLSA</strong>: a public scale for how far you can trust the way software was built. Its Build track runs from Level 0 to Level 3.</li>
+  </ul>
+  
 
   <h2>The two NIST documents</h2>
   <ul>
@@ -132,7 +140,7 @@
       </tr>
       <tr>
         <td>Scans</td>
-        <td>Two scanners with different vulnerability databases run, each on its own machine. They first check the image-assembly and reproducibility statements, then scan every platform image of every variant. One also scans the archives, the other the Go module files. Any finding blocks the release, at any severity. For one of the two scanners, a published VEX statement can clear a finding. Each scanner signs its verdict for the exact digests.</td>
+        <td>Two scanners with different vulnerability databases run, each on its own machine. They first check the image-assembly and reproducibility statements, then scan every platform image of every variant. One also scans the archives, the other the Go module files. Any finding blocks the release, even the lowest-rated one. For one of the two scanners, a published VEX statement can clear a finding. Each scanner signs its verdict for the exact digests.</td>
         <td>800-204C 4.8 and 4.8.1 (container image scans, software composition analysis); 800-204D 5.2, DEPLOY_REQ-4 (evidence the image was scanned)</td>
         <td>Partly. The release pipeline runs no static or dynamic application security testing itself. The signed verdict records a pass, not the full scan report.</td>
       </tr>
@@ -183,13 +191,13 @@
   <h2>Which SLSA Build level do we assess v0.2.2 at?</h2>
   <p>We assess v0.2.2 at <strong>SLSA Build Level 2</strong>, against the <a href="https://slsa.dev/spec/v1.0/requirements">SLSA v1.0 requirements</a> and <a href="https://slsa.dev/spec/v1.0/levels">levels</a>. We do not claim Build Level 3.</p>
   <ul class="trust">
-    <li><strong>Consistent build process (L1).</strong> Met, by our reading. One workflow builds every release. Only a tag push starts the build job, and the first stage stops any tag not signed by the owner's key or, for an automatic patch tag, the release workflow's own identity.</li>
+    <li><strong>Consistent build process (L1).</strong> Met, by our reading. One workflow builds every v0.2 release. Only a tag push starts the build job, and the first stage stops any tag not signed by the owner's key or, for an automatic patch tag, the release workflow's own identity.</li>
     <li><strong>Provenance exists (L1).</strong> Met, by our reading. SLSA v1 provenance covers the binary archives, their SBOMs, <code>checksums.txt</code>, and the three container images, naming each digest, the source commit and the workflow run.</li>
     <li><strong>Distribute provenance (L1).</strong> Met, by our reading. It is in GitHub's attestation store, and <code>gh attestation verify</code> returns it.</li>
     <li><strong>Hosted build platform (L2).</strong> Met, by our reading. The build and image jobs ran on GitHub-hosted <code>ubuntu-latest</code> machines, never on a workstation. The build job's log shows image ubuntu-24.04, version 20261004.327.1.</li>
-    <li><strong>Provenance is authentic (L2).</strong> Met, by our reading. The provenance is signed with a short-lived certificate issued to the building workflow, and the signature is logged in a public transparency log. Every later stage checks who signed the statement before it. The release authorization and the publishing step also check the source commit and the tag. You can check them yourself.</li>
+    <li><strong>Provenance is authentic (L2).</strong> Met, by our reading. The provenance is signed with a short-lived certificate issued to the building workflow, and the signature is logged in a public transparency log. The image, reproducibility and scan stages check who signed the statement before them. The acceptance tests do not. The build, the release authorization and the publishing step also check the source commit and the tag. You can check them yourself.</li>
   </ul>
-  <p>Level 3 is not claimed. It asks the build platform to "prevent runs from influencing one another, even within the same project" and to "prevent secret material used to sign the provenance from being accessible to the user-defined build steps". We have not shown either. In v0.2.2 the build job can ask for a signing identity for the whole job, and it also runs this repository's code and configuration: the Go build and the goreleaser hooks. The image job can ask for a signing identity too, and it builds this repository's Dockerfiles. So the build steps could reach the signing, and Level 3 needs that kept apart. The build job also restored a GitHub Actions cache written by earlier runs, and we have not shown that other workflows or branches cannot write to it. The spec calls that "cache poisoning" under its "Isolated" requirement. Build Level 3 is not claimed for v0.2.2.</p>
+  <p>Level 3 is not claimed. It asks the build platform to "prevent runs from influencing one another, even within the same project" and to "prevent secret material used to sign the provenance from being accessible to the user-defined build steps". We have not shown either. In v0.2.2 the build job can ask for a signing identity for the whole job, and it also runs this repository's build configuration and compiles its code: the goreleaser hooks and the Go build. The image job can ask for a signing identity too, and it builds this repository's Dockerfiles. So the build steps could reach the signing, and Level 3 needs that kept apart. The build job also restored a GitHub Actions cache written by earlier runs, and we have not shown that other workflows or branches cannot write to it. The spec calls that "cache poisoning" under its "Isolated" requirement. Build Level 3 is not claimed for v0.2.2.</p>
 
   <h2>What we do not meet</h2>
   <ul>
