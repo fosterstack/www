@@ -180,7 +180,7 @@ tasks.test { useJUnitPlatform() }</code></pre>
 
   <p class="muted-note">Gradle run on Gradle 9.8.0 with FosterStack Cache 0.2.1, macOS (arm64), Java 27, JUnit 5.11.0. Maven run on Maven 3.10.0 with maven-build-cache-extension 1.2.3, Surefire 3.5.2, JUnit 5.11.0 and FosterStack Cache 0.2.1, macOS (arm64), Java 27.</p>
   <h3>Second run: Linux, 0.2.2</h3>
-  <p>The runs above were on a Mac with 0.2.1 and Java 27. We ran both tables again on a GitHub-hosted Linux machine with FosterStack Cache 0.2.2, Gradle 9.8.0, Maven 3.10.0 and Java 21. We rebuilt the same small test project (one class, two JUnit tests). Each run started from the same base with one change.</p>
+  <p>The runs above were on a Mac with 0.2.1 and Java 27. We ran both tables again on a GitHub-hosted Linux machine with FosterStack Cache 0.2.2, Gradle 9.8.0, Maven 3.10.0 and Java 21. We rebuilt the same small test project (one class, two JUnit tests). Each run started from a fresh copy of the same base project, with at most one change.</p>
   <ul class="trust">
     <li>Gradle: all seven runs matched the table, for <code>compileJava</code>, <code>compileTestJava</code> and <code>test</code>. Run 2 printed <code>&gt; Task :test FROM-CACHE</code>. Runs 6 and 7 ended with <code>BUILD FAILED</code>, and run 7 reported <code>2 tests completed, 1 failed</code>.</li>
     <li>Maven: all six runs matched. Run 2 restored the module and listed the six <code>Skipping plugin execution (cached)</code> lines above, with no <code>Tests run:</code> line.</li>
