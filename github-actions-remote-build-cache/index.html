@@ -219,13 +219,16 @@ jobs:
     </tbody>
   </table></div>
   <p>The script also wrote straight to the server with the read-only login and with a wrong password, and would have stopped the run unless it got HTTP 403 and 401. The run passed. <a href="https://github.com/fosterstack/www/actions/runs/38004412787">The run and its log are public</a>, and the script is <a href="/bin/demo-github-actions.sh">bin/demo-github-actions.sh</a>. The server ran on the same machine, so this shows the settings and the environment-variable mechanism work.</p>  <p><strong>The page's own workflow steps, on a hosted runner.</strong> We then ran the checkout and Build steps from this page, for Gradle and for Maven, in a GitHub Actions job. The setup was Ubuntu 24, 4 CPUs, FosterStack Cache 0.2.2, Java 21.0.12.1, Gradle 9.8.0, the runner's own Maven 3.10.0 and extension 1.2.3. A step started the cache server on the same machine.</p>
-  <p>Two things were swapped in: made-up logins in place of the five secrets, and a fixed value in place of <code>github.event_name</code>, because a manual run is neither a push nor a pull request. Nothing else in the steps changed. We read the results from the server's counters and the build logs:</p>
+  <p>Two things were swapped in: made-up logins in place of the five secrets, and a fixed value in place of <code>github.event_name</code>, because a manual run is neither a push nor a pull request. Besides a working directory for the Maven step and a build log for our checks, nothing else in the steps changed. We read the results from the server's counters and the build logs. First, the cases that the page's own Build steps ran:</p>
   <ul class="trust">
     <li>Gradle, main build with the read-write login: both compile tasks ran and the server stored 5 entries. The same build again from a fresh checkout: both came from the cache and nothing new was stored.</li>
     <li>Gradle, pull request with the read-only login and one module changed: the unchanged module came from the cache, the changed one ran, and nothing was stored.</li>
     <li>Gradle, every variable empty (a fork pull request): both ran and the server saw no request.</li>
-    <li>Gradle, read-only login with push on: the build succeeded, the log had the 403 and the "remote build cache was disabled" lines, and nothing was stored. A wrong password, or an address with an empty login, gave the 401 line.</li>
     <li>Maven, the same four builds: the main build stored 3 files; the next build restored from the cache; the pull request built and stored nothing; the fork build ran without the cache and the server saw no request.</li>
+  </ul>
+  <p>The error cases cannot come from the workflow as written, so they ran the same build commands from a script, with the variables set by hand (the Maven 403 case also turned saving on with the read-only login):</p>
+  <ul class="trust">
+    <li>Gradle, read-only login with push on: the build succeeded, the log had the 403 and the "remote build cache was disabled" lines, and nothing was stored. A wrong password, or an address with an empty login, gave the 401 line.</li>
     <li>Maven, read-only login with push on: three "Unable to save to remote cache" lines and nothing stored. A missing login or a wrong password: the build succeeded with "Error downloading cache item".</li>
     <li>Maven 3.10.0 with the cache flags and an empty address did not stop the build. It ran without the remote cache and logged "Error downloading cache item". The <code>NoTransporterException</code> in the table is the Maven 3.9.9 result.</li>
   </ul>
