@@ -470,7 +470,7 @@ EOF
 # =====================================================================================
 scenario_w() {
   echo; echo "== W  (what-gradle-stores-in-build-cache: Maven)"
-  local D="$W/w" S1 S2 u sz sj sb srep tot k; mkdir -p "$D"
+  local D="$W/w" S1 S2 u sz sj sb srep tot k info; mkdir -p "$D"
   start_server w "$MPORT" "" "" || return
   want "empty server: entries" "$(sfield $MPORT store_entries)" 0
   mm_project "$D/m1" none; mvnrun w1 "$D/m1"; expect m-w1 "BUILD SUCCESS"
@@ -482,7 +482,9 @@ scenario_w() {
   want "first build: '[ERROR] Error downloading cache item ... buildinfo.xml' lines (Maven 3.10.0 logs the misses so)" "$(grep -c '^\[ERROR\] Error downloading cache item.*buildinfo\.xml' "$W/m-w1.out")" 3
   tot=0; sj=0; sb=0
   for u in $(grep -oE 'Saved to remote cache [^ ]+' "$W/m-w1.out" | awk '{print $5}'); do
-    sz="$(curl -s --max-time 30 -o /dev/null -w '%{size_download}' "$u")"; tot=$((tot+sz))
+    u="$(printf '%s' "$u" | sed -E 's#([^:])//+#\1/#g')"   # the log prints a doubled slash after the host; the server refuses an empty path segment (400 'invalid key'), so ask for the single-slash form
+    info="$(curl -s --max-time 30 -o /dev/null -w '%{http_code} %{size_download}' "$u")"; sz="${info#* }"; tot=$((tot+sz))
+    [ "${info%% *}" = 200 ] || fail "W fetching a saved entry ($u) answered ${info%% *}, not 200"
     case "$u" in *.jar) sj=$((sj+sz));; *buildinfo.xml) sb=$((sb+sz));; esac
   done
   echo "OBS W the seven entries: jars $sj bytes in all, buildinfo.xml files $sb bytes in all, together with the report $tot bytes; the server says $S1 bytes"
