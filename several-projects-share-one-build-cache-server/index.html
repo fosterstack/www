@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Can Several Projects Share One Build Cache Server?</title>
-<meta name="description" content="Many repos, one cache server? In our runs they shared identical work, could read each other's results and shared one size cap. Use one server per team.">
+<meta name="description" content="Many repos, one cache server? In our runs they shared identical work and one size cap, and could read each other's results. Separate servers kept groups apart.">
 <meta property="og:title" content="Can Several Projects Share One Build Cache Server?">
-<meta property="og:description" content="Many repos, one cache server? In our runs they shared identical work, could read each other&#x27;s results and shared one size cap. Use one server per team.">
+<meta property="og:description" content="Many repos, one cache server? In our runs they shared identical work and one size cap, and could read each other&#x27;s results. Separate servers kept groups apart.">
 <meta property="og:url" content="https://fosterstack.com/several-projects-share-one-build-cache-server/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="FosterStack">
@@ -92,17 +92,17 @@
 
   <h2>The short answer</h2>
   <ul class="trust">
-    <li><strong>Different code does not clash.</strong> Project B's own compile missed and stored its own entry next to project A's.</li>
+    <li><strong>Different code did not clash in our runs.</strong> Project B's own compile found nothing stored, so it ran and stored its own entry next to project A's.</li>
     <li><strong>Identical work is shared.</strong> A copy of project A in another folder restored A's compile result. Project B also restored one entry from A: the compiled build script, because both build files hold the same text.</li>
-    <li><strong>One login reaches every project.</strong> The login that B's builds used also fetched A's entry. The read-only login read both, and its write got a <code>403</code>.</li>
+    <li><strong>One login reaches every project, which is a warning, not a feature.</strong> The login that B's builds used also fetched A's entry, so anyone with it sees every project's results. The read-only login read both, and its write got a <code>403</code>.</li>
     <li><strong>One size cap covers every project.</strong> With a small cap, B's store pushed out A's entry, and a copy of A pushed B's out again.</li>
-    <li><strong>Separate servers separate teams.</strong> Team 2's server restored nothing from team 1's. Each team's login got a <code>401</code> on the other server.</li>
+    <li><strong>Separate servers kept teams apart in our runs.</strong> Team 2's server restored nothing from team 1's. Each team's login got a <code>401</code> on the other server.</li>
   </ul>
 
   <h2>What to do</h2>
   <p>Our advice, not a test result:</p>
   <ul>
-    <li><strong>One server is fine when everyone may see everyone's results.</strong> Many repos in one company often fit. You also save time when two repos build the same thing.</li>
+    <li><strong>One server is fine when everyone may see everyone's results.</strong> Many repos in one company often fit. Two repos that build the same thing can reuse each other's results.</li>
     <li><strong>Use one server for each group that must not read another group's results.</strong> Each server has its own data folder and logins.</li>
     <li><strong>Treat everything in the cache as readable by anyone with a login.</strong> Do not rely on a project name to hide it.</li>
     <li><strong>Give CI the read-write login and everyone else the read-only one.</strong> See <a href="/gradle-build-cache-ci-writes-developers-read/">let CI write and developers read</a> and <a href="/can-someone-poison-our-build-cache/">can someone poison our shared build cache</a>.</li>
@@ -111,7 +111,7 @@
   <p>Gradle and Maven builds can use the same server too. See <a href="/one-build-cache-server-gradle-and-maven/">one build cache server for Gradle and Maven</a>.</p>
 
   <h2>How we checked</h2>
-  <p>FosterStack Cache 0.2.1 and Gradle 9.8.0 with Java 21 on a Mac (arm64), one machine. Project A has three classes, project B has four different ones, and project C is an exact copy of A in a different folder. Each build ran <code>compileJava</code> and <code>jar</code> with a new Gradle home, no daemon and the local build cache off. The cache address and login reached the build only as environment variables. All logins were made up for the test. Each row is one run.</p>
+  <p>FosterStack Cache 0.2.1 and Gradle 9.8.0 with Java 21 on a Mac (arm64), one machine. Project A has three classes, project B has four different ones, and project C is an exact copy of A in a different folder. Each build ran <code>compileJava</code> and <code>jar</code> with a new Gradle home, Gradle's <code>--no-daemon</code> flag and the local build cache off. The cache address and login reached the build only as environment variables. All logins were made up for the test. Each row is one run.</p>
 
   <p><strong>One server, no size cap.</strong> The same read-write login for all three builds.</p>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
@@ -161,7 +161,7 @@
       <tr><td>B again</td><td>Ran</td><td>3</td><td>B's compile result, the build script</td></tr>
     </tbody>
   </table></div>
-  <p>The cap belongs to the server, not to a project. Whichever project built last kept its entry. This cap is far smaller than a real one. We tested only that one cap is shared.</p>
+  <p>The cap belongs to the server, not to a project. The compile entry of the project that built last stayed. So did the shared build-script entry. This cap is far smaller than a real one. We only checked that the cap is shared.</p>
   <p class="muted-note">Limits: Gradle only, three small projects, one run of each case. We did not test Maven, many projects building at once, or real project sizes.</p>
 </main>
 <footer>
