@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Can a Failed or Cancelled Build Poison the Cache?</title>
+<meta name="description" content="What a Gradle build leaves in the cache when a task fails, a test fails, you press Ctrl-C or the job is killed. From real runs, including a kill during an upload.">
+<meta property="og:title" content="Can a Failed or Cancelled Build Poison the Cache?">
+<meta property="og:description" content="What a Gradle build leaves in the cache when a task fails, a test fails, you press Ctrl-C or the job is killed. From real runs, including a kill during an upload.">
+<meta property="og:url" content="https://fosterstack.com/failed-or-cancelled-build-bad-results-in-cache/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="FosterStack">
+<link rel="canonical" href="https://fosterstack.com/failed-or-cancelled-build-bad-results-in-cache/">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<style>
+  :root {
+    --bg: #ffffff; --fg: #16181d; --muted: #5b6472; --line: #e4e7ec;
+    --accent: #0d7a5f; --accent-fg: #ffffff; --card: #f6f8f9; --warn-bg: #fff7ed; --warn-line: #fdba74;
+    --mark: #0f4d66;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #101318; --fg: #e8eaf0; --muted: #98a2b3; --line: #262c36;
+      --accent: #2fbf95; --accent-fg: #08110e; --card: #171c23; --warn-bg: #241a10; --warn-line: #7c4a12;
+      --mark: #e8eaf0;
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 44rem; margin: 0 auto; padding: 0 1.25rem 4rem; }
+  header.site { max-width: 44rem; margin: 0 auto; padding: 1.25rem; display: flex; align-items: baseline; gap: .6rem; }
+  .logo { font-weight: 700; font-size: 1.05rem; letter-spacing: -.01em; }
+  .logo span { color: var(--accent); }
+  .logo .mark { width: 1.2em; height: 1.2em; vertical-align: -.24em; margin-right: .4em; }
+  .tag { color: var(--muted); font-size: .85rem; }
+  .notice {
+    background: var(--warn-bg); border: 1px solid var(--warn-line); border-radius: 8px;
+    padding: .7rem 1rem; font-size: .92rem; margin: 1.5rem 0 2.5rem;
+  }
+  h1 { font-size: 2rem; line-height: 1.2; letter-spacing: -.02em; margin-bottom: 1rem; }
+  .lede { font-size: 1.12rem; color: var(--muted); margin-bottom: 2rem; }
+  h2 { font-size: 1.25rem; margin: 3rem 0 .9rem; letter-spacing: -.01em; }
+  p + p { margin-top: .8rem; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: .8rem; margin-top: 1rem; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1rem 1.1rem; }
+  .card h3 { font-size: .98rem; margin-bottom: .35rem; }
+  .card p { font-size: .9rem; color: var(--muted); }
+  ul.trust { list-style: none; margin-top: .5rem; }
+  ul.trust li { padding: .45rem 0 .45rem 1.6rem; position: relative; }
+  ul.trust li::before { content: "✓"; position: absolute; left: .2rem; color: var(--accent); font-weight: 700; }
+  code, pre { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .88em; }
+  code { background: var(--card); border: 1px solid var(--line); border-radius: 5px; padding: .1em .35em; }
+  pre code { background: none; border: 0; padding: 0; color: inherit; font-size: 1em; }
+  button {
+    padding: .7rem 1.3rem; font-size: 1rem; font-weight: 600; cursor: pointer;
+    background: var(--accent); color: var(--accent-fg); border: 0; border-radius: 8px;
+  }
+  button:disabled { opacity: .6; cursor: default; }
+  table { width: 100%; border-collapse: collapse; font-size: .92rem; margin-top: 1rem; }
+  th, td { text-align: left; padding: .55rem .6rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  pre { background: #0f172a; color: #e2e8f0; padding: .9rem 1rem; border-radius: 8px;
+        overflow-x: auto; font-size: .9rem; line-height: 1.5; }
+  .cta-row { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1.1rem; }
+  .btn { display: inline-block; padding: .55rem 1rem; border-radius: 8px; font-weight: 600;
+         text-decoration: none; background: var(--accent); color: var(--accent-fg); }
+  .btn-secondary { background: transparent; color: inherit; border: 1px solid var(--muted); }
+  .muted-note { color: var(--muted); font-size: .93rem; margin-top: 1.1rem; }
+  footer { border-top: 1px solid var(--line); margin-top: 4rem; padding: 1.5rem 1.25rem 3rem; }
+  footer div { max-width: 44rem; margin: 0 auto; color: var(--muted); font-size: .82rem; }
+  a { color: var(--accent); }
+  code { overflow-wrap: anywhere; }
+  pre code { overflow-wrap: normal; }
+  .table-scroll { max-width: 100%; overflow-x: auto; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+</style>
+</head>
+<body>
+<header class="site">
+  <div class="logo"><svg class="mark" viewBox="0 0 96 96" aria-hidden="true" focusable="false"><rect x="12" y="14" width="72" height="18" rx="5" fill="var(--mark)"/><rect x="12" y="39" width="48" height="18" rx="5" fill="var(--mark)"/><rect x="12" y="64" width="26" height="18" rx="5" fill="var(--accent)"/></svg>foster<span>stack</span></div>
+  <div class="tag">Infrastructure worth keeping — and kept patched.</div>
+</header>
+<main>
+  <h1>Can a Failed or Cancelled Build Poison the Cache?</h1>
+  <p class="lede">In our runs, a failed or stopped build left no half-built result in FosterStack Cache. Only tasks that finished were stored, and a job killed during an upload left nothing behind.</p>
+
+  <h2>The short answer</h2>
+  <ul class="trust">
+    <li><strong>A failed compile stored nothing for the failing module.</strong> The modules that compiled were stored. The next build took them from the cache.</li>
+    <li><strong>A failed test was not stored.</strong> Running it again ran it again and it failed again. Only the passing result was stored, after we fixed it.</li>
+    <li><strong>Ctrl-C and a hard kill gave the same result.</strong> The two tasks that had finished were stored, and nothing else was. The next build took those two from the cache and ran the rest.</li>
+    <li><strong>A job killed during an upload left no partial entry.</strong> The next build stored the result and the build after that restored it, byte for byte.</li>
+    <li><strong>One kind of wrong result does get in.</strong> A task whose output depends on something Gradle does not track, such as the clock, is stored with whatever it produced the first time. That is a build-script problem, not a failed-build problem.</li>
+  </ul>
+
+  <h2>What to do</h2>
+  <p>Our advice, not a test result:</p>
+  <ul>
+    <li><strong>Do not clear the cache because a build failed.</strong> In our runs the failure stored nothing to clear.</li>
+    <li><strong>If a task keeps giving an old result, look for an input Gradle cannot see.</strong> A clock, an environment variable or a file outside the project are the usual ones. Declare that value as a task input, or turn off caching for that task.</li>
+    <li><strong>If you still suspect a bad entry,</strong> see <a href="/reset-gradle-build-cache/">how to clear or reset a self-hosted Gradle build cache</a>. It clears everything.</li>
+    <li><strong>Limit who can write.</strong> Give developers the read-only login, as on <a href="/gradle-build-cache-ci-writes-developers-read/">Gradle build cache: let CI write, developers only read</a>. Someone who writes bad results on purpose is a different question, on <a href="/can-someone-poison-our-build-cache/">can someone poison our shared build cache</a>.</li>
+    <li><strong>If the server is stopped, not the build,</strong> see <a href="/restart-build-cache-server-while-builds-run/">can I restart the cache server while builds run</a>.</li>
+  </ul>
+
+  <h2>How we checked</h2>
+  <p>FosterStack Cache 0.2.1 on a Mac (arm64), no password, a fresh data folder for each case. Gradle 9.8.0 with Java 21, one fresh copy of the project for every build, no reused daemon, the local build cache off. All builds shared one Gradle home, filled first by a build with the cache off. We counted entries with the server's <code>/statusz</code> page and listed its data folder. Each row is one run; we did not repeat them.</p>
+  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
+    <thead><tr><th>What went wrong</th><th>What the build did</th><th>Entries stored</th><th>The next builds</th></tr></thead>
+    <tbody>
+      <tr><td>Syntax error in module b. Three modules, <code>compileJava --continue</code></td><td>a and c compiled. b failed. Exit code 1</td><td>2 (a and c)</td><td>Same build again: a and c from the cache, b failed again, still 2 entries. Code fixed: b ran, a and c from the cache, 3 entries. Fixed again in a new copy: all three from the cache</td></tr>
+      <tr><td>A JUnit test fails</td><td><code>compileJava</code> and <code>compileTestJava</code> ran. The test failed. Exit code 1</td><td>2 (the two compile tasks)</td><td>Same build again: both compile tasks from the cache, the test ran and failed again, still 2 entries. Test fixed: <code>compileTestJava</code> and the test ran, 4 entries. Again in a new copy: the test from the cache</td></tr>
+      <tr><td>Ctrl-C (<code>SIGINT</code>) to the Gradle process, 3 seconds after the second of four 8-second tasks had finished</td><td>Tasks 1 and 2 had finished. Gradle exited with code 130. No Gradle process was left 6 seconds later</td><td>2 (tasks 1 and 2). No temporary file</td><td>Next build: tasks 1 and 2 from the cache, tasks 3 and 4 ran, all four outputs correct. The build after: all four from the cache</td></tr>
+      <tr><td><code>SIGKILL</code> to the whole build, at the same moment</td><td>Tasks 1 and 2 had finished. The build was killed, so it has no exit code. No Gradle process was left 6 seconds later</td><td>2. No temporary file</td><td>Same as Ctrl-C</td></tr>
+      <tr><td><code>SIGKILL</code> to the whole build while it was uploading a 300 MiB result</td><td>The server held a 2.8 MiB temporary file when we killed it</td><td>0. The temporary file was gone</td><td>Next build: the task ran and stored the result. The build after: from the cache, and the file was identical to the one the build before it made</td></tr>
+      <tr><td><code>curl</code> killed while uploading 40 MiB at 4 MiB a second</td><td>The server held a temporary file of about 16 MiB, then logged <code>blobstore: write: unexpected EOF</code></td><td>0. The temporary file was gone</td><td>Reading that key gave <code>404</code>. The same upload left alone gave <code>201</code> and then <code>200</code></td></tr>
+      <tr><td>A task writes the time into its output, and the time is not an input</td><td>First build: the task ran and wrote a timestamp</td><td>Not recorded</td><td>A new copy built a few seconds later took it from the cache with the same timestamp</td></tr>
+    </tbody>
+  </table></div>
+  <p class="muted-note">The three slow-task rows used four tasks that each sleep for 8 seconds, built one at a time. We sent the signal to the process, or process group, we had started, and nothing else. For the 300 MiB row we watched the server's data folder and sent the kill when a temporary file above 1 MiB appeared. A first try caught a small upload instead and is not counted.</p>
+  <p class="muted-note">Not tested: Maven, Kotlin or Android builds, a CI system's own cancel button, Windows, a second Ctrl-C, more than one build at a time, and a kill at any other moment than the ones in the table.</p>
+</main>
+<footer>
+  <div>
+    <p>FosterStack is not affiliated with, endorsed by, or sponsored by Gradle Inc.
+    "Gradle" and "Develocity" are trademarks of Gradle Inc., used here only to identify
+    compatibility. FosterStack contains no Gradle Inc. code; it is a clean-room implementation
+    of the documented remote build cache HTTP protocol. Apache Maven is a trademark of the
+    Apache Software Foundation; the Maven Build Cache Extension is Apache's project, not
+    ours.</p>
+    <p style="margin-top:.6rem">© 2026 FosterStack · <a href="/build-cache-node-end-of-life/">Build Cache Node end of life</a> · <a href="/migrate-build-cache-node/">Migrate</a> · <a href="/build-cache-node-faq/">FAQ</a> · <a href="/jenkins-ci-build-cache/">CI setup</a> · <a href="/how-we-build/">How we build</a> · <a href="/regulated/">For regulated markets</a> · <a href="https://github.com/fosterstack/cache">github.com/fosterstack/cache</a> · <a href="mailto:hello@fosterstack.com">hello@fosterstack.com</a></p>
+  </div>
+</footer>
+</body>
+</html>
