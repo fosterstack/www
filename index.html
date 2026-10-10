@@ -133,7 +133,7 @@ curl localhost:8080/healthz   # -&gt; ok</code></pre>
     <div class="card"><h3>Cache management</h3><p>Size-capped LRU eviction that keeps a busy CI cache healthy without hand-tending — set the cap, and the oldest-unused entries make room.</p></div>
     <div class="card"><h3>Authentication</h3><p>HTTP Basic Auth over TLS, wired the way Gradle and Maven already expect credentials. Constant-time comparison, no credential ever logged.</p></div>
     <div class="card"><h3>Metrics &amp; status</h3><p>Prometheus metrics, a read-only status page with hit rates and size-vs-cap, and a Grafana dashboard in the repo — so you know the cache is earning its keep.</p></div>
-    <div class="card"><h3>Maintenance target</h3><p>Vulnerable dependencies fixed fast — our target is 48 hours from disclosure.</p></div>
+    <div class="card"><h3>Maintenance target</h3><p>Vulnerable dependencies fixed fast — our target is 48 hours from disclosure (<a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md">the scope is in SECURITY.md</a>).</p></div>
     <div class="card"><h3>Designed against NIST guidance</h3><p>Our release pipeline is designed against NIST SP 800-204C and 800-204D: each stage's result is recorded in a signed statement, and nothing is promoted to the public registries until a signed release authorization has verified every earlier statement. Guidance we designed against, not a certification we hold. <a href="/how-our-pipeline-maps-to-nist-and-slsa/">See how each stage maps</a>.</p></div>
     <div class="card"><h3>30-minute migration</h3><p>A step-by-step guide for existing Build Cache Node deployments. Same protocol, same CI config shape — migrating is mostly a URL change.</p></div>
   </div>
@@ -145,7 +145,7 @@ curl localhost:8080/healthz   # -&gt; ok</code></pre>
     <li>Scanned before every release, rescanned every day.</li>
     <li>Images assembled twice on separate machines; the results must match.</li>
     <li>Minimal image, no telemetry. FIPS variant available.</li>
-    <li>Vulnerable dependencies fixed fast — our target is 48 hours from disclosure.</li>
+    <li>Vulnerable dependencies fixed fast — our target is 48 hours from disclosure (<a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md">the scope is in SECURITY.md</a>).</li>
   </ul>
   <p><a href="/how-we-build/">How we build</a> · <a href="/security/">Security policy</a> · <a href="/verify-a-release/">Verify a release</a></p>
 

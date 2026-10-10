@@ -143,7 +143,7 @@ org.gradle.parallel=true</code></pre>
     <li><strong>Changes to public methods spread (run 5).</strong> All four modules ran.</li>
     <li><strong>The first person paid, everyone else downloaded (runs 4 and 6).</strong> The edit in run 3 was uploaded once. In run 4 a separate copy of the project made the same edit and ran nothing.</li>
   </ul>
-  <p>Only the compile step is shown here, because it is the step that showed the pattern clearly in a small project. The jar steps in this build are not cacheable by default in Gradle, so they ran every time. The project is small, so we are not quoting time saved: the cache pays off as your modules get bigger.</p>
+  <p>Only the compile step is shown here, because it is the step that showed the pattern clearly in a small project. The jar steps in this build are not cacheable by default in Gradle, so they ran every time. The project is small, so we are not quoting time saved.</p>
 
   <h2 id="gradle-build-cache-buildsrc-included-builds">Does Gradle cache buildSrc and included builds?</h2>
   <p>Yes, in our runs. The build had three parts: a <code>buildSrc</code> folder with one Java class, an included build called <code>lib</code> with one Java class, and an <code>app</code> project that uses <code>lib</code>. The columns show the <code>compileJava</code> task of each part.</p>

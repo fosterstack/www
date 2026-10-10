@@ -95,7 +95,7 @@
   <p class="muted-note">Source: the vendor's <a href="https://docs.develocity.ai/bcn/21.2/">official notice</a>.</p>
 
   <h2>What keeps working</h2>
-  <p>What happens to a node you already run is for the vendor to say, so read their notice. What holds for any build cache: it only speeds builds up, so if it is slow, empty or down, the worst case is a slower build, not a wrong one.</p>
+  <p>What happens to a node you already run is for the vendor to say, so read their notice. What holds for any build cache: if it is slow, empty or down, the worst case is a slower build, not a wrong one.</p>
   <p>What changes is that the vendor says it will no longer support it.</p>
 
   <h2>Your three options</h2>
@@ -121,7 +121,7 @@
     <li>Two different scanners, with different vulnerability databases, check each release candidate before it ships, and every published image is scanned again daily.</li>
     <li>Images assembled twice on separate machines; the results must match.</li>
     <li>Minimal image, with one static program and no shell. No telemetry. FIPS variant available.</li>
-    <li>Vulnerable dependencies fixed fast — our target is 48 hours from disclosure.</li>
+    <li>Vulnerable dependencies fixed fast — our target is 48 hours from disclosure (<a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md">the scope is in SECURITY.md</a>).</li>
   </ul>
   <p><a href="/how-we-build/">How we build</a> · <a href="/security/">Security policy</a> · <a href="/verify-a-release/">Verify a release</a></p>
 
