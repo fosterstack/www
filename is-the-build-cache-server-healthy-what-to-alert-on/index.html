@@ -93,9 +93,9 @@
   <h2>The short answer</h2>
   <ul style="padding-left:1.25rem">
     <li><strong><code>/healthz</code> answers <code>ok</code> when the process is up.</strong> In our runs it kept answering <code>ok</code> after we made the data folder read-only and after we deleted it.</li>
-    <li><strong>A broken data folder shows up as uploads failing.</strong> The server answered every upload with a 500 and counted it in <code>fscache_http_requests_total</code>.</li>
-    <li><strong>A cache that is too small shows up as evictions with no hits.</strong> With a 20,000-byte cap, three builds in a row got zero hits.</li>
-    <li><strong>Your builds will not tell you.</strong> In the broken-folder and wrong-login runs below, the Gradle build still finished with <code>BUILD SUCCESSFUL</code>. It printed a warning and stopped using the remote cache for that build.</li>
+    <li><strong>A broken data folder shows up as uploads failing.</strong> Each upload we tried got a 500, and the server counted it in <code>fscache_http_requests_total</code>.</li>
+    <li><strong>A cache that is too small throws entries away before they are used.</strong> That shows as <code>fscache_evicted_entries_total</code> going up while <code>fscache_cache_hits_total</code> stays flat. With a 20,000-byte cap, three builds in a row got zero hits.</li>
+    <li><strong>A failing build is not your signal.</strong> In the broken-folder and wrong-login runs below, Gradle still ended with <code>BUILD SUCCESSFUL</code>. It printed a warning and stopped using the remote cache for that build.</li>
   </ul>
 
   <h2>What to alert on</h2>
@@ -112,10 +112,10 @@
   <ul style="padding-left:1.25rem">
     <li><strong><code>/healthz</code> on its own.</strong> In our runs it did not notice a broken data folder.</li>
     <li><strong><code>fscache_store_entries</code> or <code>fscache_store_bytes</code> at zero after a restart.</strong> Right after a restart both metrics read 0 until the first upload, even though the data is there. <code>/statusz</code> shows the real numbers.</li>
-    <li><strong>A count of 401 or 403 responses.</strong> There is none. Refused logins did not appear in <code>fscache_http_requests_total</code> or in the server log. A wrong login shows up on the client: the build log says <code>response status 401</code> and the build gets no hits from the server.</li>
-    <li><strong>Made-up health URLs.</strong> There is no <code>/readyz</code> or <code>/livez</code>. A request to an unknown path counted as a cache miss.</li>
+    <li><strong>A count of 401 or 403 responses.</strong> The server does not count them. Refused logins did not appear in <code>fscache_http_requests_total</code> or in the server log. A wrong login shows up on the client: the build log says <code>response status 401</code> and the build gets no hits from the server.</li>
+    <li><strong>Made-up health URLs.</strong> <code>/readyz</code> and <code>/livez</code> returned 404. The server counted each 404 as a cache miss.</li>
   </ul>
-  <p>Counters start again at 0 when the server restarts. A Prometheus <code>increase()</code> copes with that. A plain value does not. The rest of the metric names are on <a href="/monitor-build-cache-prometheus-grafana/">monitoring with Prometheus and Grafana</a>.</p>
+  <p>Counters start again at 0 when the server restarts. Prometheus <code>increase()</code> handles the reset. Reading the raw value does not. The rest of the metric names are on <a href="/monitor-build-cache-prometheus-grafana/">monitoring with Prometheus and Grafana</a>.</p>
 
   <h2>How we checked</h2>
   <p>We ran real FosterStack Cache servers, one per case, and built a four-module Gradle project against each. After every step we asked <code>/healthz</code> and <code>/statusz</code>, read <code>/metrics</code>, and kept the build log.</p>
@@ -138,7 +138,7 @@
       <tr><td>Gradle with a wrong password</td><td>n/a</td><td><code>Could not load entry ... response status 401: Unauthorized</code>, remote cache disabled for the build, <code>BUILD SUCCESSFUL</code></td></tr>
     </tbody>
   </table></div>
-  <p class="muted-note">The two rules: rule 1 is the increase of PUT requests with a 5xx status. Rule 2 is evictions up while hits are flat. We worked out the difference between two saved <code>/metrics</code> scrapes with a small script. We did not run a Prometheus server or an alerting tool, so the exact query text on this page is our suggestion.</p>
+  <p class="muted-note">The two rules: rule 1 is the increase of PUT requests with a 5xx status. Rule 2 is evictions up while hits are flat. We worked out the difference between two saved <code>/metrics</code> scrapes with a small script. We did not run a Prometheus server or an alerting tool, so how you write these rules in your alerting tool is our suggestion.</p>
   <p class="muted-note">Where the figures come from: a build asks the server for 13 things (four compile tasks and nine compiled build scripts), so one build adds 13 hits or misses. <code>fscache_evicted_entries_total</code> counts entries, not builds.</p>
   <p class="muted-note">Setup: FosterStack Cache 0.2.1 and Gradle 9.8.0 on a Mac (arm64), Temurin 21.0.12.1, all on one machine over plain HTTP on the loopback address. Every build used a fresh copy of the project and a new empty Gradle home, with Gradle's local cache off. We broke the data folder with <code>chmod</code> and <code>rm</code> as the same user that ran the server.</p>
   <p class="muted-note">Limits: we did not fill a real disk, we only used the size cap. We did not test Docker or Kubernetes probes, HTTPS, Maven, Linux, a slow disk, or a very large cache. A disk that fills up may behave differently from a cap or a read-only folder. For the exit with <code>permission denied</code> in a container, see <a href="/build-cache-permission-denied-data-directory/">the data directory page</a>. For what a build does while the server is down, see <a href="/build-cache-server-down-what-happens/">server down</a>.</p>
