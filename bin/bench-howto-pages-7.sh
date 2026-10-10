@@ -2,7 +2,7 @@
 # End-to-end runs on a GitHub-hosted runner, batch 7: do the commands and promised outputs of these pages really happen?
 #   V  /is-the-build-cache-server-healthy-what-to-alert-on/   the rows of the page's "How we checked" table: a healthy server, a stopped one, a
 #                                                             restart on the same data, a read-only or deleted data folder (while running and at
-#                                                             start), a tiny size cap, logins on; the metric names; the two rules by hand
+#                                                             start), a tiny size cap, logins on; the metric names; the two rules checked on live /metrics values
 #   T  /build-cache-eviction-size-limit/                      a 3,500-byte cap with five 1,000-byte entries, an entry bigger than the cap, and a
 #                                                             real full disk (an 8 MiB tmpfs volume): uploads, builds, recovery, starts, caps
 # Run by the "bench-howto-pages-7" job of .github/workflows/hygiene.yml (manual dispatch only, choice "howto-pages-7"). Same method as the other
@@ -86,8 +86,9 @@ echo "NOT checksum-pinned: nothing else is downloaded; the full-disk part mounts
 echo "invented by this script (the pages show their settings, not their build files): the four-module Java project (12 small classes per module), made-up logins and passwords, the stand-in ports, the files and key names of the upload tests"
 echo "differences from the pages' own runs: Linux amd64 (the pages: macOS arm64, Java 21.0.12.1 or 27), release ${VER} (the pages: 0.2.1); V: this project asks the server for a different number of things per build than the page's project (the page: 13 = four tasks and nine compiled build scripts), so the script compares the numbers with each other, not with the page's 13; T: the full disk is an 8 MiB tmpfs, the page used an 8 MiB APFS image, so counts of accepted uploads can differ"
 echo "Gradle runs use a new empty Gradle home and a fresh project copy each, no daemon, Gradle's own local cache switched off (as the pages' runs did)"
-echo "NOT tested here: Docker or Kubernetes volumes, file systems other than tmpfs, Maven, a full inode table, a disk quota, a very large single upload, Prometheus itself (the two rules are computed by a small script on saved /metrics text, as on the page)"
+echo "NOT tested here: Docker or Kubernetes volumes, file systems other than tmpfs, Maven, a full inode table, a disk quota, a very large single upload, Prometheus itself (the two rules are checked on live /metrics values with the script's own arithmetic, not on saved scrapes)"
 echo "page commands run with 'bash -o pipefail'; a runner times commands, not people"
+echo "replaced by helper functions: the eviction page's put()/get() block (tput_code, tget_code, treadback); the healthy page's curl of /statusz is parsed with python; two filler files outside the data folder (1 MiB and 512 KiB) imitate the page\'s free-space step on the tmpfs"
 
 export GRADLE_USER_HOME="$W/gradle-home"
 
@@ -277,6 +278,11 @@ vrestart() { # NAME PORT KEY=VALUE...   same data folder
 vbuild() { # NAME EDIT   (the four compile tasks, a fresh copy, a new Gradle home)
   q_project "$W/v/$1" "$2"; qrun "$1" "$W/v/$1" "gradle compileJava --console=plain --no-daemon"; rm -rf "$W/v/$1"
 }
+qcheck() { # LABEL NAME "want per task" tasks...   (ran | cache for each compile task)
+  local label="$1" name="$2" want="$3"; shift 3; local got="" t
+  for t in "$@"; do got="$got $(qstate "$name" "$t")"; done; got="${got# }"
+  if [ "$got" = "$want" ]; then echo "OBS V/T $label: $got, as the page says"; else fail "$label: the page says '$want'; the build did '$got'"; fi
+}
 scenario_v() {
   echo; echo "== V  (is-the-build-cache-server-healthy-what-to-alert-on)"
   mkdir -p "$W/v"; QPORT=$VPORT; local P=$VPORT S M h0 h1 m0 e0 b0 bw br st0 pt0 B
@@ -296,12 +302,14 @@ scenario_v() {
   vbuild vb2 none; qcheck "same project again: the four compile tasks" vb2 "cache cache cache cache" core:compileJava util:compileJava api:compileJava app:compileJava
   want "same project again: hits equal the earlier misses" "$(mval $P fscache_cache_hits_total)" "$M"
   want "same project again: bytes read equal the bytes written" "$(mval $P fscache_bytes_read_total)" "$bw"
+  want "same project again: no PUT with a 5xx status and no evictions (the two rules stay quiet)" "$(put5xx $P)/$(mval $P fscache_evicted_entries_total)" "0/0"
   # --- one method changed in one module
   h0="$(mval $P fscache_cache_hits_total)"; m0="$M"
   vbuild vb3 core-method; qcheck "one method changed: the four compile tasks" vb3 "ran cache cache cache" core:compileJava util:compileJava api:compileJava app:compileJava
   want "one method changed: one more miss" "$(mval $P fscache_cache_misses_total)" "$((m0+1))"
   want "one method changed: the other lookups are hits" "$(( $(mval $P fscache_cache_hits_total) - h0 ))" "$((M-1))"
   want "one method changed: one more entry" "$(sfield $P store_entries)" "$((M+1))"
+  want "one method changed: no PUT with a 5xx status and no evictions (the two rules stay quiet)" "$(put5xx $P)/$(mval $P fscache_evicted_entries_total)" "0/0"
   # --- the status page and the metric names
   curl -s "http://127.0.0.1:$P/statusz" | python3 -c "
 import sys,json
@@ -331,6 +339,7 @@ print('statusz keys: ' + ('all 14 of the page are there' if not missing else 'MI
   want "restart: /statusz still shows the entries" "$(sfield $P store_entries)" "$e0"
   want "restart: the hit counter is back to 0" "$(sfield $P cache_hits)" 0
   want "restart: the miss counter is back to 0" "$(sfield $P cache_misses)" 0
+  want "restart: the eviction counter is back to 0" "$(sfield $P evicted_entries)" 0
   awk -v u="$(sfield $P uptime_seconds)" 'BEGIN { exit !(u < 10) }' && echo "OBS V restart: uptime is back to $(sfield $P uptime_seconds) s" || fail "V restart: the page says uptime is back to 0; it is $(sfield $P uptime_seconds)"
   want "restart: /metrics store_bytes reads 0 until an upload" "$(mval $P fscache_store_bytes)" 0
   want "restart: /metrics store_entries reads 0 until an upload" "$(mval $P fscache_store_entries)" 0
@@ -417,7 +426,9 @@ buildCache {
     }
 }
 EOF
+  local H0; H0="$(sfield $P cache_hits)"
   qrun vb-wrong "$d" "gradle compileJava --console=plain --no-daemon"
+  want "Gradle with a wrong password: the build got no hits from the server" "$(sfield $P cache_hits)" "$H0"
   expect q-vb-wrong "BUILD SUCCESSFUL" "Could not load entry" "response status 401: Unauthorized" "The remote build cache was disabled during the build due to errors."
   echo "OBS V Gradle with a wrong password: the 401 line, the remote cache disabled, BUILD SUCCESSFUL"
   stop_server
@@ -471,7 +482,7 @@ scenario_t() {
   start_server t2 "$P" "" "" FSCACHE_DATA_DIR="$VOL/data" || return
   q_project "$W/t/b1" none; qrun tb1 "$W/t/b1" "gradle compileJava --console=plain --no-daemon"; qcheck "full disk, cold build (the disk has room)" tb1 "ran ran ran ran" core:compileJava util:compileJava api:compileJava app:compileJava
   echo "OBS T cold build with room: $(sfield $P store_entries) entries, $(sfield $P store_bytes) bytes"
-  dd if=/dev/zero of="$VOL/filler" bs=1048576 count=1 2>/dev/null
+  dd if=/dev/zero of="$VOL/filler" bs=1048576 count=1 2>/dev/null; dd if=/dev/zero of="$VOL/filler_b" bs=1024 count=512 2>/dev/null   # two files outside the data folder: 1 MiB to free in the page's step, 512 KiB more so the last build has room
   # 256 KiB uploads until one fails
   N=0; for i in $(seq 1 60); do code="$(tput_code "$P" "big$i" "$W/t/k256k")"; [ "$code" = 201 ] && N=$((N+1)) || break; done
   curl -s --max-time 30 -X PUT --data-binary @"$W/t/k256k" "http://127.0.0.1:$P/bigfail" > "$W/t/body.txt" 2>/dev/null
@@ -496,9 +507,10 @@ scenario_t() {
   want "1 MiB freed: a 1 KiB upload" "$(tput_code "$P" after1k "$W/t/k1k")" 201
   N=0; for i in 1 2 3; do code="$(tput_code "$P" "after$i" "$W/t/k256k")"; [ "$code" = 201 ] && N=$((N+1)); done; want "1 MiB freed: three 256 KiB uploads accepted" "$N" 3
   N=0; for i in 4 5; do code="$(tput_code "$P" "after$i" "$W/t/k256k")"; [ "$code" = 500 ] && N=$((N+1)); done; want "...the next two get 500, no restart" "$N" 2
+  rm -f "$VOL/filler_b"
   q_project "$W/t/b4" core-public; qrun tb4 "$W/t/b4" "gradle compileJava --console=plain --no-daemon"
   absent q-tb4 "Could not store entry" "The remote build cache was disabled"
-  echo "OBS T a changed build with room: BUILD SUCCESSFUL and no warning"
+  echo "OBS T a changed build with room (512 KiB more freed first): BUILD SUCCESSFUL and no warning"
   # a start on a full volume, with the old data
   stop_server
   dd if=/dev/zero of="$VOL/filler2" bs=1024 2>/dev/null
