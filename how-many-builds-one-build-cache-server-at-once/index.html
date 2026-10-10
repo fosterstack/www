@@ -88,7 +88,7 @@
 </header>
 <main>
   <h1>How many builds can use one cache server at once?</h1>
-  <p class="lede">In our runs, one FosterStack Cache server handled 8 builds at once and every build succeeded. It refuses an upload only when too many uploads arrive at the same moment, and the limit is 32 by default.</p>
+  <p class="lede">In our runs, one FosterStack Cache server handled 8 builds at once, the most we tried, and every build succeeded. It refuses an upload only when 32 uploads are already in progress, which is the default limit.</p>
 
   <h2>The short answer</h2>
   <ul class="trust">
@@ -96,17 +96,17 @@
     <li><strong>The server stayed small.</strong> Its memory peaked at about 16 MiB under the builds. It peaked at about 23 MiB under a burst of 100 uploads of 1 MiB each.</li>
     <li><strong>Uploads have a limit.</strong> By default the server takes 32 uploads at a time. An upload past the limit gets a <code>429</code> with <code>Retry-After: 1</code>, and nothing is stored.</li>
     <li><strong>A refused upload costs one build its cache, not the build.</strong> In our run, Gradle printed one warning, switched the remote cache off for the rest of that build and still ended with <code>BUILD SUCCESSFUL</code>. The next build was normal.</li>
-    <li><strong>Reads and repeat writes were safe.</strong> No read failed. Two uploads of the same entry at once left one complete entry. A reader got <code>404</code> while a slow upload was running, never half an entry.</li>
+    <li><strong>Reads and repeat uploads behaved correctly in our runs.</strong> No read failed. Two uploads of the same entry at once left one complete entry. A reader got <code>404</code> while a slow upload was running, never half an entry.</li>
   </ul>
 
   <h2>What to watch</h2>
   <p>Our advice, not a test result:</p>
   <ul>
-    <li><strong>Watch the refused-upload counter.</strong> It is <code>fscache_http_requests_total{method="PUT",status="429"}</code>. In our build runs it stayed at 0. If it climbs, uploads are being refused.</li>
-    <li><strong>If it climbs, count how many jobs upload at the same moment.</strong> Many CI jobs that finish together and upload large outputs are the likely cause. Our builds uploaded small entries, 13 of them in about 36 KB, and none was refused even with the limit set to 1.</li>
-    <li><strong>The limit is a setting.</strong> It is <code>FSCACHE_MAX_CONCURRENT_UPLOADS</code>, and <code>0</code> turns it off. We tested 8, the default of 32 and 0. We did not test what 0 does on a small machine.</li>
+    <li><strong>Watch the refused-upload counter.</strong> It is <code>fscache_http_requests_total{method="PUT",status="429"}</code>. In our main build run it stayed at 0. If it climbs, uploads are being refused.</li>
+    <li><strong>If it climbs, count how many jobs upload at the same moment.</strong> Many CI jobs that finish together and upload large outputs are the likely cause. Our builds uploaded small entries, 13 of them in about 35 KiB, and none was refused even with the limit set to 1.</li>
+    <li><strong>The limit is a setting.</strong> It is <code>FSCACHE_MAX_CONCURRENT_UPLOADS</code>, and <code>0</code> turns it off. We tested 1, 8, the default of 32 and 0. We did not test what 0 does on a small machine.</li>
     <li><strong>Keep watching memory and server errors too.</strong> See <a href="/is-the-build-cache-server-healthy-what-to-alert-on/">is my build cache server healthy</a> and <a href="/build-cache-hit-rate-how-to-measure/">how do I know my build cache hit rate</a>.</li>
-    <li><strong>Size the machine for the disk, not for the builds.</strong> See <a href="/build-cache-server-sizing/">how big a server a build cache needs</a> and <a href="/run-build-cache-on-a-small-vm-or-laptop/">can I run the build cache on a small VM or laptop</a>.</li>
+    <li><strong>Our builds used little memory, so size the machine for the disk first.</strong> See <a href="/build-cache-server-sizing/">how big a server a build cache needs</a> and <a href="/run-build-cache-on-a-small-vm-or-laptop/">can I run the build cache on a small VM or laptop</a>.</li>
   </ul>
 
   <h2>How we checked</h2>
@@ -141,7 +141,7 @@
   <p><strong>A refused upload in a Gradle build.</strong> We set the limit to 1 and held the only upload slot open with a slow upload. A build that stored entries during that time printed one warning, <code>Could not store entry ... response status 429: Too Many Requests</code>, then <code>The remote build cache was disabled during the build due to errors.</code> It ended with <code>BUILD SUCCESSFUL</code>, and Gradle did not retry. The build after it, with the slot free, printed no warning. We also ran 8 builds that all stored at the same moment with the limit at 1. All succeeded and none was refused.</p>
 
   <p class="muted-note">What: FosterStack Cache 0.2.1 on a Mac (arm64, 10 CPUs, 16 GiB), no password. Gradle 9.8.0 with Java 21, a four-module project, compile tasks only. Each build used a fresh copy of the project, a new Gradle home, no reused daemon and the local build cache off. Memory is the server process only, sampled every second for builds and every 0.2 seconds for the direct requests.</p>
-  <p class="muted-note">Limits: the Mac was heavily loaded by other work, with a load average from about 8 to 180 during these runs. So we report counts and outcomes, not times, and nothing here says how your hardware will behave. One run for each row. Not tested: Maven, more than 8 builds at once, uploads larger than 8 MiB, Linux, Docker and Kubernetes.</p>
+  <p class="muted-note">Limits: the Mac was heavily loaded by other work, with a load average from about 8 to 160 during these runs. So we report counts and outcomes, not times, and nothing here says how your hardware will behave. One run for each row. Not tested: Maven, more than 8 builds at once, uploads larger than 8 MiB, Linux, Docker and Kubernetes.</p>
 </main>
 
 <footer>
