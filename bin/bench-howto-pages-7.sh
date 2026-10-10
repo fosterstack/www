@@ -88,7 +88,8 @@ echo "differences from the pages' own runs: Linux amd64 (the pages: macOS arm64,
 echo "Gradle runs use a new empty Gradle home and a fresh project copy each, no daemon, Gradle's own local cache switched off (as the pages' runs did)"
 echo "NOT tested here: Docker or Kubernetes volumes, file systems other than tmpfs, Maven, a full inode table, a disk quota, a very large single upload, Prometheus itself (the two rules are checked on live /metrics values with the script's own arithmetic, not on saved scrapes)"
 echo "page commands run with 'bash -o pipefail'; a runner times commands, not people"
-echo "replaced by helper functions: the eviction page's put()/get() block (tput_code, tget_code, treadback); the healthy page's curl of /statusz is parsed with python; two filler files outside the data folder (1 MiB and 512 KiB) imitate the page\'s free-space step on the tmpfs"
+echo "full-disk start: two states are tried, with not one free byte (the server stops at its shutdown marker) and with 16 KiB free (the page's APFS volume still had room for small files); the page says which of the two it saw only in the words 'a full volume'"
+echo "replaced by helper functions: the eviction page's put()/get() block (tput_code, tget_code, treadback); the healthy page's curl of /statusz is parsed with python; two filler files outside the data folder (1 MiB and 512 KiB) imitate the page's free-space step on the tmpfs"
 
 export GRADLE_USER_HOME="$W/gradle-home"
 
@@ -511,19 +512,24 @@ scenario_t() {
   q_project "$W/t/b4" core-public; qrun tb4 "$W/t/b4" "gradle compileJava --console=plain --no-daemon"
   absent q-tb4 "Could not store entry" "The remote build cache was disabled"
   echo "OBS T a changed build with room (512 KiB more freed first): BUILD SUCCESSFUL and no warning"
-  # a start on a full volume, with the old data
+  # a start on a full volume. First with NO free byte at all, then with 16 KiB free (the page's volume still had room for small files)
   stop_server
   dd if=/dev/zero of="$VOL/filler2" bs=1024 2>/dev/null
+  CASE_PORT=$P startcase t-full0-old "FSCACHE_DATA_DIR=$VOL/data"
+  casefail "T a start with not one free byte, with the old data" "write shutdown marker" "no space left on device"
+  CASE_PORT=$P startcase t-full0-new "FSCACHE_DATA_DIR=$VOL/newdata0"
+  casefail "T a start with not one free byte, with a new empty data folder" "no space left on device"
+  truncate -s "$(( $(stat -c %s "$VOL/filler2") - 16384 ))" "$VOL/filler2"
   ( cd "$W/srv-t2" && exec env FSCACHE_ADDR="127.0.0.1:${P}" FSCACHE_DATA_DIR="$VOL/data" ./fscache ) > "$W/srv-t2/again.log" 2>&1 &
   SERVER_PID=$!; SERVER_PORT=$P
   if wait_up "$P"; then
-    echo "OBS T started on a full volume with its old data: /healthz ok, /statusz $(statusz $P x y)"
+    echo "OBS T started on a full volume (16 KiB free) with its old data: /healthz ok, /statusz $(statusz $P x y)"
     want "...a stored entry reads" "$(tget_code "$P" big1)" 200
-    want "...a new upload" "$(tput_code "$P" newfull "$W/t/k1k")" 500
+    want "...a new 256 KiB upload" "$(tput_code "$P" newfull "$W/t/k256k")" 500
   else fail "T the page says the server starts on a full volume with its old data; it did not answer: $(tail -n 2 "$W/srv-t2/again.log" | cut -c1-200)"; fi
   stop_server
   CASE_PORT=$P startcase t-newfolder "FSCACHE_DATA_DIR=$VOL/newdata" FSCACHE_MAX_BYTES=4194304
-  casefail "T a new, empty data folder on a full volume" "open metadata store" "no space left on device"
+  casefail "T a new, empty data folder on a full volume (16 KiB free)" "open metadata store" "no space left on device"
   want "...and it never answered" "$(probe_rc "http://127.0.0.1:$P/healthz")" 7
   # the size cap against a small volume: 40 uploads of 256 KiB (10 MiB in all)
   for G in 4194304 20971520; do
