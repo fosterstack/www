@@ -132,6 +132,16 @@ docker run -d -p 127.0.0.1:8080:8080 -v fscache-data:/home/nonroot ghcr.io/foste
     <li>For containers we used <code>docker pull</code> and <code>docker save</code> in place of <code>crane pull</code>. Then <code>docker load -i</code> and the <code>docker run</code> line above (with a <code>--name</code> added so we could remove the container) gave a server that answered <code>/healthz</code> on <code>127.0.0.1:8080</code>.</li>
   </ul>
   <p class="muted-note">Not tested: <code>crane pull</code>, verifying the image with <code>cosign verify</code>, the systemd service, and later upgrades. <a href="https://github.com/fosterstack/www/actions/runs/38074962799">The run and its log are public</a>.</p>
+  <h2>How we checked</h2>
+  <p>We followed this page on a GitHub-hosted Linux machine with FosterStack Cache 0.2.2.</p>
+  <ul class="trust">
+    <li>The two verify steps printed <code>Verified OK</code> and <code>fscache_0.2.2_linux_amd64.tar.gz: OK</code>. Our first version of step 2, without <code>grep -v sbom</code>, exited with an error because it also matched the SBOM line. We fixed the line above.</li>
+    <li>An archive with one changed byte failed step 2 with <code>fscache_0.2.2_linux_amd64.tar.gz: FAILED</code>.</li>
+    <li>The unpacked <code>fscache</code> file is a statically linked program.</li>
+    <li>We ran the server in a network namespace that had only a loopback interface. It started, answered <code>/healthz</code>, and stored and returned an entry. We did not capture network traffic, and we did not test a machine with no network at all.</li>
+    <li>For containers we used <code>docker pull</code> and <code>docker save</code> in place of <code>crane pull</code>. Then <code>docker load -i</code> and the <code>docker run</code> line above (with a <code>--name</code> added so we could remove the container) gave a server that answered <code>/healthz</code> on <code>127.0.0.1:8080</code>.</li>
+  </ul>
+  <p class="muted-note">Not tested: <code>crane pull</code>, verifying the image with <code>cosign verify</code>, the systemd service, and later upgrades. <a href="https://github.com/fosterstack/www/actions/runs/38074962799">The run and its log are public</a>.</p>
   <p class="muted-note">Related: <a href="/how-we-build/">how releases are built and signed</a> and <a href="/build-cache-server-sizing/">server sizing</a>.</p>
   <div class="cta-row">
     <a class="btn" href="/migrate-build-cache-node/">Gradle and Maven setup</a>

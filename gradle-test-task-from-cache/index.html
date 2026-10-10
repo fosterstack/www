@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Skip tests that passed: Gradle and Maven build cache</title>
-<meta name="description" content="Do Gradle and Maven skip tests that already passed? Real runs with JUnit against a self-hosted build cache on release 0.2.1, including a failing test.">
+<meta name="description" content="Do Gradle and Maven skip tests that already passed? Real runs with JUnit against a self-hosted build cache on releases 0.2.1 and 0.2.2, including a failing test.">
 <meta property="og:title" content="Skip tests that passed: Gradle and Maven build cache">
-<meta property="og:description" content="Do Gradle and Maven skip tests that already passed? Real runs with JUnit against a self-hosted build cache on release 0.2.1, including a failing test.">
+<meta property="og:description" content="Do Gradle and Maven skip tests that already passed? Real runs with JUnit against a self-hosted build cache on releases 0.2.1 and 0.2.2, including a failing test.">
 <meta property="og:url" content="https://fosterstack.com/gradle-test-task-from-cache/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="FosterStack">
@@ -179,6 +179,13 @@ tasks.test { useJUnitPlatform() }</code></pre>
 
 
   <p class="muted-note">Gradle run on Gradle 9.8.0 with FosterStack Cache 0.2.1, macOS (arm64), Java 27, JUnit 5.11.0. Maven run on Maven 3.10.0 with maven-build-cache-extension 1.2.3, Surefire 3.5.2, JUnit 5.11.0 and FosterStack Cache 0.2.1, macOS (arm64), Java 27.</p>
+  <h3>Second run: Linux, 0.2.2</h3>
+  <p>The runs above were on a Mac with 0.2.1 and Java 27. We ran both tables again on a GitHub-hosted Linux machine with FosterStack Cache 0.2.2, Gradle 9.8.0, Maven 3.10.0 and Java 21. We wrote the small test project again, with one class and two JUnit tests, and each run started from the same base project with one change.</p>
+  <ul class="trust">
+    <li>Gradle: all seven runs matched the table, for <code>compileJava</code>, <code>compileTestJava</code> and <code>test</code>. Run 2 printed <code>&gt; Task :test FROM-CACHE</code>. Runs 6 and 7 ended with <code>BUILD FAILED</code>, and run 7 reported <code>2 tests completed, 1 failed</code>.</li>
+    <li>Maven: all six runs matched. Run 2 restored the module and listed the six <code>Skipping plugin execution (cached)</code> lines above, with no <code>Tests run:</code> line. Runs 5 and 6 ended with <code>BUILD FAILURE</code> and <code>Tests run: 2, Failures: 1</code>, and run 6 was built again, not restored.</li>
+  </ul>
+  <p class="muted-note"><a href="https://github.com/fosterstack/www/actions/runs/38074962799">The run and its log are public</a>.</p>
 </main>
 
 <footer>

@@ -163,6 +163,16 @@
   </table></div>
   <p>The cap belongs to the server, not to a project. The compile entry of the project that built last stayed. So did the shared build-script entry. This cap is far smaller than a real one. We only checked that the cap is shared.</p>
   <p class="muted-note">Limits: Gradle only, three small projects, one run of each case. We did not test Maven, many projects building at once, or real project sizes.</p>
+  <h3>Second run: Linux, 0.2.2</h3>
+  <p>The run above was on a Mac with 0.2.1. We ran it again on a GitHub-hosted Linux machine with FosterStack Cache 0.2.2, Gradle 9.8.0 and Java 21, with three small projects of our own written in the same shape.</p>
+  <ul class="trust">
+    <li>One server: the rows matched. A ran and left 2 entries. B ran, restored the compiled build script and left 3. The copy C restored A's compile result and the build script.</li>
+    <li>Direct requests: A's and B's keys answered <code>200</code> to the read-write login, and to the read-only login. A write with the read-only login got <code>403</code>, and the entry count stayed at 3. No login or a wrong password got <code>401</code>, and a project name in front of the key got <code>404</code> for both keys. Builds of A and B with the read-only login and pushing off each restored their compile result.</li>
+    <li>Two servers: team 1's login on team 2's server got <code>401</code>. That build ran everything, and nothing was stored on or restored from team 2's server. With team 2's login the build stored 2 entries and restored nothing, and the same build again restored its compile result. Each team's login got <code>401</code> on the other server for A's key.</li>
+    <li>The small cap: the same 5,000-byte cap, with A's two entries taking 4,025 bytes here (4,472 on the Mac). After each build the server had evicted 0, 1, 2 and 3 entries, and the compile result of the project that built last was on the server while the other was not.</li>
+    <li>The sizes of single entries differed: A's compile result was 1,211 bytes and B's 1,294 (on the Mac, 1,659 and 1,803).</li>
+  </ul>
+  <p class="muted-note"><a href="https://github.com/fosterstack/www/actions/runs/38074962799">The run and its log are public</a>.</p>
 </main>
 <footer>
   <div>
