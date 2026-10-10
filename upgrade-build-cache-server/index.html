@@ -217,7 +217,14 @@ FSCACHE_ADDR=127.0.0.1:18152 FSCACHE_DATA_DIR=$PWD/data-new-copied fscache</code
     <li><strong>Upgrade:</strong> we ran two pairs of releases, 0.1.0 with 0.2.1, and 0.2.1 with 0.2.2. In each pair we stored entries on the older release, started the newer one on the same data volume, wrote more, and then went back to the older one. Docker, one named volume at <code>/home/nonroot</code>, no password, stopped and started cleanly between versions.</li>
     <li><strong>Backup and restore:</strong> run for real on the 0.2.1 image with plain Docker, three small entries.</li>
     <li><strong>Maven move:</strong> a small Maven project, Maven 3.10.0, extension 1.2.3, macOS (arm64). Every build used a fresh copy of the project and an empty local build cache, so the only thing shared was the cache server. All five builds ended with <code>BUILD SUCCESS</code>. Every step was run for real with FosterStack Cache 0.2.1.</li>
-    <li><strong>Again on Linux:</strong> we ran both pairs of releases, the backup and restore commands and the five Maven builds on a GitHub-hosted Linux machine, with release images checked against their published digests and verified with cosign before they ran. The status page numbers (3 entries and 29 bytes, 5 entries and 49 bytes), the version strings, the 404 for <code>/statusz</code> on 0.1.0, the entry-count metric reading 0 after a restart, the archive and its owner (65532), the restored server (32 bytes, 3 entries, <code>value-alpha</code>, a 404 for a missing key) and the Maven results (2 hits and 0 misses on the copied folder) were all as on this page. <a href="https://github.com/fosterstack/www/actions/runs/38041159465">The run and its log are public</a>.</li>
+    <li><strong>Again on Linux:</strong> we ran both release pairs, the backup and restore commands and the five Maven builds on a GitHub-hosted Linux machine. The release images were checked against their published digests and verified with cosign first. Everything matched this page:
+      <ul>
+        <li>the status page: 3 entries and 29 bytes, then 5 entries and 49 bytes, and the version strings</li>
+        <li>a 404 for <code>/statusz</code> on 0.1.0, and the entry-count metric reading 0 after a restart</li>
+        <li>the restored data folder owned by 65532, and the restored server: 32 bytes, 3 entries, <code>value-alpha</code>, and a 404 for a missing key</li>
+        <li>Maven: 2 hits and 0 misses on the copied data folder</li>
+      </ul>
+      <a href="https://github.com/fosterstack/www/actions/runs/38041159465">The run and its log are public</a>.</li>
     <li><strong>Not tested:</strong> upgrading or backing up while the server is running, any other pair of releases (there is no 0.2.0 release; see <a href="/changelog/">the changelog</a>), restoring into a different version of the server than the one that wrote the data, Kubernetes or Compose rollouts (the same idea applies to the volume behind the claim, but we only ran plain Docker), the FIPS image, or a cache that was close to its size cap.</li>
   </ul>
 
