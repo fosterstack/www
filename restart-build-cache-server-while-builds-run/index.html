@@ -95,7 +95,7 @@
     <li>If the build touched the cache while the server was down, Gradle printed one warning and switched the remote cache off for the rest of that build. The build still ended with <code>BUILD SUCCESSFUL</code>.</li>
     <li>If it did not, the build printed nothing. That was the case in our 2-second restarts.</li>
     <li>The next build used the cache again and rebuilt only what had not been stored.</li>
-    <li>In our runs, a normal stop waited for an upload in progress but gave up after 10 seconds. A kill lost the upload in progress.</li>
+    <li>In our runs, a normal stop waited up to 10 seconds for an upload in progress. A longer upload was lost. So was an upload cut off by a kill.</li>
   </ul>
 
   <h2>What to do</h2>
