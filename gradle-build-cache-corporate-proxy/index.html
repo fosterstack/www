@@ -198,6 +198,24 @@ PUT http://&lt;cache-ip&gt;:18132/v1.1/demo/demo/&lt;id&gt;/build-cache-report.x
   <p><strong>Maven run.</strong> Maven 3.10.0, extension 1.2.3 and FosterStack Cache 0.2.1. We wrote a small proxy for the test, which forwards plain HTTP, can refuse a host, and logs every request (we made it close each connection after one request so that none go unlogged). The cache was on a non-loopback address, over plain HTTP, with a password.</p>
   <p class="muted-note">Not tested in Gradle: a real corporate proxy product, a proxy that asks for a password (407), a proxy that inspects and re-signs TLS, automatic proxy configuration files, and the <code>HTTP_PROXY</code> variables. Not tested in Maven: HTTPS through a proxy, a proxy that asks for a password, other Maven or extension versions, and any real proxy product.</p>
 
+  <h3>Second run: Linux, 0.2.2</h3>
+  <p>The runs above were on a Mac with 0.2.1. We ran both sections again on a GitHub-hosted Linux machine with FosterStack Cache 0.2.2, Gradle 9.8.0, Maven 3.10.0 and extension 1.2.3. The cache was on the runner's own non-loopback address.</p>
+  <p>The proxy was again a small one we wrote for the test: <a href="https://github.com/fosterstack/www/blob/main/bin/bench-proxy.py">about 150 lines</a> that forward plain HTTP, tunnel <code>CONNECT</code>, can refuse a host with a 403 and log every request. It is not a production proxy product. Real proxies may ask for a password (407) or inspect TLS, and we did not test those. These results show how the cache, Gradle and Maven behave with this test proxy. They do not show how any real corporate proxy behaves. For the HTTPS rows we used a small TLS server of our own, with a self-signed certificate, in front of the cache (the Mac run used nginx), and told Java to trust it.</p>
+  <p>On the Linux run:</p>
+  <ul class="trust">
+    <li>Gradle without proxy settings: nothing reached the proxy. With proxy settings and a plain-HTTP cache address, the requests went through the proxy.</li>
+    <li>Gradle with the cache at <code>127.0.0.1</code>, or its address in <code>nonProxyHosts</code>: nothing reached the proxy, and the second build was still <code>FROM-CACHE</code>.</li>
+    <li>Gradle with an HTTPS cache through the proxy: one <code>CONNECT</code> line per build and no <code>GET</code> or <code>PUT</code> lines, so the proxy saw no request inside the tunnel.</li>
+    <li>Gradle with a proxy that refuses the cache host: both builds succeeded without the cache, and each logged a warning ending in <code>response status 403: Forbidden</code>, like the one shown above. The first build then said the remote cache was disabled. The two curl commands printed <code>curl: (56) CONNECT tunnel failed, response 403</code> and <code>ok</code>.</li>
+    <li>One difference from the Mac run: with proxy settings, each Gradle build made two <code>GET</code> requests to the cache, not one, and the two builds made one <code>PUT</code> between them.</li>
+    <li>Maven: the proxy log of the first and second builds matched the two lists above.</li>
+    <li>Maven with the cache at <code>127.0.0.1</code> and the proxy configured: it still used the proxy (4 requests for the restoring build).</li>
+    <li>Maven with the cache's address in <code>nonProxyHosts</code>: nothing reached the proxy, and the build restored from the cache.</li>
+    <li>Maven with a proxy that refuses the cache host: nothing was stored or restored, and the log had <code>Error downloading cache item</code> with <code>HTTP Status: 403</code>.</li>
+    <li>Maven with no proxy running: the lookup failed with <code>Connect to 127.0.0.1:18131 ... Connection refused</code>, the build succeeded and nothing was uploaded.</li>
+  </ul>
+  <p class="muted-note"><a href="https://github.com/fosterstack/www/actions/runs/38069708218">The run and its log are public</a>.</p>
+
   <p class="muted-note">Related: <a href="/gradle-remote-cache-not-working/">Gradle remote build cache not working</a>, <a href="/gradle-remote-build-cache-authentication/">authentication and 401 errors</a> and <a href="/maven-build-cache-extension-not-restoring/">Maven build cache extension not restoring</a>.</p>
   <div class="cta-row">
     <a class="btn" href="/first-15-minutes-build-cache/#gradle-build-cache-tutorial">Gradle build cache tutorial</a>
