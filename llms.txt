@@ -40,6 +40,10 @@ verifiable against the CI run that produced them.
 - [Is My Build Cache Server Healthy? What to Alert On](https://fosterstack.com/is-the-build-cache-server-healthy-what-to-alert-on/): how to tell the cache server is healthy and what to alert on, from tested failures.
 - [Can I Restart the Cache Server While Builds Run?](https://fosterstack.com/restart-build-cache-server-while-builds-run/): what a running build sees when the cache server is stopped and restarted, from real runs.
 - [Change the Build Cache Logins Without Breaking CI](https://fosterstack.com/change-build-cache-logins-without-breaking-ci/): the order to change the cache logins so CI jobs keep using the cache, from real runs.
+- [Can Several Projects Share One Build Cache Server?](https://fosterstack.com/several-projects-share-one-build-cache-server/): whether several projects can share one cache server, what is shared and what is not, from real runs.
+- [How Many Builds Can Use One Cache Server at Once?](https://fosterstack.com/how-many-builds-one-build-cache-server-at-once/): what one cache server did with 1 to 8 builds at once and a burst of uploads, and what to watch.
+- [Can a Failed or Cancelled Build Poison the Cache?](https://fosterstack.com/failed-or-cancelled-build-bad-results-in-cache/): what a failed test, a failed compile, Ctrl-C or a killed job leaves in the cache, from real runs.
+- [Can I Run Two Build Cache Servers?](https://fosterstack.com/run-two-build-cache-servers/): what happened with a second server on one data folder, on separate folders and from a copy.
 - [Jenkins and CI build cache](https://fosterstack.com/jenkins-ci-build-cache/): one shared cache for CI runners.
 - [Gradle remote build cache not working](https://fosterstack.com/gradle-remote-cache-not-working/): six checks when nothing comes from the cache.
 - [Maven remote build cache setup](https://fosterstack.com/maven-remote-build-cache-setup/): extension, config, credentials, checking hits.
