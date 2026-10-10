@@ -2,12 +2,13 @@
 # Runs INSIDE a fresh debian container, started by bin/bench-verify-release.sh. It does what a reader of
 # /verify-a-release/ does, with the page's commands word for word, and times every step.
 #
-# Environment: VER ("0.2.1", or "latest" to set it with the page's own command), PLATFORM, TOKEN_FOR_STEPS_5_TO_7.
+# Environment: VER ("0.2.1", or "latest" to set it with the page's own command), PLATFORM. Stdin: the token, one line.
 # The token is exported as GH_TOKEN only for steps 5 to 7, because the page says only those need one.
 set -u
-# take the token out of the environment right away: only steps 5 to 7 may see it
-TOK="${TOKEN_FOR_STEPS_5_TO_7:-}"
-unset TOKEN_FOR_STEPS_5_TO_7
+# The token arrives on stdin (one line), never in the container's environment, so it is not in any process's
+# environ and not in `docker inspect`. It is exported as GH_TOKEN only around steps 5 to 7.
+TOK=""
+IFS= read -r TOK || true
 VER_ARG="${VER:-0.2.1}"
 PLATFORM="${PLATFORM:-linux_amd64}"
 OUT=/tmp/out; mkdir -p "$OUT" /work

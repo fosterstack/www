@@ -10,8 +10,9 @@
 # other than what the page says, is RECORDED and fails the job at the end; it is not hidden.
 #
 # The token: steps 5 to 7 (gh attestation verify) need one by the page's own words. The job passes the automatic read-only
-# GITHUB_TOKEN as TOKEN_FOR_STEPS_5_TO_7; the inner script exports it as GH_TOKEN only for those steps, so steps 1 to 4 run
-# unauthenticated exactly as the page says. It is not a repository secret and it is not written to any file.
+# GITHUB_TOKEN as TOKEN_FOR_STEPS_5_TO_7 and this script hands it to the container on stdin (not as an environment variable,
+# so it is in no process's environment and not in `docker inspect`); the inner script exports it as GH_TOKEN only for steps 5
+# to 7, so steps 1 to 4 run unauthenticated exactly as the page says. It is not a repository secret and it is not written to any file.
 set -euo pipefail
 
 REPS="${BENCH_REPS:-2}"
@@ -33,8 +34,8 @@ for ver in 0.2.1 latest; do
     echo
     echo "== RUN version=$ver rep=$rep/$REPS (new container)"
     start=$(date +%s.%N)
-    docker run --rm \
-      -e VER="$ver" -e PLATFORM=linux_amd64 -e TOKEN_FOR_STEPS_5_TO_7 \
+    printf '%s\n' "${TOKEN_FOR_STEPS_5_TO_7:-}" | docker run -i --rm \
+      -e VER="$ver" -e PLATFORM=linux_amd64 \
       -v "$HERE/bench-verify-release-inner.sh:/inner.sh:ro" \
       "$IMAGE" bash /inner.sh || status=1
     end=$(date +%s.%N)
