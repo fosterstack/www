@@ -74,7 +74,6 @@ else
 fi
 "$JDK21_HOME/bin/java" -version 2>&1 | head -1 | grep -q '"21\.' || { echo "JAVA_HOME for Java 21 is not Java 21: $("$JDK21_HOME/bin/java" -version 2>&1 | head -1)" >&2; exit 1; }
 export JAVA_HOME="$JDK21_HOME"; export PATH="$JDK21_HOME/bin:$PATH"
-sha512_check() { echo "$2  $1" | sha512sum -c - >/dev/null 2>&1 || { echo "CHECKSUM MISMATCH: $1" >&2; exit 2; }; }
 curl -fsSL -o "$W/tools/jdk27.tgz" "$JDK27_URL"; sha_check "$W/tools/jdk27.tgz" "$JDK27_SHA"; mkdir -p "$W/tools/jdk27" && tar -xzf "$W/tools/jdk27.tgz" -C "$W/tools/jdk27" --strip-components=1; JDK27_HOME="$W/tools/jdk27"
 curl -fsSL -o "$W/tools/mvn399.tgz" "$MVN399_URL"; sha512_check "$W/tools/mvn399.tgz" "$MVN399_SHA512"; tar -xzf "$W/tools/mvn399.tgz" -C "$W/tools"; MVN399_HOME="$W/tools/apache-maven-3.9.9"
 [ -x "$JDK27_HOME/bin/java" ] && [ -x "$MVN399_HOME/bin/mvn" ] || { echo "Java 27 or Maven 3.9.9 not usable" >&2; exit 1; }
@@ -91,6 +90,7 @@ echo "NOT checksum-pinned: the Maven build-cache extension 1.2.3 and the Maven p
 echo "invented by this script (the pages show their configuration, not their projects): the Java classes of the one-module and three-module projects, made-up passwords and keys"
 echo "differences from the pages' own runs: Linux amd64 (the pages: macOS arm64), release ${VER} (the pages: 0.2.1), Maven 3.10.0 on the runner as on the pages; the page's Java 27 is Temurin 27+35 here (the page: OpenJDK 27 from Homebrew); builds run offline-capable only after the first build has filled the shared Maven repository (the pages: an already-filled local repository)"
 echo "Gradle builds use a new empty Gradle home and a fresh project copy each, no daemon, Gradle's own local cache switched off; Maven builds use an emptied ~/.m2/build-cache"
+echo "differences from the not-restoring page: the page ran its symptom runs against a server with a password; here only the 401 symptom uses one (the others use a server without a login); the builds are not offline"
 echo "NOT tested here (as on the pages): other Maven or extension versions, other Java vendors, projects whose build settings change with the Java version, Windows, large jars"
 echo "page commands run with 'bash -o pipefail'; a runner times commands, not people"
 
@@ -291,6 +291,7 @@ qcheck() { # LABEL NAME "want per task" tasks...   (ran | cache for each compile
 # Maven helpers
 # =====================================================================================
 MPORT=18180; MPORT2=18181
+stop_proxy() { :; }; stop_tls() { :; }   # the exit trap of the shared base calls these two; this job starts neither
 MH="$W/mvnhome"; mkdir -p "$MH/.m2"
 PLUGINS='      <plugin><artifactId>maven-clean-plugin</artifactId><version>3.4.0</version></plugin>
       <plugin><artifactId>maven-resources-plugin</artifactId><version>3.3.1</version></plugin>
@@ -378,7 +379,7 @@ scenario_y() {
 # =====================================================================================
 # Z  /maven-build-cache-extension-not-restoring/
 # =====================================================================================
-jarsum() { sha256sum "$1/target/demo-1.0.jar" 2>/dev/null | cut -c1-16; }
+jarsum() { [ -s "$1/target/demo-1.0.jar" ] && sha256sum "$1/target/demo-1.0.jar" | cut -c1-16 || echo "MISSING-JAR-$RANDOM"; }
 scenario_z() {
   echo; echo "== Z  (maven-build-cache-extension-not-restoring)"
   local D="$W/z" S U="http://127.0.0.1:${MPORT}/" b i n
@@ -402,6 +403,7 @@ scenario_z() {
   m1_project "$D/s1" 303 outside "$U" 0; mvnrun zs1 "$D/s1"
   [ "$RC" != 0 ] && echo "OBS Z symptom 1: Maven stopped (exit $RC)" || fail "Z symptom 1: the page says Maven stops; it exited 0"
   has zs1 "Cannot initialize cache because xml config is not valid or not available" && has zs1 "Unable to parse cache xml element: Unrecognised tag: 'remote'" && echo "OBS Z symptom 1: both log lines of the page are there" || fail "Z symptom 1: the page's two log lines ('Cannot initialize cache because xml config is not valid or not available', 'Unable to parse cache xml element: Unrecognised tag: remote') are not both in the log"
+  want "symptom 1: 'Compiling' and 'Saved to remote cache' lines (nothing built)" "$(cnt zs1 'Compiling')/$(cnt zs1 'Saved to remote cache')" "0/0"
   want "symptom 1: the server saw nothing (hits+misses+entries)" "$(sfield $MPORT cache_hits)/$(sfield $MPORT cache_misses)/$(sfield $MPORT store_entries)" "0/0/0"
   stop_server
   # --- symptom 2: no saveToRemote="true"
@@ -428,7 +430,7 @@ scenario_z() {
 EOF
     m1_project "$D/s3$b" 305 healthy "http://127.0.0.1:${MPORT2}/" 0; mvnrun "zs3$b" "$D/s3$b"; expect "m-zs3$b" "BUILD SUCCESS"
     has "zs3$b" "HTTP Status: 401" && echo "OBS Z symptom 3 ($b mistake): 'HTTP Status: 401' in the log and BUILD SUCCESS" || fail "Z symptom 3 ($b mistake): the page says the log has 'HTTP Status: 401'"
-    has "zs3$b" "HttpTransporterException: HTTP Status: 401" || echo "OBS Z   (the exception name differs from the page's 'org.eclipse.aether.spi.connector.transport.http.HttpTransporterException: HTTP Status: 401' line; log has: $(grep -m1 'HTTP Status: 401' "$W/m-zs3$b.out" | cut -c1-200))"
+    has "zs3$b" "org.eclipse.aether.spi.connector.transport.http.HttpTransporterException: HTTP Status: 401" && echo "OBS Z   the log has the page's line 'org.eclipse.aether.spi.connector.transport.http.HttpTransporterException: HTTP Status: 401'" || fail "Z symptom 3 ($b mistake): the page quotes 'org.eclipse.aether.spi.connector.transport.http.HttpTransporterException: HTTP Status: 401'; the log has: $(grep -m1 'HTTP Status: 401' "$W/m-zs3$b.out" | cut -c1-200)"
     want "symptom 3 ($b mistake): 'Saved to remote cache' lines" "$(cnt "zs3$b" 'Saved to remote cache')" 0
     want "symptom 3 ($b mistake): the server stays empty (store_entries)" "$(curl -s --max-time 10 -u maven:right-secret "http://127.0.0.1:${MPORT2}/statusz" | python3 -c "import sys,json;print(json.load(sys.stdin)['store_entries'])" 2>/dev/null)" 0
     grep -iE 'credentials|authentication' "$W/m-zs3$b.out" | head -n 2 | cut -c1-200 | sed 's/^/OBS Z   a line about credentials in the log: /'
@@ -449,15 +451,17 @@ EOF
       sums="$sums $(jarsum "$D/j$ser$n")"
     done
     [ "$(printf '%s\n' $sums | sort -u | wc -l | tr -d ' ')" = 1 ] && echo "OBS Z Java series $ser: all five jars have one checksum (${sums# })" || fail "Z Java series $ser: the page says all five jars had one checksum; got: $sums"
-    mf="$(unzip -p "$D/j${ser}5/target/demo-1.0.jar" META-INF/MANIFEST.MF 2>/dev/null | tr -d '\r' | grep -E '^Build-Jdk-Spec')"
     first="$(printf '%s' "$seq" | cut -d' ' -f1)"
-    want "Java series $ser: the manifest in the jar" "$mf" "Build-Jdk-Spec: $first"
+    for n in 1 2 3 4 5; do
+      mf="$(unzip -p "$D/j${ser}${n}/target/demo-1.0.jar" META-INF/MANIFEST.MF 2>/dev/null | tr -d '\r' | grep -E '^Build-Jdk-Spec')"
+      want "Java series $ser, build $n (Java $(printf '%s' "$seq" | cut -d' ' -f$n)): the manifest of the jar it ended with names the first build's Java" "$mf" "Build-Jdk-Spec: $first"
+    done
     unzip -p "$D/j${ser}5/target/demo-1.0.jar" demo/App.class > "$W/z/App-$ser.class" 2>/dev/null
     if [ "$ser" = A ]; then has zjA1 "release 17" || has zjA1 "--release 17" && echo "OBS Z series A: the compiler log names release 17" || fail "Z series A: the log should name release 17"
     else has "zj${ser}1" "target 1.8" && echo "OBS Z series $ser: the compiler log says target 1.8, as the page says" || fail "Z series $ser: the page says the log said target 1.8"; fi
     stop_server
   done
-  cmp -s "$W/z/App-B.class" "$W/z/App-C.class" && echo "OBS Z the compiled class in the Java 21 jar and the Java 27 jar is byte for byte the same (cmp), as the page says" || fail "Z the page says the class was byte for byte the same on both Javas (cmp)"
+  [ -s "$W/z/App-B.class" ] && [ -s "$W/z/App-C.class" ] && cmp -s "$W/z/App-B.class" "$W/z/App-C.class" && echo "OBS Z the compiled class in the Java 21 jar and the Java 27 jar is byte for byte the same (cmp), as the page says" || fail "Z the page says the class was byte for byte the same on both Javas (cmp)"
 }
 
 # =====================================================================================
@@ -487,7 +491,7 @@ scenario_w() {
   want "second build from a fresh copy: all three restored" "$(mstate w2)" "restored restored restored"
   want "...it added one entry (entries)" "$(sfield $MPORT store_entries)" 8
   want "...and it uploaded one file: 'Saved to remote cache' lines" "$(cnt w2 'Saved to remote cache')" 1
-  has w2 "build-cache-report.xml" && echo "OBS W ...that file is build-cache-report.xml" || fail "W the page says the one file a restored build uploads is build-cache-report.xml"
+  want "...and that Saved line is the build-cache-report.xml" "$(grep -c 'Saved to remote cache.*build-cache-report\.xml$' "$W/m-w2.out")" 1
   S2="$(sfield $MPORT store_bytes)"; echo "OBS W the restored build added $((S2-S1)) bytes (the page: 1,318)"
   stop_server
 }
