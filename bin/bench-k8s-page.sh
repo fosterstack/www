@@ -27,6 +27,7 @@ NODE_IMAGE="kindest/node:v1.37.0@sha256:a1ed56cfb0e7b93589bdf97c8cd566405a265939
 GUIDE_URL="https://raw.githubusercontent.com/fosterstack/cache/v${VER}/docs/kubernetes.md"
 GUIDE_SHA_022=9531258862058907a1ab8e1de8268a5d35c003e19d0fb4256c5fa3ff84668db0     # docs/kubernetes.md at tag v0.2.2 (commit 0ac0586dc1b2de70318b82469fa5b35bfa090068)
 IMG=ghcr.io/fosterstack/cache
+if [ "$VER" = 0.2.2 ]; then GUIDE_NOTE="file sha256 ${GUIDE_SHA_022} checked"; else GUIDE_NOTE="read from the v${VER} tag, its sha256 printed after the download and NOT pinned in this script"; fi
 # The production image digest of the release under test comes from the release's OWN published release-manifest.json (no per-version
 # digest is kept in this file). Trust does not rest on that file: the image pulled by tag must have exactly this digest, and the
 # digest is then verified with cosign against the release workflow's identity for the tag, before anything runs it.
@@ -104,8 +105,7 @@ for p in 8080; do curl -sf --max-time 3 "localhost:$p/healthz" >/dev/null 2>&1 &
 
 # ---------- the guide, checked, and its four manifests ----------
 curl -fsSL -o "$W/kubernetes.md" "$GUIDE_URL"
-if [ "$VER" = 0.2.2 ]; then sha_check "$W/kubernetes.md" "$GUIDE_SHA_022"; GUIDE_NOTE="file sha256 ${GUIDE_SHA_022} checked"
-else GUIDE_NOTE="file sha256 $(sha256sum "$W/kubernetes.md" | cut -d' ' -f1), read from the v${VER} tag and NOT pinned in this script"; fi
+if [ "$VER" = 0.2.2 ]; then sha_check "$W/kubernetes.md" "$GUIDE_SHA_022"; else echo "guide of v${VER}: sha256 $(sha256sum "$W/kubernetes.md" | cut -d' ' -f1) (read from the tag, not pinned)"; fi
 python3 - "$W/kubernetes.md" "$W/manifests.yaml" "$VER" "$PASS" <<'PYEOF'
 import re,sys
 md=open(sys.argv[1]).read(); out=sys.argv[2]; ver=sys.argv[3]; pw=sys.argv[4]
