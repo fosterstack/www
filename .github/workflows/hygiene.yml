@@ -22,6 +22,7 @@ on:
           - howto-pages
           - mac-linux
           - howto-pages-2
+          - howto-pages-3
         default: miss-cost
 
 permissions:
@@ -155,6 +156,25 @@ jobs:
 
       - name: follow the pages' commands as written and check what they promise
         run: bash bin/bench-howto-pages-2.sh
+
+  # End-to-end runs of two more how-to pages (gradle-remote-cache-not-working: the local-cache trap, 401, http://localhost, the Greet
+  # tasks, the Gradle and Maven version table; upgrade-build-cache-server: upgrade and rollback on a Docker volume, back up and
+  # restore, the Maven move). Same rules as bench-howto-pages: manual dispatch only, chosen with the "which" input (compared in this
+  # `if` only), no token and no secret, read-only token not persisted. Gradle (three versions), Maven (two), JDK 27 and cosign are
+  # downloaded and checked against pinned checksums; the Maven extension, plugins and JUnit come from Maven Central (not pinned, said
+  # in the output). The three cache images are pinned by digest and verified with cosign before docker runs them; the page's backup
+  # helper image ubuntu:24.04 is resolved once and its digest logged. Containers publish 127.0.0.1:8080 only.
+  bench-howto-pages-3:
+    if: github.event_name == 'workflow_dispatch' && inputs.which == 'howto-pages-3'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: follow the pages' commands as written and check what they promise
+        run: bash bin/bench-howto-pages-3.sh
 
   # Does a build result stored from Linux restore on a Mac, and the other way round (the claim of the laptop page)? Manual
   # dispatch only, chosen with the "which" input (compared in each `if` only). Two chains of two jobs: a Linux job builds against a

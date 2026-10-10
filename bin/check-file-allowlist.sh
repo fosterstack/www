@@ -48,6 +48,7 @@ ALLOW_PATTERNS=(
   '^bin/bench-howto-pages\.sh$'
   '^bin/bench-maclinux\.sh$'
   '^bin/bench-howto-pages-2\.sh$'
+  '^bin/bench-howto-pages-3\.sh$'
   '^\.github/workflows/[A-Za-z0-9_-][A-Za-z0-9._-]*\.ya?ml$'
   '^functions/(api/)?[A-Za-z0-9._-]+\.js$'
   '^[A-Za-z0-9._-]+/index\.html$'   # pre-positioned pages, e.g. bcn-removed/index.html
