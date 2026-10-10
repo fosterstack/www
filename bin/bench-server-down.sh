@@ -16,9 +16,8 @@
 set -euo pipefail
 
 N="${BENCH_N:-7}"
-FS_VER=0.2.1
-FS_URL="https://github.com/fosterstack/cache/releases/download/v${FS_VER}/fscache_${FS_VER}_linux_amd64.tar.gz"
-FS_SHA=7d464d7926cdc0c10636dde754e23a37fc6518e341465c67f58fe88a617aaf6a   # checksums.txt of release v0.2.1
+FS_VER="${BENCH_VER:-0.2.1}"   # the release the page names; a proof run can pass another one
+[[ "$FS_VER" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "bad release version: $FS_VER" >&2; exit 2; }
 GR_VER=9.8.0
 GR_URL="https://services.gradle.org/distributions/gradle-${GR_VER}-all.zip"
 GR_SHA=46ac66d47f30f3dacfdf306e0b714a91a34fb94a22ba0a744b280933f47bc0cf   # services.gradle.org/distributions/gradle-9.8.0-all.zip.sha256
@@ -39,9 +38,24 @@ sha_check() { # file expected
   [ "$got" = "$2" ] || { echo "CHECKSUM MISMATCH for $1: $got" >&2; exit 1; }
 }
 
+COSIGN_VER=3.1.3
+COSIGN_SHA=4629c757b7618056f8ddd7e2625ae9fdd94c0372a65049520bc7d9df9efc7f71   # cosign-linux-amd64 v3.1.3 (the same pin as the other bench scripts)
+fetch_release_tarball() { # the release's own checksums.txt, verified with cosign, gives the tarball's sha256: no per-version checksum is kept in this file
+  mkdir -p rel
+  ( cd rel
+    gh release download "v${FS_VER}" --repo fosterstack/cache -p checksums.txt -p checksums.txt.bundle -p "fscache_${FS_VER}_linux_amd64.tar.gz" || exit 1
+    curl -fsSL -o cosign "https://github.com/sigstore/cosign/releases/download/v${COSIGN_VER}/cosign-linux-amd64" || exit 1
+    sha_check cosign "$COSIGN_SHA"; chmod +x cosign
+    ./cosign verify-blob --bundle checksums.txt.bundle --certificate-identity-regexp='^https://github.com/fosterstack/cache/' --certificate-oidc-issuer='https://token.actions.githubusercontent.com' checksums.txt || exit 1
+    want="$(grep -E "^[0-9a-f]{64}  fscache_${FS_VER}_linux_amd64\.tar\.gz\$" checksums.txt | cut -d' ' -f1)"
+    [ -n "$want" ] && [ "$(printf '%s\n' "$want" | wc -l | tr -d ' ')" = 1 ] || { echo "no single checksum line for the tarball in checksums.txt" >&2; exit 1; }
+    sha_check "fscache_${FS_VER}_linux_amd64.tar.gz" "$want" ) || exit 1
+  cp "rel/fscache_${FS_VER}_linux_amd64.tar.gz" fs.tgz
+}
+
 # ---- tools (BENCH_FSCACHE_BIN / BENCH_GRADLE_BIN let a developer test the script locally without downloads)
 if [ -n "${BENCH_FSCACHE_BIN:-}" ]; then FSCACHE="$BENCH_FSCACHE_BIN"; else
-  curl -fsSL "$FS_URL" -o fs.tgz; sha_check fs.tgz "$FS_SHA"; mkdir fs && tar -xzf fs.tgz -C fs; FSCACHE="$WORK/fs/fscache"
+  fetch_release_tarball; mkdir fs && tar -xzf fs.tgz -C fs; FSCACHE="$WORK/fs/fscache"
 fi
 if [ -n "${BENCH_GRADLE_BIN:-}" ]; then GRADLE="$BENCH_GRADLE_BIN"; else
   curl -fsSL "$GR_URL" -o gr.zip; sha_check gr.zip "$GR_SHA"; unzip -q gr.zip; GRADLE="$WORK/gradle-${GR_VER}/bin/gradle"
