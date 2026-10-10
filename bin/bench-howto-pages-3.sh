@@ -64,7 +64,7 @@ cleanup_docker() {
   local p c
   for p in $COMPOSE_PROJECTS; do docker compose -p "$p" down -v >/dev/null 2>&1 || true; done
   for c in $CONTAINERS; do docker rm -f "$c" >/dev/null 2>&1 || true; done
-  docker volume rm fscache-data >/dev/null 2>&1 || true
+  docker volume rm fscache-data fscache-data-restored g-up-0.1.0-0.2.1 g-up-0.2.1-0.2.2 >/dev/null 2>&1 || true
 }
 trap 'stop_server; cleanup_docker; [ -z "${BENCH_WORK:-}" ] && [ -n "${W:-}" ] && rm -rf "${W:?}"' EXIT
 
@@ -95,6 +95,7 @@ GR980_BIN="$(command -v gradle)"
 for h in "$JDK21_HOME" "$JDK27_HOME"; do [ -x "$h/bin/java" ] || { echo "no usable Java at $h" >&2; exit 1; }; done
 [ -x "$MVN310_HOME/bin/mvn" ] && [ -x "$MVN399_HOME/bin/mvn" ] || { echo "Maven homes not usable" >&2; exit 1; }
 for g in "$GR971_HOME" "$GR951_HOME"; do [ -x "$g/bin/gradle" ] || { echo "Gradle home not usable: $g" >&2; exit 1; }; done
+"$JDK21_HOME/bin/java" -version 2>&1 | head -1 | grep -q '"21\.' || { echo "JAVA_HOME for Java 21 is not Java 21: $("$JDK21_HOME/bin/java" -version 2>&1 | head -1)" >&2; exit 1; }
 export JAVA_HOME="$JDK21_HOME"; export PATH="$JDK21_HOME/bin:$PATH"
 for t in gh cosign gradle curl python3 tar docker openssl; do command -v "$t" >/dev/null || { echo "missing tool: $t" >&2; exit 1; }; done
 command -v "$JDK27_HOME/bin/keytool" >/dev/null || { echo "missing keytool in JDK 27" >&2; exit 1; }
@@ -113,6 +114,9 @@ echo "release under test: FosterStack Cache ${VER}, downloaded with no login and
 echo "invented by this script (the pages show none): the Gradle and Maven projects and their small sources (the Greet tasks are the page's own), test passwords, the values stored in the upgrade and backup steps (chosen to give the byte counts the page shows: 29 and 49 bytes for the upgrade steps, 32 for the backup), the Maven projects' two tests"
 echo "differences from the pages' own runs: the Gradle-version series use ONE module with :compileJava (the page: four modules, :core:compileJava) and Temurin 21.0.12.1 or the runner's Java 21; Maven runs on Java 21 (the page: OpenJDK 27); Linux (the pages: a Mac); the Greet-task runs use Java 27 to fill and Java 21 to test, as the page does"
 echo "Gradle's own local cache is switched off in the runs that count hits (as the pages' own runs did) unless a step says otherwise; developer builds run with CI unset; page commands that use ~/.gradle run with an isolated HOME and GRADLE_USER_HOME=\$HOME/.gradle"
+echo "scenario I tests the CORRECTED step 2 of the not-working page: as the page writes it (clear the local cache, --stop, build -i, run it twice, no clean) a second build with nothing changed prints UP-TO-DATE and tells you nothing; the script records that as an OBS FINDING and asserts the sequence with ./gradlew clean first (the page is fixed after this run). The 401 steps (page step 3) use a NEW Gradle home for each of the first two builds because, in a home that has built the project before, Gradle finds the compiled build script and the task output locally and never asks the server; they run 'gradle', not './gradlew'"
+echo "scenario G: option 2 of the Maven move runs 'cp -R <old server data folder> data-new-copied' and starts the binary with FSCACHE_ADDR and FSCACHE_DATA_DIR (the page's data-old is the folder the old server wrote); the Maven plugin pin set '1' is not on any page (used only by earlier scenarios)"
+echo "NOT reproduced: step 1 of the not-working page (the buildCache block does nothing without org.gradle.caching=true), step 6 (isPush false), the configuration-cache aside, 'a four-task project stored six entries', the 'Why it happens' key comparisons; on the upgrade page the sentence about '3 entries and 9 bytes' on 0.2.1 (a different volume), '0.2.1's metrics read 0 until the next upload', the archive size and 'one folder per entry prefix'"
 echo "NOT tested here: the upgrade page's 0.1.0 /statusz and entry-count metric differences are checked, but other release pairs, copying a data folder while the server runs, Kubernetes or Compose rollouts, the FIPS image, a cache near its size cap; Gradle versions other than 9.8.0, 9.7.1 and 9.5.1; Java toolchains"
 echo "page commands run with 'bash -o pipefail'; a runner times commands, not people"
 
@@ -384,6 +388,7 @@ EOF
   expect i-s3-wrong "BUILD SUCCESSFUL" "response status 401: Unauthorized"
   ip_project "$D/s3c" "http://127.0.0.1:${P}/" 1; gradle_code "$D/s3c" 7
   E0="$(statusz "$P" gradle "$PW")"
+  HOME="$H3b" GRADLE_USER_HOME="$H3b/.gradle" "$GRADLE_BIN" --status 2>&1 | grep -qE "IDLE|BUSY" && echo "OBS I step 3: a Gradle daemon from the wrong-password build is still running (the next build reuses it)" || fail "I step 3: no Gradle daemon is running before the right-password build, so it cannot show that a running daemon picks up a new password"
   run i-s3-right-same-daemon "$D/s3c" <<EOF
 export HOME="${H3b}"; export GRADLE_USER_HOME="${H3b}/.gradle"; export FSCACHE_PASSWORD='${PW}'
 gradle build --build-cache
@@ -517,7 +522,9 @@ export JAVA_HOME="${JDK21_HOME}"; export GRADLE_USER_HOME="${W}/ghu-$(basename "
 "${g2}/bin/gradle" compileJava --build-cache
 EOF
     expect "iu-$name-b" "BUILD SUCCESSFUL" "> Task :compileJava"
-    if grep -qF "> Task :compileJava FROM-CACHE" "$W/iu-$name-b.out"; then fail "I Gradle ${name}: the second version restored the first version's entry, but the page says it rebuilt"; else echo "OBS I Gradle ${name}: the other version rebuilt, as the page says"; fi
+    absent "iu-$name-b" "Could not load entry" "Could not store entry" "remote build cache was disabled"
+    S="$(statusz "$P" x y)"; [ "$(entries_of "$S")" -ge 2 ] 2>/dev/null || fail "I Gradle ${name}: the second version should have stored its own entry beside the first's (server: ${S})"
+    if grep -qF "> Task :compileJava FROM-CACHE" "$W/iu-$name-b.out"; then fail "I Gradle ${name}: the second version restored the first version's entry, but the page says it rebuilt"; else echo "OBS I Gradle ${name}: the other version rebuilt and stored its own entry (server: ${S}), as the page says"; fi
     run "iu-$name-c" "$D/u-$name-3" <<EOF
 export JAVA_HOME="${JDK21_HOME}"; export GRADLE_USER_HOME="${W}/ghu-$(basename "$g1")"
 "${g1}/bin/gradle" compileJava --build-cache
@@ -550,10 +557,11 @@ rm -rf "\$HOME"/.m2/build-cache
 mvn verify
 EOF
     expect "im-$name-b" "BUILD SUCCESS"
+    absent "im-$name-b" "Unable to save to remote cache"
     if grep -qF "Found cached build, restoring demo:mtest" "$W/im-$name-b.out"; then
       [ "$want" = restored ] && echo "OBS I Maven ${name}: the other Maven version restored the entry, as the page says" || fail "I Maven ${name}: the page says the other version rebuilt, but it restored"
     else
-      [ "$want" = rebuilt ] && echo "OBS I Maven ${name}: the other Maven version rebuilt, as the page says" || fail "I Maven ${name}: the page says the other version restored (all eight pinned), but it rebuilt"
+      [ "$want" = rebuilt ] && { grep -qF "Saved to remote cache" "$W/im-$name-b.out" && echo "OBS I Maven ${name}: the other Maven version rebuilt and saved its own result, as the page says" || fail "I Maven ${name}: the other version rebuilt but saved nothing to the server"; } || fail "I Maven ${name}: the page says the other version restored (all eight pinned), but it rebuilt"
     fi
     run "im-$name-c" "$D/m-$name-c" <<EOF
 export PATH="${m1}/bin:\$PATH"
@@ -563,6 +571,7 @@ EOF
     expect "im-$name-c" "BUILD SUCCESS" "Found cached build, restoring demo:mtest from cache by checksum"
     stop_server
   }
+  local gd; for gd in "$W"/ghu-* "$GH27" "$GH21"; do [ -d "$gd" ] && GRADLE_USER_HOME="$gd" "$GRADLE_BIN" --stop >/dev/null 2>&1; done
   mseries s-310-399 s "$MVN310_HOME" "$MVN399_HOME" rebuilt
   mseries s-399-310 s "$MVN399_HOME" "$MVN310_HOME" rebuilt
   mseries r-310-399 r "$MVN310_HOME" "$MVN399_HOME" rebuilt
@@ -620,8 +629,15 @@ EOF
       [ "$(gmetric fscache_store_entries)" = 3 ] && [ "$(gmetric fscache_store_bytes)" = 29 ] && echo "OBS G ${old}: its metrics show 3 entries, 29 bytes, as the page says" || fail "G ${old}: metrics should show 3 entries, 29 bytes (entries=$(gmetric fscache_store_entries) bytes=$(gmetric fscache_store_bytes))"
     else gstatus "G ${old} after three stores" 3 29 "v${old}"; fi
     # the page's upgrade commands, word for word except the version tag
-    run "g-upgrade-$new" "$D" <<EOF
+    # the page's block, in two parts so that the pulled image can be compared with the verified digest before it runs
+    run "g-upgrade-pull-$new" "$D" <<EOF
 docker pull ghcr.io/fosterstack/cache:${new}
+EOF
+    expect "g-upgrade-pull-$new"
+    local want_digest; case "$new" in 0.2.1) want_digest="$IMG_021";; 0.2.2) want_digest="$IMG_022";; *) want_digest="";; esac
+    got="$(docker inspect --format '{{index .RepoDigests 0}}' "$IMG:${new}")"
+    [ "${got#*@}" = "$want_digest" ] || { fail "G: after the page's own docker pull, $IMG:${new} is ${got#*@}, not the verified ${want_digest}: it is not run"; return; }
+    run "g-upgrade-$new" "$D" <<EOF
 docker stop fscache && docker rm fscache
 docker run -d --name fscache -p 127.0.0.1:8080:8080 \
   -v ${vol}:/home/nonroot \
@@ -630,7 +646,7 @@ EOF
     expect "g-upgrade-$new"; wait_up 8080 || { fail "G: ${new} did not start on the ${old} volume"; return; }
     gstatus "G ${new} on the ${old} volume" 3 29 "v${new}"
     gget one value-one; gget two value-two; gget three value-three
-    [ "$(gmetric fscache_store_entries)" = 0 ] && echo "OBS G ${new} right after the start: fscache_store_entries reads 0 while /statusz shows 3, as the page says" || echo "OBS FINDING? G ${new}: fscache_store_entries after the start reads $(gmetric fscache_store_entries), the page says 0"
+    [ "$(gmetric fscache_store_entries)" = 0 ] && echo "OBS G ${new} right after the start: fscache_store_entries reads 0 while /statusz shows 3, as the page says" || fail "G ${new}: the page says fscache_store_entries reads 0 right after the start while /statusz shows 3; it reads '$(gmetric fscache_store_entries)'"
     gput four value-four; gput five value-five
     gstatus "G ${new} after two more stores" 5 49 "v${new}"
     gstop; gstart "$old" "$vol" || return
