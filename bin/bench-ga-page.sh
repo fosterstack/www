@@ -189,19 +189,19 @@ event)
 fresh)
   case "${2:-}" in
     gradle)
-      cd "$WS"; rm -rf "$T/gh" lib/build app/build build .gradle; mkdir -p "$T/gh/init.d" "$T/gh/wrapper"; cp -R "$T/dists/dists" "$T/gh/wrapper/"
-      cp "$T/init/log-tasks.gradle" "$T/gh/init.d/"; : > "$T/tasks.log"
-      printf 'package demo;\n\npublic class App {\n    public static void main(String[] args) {\n        System.out.println(Lib.name() + " app 1");\n    }\n}\n' > app/src/main/java/demo/App.java ;;
+      cd "$WS" || exit 1; rm -rf "$T/gh" lib/build app/build build .gradle; mkdir -p "$T/gh/init.d" "$T/gh/wrapper" || exit 1; cp -R "$T/dists/dists" "$T/gh/wrapper/" || exit 1
+      cp "$T/init/log-tasks.gradle" "$T/gh/init.d/" || exit 1; : > "$T/tasks.log" || exit 1
+      printf 'package demo;\n\npublic class App {\n    public static void main(String[] args) {\n        System.out.println(Lib.name() + " app 1");\n    }\n}\n' > app/src/main/java/demo/App.java || exit 1 ;;
     maven)
-      rm -rf "$HOME/.m2/build-cache" "$WS/mproj/target"; : > "$T/mvn.log"
-      printf 'package demo;\n\npublic class App {\n    public static String hello() { return "hello 1"; }\n}\n' > "$WS/mproj/src/main/java/demo/App.java" ;;
+      rm -rf "$HOME/.m2/build-cache" "$WS/mproj/target"; : > "$T/mvn.log" || exit 1
+      printf 'package demo;\n\npublic class App {\n    public static String hello() { return "hello 1"; }\n}\n' > "$WS/mproj/src/main/java/demo/App.java" || exit 1 ;;
     *) echo "fresh gradle|maven" >&2; exit 2 ;;
   esac
   ;;
 mutate)
   case "${2:-}" in
-    gradle) printf 'package demo;\n\npublic class App {\n    public static void main(String[] args) {\n        System.out.println(Lib.name() + " app 2");\n    }\n}\n' > "$WS/app/src/main/java/demo/App.java" ;;
-    maven)  printf 'package demo;\n\npublic class App {\n    public static String hello() { return "hello 2"; }\n}\n' > "$WS/mproj/src/main/java/demo/App.java" ;;
+    gradle) printf 'package demo;\n\npublic class App {\n    public static void main(String[] args) {\n        System.out.println(Lib.name() + " app 2");\n    }\n}\n' > "$WS/app/src/main/java/demo/App.java" || exit 1 ;;
+    maven)  printf 'package demo;\n\npublic class App {\n    public static String hello() { return "hello 2"; }\n}\n' > "$WS/mproj/src/main/java/demo/App.java" || exit 1 ;;
     *) echo "mutate gradle|maven" >&2; exit 2 ;;
   esac
   ;;
@@ -217,6 +217,7 @@ expect)
                   [ "$DH" -gt 0 ] || fail "main build 2: FROM-CACHE but the server counted no hit"; [ "$DE" = 0 ] || fail "main build 2: the server stored $DE new entries on a repeat build" ;;
     gradle-pr)    [ "$(outcome :lib:compileJava)" = FROM-CACHE ] || fail "pull request: the unchanged module should come from the cache ($(grep compileJava "$LOG" | tr '\n' ';'))"
                   [ "$(outcome :app:compileJava)" = EXECUTED ] || fail "pull request: the changed module should have run"
+                  [ "$DH" -gt 0 ] || fail "pull request: the unchanged module came from the cache but the server counted no hit"
                   [ "$DE" = 0 ] || fail "pull request: the read-only login stored $DE entries" ;;
     gradle-fork)  [ "$(outcome :lib:compileJava)" = EXECUTED ] && [ "$(outcome :app:compileJava)" = EXECUTED ] || fail "fork pull request: both compile tasks should have run without the cache ($(grep compileJava "$LOG" | tr '\n' ';'))"
                   [ "$DE" = 0 ] && [ "$DH" = 0 ] && [ "$((M1-M0))" = 0 ] || fail "fork pull request: the server saw requests (entries $DE, hits $DH, misses $((M1-M0)))" ;;
@@ -233,7 +234,7 @@ expect)
   echo "$E1 $H1 $M1" > "$T/last"; echo "checked: ${2}"
   ;;
 extra)
-  cd "$WS"; export JAVA_HOME="${JAVA_HOME:-${JAVA_HOME_21_X64:-}}"
+  cd "$WS" || exit 1; export JAVA_HOME="${JAVA_HOME:-${JAVA_HOME_21_X64:-}}"
   gradle_extra() { # NAME USER PASS PUSH URL  -- the page's variables set by hand, ./gradlew build, log kept
     local name="$1" gh="$T/gh-$1"
     rm -rf "$gh" lib/build app/build build .gradle; mkdir -p "$gh/wrapper"; cp -R "$T/dists/dists" "$gh/wrapper/"
@@ -254,7 +255,7 @@ extra)
     gradle-empty-login) gradle_extra gempty "" "" false "$URL"
                  grep -q "BUILD SUCCESSFUL" "$T/gempty.out" || fail "empty login with an address set: the build should still succeed"
                  grep -q "response status 401: Unauthorized" "$T/gempty.out" || fail "empty login with an address set: no 401 line"; echo "checked: gradle-empty-login"; snap > "$T/last" ;;
-    mvn-empty-url) cd "$WS/mproj"; rm -rf "$HOME/.m2/build-cache" target
+    mvn-empty-url) cd "$WS/mproj" || exit 1; rm -rf "$HOME/.m2/build-cache" target
                  MAVEN_ARGS= CACHE_USER="$RW_USER" CACHE_PASSWORD="$RW_PASS" mvn -B -s .mvn/ci-settings.xml -Dmaven.build.cache.remote.enabled=true -Dmaven.build.cache.remote.url="" -Dmaven.build.cache.remote.save.enabled=false verify > "$T/mempty.out" 2>&1; echo "extra mvn-empty-url: exit $?"
                  MV="$(MAVEN_ARGS= mvn -v 2>/dev/null | head -1)"; echo "Maven here: ${MV}"
                  case "$MV" in
@@ -262,7 +263,7 @@ extra)
                    *) echo "OBS flags with an empty address on ${MV} (not 3.9.x): $(grep -m1 -E 'NoTransporter|ERROR|BUILD' "$T/mempty.out" | cut -c1-200)" ;;
                  esac
                  tail -n 25 "$T/mempty.out"; echo "checked: mvn-empty-url" ;;
-    mvn-403)     cd "$WS/mproj"; rm -rf "$HOME/.m2/build-cache" target; printf 'package demo;\n\npublic class App {\n    public static String hello() { return "hello 3"; }\n}\n' > src/main/java/demo/App.java
+    mvn-403)     cd "$WS/mproj" || exit 1; rm -rf "$HOME/.m2/build-cache" target; printf 'package demo;\n\npublic class App {\n    public static String hello() { return "hello 3"; }\n}\n' > src/main/java/demo/App.java
                  read -r E0 _ _ <<< "$(snap)"
                  MAVEN_ARGS= CACHE_USER="$RO_USER" CACHE_PASSWORD="$RO_PASS" mvn -B -s .mvn/ci-settings.xml -Dmaven.build.cache.remote.enabled=true -Dmaven.build.cache.remote.url="$URL" -Dmaven.build.cache.remote.save.enabled=true verify > "$T/m403.out" 2>&1; echo "extra mvn-403: exit $?"
                  read -r E1 _ _ <<< "$(snap)"
@@ -276,11 +277,11 @@ extra)
                  esac
                  [ "$E1" = "$E0" ] || fail "Maven, read-only login with saving on: the server stored entries ($E0 -> $E1)"
                  echo "OBS 'Unable to save to remote cache' lines: $(grep -c 'Unable to save to remote cache' "$T/m403.out") (the page says 3)"; echo "checked: mvn-403"; snap > "$T/last" ;;
-    mvn-missing-login) cd "$WS/mproj"; rm -rf "$HOME/.m2/build-cache" target; printf 'package demo;\n\npublic class App {\n    public static String hello() { return "hello 1"; }\n}\n' > src/main/java/demo/App.java
+    mvn-missing-login) cd "$WS/mproj" || exit 1; rm -rf "$HOME/.m2/build-cache" target; printf 'package demo;\n\npublic class App {\n    public static String hello() { return "hello 1"; }\n}\n' > src/main/java/demo/App.java
                  ( unset CACHE_USER CACHE_PASSWORD; MAVEN_ARGS= mvn -B -s .mvn/ci-settings.xml -Dmaven.build.cache.remote.enabled=true -Dmaven.build.cache.remote.url="$URL" -Dmaven.build.cache.remote.save.enabled=false verify > "$T/mmissing.out" 2>&1 ); echo "extra mvn-missing-login: exit $?"
                  grep -q "BUILD SUCCESS" "$T/mmissing.out" || fail "Maven with a missing login: the build should still succeed"
                  grep -q "Error downloading cache item" "$T/mmissing.out" || fail "Maven with a missing login: no 'Error downloading cache item' line"; echo "checked: mvn-missing-login"; snap > "$T/last" ;;
-    mvn-wrong-password) cd "$WS/mproj"; rm -rf "$HOME/.m2/build-cache" target
+    mvn-wrong-password) cd "$WS/mproj" || exit 1; rm -rf "$HOME/.m2/build-cache" target
                  MAVEN_ARGS= CACHE_USER="$RW_USER" CACHE_PASSWORD="wrong-password" mvn -B -s .mvn/ci-settings.xml -Dmaven.build.cache.remote.enabled=true -Dmaven.build.cache.remote.url="$URL" -Dmaven.build.cache.remote.save.enabled=false verify > "$T/mwrong.out" 2>&1; echo "extra mvn-wrong-password: exit $?"
                  grep -q "BUILD SUCCESS" "$T/mwrong.out" || fail "Maven with a wrong password: the build should still succeed"
                  grep -q "Error downloading cache item" "$T/mwrong.out" || fail "Maven with a wrong password: no 'Error downloading cache item' line"; echo "checked: mvn-wrong-password"; snap > "$T/last" ;;
@@ -295,3 +296,6 @@ finish)
   ;;
 *) echo "usage: $0 setup|event|fresh|mutate|expect|extra|finish" >&2; exit 2 ;;
 esac
+# a subcommand that did not exit above is done: do not let the status of its last command (for example a loop that tests whether a log
+# file exists) decide whether the step passes; the checks record their own failures and "finish" turns them red
+exit 0
