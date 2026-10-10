@@ -118,6 +118,19 @@
   <h2>Get the manifests</h2>
   <p>The four manifests (Secret, volume claim, Deployment, Service) and the steps to reach the cache from outside the cluster are in the <a href="https://github.com/fosterstack/cache/blob/main/docs/kubernetes.md">Kubernetes guide</a> on GitHub. Copy them into one file and apply it.</p>
 
+  <h2>How we checked</h2>
+  <p>We applied the guide's four manifests to a new kind cluster (Kubernetes in Docker) on a GitHub-hosted Linux machine, with FosterStack Cache 0.2.2. What we saw:</p>
+  <ul>
+    <li>A namespace that enforces the restricted Pod Security profile accepted all four with no warning, and the pod became ready.</li>
+    <li>The running Deployment has one replica, the Recreate strategy and a ReadWriteOnce claim. It runs as user 65532 with a read-only root file system, no added capabilities, no privilege escalation and the default seccomp profile. It asks for 100m CPU and 128Mi memory, has a 512Mi memory limit and no CPU limit. It has no privileged mode, host networking or host path.</li>
+    <li>The health check at <code>/healthz</code> only says the process is up. It says nothing about the disk. A key that survives a restart, and a build that restores from the cache, are what show the volume works.</li>
+    <li>We stored a key and deleted the pod. The key was still there afterwards.</li>
+    <li>A Gradle build from outside the cluster, through the guide's <code>kubectl port-forward</code>, restored from the cache, and the server's hit counter went up.</li>
+    <li>With two replicas, only one pod stayed ready. The other stopped with a metadata lock timeout.</li>
+    <li>Keep <code>FSCACHE_DATA_DIR</code> in the Deployment. Without it, the pod in the guide never became ready: it stopped with a read-only file system error.</li>
+  </ul>
+  <p class="muted-note">Not tested: a real cloud cluster, other storage classes, a cluster with more than one node, rollouts, the <code>fsGroup</code> requirement, the load balancer, Gateway and Ingress examples, and the cluster-internal name. We used the guide as it was at release 0.2.2. <a href="https://github.com/fosterstack/www/actions/runs/38042410432">The run and its log are public</a>.</p>
+
   <div class="cta-row">
     <a class="btn" href="https://github.com/fosterstack/cache/blob/main/docs/kubernetes.md">Kubernetes guide</a>
     <a class="btn btn-secondary" href="/migrate-build-cache-node/">Gradle and Maven setup</a>
