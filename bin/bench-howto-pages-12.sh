@@ -195,8 +195,9 @@ casestarts() { # LABEL [TEXT]  the start must have worked (still running after t
   if [ "$ok" = 1 ]; then echo "OBS $label: started${CASE_STOP_RC:+; a normal stop exited with code ${CASE_STOP_RC}}"
   else fail "$label: the page says it starts${2:+ with '$2' in the start line}; got exit '${CASE_RC}', last line: ${CASE_LAST}"; fi
 }
-sfield() { # PORT FIELD  one field of /statusz (no login)
-  curl -s --max-time 30 "http://127.0.0.1:$1/statusz" | python3 -c "import sys,json;print(json.load(sys.stdin)['$2'])" 2>/dev/null || echo unreadable
+sfield() { # PORT FIELD  one field of /statusz; the login (USER:PASS) is read from the variable SFA_<port> when the server has one
+  local v="SFA_$1" auth=""; auth="${!v:-}"
+  curl -s --max-time 30 ${auth:+-u "$auth"} "http://127.0.0.1:$1/statusz" | python3 -c "import sys,json;print(json.load(sys.stdin)['$2'])" 2>/dev/null || echo unreadable
 }
 misses_of() { case "$1" in *misses=*) printf '%s' "$1" | sed -E 's/.*misses=([0-9]+).*/\1/';; *) printf 'unreadable';; esac; }
 
@@ -474,6 +475,7 @@ scenario_s() {
   local D="$W/s" U1="http://127.0.0.1:${SPORT}/" U2="http://127.0.0.1:${SPORT2}/" ka kb h0 h1 h2 e
   mkdir -p "$D"
   # --- one server, no size cap, one read-write login (and a read-only one)
+  SFA_18160="$RWU:$RWP"
   start_server s1 "$SPORT" "$RWU" "$RWP" FSCACHE_RO_USERNAME="$ROU" FSCACHE_RO_PASSWORD="$ROP" || return
   sproj "$D/a" A; sbuild sa "$D/a" "$U1" "$RWU" "$RWP"; expect s-sa "BUILD SUCCESSFUL"
   want "A: compile task" "$(sstate sa)" ran
@@ -507,6 +509,7 @@ scenario_s() {
   want "B with the read-only login and pushing off: compile task" "$(sstate srb)" cache
   stop_server
   # --- two servers, one for each team
+  SFA_18160="$T1U:$T1P"; SFA_18161="$T2U:$T2P"
   start_server s2 "$SPORT" "$T1U" "$T1P" || return; local PID1="$SERVER_PID"
   sproj "$D/ta" A; sbuild ta "$D/ta" "$U1" "$T1U" "$T1P"; expect s-ta "BUILD SUCCESSFUL"
   want "A on team 1's server: compile task" "$(sstate ta)" ran
@@ -520,18 +523,21 @@ scenario_s() {
   local PID2="$SERVER_PID"
   sproj "$D/td" A; sbuild td "$D/td" "$U2" "$T1U" "$T1P"; expect s-td "BUILD SUCCESSFUL"
   want "C on team 2's server, sending team 1's login: compile task" "$(sstate td)" ran
+  want "...nothing was stored on team 2's server (entries) and nothing restored (hits)" "$(sfield $SPORT2 store_entries)/$(sfield $SPORT2 cache_hits)" "0/0"
   has_s() { grep -qF -- "$2" "$W/s-$1.out"; }
   has_s td "401" && echo "OBS S the build log names a 401" || fail "S the page says team 1's login got a 401 on team 2's server; no 401 in the log"
   has_s td "remote build cache" && echo "OBS S the build warned about the remote build cache (log: $(grep -m2 -iE 'disabled|warn' "$W/s-td.out" | tr '\n' ' ' | cut -c1-260))" || fail "S the page says the build warned and switched the remote cache off"
   sproj "$D/te" A; sbuild te "$D/te" "$U2" "$T2U" "$T2P"; expect s-te "BUILD SUCCESSFUL"
   want "C on team 2's server, with team 2's login: compile task (nothing restored)" "$(sstate te)" ran
   want "...entries stored on team 2's server" "$(sfield $SPORT2 store_entries)" 2
+  want "...and nothing restored from it (hits)" "$(sfield $SPORT2 cache_hits)" 0
   sproj "$D/tf" A; sbuild tf "$D/tf" "$U2" "$T2U" "$T2P"; expect s-tf "BUILD SUCCESSFUL"
   want "the same build again on team 2's server: compile task" "$(sstate tf)" cache
   want "team 1's login on team 2's server, A's key" "$(scode -u "$T1U:$T1P" "${U2}${KT1}")" 401
   want "team 2's login on team 1's server, A's key" "$(scode -u "$T2U:$T2P" "${U1}${KT1}")" 401
   kill "$PID2" 2>/dev/null; wait "$PID2" 2>/dev/null; SERVER_PID="$PID1"; stop_server
   # --- one small size cap
+  SFA_18160="$RWU:$RWP"
   start_server s4 "$SPORT" "$RWU" "$RWP" FSCACHE_MAX_BYTES=5000 || return
   sproj "$D/ca" A; sbuild ca "$D/ca" "$U1" "$RWU" "$RWP"; expect s-ca "BUILD SUCCESSFUL"
   echo "OBS S cap run: A's entries take $(sfield $SPORT store_bytes) bytes (the page: 4,472 with a 5,000-byte cap)"
@@ -541,8 +547,10 @@ scenario_s() {
   want "...B's compile result is on the server, A's is not" "$(scode -u "$RWU:$RWP" "${U1}$(skey cb)") $(scode -u "$RWU:$RWP" "${U1}$(skey ca)")" "200 404"
   sproj "$D/cc" A; sbuild cc "$D/cc" "$U1" "$RWU" "$RWP"; expect s-cc "BUILD SUCCESSFUL"
   want "C, a copy of A: compile task / evicted so far / entries" "$(sstate cc) $(sfield $SPORT evicted_entries) $(sfield $SPORT store_entries)" "ran 2 2"
+  want "...A's compile result is on the server again, B's is not" "$(scode -u "$RWU:$RWP" "${U1}$(skey ca)") $(scode -u "$RWU:$RWP" "${U1}$(skey cb)")" "200 404"
   sproj "$D/cd" B; sbuild cd "$D/cd" "$U1" "$RWU" "$RWP"; expect s-cd "BUILD SUCCESSFUL"
   want "B again: compile task / evicted so far / entries" "$(sstate cd) $(sfield $SPORT evicted_entries) $(sfield $SPORT store_entries)" "ran 3 2"
+  want "...B's compile result is on the server, A's is not" "$(scode -u "$RWU:$RWP" "${U1}$(skey cd)") $(scode -u "$RWU:$RWP" "${U1}$(skey ca)")" "200 404"
   stop_server
 }
 
@@ -563,13 +571,16 @@ cosign verify-blob \\
   --certificate-oidc-issuer='https://token.actions.githubusercontent.com' \\
   checksums.txt
 # 2. Prove your archive matches it
-sha256sum -c <(grep "fscache_\${VER}_linux_amd64.tar.gz" checksums.txt)
+sha256sum -c <(grep "fscache_\${VER}_linux_amd64.tar.gz" checksums.txt | grep -v sbom)
 EOF
   expect a-fetch "Verified OK" "fscache_${VER}_linux_amd64.tar.gz: OK"
+  # the command as the page published it (without the grep -v sbom): what does it do?
+  ( cd "$D/connected" && sha256sum -c <(grep "fscache_${VER}_linux_amd64.tar.gz" checksums.txt) ) > "$W/a-asis.out" 2>&1; local asis=$?
+  echo "OBS A the page's verify line as first published (no 'grep -v sbom') exited $asis; its output: $(tr '\n' ' ' < "$W/a-asis.out" | cut -c1-260)"
   cp "$D/connected/fscache_${VER}_linux_amd64.tar.gz" "$D/isolated/"
   # a wrong archive must fail the second step
   cp "$D/connected/checksums.txt" "$D/connected/bad-checksums.txt"; printf 'tampered' >> "$D/connected/fscache_${VER}_linux_amd64.tar.gz"
-  ( cd "$D/connected" && sha256sum -c <(grep "fscache_${VER}_linux_amd64.tar.gz" checksums.txt) >/dev/null 2>&1 ) && fail "A a tampered archive passed the checksum step" || echo "OBS A a tampered archive fails 'sha256sum -c', as the page's 'both steps matter' implies"
+  ( cd "$D/connected" && sha256sum -c <(grep "fscache_${VER}_linux_amd64.tar.gz" checksums.txt | grep -v sbom) >/dev/null 2>&1 ) && fail "A a tampered archive passed the checksum step" || echo "OBS A a tampered archive fails 'sha256sum -c', as the page's 'both steps matter' implies"
   # the isolated side: unpack and look at it
   run a-unpack "$D/isolated" <<EOF
 tar -xzf "fscache_${VER}_linux_amd64.tar.gz"
