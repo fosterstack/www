@@ -95,7 +95,7 @@
     <li><strong>The old login stops working at once.</strong> The server reads its logins when it starts. In our runs the old login was refused (401) right after the restart.</li>
     <li><strong>In our runs the build still succeeded.</strong> A job with the old login built everything locally, restored nothing, and warned. Gradle also printed that it disabled the remote cache for the rest of that build.</li>
     <li><strong>The stored results stay.</strong> After the restart, a job with the new login restored all four cached entries.</li>
-    <li><strong>The server holds one read-write login and one read-only login.</strong> Per the README it takes one pair of each, so the old and new logins cannot both store results.</li>
+    <li><strong>The server holds one read-write login and one read-only login.</strong> So only one login can store results at a time. The old login can still read, if you give it the read-only slot.</li>
   </ul>
 
   <h2>The order that keeps the cache working</h2>
