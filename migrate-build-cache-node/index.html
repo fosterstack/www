@@ -211,7 +211,7 @@ rm -rf ~/.gradle/caches/build-cache-1
   <p>Look for signatures, a software bill of materials, build provenance and vulnerability statements, and check whether you need an account to see them. <strong>FosterStack Cache:</strong> signed images and checksums, an SBOM per binary archive, build provenance and a VEX file, all public. See <a href="/how-we-build/">how we build</a>.</p>
 
   <h3>4. Is it kept patched?</h3>
-  <p>Ask how often published files are rescanned and how fast fixes ship. <strong>FosterStack Cache:</strong> a release is blocked on scanner findings unless a VEX statement explains them, and published images are rescanned daily. Vulnerable dependencies fixed fast — our target is 48 hours from disclosure (<a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md">the scope is in SECURITY.md</a>).</p>
+  <p>Ask how often published files are rescanned and how fast fixes ship. <strong>FosterStack Cache:</strong> a release is blocked on scanner findings unless a VEX statement explains them, and the current release's images are rescanned daily, at every severity the scanners report. Vulnerable dependencies fixed fast — our target is 48 hours from disclosure (<a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md">the scope is in SECURITY.md</a>).</p>
 
   <h3>5. Does it call home?</h3>
   <p>A server in your build network should not need to reach out. <strong>FosterStack Cache:</strong> no telemetry, no update check, no licence check. It can run on a network with no route to the internet.</p>
@@ -248,7 +248,7 @@ rm -rf ~/.gradle/caches/build-cache-1
   <ul class="trust">
     <li>Signed releases you can verify in minutes.</li>
     <li>Build record, parts list (SBOM) and vulnerability statements published with every release.</li>
-    <li>Scanned before every release, rescanned every day.</li>
+    <li>Scanned before every release. The current release is rescanned every day.</li>
     <li>Images assembled twice on separate machines; the results must match.</li>
     <li>Minimal image, no telemetry. FIPS variant available.</li>
     <li>Vulnerable dependencies fixed fast — our target is 48 hours from disclosure (<a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md">the scope is in SECURITY.md</a>).</li>
