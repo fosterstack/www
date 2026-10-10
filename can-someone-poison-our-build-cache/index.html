@@ -97,7 +97,7 @@
     <li><strong>With the read-only login, no.</strong> Its writes and deletes were refused with a 403, and the stored entry stayed the same.</li>
     <li><strong>With no login, nothing.</strong> Reads and writes were refused with a 401.</li>
     <li><strong>The server stored whatever the write login sent.</strong> That was a different valid entry and 200 random bytes. The random bytes broke the next build.</li>
-    <li><strong>Turning off uploads in Gradle (<code>isPush = false</code>) does not protect the cache.</strong> With it set, the build uploaded nothing, but the write login could still replace entries with a direct request.</li>
+    <li><strong>Turning off uploads in Gradle (<code>isPush = false</code>) does not protect the cache.</strong> With it set, the build uploaded nothing, but the write login could still write entries with a direct request.</li>
   </ul>
 
   <h2>What to do</h2>
