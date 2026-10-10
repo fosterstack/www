@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Can I Restart the Cache Server While Builds Run?</title>
-<meta name="description" content="What a running Gradle build sees when you stop and restart the build cache server. We did it mid-build, with a normal stop and a kill. At worst, one warning.">
+<meta name="description" content="What a running Gradle build sees when you stop and restart the cache server. We did it mid-build, with a normal stop and a kill. One warning at most, in our runs.">
 <meta property="og:title" content="Can I Restart the Cache Server While Builds Run?">
-<meta property="og:description" content="What a running Gradle build sees when you stop and restart the build cache server. We did it mid-build, with a normal stop and a kill. At worst, one warning.">
+<meta property="og:description" content="What a running Gradle build sees when you stop and restart the cache server. We did it mid-build, with a normal stop and a kill. One warning at most, in our runs.">
 <meta property="og:url" content="https://fosterstack.com/restart-build-cache-server-while-builds-run/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="FosterStack">
@@ -88,20 +88,20 @@
 </header>
 <main>
   <h1>Can I Restart the Cache Server While Builds Run?</h1>
-  <p class="lede">Yes. In our runs, a build that was already running finished normally when we stopped and restarted FosterStack Cache. At worst it printed one warning and stopped using the cache for the rest of that build.</p>
+  <p class="lede">Yes. In our runs, a build that was already running finished normally when we stopped and restarted FosterStack Cache. It printed at most one warning and stopped using the cache for the rest of that build.</p>
 
   <h2>The short answer</h2>
   <ul class="trust">
-    <li>A short restart is often invisible. When the server was back within 2 seconds and the build did not touch the cache in that moment, there was no warning.</li>
+    <li>A 2-second restart went unnoticed in our runs. The build did not touch the cache in that moment, so it printed no warning.</li>
     <li>If the build did touch the cache while the server was down, Gradle printed one warning and switched the remote cache off for the rest of that build. The build still ended with <code>BUILD SUCCESSFUL</code>.</li>
     <li>The next build used the cache again and rebuilt only what had not been stored.</li>
-    <li>A normal stop waits for an upload that is in progress, but only for 10 seconds. A kill loses the upload in progress.</li>
+    <li>In our runs, a normal stop waited for an upload in progress but gave up after 10 seconds. A kill lost the upload in progress.</li>
   </ul>
 
   <h2>What to do</h2>
   <p>Our advice, not a test result:</p>
   <ul>
-    <li><strong>Stop the server with a normal stop, not a kill.</strong> <code>docker stop</code> sends one first. Our runs started the server binary directly, not in Docker.</li>
+    <li><strong>Stop the server with a normal stop, not a kill.</strong> <code>docker stop</code> sends a normal stop first, per Docker's documentation. We started the server binary directly and did not test Docker.</li>
     <li><strong>Restart in a quiet moment.</strong> The server was back in well under a second in our runs, so a quiet moment keeps the chance of a warning small.</li>
     <li><strong>Do not worry about one warning.</strong> The lines to expect are <code>Could not store entry</code> or <code>Could not load entry</code>, then <code>The remote build cache was disabled during the build due to errors</code>. The next build stores what was missed.</li>
     <li><strong>Keep the same data folder or volume.</strong> That is what keeps the stored results. See <a href="/build-cache-survives-restart/">does the build cache survive a restart</a>.</li>
@@ -111,7 +111,7 @@
   <p>If the server is down for a whole build, nothing breaks either. That case is on <a href="/build-cache-server-down-what-happens/">what happens when the cache server is down</a>.</p>
 
   <h2>How we checked</h2>
-  <p>FosterStack Cache 0.2.1 on a Mac (arm64), no password. Gradle 9.8.0, Java 21, one fresh copy of the project per build, no daemon, the local build cache off. Compile tasks finish too fast to catch a restart, so each of the four modules had a cacheable task that sleeps for 8 seconds. We sent the signal to the server's process ID and started it again on the same data folder. All builds ended with <code>BUILD SUCCESSFUL</code>. Each row is one run; we did not repeat them.</p>
+  <p>FosterStack Cache 0.2.1 on a Mac (arm64), no password. Gradle 9.8.0, Java 21, one fresh copy of the project per build, no reused daemon, the local build cache off. To keep builds open long enough to overlap a restart, each of the four modules had a cacheable task that sleeps for 8 seconds. We sent the signal to the server's process ID and started it again on the same data folder. All builds ended with <code>BUILD SUCCESSFUL</code>. Each row is one run; we did not repeat them.</p>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <thead><tr><th>Server stopped during the build</th><th>Back after</th><th>What the build printed</th><th>Entries stored</th><th>Next build, from cache</th></tr></thead>
     <tbody>
@@ -128,21 +128,21 @@
     <thead><tr><th>Data in the cache</th><th>Normal stop, then start</th><th>Kill, then start</th></tr></thead>
     <tbody>
       <tr><td>20 small entries</td><td>0.03 to 0.05 seconds</td><td>0.03 seconds</td></tr>
-      <tr><td>5,000 entries, 50 MB</td><td>0.03 to 0.06 seconds</td><td>0.05 to 0.15 seconds</td></tr>
+      <tr><td>5,000 entries, about 49 MiB</td><td>0.03 to 0.06 seconds</td><td>0.05 to 0.15 seconds</td></tr>
     </tbody>
   </table></div>
   <p>After a kill, the server logs <code>unclean shutdown detected, reconciling stores before serving</code> and checks its files before it answers. No entries were lost in these runs.</p>
 
-  <p><strong>An upload in progress when the server stops.</strong> Gradle's uploads finish too quickly to catch, so we used <code>curl</code> to send a large file slowly (2 MB per second) and stopped the server 3 seconds in.</p>
+  <p><strong>An upload in progress when the server stops.</strong> To catch an upload in progress we used <code>curl</code> to send a large file slowly (2 MiB per second) and stopped the server 3 seconds in.</p>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <thead><tr><th>Upload</th><th>Stop</th><th>What happened</th><th>Entry afterwards</th></tr></thead>
     <tbody>
-      <tr><td>20 MB</td><td>Normal stop</td><td>The server waited, the upload finished with <code>201</code>, the server exited cleanly after 7.4 seconds</td><td>Readable</td></tr>
-      <tr><td>20 MB</td><td>Kill</td><td>The upload broke. A 6 MB temporary file stayed behind</td><td>Not found (404). The next start removed the temporary file</td></tr>
-      <tr><td>40 MB</td><td>Normal stop</td><td>The server gave up after 10.0 seconds and exited with an error. The upload broke. A 26 MB temporary file stayed on disk</td><td>Not found (404)</td></tr>
+      <tr><td>20 MiB</td><td>Normal stop</td><td>The server waited, the upload finished with <code>201</code>, the server exited cleanly after 7.4 seconds</td><td>Readable</td></tr>
+      <tr><td>20 MiB</td><td>Kill</td><td>The upload broke. A 6 MiB temporary file stayed behind</td><td>Not found (404). The next start removed the temporary file</td></tr>
+      <tr><td>40 MiB</td><td>Normal stop</td><td>The server gave up after 10.0 seconds and exited with an error. The upload broke. A 26 MiB temporary file stayed on disk</td><td>Not found (404)</td></tr>
     </tbody>
   </table></div>
-  <p>An entry that was stored earlier stayed readable in every case. We did not test whether a later start removes the temporary file left by the 40 MB case.</p>
+  <p>In both 20 MiB cases, an entry that was stored earlier stayed readable. We did not test whether a later start removes the temporary file left by the 40 MiB case.</p>
   <p>Not tested: Docker, Kubernetes or Compose rollouts, Maven builds, other releases, and more than one build running at once.</p>
 </main>
 
