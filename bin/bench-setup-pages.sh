@@ -118,6 +118,7 @@ statusz() { # port user pass -> "entries=N hits=N misses=N"
   curl -s -u "$2:$3" "localhost:$1/statusz" | python3 -c "import sys,json;d=json.load(sys.stdin);print('entries=%s hits=%s misses=%s' % (d['store_entries'],d['cache_hits'],d['cache_misses']))" 2>/dev/null || echo "statusz-unreadable"
 }
 hits_of() { case "$1" in *hits=*) printf '%s' "$1" | sed -E 's/.*hits=([0-9]+).*/\1/';; *) printf 'unreadable';; esac; }
+readable() { case "$1" in *hits=*) return 0;; *) fail "the status page could not be read ($2)"; return 1;; esac; }
 wait_up() { # port -> seconds waited via EL
   local i; for i in $(seq 1 400); do curl -sf "localhost:$1/healthz" >/dev/null 2>&1 && return 0; sleep 0.05; done; return 1
 }
@@ -228,10 +229,12 @@ EOF
   expect a-step6-build2 "> Task :compileJava FROM-CACHE"; B3=$EL
   SZ="$(statusz "$PORT_A" gradle "$PASS_GRADLE")"
   echo "OBS ${variant} after build 2: server ${SZ}"
+  if ! readable "$SZ" "A ${variant}, after build 2"; then echo "OBS no conclusion about where the second build restored from"; else
   case "$variant" in
     aswritten) case "$SZ" in *"hits=0"*) echo "OBS FINDING? page as written (Gradle's own cache left ON): the second build says FROM-CACHE but the server counted 0 hits: the hit came from the local cache, as the page's own sentence warns";; *) echo "OBS page as written (local cache ON): the server counted a hit too: ${SZ}";; esac;;
     localoff) case "$SZ" in "entries=1 hits=1 misses=1") echo "OBS page's recorded numbers confirmed with Gradle's local cache off: ${SZ}";; *) fail "A localoff: the page says one entry and one hit; the server says ${SZ}";; esac;;
   esac
+  fi
   T_ALL=$(awk -v a="$A2" -v b="$A3" -v c="$A5" -v d="$B1" -v e="$B2" -v f="$B3" 'BEGIN{printf "%.2f", a+b+c+d+e+f}')
   echo "TABLE A rep=${rep} variant=${variant}: download+verify ${A2} s | unpack+start ${A3} s | write files ${A5} s | build ${B1} s + clean ${B2} s + build ${B3} s = $(awk -v a="$B1" -v b="$B2" -v c="$B3" 'BEGIN{printf "%.2f", a+b+c}') s | all steps ${T_ALL} s"
   "$GRADLE_BIN" --stop >/dev/null 2>&1 || true
@@ -340,7 +343,8 @@ EOF
   expect b-step4-build2-aswritten "Found cached build, restoring demo:demo from cache by checksum" "BUILD SUCCESS"; MB2=$EL
   H1="$(statusz "$PORT_B" maven "$PASS_MAVEN")"
   echo "OBS second build as the page writes it: server before ${H0} / after ${H1}"
-  if [ "$(hits_of "$H0")" = "$(hits_of "$H1")" ]; then echo "OBS FINDING? the page says deleting target and build-cache leaves 'the only copy ... on the server', but the server's hit counter did not move: this restore came from the local copy (the command was run in the project folder; the extension keeps its folder next to the local repository)"; else echo "OBS the server counted the restore: it came from the server"; fi
+  if ! readable "$H0" "Maven build 2, before" || ! readable "$H1" "Maven build 2, after"; then echo "OBS no conclusion about where build 2 restored from";
+  elif [ "$(hits_of "$H0")" = "$(hits_of "$H1")" ]; then echo "OBS FINDING? the page says deleting target and build-cache leaves 'the only copy ... on the server', but the server's hit counter did not move: this restore came from the local copy (the command was run in the project folder; the extension keeps its folder next to the local repository)"; else echo "OBS the server counted the restore: it came from the server"; fi
   # to be sure the server can serve it: delete the extension's real local folder too
   H0b="$(statusz "$PORT_B" maven "$PASS_MAVEN")"
   run b-step4-build3-localcopygone "$D/proj" <<'EOF'
@@ -350,13 +354,16 @@ EOF
   expect b-step4-build3-localcopygone "Found cached build, restoring demo:demo from cache by checksum" "BUILD SUCCESS"; MB3=$EL
   H1b="$(statusz "$PORT_B" maven "$PASS_MAVEN")"
   echo "OBS third build, extension's local folder deleted too: server before ${H0b} / after ${H1b}"
-  [ "$(hits_of "$H0b")" != "$(hits_of "$H1b")" ] || fail "B: with the extension's local folder deleted, the restore still did not come from the server (hit counter unchanged)"
+  if readable "$H0b" "Maven build 3, before" && readable "$H1b" "Maven build 3, after"; then [ "$(hits_of "$H0b")" != "$(hits_of "$H1b")" ] || fail "B: with the extension's local folder deleted, the restore still did not come from the server (hit counter unchanged)"; fi
   echo "TABLE B rep=${rep}: add extension ${M1} s | config ${M2} s | password ${M3} s | build ${MB1} s | build again as written ${MB2} s | build with local copy gone ${MB3} s"
   stop_server
   export HOME="$ORIGHOME"; unset MAVEN_OPTS
 }
 
 # ---------- run ----------
+for port in "$PORT_A" "$PORT_B"; do
+  curl -sf "localhost:${port}/healthz" >/dev/null 2>&1 && { echo "something already answers on port ${port}: not starting" >&2; exit 1; }
+done
 for rep in $(seq 1 "$REPS"); do
   scenario_a "$rep" aswritten
   scenario_a "$rep" localoff
