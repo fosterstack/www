@@ -100,7 +100,7 @@
   <p>Parts of both documents cover running services in your own cluster, such as service mesh and GitOps. That is your environment, not our release pipeline, so this page does not map it.</p>
 
   <h2>Stage by stage: what runs, and which practice it maps to</h2>
-  <p>This describes the workflow files as they were at the v0.2.1 tag. "Signs" means the stage writes a statement about its work and signs it with keyless signing tied to that stage's own workflow identity, logged in a public transparency log.</p>
+  <p>This describes the workflow files as they were at the v0.2.1 tag. The v0.2.2 tag changed 31 of the workflow files, including <code>release.yml</code> and the admission, authorization, image, promotion and reproducibility stages, and its release run has 19 jobs where the v0.2.1 run had 16. This page maps v0.2.1 and does not describe v0.2.2. "Signs" means the stage writes a statement about its work and signs it with keyless signing tied to that stage's own workflow identity, logged in a public transparency log.</p>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <thead>
       <tr><th>Stage</th><th>What it does in v0.2.1</th><th>NIST practice</th><th>How much</th></tr>
@@ -203,6 +203,7 @@
   <ul class="trust">
     <li><a href="/verify-a-release/">Verify a release</a>: every check we ran against v0.2.1, with its real output.</li>
     <li><a href="https://github.com/fosterstack/cache/actions/runs/35554556056">The v0.2.1 release run</a>: all 16 jobs.</li>
+    <li><a href="https://github.com/fosterstack/cache/compare/v0.2.1...v0.2.2">What changed from v0.2.1 to v0.2.2</a>, including the workflow files.</li>
     <li><a href="https://github.com/fosterstack/cache/releases/tag/v0.2.1">The v0.2.1 release</a>: SBOMs, VEX file, signed checksums and <code>release-manifest.json</code>.</li>
     <li><a href="https://github.com/fosterstack/cache/blob/v0.2.1/RELEASING.md">RELEASING.md at v0.2.1</a>: the pipeline in the maintainer's words.</li>
     <li><a href="https://github.com/fosterstack/cache/tree/v0.2.1/.github/workflows">The workflow files at v0.2.1</a>, starting with <a href="https://github.com/fosterstack/cache/blob/v0.2.1/.github/workflows/release.yml">release.yml</a> and <a href="https://github.com/fosterstack/cache/blob/v0.2.1/.github/workflows/stage-authorize.yml">stage-authorize.yml</a>.</li>

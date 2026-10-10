@@ -45,10 +45,10 @@ verifiable against the CI run that produced them.
 - [Maven remote build cache setup, on/off, and with Gradle](https://fosterstack.com/maven-remote-build-cache-setup/): extension, config, credentials, checking hits.
 - [Gradle build cache on Kubernetes](https://fosterstack.com/gradle-build-cache-kubernetes/): one replica, sizing, security context.
 - [Security policy](https://fosterstack.com/security/): how to report a vulnerability, what we sign and publish.
-- [Verify a release yourself](https://fosterstack.com/verify-a-release/): every command with real output from 0.2.1.
+- [Verify a release yourself](https://fosterstack.com/verify-a-release/): every command with real output from 0.2.2, and how long it takes.
 - [FIPS 140-3 build cache](https://fosterstack.com/fips-140-3-build-cache/): run the FIPS image and confirm FIPS mode.
 - [Reset a build cache](https://fosterstack.com/reset-gradle-build-cache/): how to empty it.
-- [Changelog](https://fosterstack.com/changelog/): release notes for v0.1.0 and v0.2.1.
+- [Changelog](https://fosterstack.com/changelog/): release notes for v0.1.0, v0.2.1 and v0.2.2.
 - [For regulated markets](https://fosterstack.com/regulated/): the FIPS build and the public release evidence.
 - [Build cache size limit, eviction and a full disk](https://fosterstack.com/build-cache-eviction-size-limit/): What a self-hosted build cache does when it reaches its size cap: least-recently-used eviction, real numbers from a 0.2.1 server, and what an oversized entry gets.
 - [Your first 15 minutes with a self-hosted build cache](https://fosterstack.com/first-15-minutes-build-cache/): A checklist from nothing to your first FROM-CACHE with a self-hosted Gradle build cache, with the commands timed in a real run on release 0.2.1.
@@ -64,7 +64,7 @@ verifiable against the CI run that produced them.
 - [Gradle build cache: monorepo, buildSrc and included builds](https://fosterstack.com/gradle-build-cache-monorepo/): A real run of a four-module Gradle monorepo against a self-hosted build cache: what came from the cache, what rebuilt, and why. Release 0.2.1.
 - [NIST SP 800-204C, 800-204D and SLSA: Our Release Pipeline](https://fosterstack.com/how-our-pipeline-maps-to-nist-and-slsa/): How the FosterStack Cache release pipeline maps to NIST SP 800-204C and 800-204D, stage by stage, and why we assess v0.2.1 at SLSA Build Level 2, not Level 3.
 - [Maven Build Cache Extension in a Multi-Module Project](https://fosterstack.com/maven-build-cache-extension-multi-module/): A real run of the Apache Maven Build Cache Extension on a three-module project with a self-hosted cache: which modules restore, which rebuild, and why.
-- [Upgrade, back up and move a build cache server](https://fosterstack.com/upgrade-build-cache-server/): Upgrading FosterStack Cache from 0.1.0 to 0.2.1 on the same data volume, and back, run for real: what was kept, and two differences between the releases.
+- [Upgrade, back up and move a build cache server](https://fosterstack.com/upgrade-build-cache-server/): Upgrading FosterStack Cache from 0.1.0 to 0.2.1 to 0.2.2 on the same data volume, and back, run for real: what was kept, and two differences between the releases.
 - [Skip tests that passed: Gradle and Maven build cache](https://fosterstack.com/gradle-test-task-from-cache/): When Gradle takes the test task from a self-hosted build cache and when it runs the tests again, from seven real runs with JUnit on release 0.2.1.
 - [What does the build cache store? Gradle and Maven](https://fosterstack.com/what-gradle-stores-in-build-cache/): What one real Gradle build stored in a self-hosted build cache: which tasks make entries, which make none, and how to count them. Tested on release 0.2.1.
 - [Use your Gradle build cache over HTTPS with a private CA](https://fosterstack.com/gradle-remote-build-cache-private-ca-https/): Fix the PKIX path building failed error for a Gradle build cache behind HTTPS with a private CA: trust store settings and a Maven Central trap. Tested on 0.2.1.
