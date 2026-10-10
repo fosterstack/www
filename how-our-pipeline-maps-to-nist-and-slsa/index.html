@@ -109,17 +109,17 @@
   <h2>SLSA</h2>
   <p><code>[TO-VERIFY]</code> The SLSA Build level we assess v0.3.0 at. We claim Level 3 for the Build stage only after a test shows that a malicious build step cannot produce provenance the release step accepts. Until that test has passed, this page says nothing about Level 3.</p>
   <h2>CISA Secure by Design</h2>
-  <p><code>[TO-VERIFY]</code> This section is a draft and is not published. It lines up the seven goals of CISA's Secure by Design materials with what the product does. CISA does not endorse any company or product, and this page is not a statement by CISA. We designed against these goals; we do not claim to meet them until each row below has been checked against the v0.3.0 release.</p>
+  <p><code>[TO-VERIFY]</code> This section is a draft and is not published. It lines up the seven goals of CISA's Secure by Design materials with what the product does. CISA does not endorse any company or product, and this page is not a statement by CISA. We do not claim to meet any of these goals until each row below has been checked against the v0.3.0 release.</p>
   <table>
     <thead><tr><th>Goal</th><th>What the product does</th><th>Status</th></tr></thead>
     <tbody>
       <tr><td>Multi-factor authentication</td><td><code>[TO-VERIFY]</code> The server has one optional shared HTTP Basic login (plus an optional read-only one). It has no multi-factor sign-in and no single sign-on.</td><td><code>[TO-VERIFY]</code></td></tr>
       <tr><td>Default passwords</td><td><code>[TO-VERIFY]</code> No password ships in the product. Logins come only from settings you provide at start, and a half-set pair is refused.</td><td><code>[TO-VERIFY]</code></td></tr>
-      <tr><td>Classes of vulnerability</td><td><code>[TO-VERIFY]</code> The server is written in Go with no C code. Request paths are checked twice against directory traversal. There is no SQL.</td><td><code>[TO-VERIFY]</code></td></tr>
-      <tr><td>Security patches</td><td><code>[TO-VERIFY]</code> A daily rescan of the current release, and a 48-hour target for fixing vulnerable dependencies. Whether automatic patch releases are live at v0.3.0: <code>[TO-VERIFY]</code>.</td><td><code>[TO-VERIFY]</code></td></tr>
-      <tr><td>Vulnerability disclosure policy</td><td><code>[TO-VERIFY]</code> A private reporting channel exists on GitHub. Permission to test, a commitment about legal action, a scope and a disclosure timeline: <code>[TO-VERIFY]</code> whether the policy says each.</td><td><code>[TO-VERIFY]</code></td></tr>
+      <tr><td>Classes of vulnerability</td><td><code>[TO-VERIFY]</code> The server is written in Go, with no C imports and cgo off. Request paths are checked twice against directory traversal. There is no SQL.</td><td><code>[TO-VERIFY]</code></td></tr>
+      <tr><td>Security patches</td><td><code>[TO-VERIFY]</code> A daily rescan for newly disclosed vulnerabilities, and a 48-hour fix target (best effort). The server does not update itself, by design. Whether automatic patch releases are live at v0.3.0: <code>[TO-VERIFY]</code>.</td><td><code>[TO-VERIFY]</code></td></tr>
+      <tr><td>Vulnerability disclosure policy</td><td><code>[TO-VERIFY]</code> A private reporting channel exists on GitHub. Whether the policy allows testing, promises no legal action, sets a scope and gives a disclosure time: <code>[TO-VERIFY]</code>.</td><td><code>[TO-VERIFY]</code></td></tr>
       <tr><td>CVE records</td><td><code>[TO-VERIFY]</code> When we issue a CVE, and the fields it carries.</td><td><code>[TO-VERIFY]</code></td></tr>
-      <tr><td>Evidence of intrusions</td><td><code>[TO-VERIFY]</code> Structured logs, metrics and a status page. What customers can and cannot collect from them.</td><td><code>[TO-VERIFY]</code></td></tr>
+      <tr><td>Evidence of intrusions</td><td><code>[TO-VERIFY]</code> Structured logs and metrics. The server writes no per-request access log and does not log or count failed logins. Whether that changes at v0.3.0: <code>[TO-VERIFY]</code>.</td><td><code>[TO-VERIFY]</code></td></tr>
     </tbody>
   </table>
   <h2>What this page does not say</h2>
