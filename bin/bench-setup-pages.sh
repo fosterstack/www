@@ -47,9 +47,15 @@ sha_check() { # file sha256
 }
 
 if [ -n "${BENCH_WORK:-}" ]; then W="$BENCH_WORK"; mkdir -p "$W"; else W="$(mktemp -d)"; fi
-SERVER_PID=""
+SERVER_PID=""; SERVER_PORT=""
 stop_server() {
-  if [ -n "$SERVER_PID" ]; then pkill -P "$SERVER_PID" 2>/dev/null; kill "$SERVER_PID" 2>/dev/null; wait "$SERVER_PID" 2>/dev/null; SERVER_PID=""; fi
+  local i
+  if [ -n "$SERVER_PID" ]; then
+    pkill -P "$SERVER_PID" 2>/dev/null; kill "$SERVER_PID" 2>/dev/null; wait "$SERVER_PID" 2>/dev/null; SERVER_PID=""
+    # do not go on until the port stops answering: a stale server would be mistaken for the next one
+    for i in $(seq 1 100); do curl -sf "localhost:${SERVER_PORT}/healthz" >/dev/null 2>&1 || break; sleep 0.1; done
+    curl -sf "localhost:${SERVER_PORT}/healthz" >/dev/null 2>&1 && fail "the server on port ${SERVER_PORT} did not stop"
+  fi
 }
 trap 'stop_server; [ -z "${BENCH_WORK:-}" ] && [ -n "${W:-}" ] && rm -rf "${W:?}"' EXIT
 
@@ -80,13 +86,19 @@ echo "gradle: $(gradle --version 2>/dev/null | grep -E '^Gradle ' | head -1)   m
 if [ "$LOCAL" = 1 ]; then echo "tools: LOCAL tools in use, nothing downloaded or checked (a developer's dry run: do not quote these times)"; else
   echo "tools: Gradle ${GR_VER} (sha256 pinned), Maven ${MVN_VER} (sha512 pinned), cosign ${COSIGN_VER} (sha256 pinned), checked before use; the Maven build-cache extension ${EXT_VER} and the Maven plugins come from Maven Central at run time and are NOT checksum-pinned"; fi
 echo "release under test: FosterStack Cache ${VER} (${PLATFORM}), downloaded from its GitHub release with no login"
-echo "repetitions: ${REPS}; rep 1 = empty Gradle home and empty ~/.m2 (never built here), rep 2 = reuses them; each with a new project and a new empty server data folder"
+echo "repetitions: ${REPS}; rep 1 = empty Gradle home and empty ~/.m2 (never built here), rep 2 = a machine that has built before: Gradle home and ~/.m2 repository kept, but both local BUILD caches emptied; each with a new project and a new empty server data folder"
+echo "invented by this script (the pages show none): the Gradle project's rootProject.name, build.gradle.kts (plugins { java }) and a small App.java, and the Maven pom and App.java; scenario A's server is started as the page starts it, with no FSCACHE_ADDR, so it listens on the default :8080 (all interfaces) for a few minutes behind a made-up password; scenario B's server listens on 127.0.0.1 only"
 echo "the pages' hard-coded values replaced: PLATFORM=${PLATFORM}, a made-up password, and (Maven page) the example host https://cache.example.com/ by http://127.0.0.1:${PORT_B}/; the Maven page shows no pom: a minimal one with pinned plugin versions is used"
 echo "page commands run with 'bash -o pipefail' so a failing first command in a pipeline is not hidden"
 echo "a runner times commands, not people: the pages' '15 minutes' and 'about ten minutes' are mostly reading and choosing, which is not timed here"
 
 export GRADLE_USER_HOME="$W/gradle-home"
 mvnhome="$W/mvn-home"; mkdir -p "$mvnhome"
+
+# the local build caches of an earlier repetition would answer this one's first build: empty them (the Gradle home and ~/.m2 stay warm)
+clear_local_caches() {
+  rm -rf "${GRADLE_USER_HOME:?}/caches/build-cache-1" "${mvnhome:?}/.m2/build-cache"
+}
 
 # ---------- helpers ----------
 # run NAME DIR  (command text on stdin): run it with bash -o pipefail in DIR, time it, keep output in $W/NAME.out, set RC and EL
@@ -105,7 +117,7 @@ expect() { # NAME text...   (every text must be in the output of NAME; RC must b
 statusz() { # port user pass -> "entries=N hits=N misses=N"
   curl -s -u "$2:$3" "localhost:$1/statusz" | python3 -c "import sys,json;d=json.load(sys.stdin);print('entries=%s hits=%s misses=%s' % (d['store_entries'],d['cache_hits'],d['cache_misses']))" 2>/dev/null || echo "statusz-unreadable"
 }
-hits_of() { printf '%s' "$1" | sed -E 's/.*hits=([0-9]+).*/\1/'; }
+hits_of() { case "$1" in *hits=*) printf '%s' "$1" | sed -E 's/.*hits=([0-9]+).*/\1/';; *) printf 'unreadable';; esac; }
 wait_up() { # port -> seconds waited via EL
   local i; for i in $(seq 1 400); do curl -sf "localhost:$1/healthz" >/dev/null 2>&1 && return 0; sleep 0.05; done; return 1
 }
@@ -116,7 +128,7 @@ wait_up() { # port -> seconds waited via EL
 scenario_a() { # rep variant(aswritten|localoff)
   local rep="$1" variant="$2"
   local D="$W/a${rep}-${variant}"
-  mkdir -p "$D"; cd "$D"
+  mkdir -p "$D"; cd "$D"; clear_local_caches
   echo; echo "== A rep=${rep}/${REPS} variant=${variant}  (first-15-minutes, steps 2 to 6)"
   local T0 T1
   # step 2: download it and check it is ours
@@ -131,6 +143,9 @@ cosign verify-blob --bundle checksums.txt.bundle \\
 sha256sum -c <(grep "fscache_\${VER}_\${PLATFORM}.tar.gz" checksums.txt | grep -v sbom)
 EOF
   expect a-step2-download-verify "Verified OK" "fscache_${VER}_${PLATFORM}.tar.gz: OK"; A2=$EL
+  # never unpack or start a release that did not verify
+  if [ "$RC" != 0 ] || ! grep -qF "Verified OK" "$W/a-step2-download-verify.out"; then fail "A step 2: the release did not verify, so it is not unpacked or started"; return; fi
+  [ -n "$VERIFIED_TARBALL" ] || VERIFIED_TARBALL="$D/fscache_${VER}_${PLATFORM}.tar.gz"
   # step 3: unpack it and start it with a password and a size cap (in the background; the time includes waiting until it answers)
   cat > "$D/start.sh" <<EOF
 VER=${VER}
@@ -140,13 +155,14 @@ FSCACHE_USERNAME=gradle FSCACHE_PASSWORD=${PASS_GRADLE} \\
 FSCACHE_MAX_BYTES=1073741824 ./fscache
 EOF
   T0=$(now); ( cd "$D" && exec bash -o pipefail "$D/start.sh" ) > "$D/server.log" 2>&1 &
-  SERVER_PID=$!
+  SERVER_PID=$!; SERVER_PORT="$PORT_A"
   if wait_up "$PORT_A"; then T1=$(now); A3=$(secs "$T0" "$T1"); printf 'STEP %-34s %7s s  server answers on %s\n' a-step3-unpack-start "$A3" "$PORT_A"; else fail "A step 3: the server did not answer on ${PORT_A}"; sed 's/^/    | /' "$D/server.log" | tail -5; stop_server; return; fi
   # step 4: check it is up
   run a-step4-healthz "$D" <<EOF
 curl localhost:${PORT_A}/healthz
 EOF
   expect a-step4-healthz "ok"
+  grep -qx "ok" "$W/a-step4-healthz.out" || fail "A step 4: /healthz did not print a line that is exactly ok"
   run a-step4-statusz "$D" <<EOF
 curl -u gradle:${PASS_GRADLE} localhost:${PORT_A}/statusz
 EOF
@@ -222,6 +238,7 @@ EOF
   stop_server
 }
 GRADLE_BIN="$(command -v gradle)"
+VERIFIED_TARBALL=""
 
 # =====================================================================================
 # SCENARIO B: /maven-remote-build-cache-setup/ steps 1 to 4
@@ -232,9 +249,11 @@ scenario_b() { # rep
   mkdir -p "$D/proj/.mvn" "$D/proj/src/main/java/demo" "$D/server"
   echo; echo "== B rep=${rep}/${REPS}  (maven-remote-build-cache-setup, steps 1 to 4)"
   # a server for the page to talk to (the page assumes one exists: it is not part of the timed steps)
-  tar -xzf "$W/a1-aswritten/fscache_${VER}_${PLATFORM}.tar.gz" -C "$D/server" 2>/dev/null || tar -xzf "$W"/a*/fscache_${VER}_${PLATFORM}.tar.gz -C "$D/server"
+  [ -n "$VERIFIED_TARBALL" ] || { fail "B: no release has verified, so the Maven scenario is skipped"; return; }
+  clear_local_caches
+  tar -xzf "$VERIFIED_TARBALL" -C "$D/server" || { fail "B: could not unpack the verified release"; return; }
   ( cd "$D/server" && FSCACHE_ADDR="127.0.0.1:${PORT_B}" FSCACHE_USERNAME=maven FSCACHE_PASSWORD="$PASS_MAVEN" exec ./fscache ) > "$D/server.log" 2>&1 &
-  SERVER_PID=$!
+  SERVER_PID=$!; SERVER_PORT="$PORT_B"
   wait_up "$PORT_B" || { fail "B: the server did not answer on ${PORT_B}"; stop_server; return; }
   ORIGHOME="$HOME"; export HOME="$mvnhome"; mkdir -p "$HOME/.m2"
   export MAVEN_OPTS="-Duser.home=${mvnhome}"   # so that ~/.m2 means this empty folder (the JVM reads user.home from the account, not from $HOME)
