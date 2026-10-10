@@ -158,13 +158,16 @@ buildCache {
   <p>The extension itself is Apache's project. If your hit rate looks low, start with the extension's own configuration guide.</p>
 
   <h2>Step 4: Check that it works</h2>
-  <p>For Gradle, run the build twice:</p>
-  <pre tabindex="0"><code>./gradlew build --build-cache</code></pre>
-  <p>On the second run, look for <code>FROM-CACHE</code> next to tasks. Gradle also has a local cache that gives hits even when the remote is broken, so to test the remote itself, clear the local one and run with <code>-i</code>:</p>
-  <pre tabindex="0"><code>rm -rf ~/.gradle/caches/build-cache-1
+  <p>For Gradle, build, clean, and build again. Without the clean, the second build prints <code>UP-TO-DATE</code>, which tells you nothing about the cache:</p>
+  <pre tabindex="0"><code>./gradlew build --build-cache
+./gradlew clean
+./gradlew build --build-cache</code></pre>
+  <p>On the second build, look for <code>FROM-CACHE</code> next to tasks. This hit may come from your own machine, because Gradle also has a local cache that gives hits even when the remote is broken. To test the remote itself, run clean, delete the local cache, stop the daemon, then build with <code>-i</code>:</p>
+  <pre tabindex="0"><code>./gradlew clean
+rm -rf ~/.gradle/caches/build-cache-1
 ./gradlew --stop
 ./gradlew build --build-cache -i</code></pre>
-  <p>On the server, the hit and miss counters should move:</p>
+  <p>On the server, the hit counter should go up. The output also has comment lines that start with <code>#</code>; the numbers are on the counter lines:</p>
   <pre tabindex="0"><code>curl -s https://cache.example.com/metrics | grep -E 'fscache_cache_(hits|misses)_total'</code></pre>
   <p>For Maven, build twice from a clean checkout and look for cache hits in the log for unchanged modules.</p>
 
@@ -199,7 +202,7 @@ buildCache {
   <p>A build cache sits inside your supply chain: what it stores ends up in your builds. Ask these seven questions of any candidate. We answer each one for FosterStack Cache.</p>
 
   <h3>1. Does it speak your build tool's protocol?</h3>
-  <p>It should work with the tool's own remote cache setting, with nothing extra to install on developer machines. <strong>How to test:</strong> build twice with the local cache turned off and look for <code>FROM-CACHE</code> on the second run. <strong>FosterStack Cache:</strong> Gradle through its <code>HttpBuildCache</code> setting; Maven through Apache's Build Cache Extension.</p>
+  <p>It should work with the tool's own remote cache setting, with nothing extra to install on developer machines. <strong>How to test:</strong> build, run clean, and build again with the local cache turned off, and look for <code>FROM-CACHE</code> on the second build. <strong>FosterStack Cache:</strong> Gradle through its <code>HttpBuildCache</code> setting; Maven through Apache's Build Cache Extension.</p>
 
   <h3>2. Who can write to it?</h3>
   <p>Anything that can write to the cache can change what later builds use. Ask for authentication, and ask what permission levels exist. <strong>FosterStack Cache:</strong> Basic Auth with a read-write login and an optional read-only login, where any write from the read-only one is refused. Per-person identity is not built.</p>
@@ -229,6 +232,16 @@ buildCache {
     <tr><td>FosterStack Cache, URL kept with <code>/cache/</code></td><td><code>:compileJava</code> ran: separate entries</td><td><code>:compileJava FROM-CACHE</code></td></tr>
     <tr><td>Back to the old node (rollback)</td><td><code>:compileJava FROM-CACHE</code>: its entries were still there</td><td>not run</td></tr>
   </table></div>
+  <p>We then ran the steps again on a GitHub-hosted Linux machine with release 0.2.2, Gradle 9.8.0 and Maven 3.10.0. Results:</p>
+  <ul>
+    <li>The Kotlin and Groovy settings worked. Build, clean, build again showed <code>FROM-CACHE</code>. A second build with nothing changed printed <code>UP-TO-DATE</code>.</li>
+    <li>After the cache-clearing commands, the hit counter went up.</li>
+    <li>The <code>/metrics</code> command needed no login.</li>
+    <li>A URL kept with <code>/cache/</code> made its own entries.</li>
+    <li>A credentials block against a server with no password: the server ignored it and the cache still worked.</li>
+    <li><code>mvn install</code> twice: the second build restored from the cache.</li>
+  </ul>
+  <p>The old node rows and the rollback were not run again. <a href="https://github.com/fosterstack/www/actions/runs/38037262366">The run and its log are public</a>.</p>
   <p>The new server's status page agreed: two entries stored, two hits, two misses. One small difference you may notice: a successful upload returns 200 from the old node and 201 from FosterStack Cache. Gradle accepted both.</p>
 
   <h2>More than kept patched.</h2>
