@@ -184,11 +184,11 @@
     <li>A build started while the server was stopped printed one <code>Could not load entry</code> warning, disabled the remote cache and built all four modules locally.</li>
     <li>The next build, with the server back, built and stored all four. The one after that took all four from the cache.</li>
     <li>Every restart we timed took 0.01 to 0.07 seconds, with 20 entries and with 5,000 entries (about 48 MiB).</li>
-    <li>After a kill the log said <code>unclean shutdown detected, reconciling stores before serving</code>, and no entries were lost.</li>
+    <li>After a kill the log said <code>unclean shutdown detected, reconciling stores before serving</code>, and after five kills the 5,000 entries were all still there.</li>
     <li>We sent uploads at 2 MiB per second and stopped the server after 3 seconds. A 20 MiB upload with a normal stop finished with <code>201</code>. The server exited with code 0 after 7.3 seconds.</li>
     <li>A 20 MiB upload with a kill broke. A 6 MiB temporary file stayed behind, the entry was not found (404), and the next start removed the file.</li>
     <li>A 40 MiB upload with a normal stop broke when the server gave up at 10.0 seconds and exited with code 1. A 26 MiB temporary file stayed on disk and the entry was not found. An entry stored earlier stayed readable in all three cases.</li>
-    <li>After a clean stop and after a kill, the status page showed the same entries and bytes (11 entries for our test project) and the next build took everything from the cache. A build using a different, empty cache folder took none from the cache.</li>
+    <li>After a clean stop and after a kill, the status page showed the same entries and bytes (11 entries on this test project; the Mac run had 13) and the next build took everything from the cache. A build using a different, empty cache folder took none from the cache.</li>
   </ul>
   <p class="muted-note"><a href="https://github.com/fosterstack/www/actions/runs/38067965540">The run and its log are public</a>.</p>
 </main>
