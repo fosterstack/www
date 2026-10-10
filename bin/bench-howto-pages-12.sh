@@ -356,10 +356,10 @@ want() { if [ "$2" = "$3" ]; then echo "OBS $1: $2, as the page says"; else fail
 # =====================================================================================
 TPORT=18150
 tg_project() { # DIR VARIANT   (base | main3 | test4 | comment | failing)   one class, two JUnit tests; each variant starts from the base project
-  local d="$1" v="$2" body="return a + b;" extra="" two="assertEquals(4, Calc.add(2, 2));"
-  case "$v" in main3) body="return a + b + 0;";; comment) body="return a + b; // sums";; test4) extra='    @Test void addsZero() { assertEquals(0, Calc.add(0, 0)); }';; failing) two="assertEquals(5, Calc.add(2, 2));";; esac
+  local d="$1" v="$2" body="return a + b;" after="" extra="" two="assertEquals(4, Calc.add(2, 2));"
+  case "$v" in main3) body="return a + b + 0;";; comment) after=" // sums";; test4) extra='    @Test void addsZero() { assertEquals(0, Calc.add(0, 0)); }';; failing) two="assertEquals(5, Calc.add(2, 2));";; esac
   rm -rf "${d:?}"; mkdir -p "$d/src/main/java/demo" "$d/src/test/java/demo"
-  printf 'package demo;\n\npublic class Calc {\n    public static int add(int a, int b) { %s }\n}\n' "$body" > "$d/src/main/java/demo/Calc.java"
+  printf 'package demo;\n\npublic class Calc {\n    public static int add(int a, int b) { %s }%s\n}\n' "$body" "$after" > "$d/src/main/java/demo/Calc.java"
   printf 'package demo;\n\nimport org.junit.jupiter.api.Test;\nimport static org.junit.jupiter.api.Assertions.assertEquals;\n\nclass CalcTest {\n    @Test void addsOne() { assertEquals(3, Calc.add(1, 2)); }\n    @Test void addsTwo() { %s }\n%s\n}\n' "$two" "$extra" > "$d/src/test/java/demo/CalcTest.java"
 }
 tg_gradle_files() { # DIR PORT
