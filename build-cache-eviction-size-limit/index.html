@@ -118,7 +118,7 @@
     <li><strong>Set a size cap below the disk size.</strong> The server then removes the least recently used entries instead of failing. In our runs a 4 MiB cap on an 8 MiB volume never failed an upload. A 20 MiB cap, bigger than the volume, did not help. See <a href="#how-the-size-cap-works">how the size cap works</a>.</li>
     <li><strong>Alert on failed uploads.</strong> Watch for <code>fscache_http_requests_total</code> with <code>method="PUT"</code> and <code>status="500"</code> going up. Your builds will not tell you. See <a href="/is-the-build-cache-server-healthy-what-to-alert-on/">what to alert on</a>.</li>
     <li><strong>To recover, free space on the volume.</strong> In our runs the running server noticed and needed no restart.</li>
-    <li><strong>Free space before you start a new, empty data folder.</strong> On a full disk the server would not start. The log said <code>open metadata store</code> and <code>no space left on device</code>.</li>
+    <li><strong>Free space before you restart the server or start a new, empty data folder.</strong> On a full disk the server would not start. The log said <code>open metadata store</code> and <code>no space left on device</code>.</li>
   </ul>
 
   <h2>Watching it on a real cache</h2>
@@ -157,7 +157,7 @@
     </tbody>
   </table></div>
   <p class="muted-note">We found no leftover temporary files in the data folder after the first failed uploads. On this small APFS volume, uploads started to fail while <code>df</code> still showed about 1 MiB free, so do not plan around the last megabyte.</p>
-  <p class="muted-note">Not tested: Docker or Kubernetes volumes, file systems other than APFS and a Linux RAM disk (see the second run below), Maven, a very large single upload, a full inode table, a disk quota, releases other than 0.2.1 and 0.2.2, and a disk that fills while many builds upload at once.</p>
+  <p class="muted-note">Not tested: Docker or Kubernetes volumes, file systems other than APFS (the second run below adds a Linux RAM disk), Maven, a very large single upload, a full inode table, a disk quota, releases other than 0.2.1 and 0.2.2, and a disk that fills while many builds upload at once.</p>
 
   <h3>Try the tiny-cap run yourself</h3>
   <pre tabindex="0"><code>FSCACHE_ADDR=127.0.0.1:8080 FSCACHE_DATA_DIR=./data FSCACHE_MAX_BYTES=3500 ./fscache &amp;
@@ -179,9 +179,9 @@ curl -s localhost:8080/statusz | grep -E &#x27;store_bytes|evicted&#x27;
   <p>The runs above were on a Mac with 0.2.1. We ran the tiny-cap table and the size-cap runs again on a GitHub-hosted Linux machine with FosterStack Cache 0.2.2. For the full-disk runs we used an 8 MiB RAM disk there (<code>tmpfs</code>, a small disk that lives in memory, so it can be filled safely).</p>
   <ul class="trust">
     <li>The 3,500-byte table gave the same rows, and the 4,000-byte entry got the same 413. A 4 MiB cap with forty 256 KiB uploads accepted all forty, removed 24 entries and held 4,194,304 bytes.</li>
-    <li>On the full disk, the first failing upload got <code>500</code> with the body <code>internal error</code>, reads kept working, a build still ended with <code>BUILD SUCCESSFUL</code> and printed one <code>Could not store entry</code> line, and uploads were accepted again once we freed space, with no restart.</li>
+    <li>On the full disk, uploads got <code>500</code> with the body <code>internal error</code>, reads kept working, a build still ended with <code>BUILD SUCCESSFUL</code> and printed one <code>Could not store entry</code> line, and uploads were accepted again once we freed space, with no restart.</li>
     <li>The counts differ by file system. On Linux, 25 uploads of 256 KiB were accepted before the first failure (21 on the Mac). A 20 MiB cap let 31 of forty uploads through (25 on the Mac).</li>
-    <li>With no free space at all, the server would not start, even with its old data. The log said <code>write shutdown marker</code> and <code>no space left on device</code>. With 16 KiB free it started with its old data, and a new, empty data folder failed at <code>open metadata store</code>, as in the table.</li>
+    <li>After we filled the volume until a write failed, the server would not start, even with its old data. The log said <code>write shutdown marker</code> and <code>no space left on device</code>. When we shrank a filler file to leave 16 KiB free, it started with its old data, and a new, empty data folder failed at <code>open metadata store</code>, as in the table.</li>
   </ul>
   <p class="muted-note"><a href="https://github.com/fosterstack/www/actions/runs/38061887626">The run and its log are public</a>.</p>
 
