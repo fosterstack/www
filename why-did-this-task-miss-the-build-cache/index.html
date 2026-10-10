@@ -100,10 +100,14 @@
     <li><strong>Do the same for the build that missed.</strong> That is the other machine, the other folder or the build after your change. Save it as <code>run2.keys</code>.</li>
     <li><strong>Compare.</strong>
       <pre tabindex="0"><code>diff run1.keys run2.keys</code></pre></li>
-    <li><strong>Read the first line that differs.</strong> Each task writes its <code>Appending</code> lines, one per input, and then its <code>Build cache key for task</code> line. The input name is in quotes. In our runs a changed environment variable showed up like this:
-      <pre tabindex="0"><code>&lt; Appending input value fingerprint for 'label' to build cache key: 4c54da94...
+    <li><strong>Read the first line that differs.</strong> Each task writes its <code>Appending</code> lines, one per input, and then its <code>Build cache key for task</code> line. The input name is in quotes. In our runs a changed environment variable showed up like this, with the hashes shortened:
+      <pre tabindex="0"><code>94c94
+&lt; Appending input value fingerprint for 'label' to build cache key: 4c54da94...
+---
 &gt; Appending input value fingerprint for 'label' to build cache key: 96dabe02...
+96c96
 &lt; Build cache key for task ':greetEnv' is 3dd3b463...
+---
 &gt; Build cache key for task ':greetEnv' is 2a408a1a...</code></pre></li>
   </ol>
   <p>Compare the hash after the colon. For file inputs the text in braces is only a display of the path, and it can change while the hash stays the same.</p>
@@ -124,7 +128,7 @@
   </table></div>
 
   <h2>A rerun is not a miss</h2>
-  <p>With <code>--rerun-tasks</code> every task ran, but the keys were identical to the previous build. The log says why, and the result is stored again:</p>
+  <p>With <code>--rerun-tasks</code> every task ran, but the keys were identical to the unchanged repeat build. The log says why, and the result is stored again:</p>
   <pre tabindex="0"><code>Task ':greetStable' is not up-to-date because:
   Executed with '--rerun-tasks'.
 Stored cache entry for task ':greetStable' with cache key f1bf5e9a...</code></pre>
@@ -145,7 +149,7 @@ Stored cache entry for task ':greetStable' with cache key f1bf5e9a...</code></pr
   <p>None of these tasks printed a <code>Build cache key</code> line.</p>
 
   <h2>How we checked</h2>
-  <p>FosterStack Cache 0.2.1 on a Mac (arm64), no password. Gradle 9.8.0, <code>--no-daemon</code>, a new Gradle home for every build, the local build cache off. Java 21 for every build except the Java 27 row, which used Homebrew OpenJDK 27 for the Gradle run. The test project had one Java class and five small cacheable tasks. Each row is one run, we did not repeat them, and we report counts and log lines, not times.</p>
+  <p>FosterStack Cache 0.2.1 on a Mac (arm64), no password. Gradle 9.8.0, <code>--no-daemon</code>, <code>--console=plain</code>, <code>--max-workers=1</code>, a new Gradle home for every build, the local build cache off. Java 21 for every build except the Java 27 row, which used Homebrew OpenJDK 27 for the Gradle run. The test project had one Java class and five small cacheable tasks. Each row is one run, we did not repeat them, and we report counts and log lines, not times.</p>
   <p class="muted-note">Not tested: other Gradle versions, Maven, Kotlin or Android builds, a second machine, and inputs that come from dependencies. Related: <a href="/gradle-build-cache-hit-rate-low/">Gradle build cache hit rate low</a> and <a href="/build-cache-one-module-changed-what-rebuilds/">why did my whole build rerun after a small change</a>.</p>
   <div class="cta-row">
     <a class="btn" href="/gradle-remote-cache-not-working/">Not working at all?</a>
