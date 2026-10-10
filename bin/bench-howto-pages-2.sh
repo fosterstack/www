@@ -16,7 +16,8 @@
 # pinned (said again in the output): the Maven build-cache extension, the Maven plugins and JUnit from Maven Central.
 set -uo pipefail
 
-VER=0.2.2                                    # the release the pages name
+VER="${BENCH_VER:-0.2.2}"   # the release the pages name; a scheduled proof run passes the newest release tag (checked by the workflow, and again here)
+[[ "$VER" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "bad release version: $VER" >&2; exit 2; }
 LOCAL="${BENCH_LOCAL:-0}"                    # 1 = a developer's dry run with local tools (nothing downloaded or checked: do not quote times)
 if [ "$LOCAL" = 1 ]; then PLATFORM="${BENCH_PLATFORM:-darwin_arm64}"; else PLATFORM=linux_amd64; fi
 GR_VER=9.8.0
