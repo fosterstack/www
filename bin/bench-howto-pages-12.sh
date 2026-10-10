@@ -21,7 +21,6 @@ GR_URL="https://services.gradle.org/distributions/gradle-${GR_VER}-all.zip"
 GR_SHA=46ac66d47f30f3dacfdf306e0b714a91a34fb94a22ba0a744b280933f47bc0cf
 EXT_VER=1.2.3
 IMG=ghcr.io/fosterstack/cache
-IMG_022=sha256:f2b330cf27b3814405230cc001a771909ae5bbf3b1e223a90ee7a9ee5d0e53dd
 COSIGN_VER=3.1.3
 COSIGN_SHA=4629c757b7618056f8ddd7e2625ae9fdd94c0372a65049520bc7d9df9efc7f71
 
