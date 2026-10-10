@@ -88,8 +88,8 @@ echo "differences from the pages' own runs: Linux amd64 (the pages: macOS arm64,
 echo "Gradle runs use a new empty Gradle home and a fresh project copy each, no daemon, Gradle's own local cache switched off (as the pages' runs did)"
 echo "NOT tested here: Docker or Kubernetes volumes, file systems other than tmpfs, Maven, a full inode table, a disk quota, a very large single upload, Prometheus itself (the two rules are checked on live /metrics values with the script's own arithmetic, not on saved scrapes)"
 echo "page commands run with 'bash -o pipefail'; a runner times commands, not people"
-echo "full-disk start: two states are tried, with not one free byte (the server stops at its shutdown marker) and with 16 KiB free (the page\'s APFS volume still had room for small files); the page says which of the two it saw only in the words \'a full volume\'"
-echo "replaced by helper functions: the eviction page's put()/get() block (tput_code, tget_code, treadback); the healthy page's curl of /statusz is parsed with python; two filler files outside the data folder (1 MiB and 512 KiB) imitate the page\'s free-space step on the tmpfs"
+echo "full-disk start: two states are tried, with not one free byte (the server stops at its shutdown marker) and with 16 KiB free (the page's APFS volume still had room for small files); the page says which of the two it saw only in the words 'a full volume'"
+echo "replaced by helper functions: the eviction page's put()/get() block (tput_code, tget_code, treadback); the healthy page's curl of /statusz is parsed with python; two filler files outside the data folder (1 MiB and 512 KiB) imitate the page's free-space step on the tmpfs"
 
 export GRADLE_USER_HOME="$W/gradle-home"
 
