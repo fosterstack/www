@@ -189,19 +189,19 @@ event)
 fresh)
   case "${2:-}" in
     gradle)
-      cd "$WS" || exit 1; rm -rf "$T/gh" lib/build app/build build .gradle; mkdir -p "$T/gh/init.d" "$T/gh/wrapper"; cp -R "$T/dists/dists" "$T/gh/wrapper/"
-      cp "$T/init/log-tasks.gradle" "$T/gh/init.d/"; : > "$T/tasks.log"
-      printf 'package demo;\n\npublic class App {\n    public static void main(String[] args) {\n        System.out.println(Lib.name() + " app 1");\n    }\n}\n' > app/src/main/java/demo/App.java ;;
+      cd "$WS" || exit 1; rm -rf "$T/gh" lib/build app/build build .gradle; mkdir -p "$T/gh/init.d" "$T/gh/wrapper" || exit 1; cp -R "$T/dists/dists" "$T/gh/wrapper/" || exit 1
+      cp "$T/init/log-tasks.gradle" "$T/gh/init.d/" || exit 1; : > "$T/tasks.log" || exit 1
+      printf 'package demo;\n\npublic class App {\n    public static void main(String[] args) {\n        System.out.println(Lib.name() + " app 1");\n    }\n}\n' > app/src/main/java/demo/App.java || exit 1 ;;
     maven)
-      rm -rf "$HOME/.m2/build-cache" "$WS/mproj/target"; : > "$T/mvn.log"
-      printf 'package demo;\n\npublic class App {\n    public static String hello() { return "hello 1"; }\n}\n' > "$WS/mproj/src/main/java/demo/App.java" ;;
+      rm -rf "$HOME/.m2/build-cache" "$WS/mproj/target"; : > "$T/mvn.log" || exit 1
+      printf 'package demo;\n\npublic class App {\n    public static String hello() { return "hello 1"; }\n}\n' > "$WS/mproj/src/main/java/demo/App.java" || exit 1 ;;
     *) echo "fresh gradle|maven" >&2; exit 2 ;;
   esac
   ;;
 mutate)
   case "${2:-}" in
-    gradle) printf 'package demo;\n\npublic class App {\n    public static void main(String[] args) {\n        System.out.println(Lib.name() + " app 2");\n    }\n}\n' > "$WS/app/src/main/java/demo/App.java" ;;
-    maven)  printf 'package demo;\n\npublic class App {\n    public static String hello() { return "hello 2"; }\n}\n' > "$WS/mproj/src/main/java/demo/App.java" ;;
+    gradle) printf 'package demo;\n\npublic class App {\n    public static void main(String[] args) {\n        System.out.println(Lib.name() + " app 2");\n    }\n}\n' > "$WS/app/src/main/java/demo/App.java" || exit 1 ;;
+    maven)  printf 'package demo;\n\npublic class App {\n    public static String hello() { return "hello 2"; }\n}\n' > "$WS/mproj/src/main/java/demo/App.java" || exit 1 ;;
     *) echo "mutate gradle|maven" >&2; exit 2 ;;
   esac
   ;;
@@ -217,6 +217,7 @@ expect)
                   [ "$DH" -gt 0 ] || fail "main build 2: FROM-CACHE but the server counted no hit"; [ "$DE" = 0 ] || fail "main build 2: the server stored $DE new entries on a repeat build" ;;
     gradle-pr)    [ "$(outcome :lib:compileJava)" = FROM-CACHE ] || fail "pull request: the unchanged module should come from the cache ($(grep compileJava "$LOG" | tr '\n' ';'))"
                   [ "$(outcome :app:compileJava)" = EXECUTED ] || fail "pull request: the changed module should have run"
+                  [ "$DH" -gt 0 ] || fail "pull request: the unchanged module came from the cache but the server counted no hit"
                   [ "$DE" = 0 ] || fail "pull request: the read-only login stored $DE entries" ;;
     gradle-fork)  [ "$(outcome :lib:compileJava)" = EXECUTED ] && [ "$(outcome :app:compileJava)" = EXECUTED ] || fail "fork pull request: both compile tasks should have run without the cache ($(grep compileJava "$LOG" | tr '\n' ';'))"
                   [ "$DE" = 0 ] && [ "$DH" = 0 ] && [ "$((M1-M0))" = 0 ] || fail "fork pull request: the server saw requests (entries $DE, hits $DH, misses $((M1-M0)))" ;;
