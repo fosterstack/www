@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Does a Build Cache Entry Contain My Source Code or Secrets?</title>
+<meta name="description" content="We opened every stored entry from real Gradle builds on FosterStack Cache 0.2.1 and searched for fake secrets. What is stored, what is not, and who can read it.">
+<meta property="og:title" content="Does a Build Cache Entry Contain My Source Code or Secrets?">
+<meta property="og:description" content="We opened every stored entry from real Gradle builds on FosterStack Cache 0.2.1 and searched for fake secrets. What is stored, what is not, and who can read it.">
+<meta property="og:url" content="https://fosterstack.com/does-build-cache-entry-contain-source-code-or-secrets/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="FosterStack">
+<link rel="canonical" href="https://fosterstack.com/does-build-cache-entry-contain-source-code-or-secrets/">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<style>
+  :root {
+    --bg: #ffffff; --fg: #16181d; --muted: #5b6472; --line: #e4e7ec;
+    --accent: #0d7a5f; --accent-fg: #ffffff; --card: #f6f8f9; --warn-bg: #fff7ed; --warn-line: #fdba74;
+    --mark: #0f4d66;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #101318; --fg: #e8eaf0; --muted: #98a2b3; --line: #262c36;
+      --accent: #2fbf95; --accent-fg: #08110e; --card: #171c23; --warn-bg: #241a10; --warn-line: #7c4a12;
+      --mark: #e8eaf0;
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 44rem; margin: 0 auto; padding: 0 1.25rem 4rem; }
+  header.site { max-width: 44rem; margin: 0 auto; padding: 1.25rem; display: flex; align-items: baseline; gap: .6rem; }
+  .logo { font-weight: 700; font-size: 1.05rem; letter-spacing: -.01em; }
+  .logo span { color: var(--accent); }
+  .logo .mark { width: 1.2em; height: 1.2em; vertical-align: -.24em; margin-right: .4em; }
+  .tag { color: var(--muted); font-size: .85rem; }
+  .notice {
+    background: var(--warn-bg); border: 1px solid var(--warn-line); border-radius: 8px;
+    padding: .7rem 1rem; font-size: .92rem; margin: 1.5rem 0 2.5rem;
+  }
+  h1 { font-size: 2rem; line-height: 1.2; letter-spacing: -.02em; margin-bottom: 1rem; }
+  .lede { font-size: 1.12rem; color: var(--muted); margin-bottom: 2rem; }
+  h2 { font-size: 1.25rem; margin: 3rem 0 .9rem; letter-spacing: -.01em; }
+  p + p { margin-top: .8rem; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: .8rem; margin-top: 1rem; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1rem 1.1rem; }
+  .card h3 { font-size: .98rem; margin-bottom: .35rem; }
+  .card p { font-size: .9rem; color: var(--muted); }
+  ul.trust { list-style: none; margin-top: .5rem; }
+  ul.trust li { padding: .45rem 0 .45rem 1.6rem; position: relative; }
+  ul.trust li::before { content: "✓"; position: absolute; left: .2rem; color: var(--accent); font-weight: 700; }
+  code, pre { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .88em; }
+  code { background: var(--card); border: 1px solid var(--line); border-radius: 5px; padding: .1em .35em; }
+  pre code { background: none; border: 0; padding: 0; color: inherit; font-size: 1em; }
+  button {
+    padding: .7rem 1.3rem; font-size: 1rem; font-weight: 600; cursor: pointer;
+    background: var(--accent); color: var(--accent-fg); border: 0; border-radius: 8px;
+  }
+  button:disabled { opacity: .6; cursor: default; }
+  table { width: 100%; border-collapse: collapse; font-size: .92rem; margin-top: 1rem; }
+  th, td { text-align: left; padding: .55rem .6rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  pre { background: #0f172a; color: #e2e8f0; padding: .9rem 1rem; border-radius: 8px;
+        overflow-x: auto; font-size: .9rem; line-height: 1.5; }
+  .cta-row { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1.1rem; }
+  .btn { display: inline-block; padding: .55rem 1rem; border-radius: 8px; font-weight: 600;
+         text-decoration: none; background: var(--accent); color: var(--accent-fg); }
+  .btn-secondary { background: transparent; color: inherit; border: 1px solid var(--muted); }
+  .muted-note { color: var(--muted); font-size: .93rem; margin-top: 1.1rem; }
+  footer { border-top: 1px solid var(--line); margin-top: 4rem; padding: 1.5rem 1.25rem 3rem; }
+  footer div { max-width: 44rem; margin: 0 auto; color: var(--muted); font-size: .82rem; }
+  a { color: var(--accent); }
+  code { overflow-wrap: anywhere; }
+  pre code { overflow-wrap: normal; }
+  .table-scroll { max-width: 100%; overflow-x: auto; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+</style>
+</head>
+<body>
+<header class="site">
+  <div class="logo"><svg class="mark" viewBox="0 0 96 96" aria-hidden="true" focusable="false"><rect x="12" y="14" width="72" height="18" rx="5" fill="var(--mark)"/><rect x="12" y="39" width="48" height="18" rx="5" fill="var(--mark)"/><rect x="12" y="64" width="26" height="18" rx="5" fill="var(--accent)"/></svg>foster<span>stack</span></div>
+  <div class="tag">Infrastructure worth keeping — and kept patched.</div>
+</header>
+<main>
+  <h1>Does a build cache entry contain my source code or secrets?</h1>
+  <p class="lede">In our runs, FosterStack Cache stored what tasks produce, not your source files. That includes class files and anything a test prints, so a secret in an output is in the cache.</p>
+
+  <h2>The short answer</h2>
+  <ul class="trust">
+    <li><strong>Source files were not stored. Class files were.</strong> The compile entry held class files and nothing else from our code. A comment was gone, but a string constant was inside the class file.</li>
+    <li><strong>Test output was stored.</strong> The line our test printed was in four files of the stored test result: the raw output, the HTML report and the XML report with its raw copy.</li>
+    <li><strong>A task's output is stored as the task wrote it.</strong> A value a task used only as an input went into the key, which is a hash of the inputs, and not into the entry. A value the task wrote into its output file was in the entry, in plain text.</li>
+    <li><strong>Resource files and jars were not stored.</strong> Gradle logged <code>Not worth caching</code> for <code>processResources</code> and <code>jar</code>, so our resource file with a fake secret was in no entry.</li>
+    <li><strong>Anyone with a login can fetch an entry if they know its key.</strong> The read-only login fetched one. No login and a wrong password got a <code>401</code>. We found no way to list keys over HTTP.</li>
+    <li><strong>The build machine's host name was in the test report. Paths and the user name were not.</strong> The host name was in the XML report. Each entry also holds a small metadata file with a build id, a time, the Gradle version and the task name.</li>
+  </ul>
+
+  <h2>What to do</h2>
+  <p>Our advice, not a test result:</p>
+  <ul>
+    <li><strong>Treat read access to the cache like read access to your build outputs.</strong> Class files can be decompiled, and they keep string constants.</li>
+    <li><strong>Do not print secrets in tests, and do not write them into task outputs.</strong> Both end up in the cache. Test reports also name the machine that ran them.</li>
+    <li><strong>Keep secrets out of Java constants.</strong> A constant lives on in the class file, in the cache and in your jar.</li>
+    <li><strong>Declare an environment variable as a task input if the task reads it.</strong> We changed one that a task read without declaring it, and the old result came back from the cache.</li>
+    <li><strong>Give developers the read-only login and give CI the read-write login.</strong> See <a href="/gradle-build-cache-ci-writes-developers-read/">let CI write and developers read</a>. One login reaches every project on a server, so use one server per group that must not share. See <a href="/several-projects-share-one-build-cache-server/">several projects on one server</a>.</li>
+    <li><strong>Use HTTPS when the server is not on your own machine.</strong> Our runs used plain HTTP to a server on the same Mac. See <a href="/gradle-remote-build-cache-private-ca-https/">use your build cache over HTTPS with a private CA</a>.</li>
+  </ul>
+  <p>What each task stores is on <a href="/what-gradle-stores-in-build-cache/">know what your Gradle build cache stores</a>. Who can change entries is on <a href="/can-someone-poison-our-build-cache/">can someone poison our shared build cache</a>.</p>
+
+  <h2>How we checked</h2>
+  <p>FosterStack Cache 0.2.1 on a Mac (arm64) with a login turned on. Gradle 9.8.0 and Java 21 built a small project twice, each time from a fresh copy, with the local build cache off. Every secret was made up. We stopped the server, opened every file in its data folder with <code>gunzip</code> and <code>tar</code>, and searched each entry, and each file inside it, for each fake secret. Each row is what we found in these two builds.</p>
+  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
+    <thead><tr><th>What we put in</th><th>Where it showed up in the stored entries</th></tr></thead>
+    <tbody>
+      <tr><td>A string constant in a Java source file</td><td>Inside the class file of the compile entry. Also inside the class file of the test compile entry, which uses it</td></tr>
+      <tr><td>A fake key in a Java comment</td><td>In no entry</td></tr>
+      <tr><td>The <code>.java</code> files themselves</td><td>Not in any entry</td></tr>
+      <tr><td>A resource file with a fake secret, packaged into the jar</td><td>In no entry. <code>processResources</code> and <code>jar</code> were not cached</td></tr>
+      <tr><td>Text printed by a test</td><td>In the test entry, in four files: <code>output-events.bin</code> (twice, once in the results folder and once in the XML folder), the HTML report and the XML report. It was also inside the test's class file in the test compile entry, because the text was a string in the test source</td></tr>
+      <tr><td>A fake secret as a string in <code>build.gradle.kts</code>, passed to a task as an input</td><td>In no entry. The task wrote only its length</td></tr>
+      <tr><td>An environment variable, declared as a task input</td><td>In no entry. The task wrote only its length. We changed the value and built again: the task ran and stored a second entry under a different key</td></tr>
+      <tr><td>An environment variable the task reads but does not declare</td><td>In no entry. We changed it from 25 to 33 characters and built again: the task came <code>FROM-CACHE</code> with the old result, <code>length=25</code></td></tr>
+      <tr><td>An environment variable, declared, and written by the task into its output file</td><td>In that task's entry, as <code>value=</code> followed by the text</td></tr>
+      <tr><td>A <code>gradle.properties</code> value used as a declared input</td><td>In no entry. The task wrote only its length</td></tr>
+      <tr><td>The cache password, as a string in <code>settings.gradle.kts</code></td><td>In no entry, not in the server's index file and not in the server log</td></tr>
+      <tr><td>The project folder, the home folder and the user name</td><td>In no entry</td></tr>
+      <tr><td>The host name of the build machine</td><td>In the test entry, in the <code>hostname</code> attribute of the XML report. In no other entry</td></tr>
+      <tr><td>The entry files on disk</td><td>Gzip-compressed tar archives, not encrypted. A 32-character hex key names each one, in a folder named for its first two characters. On this Mac the files were readable only by their owner (<code>0600</code>), which the server's code asks for</td></tr>
+      <tr><td>The metadata file in each entry</td><td>Build id, creation time, execution time, Gradle version, task name and type. Nothing else</td></tr>
+      <tr><td>Read-only login, <code>GET</code> of a stored key</td><td><code>200</code>, 1,982 bytes. <code>HEAD</code> gave <code>200</code>, <code>PUT</code> gave <code>403</code>, an unknown key gave <code>404</code></td></tr>
+      <tr><td>No login, and a wrong password, <code>GET</code> of a stored key</td><td><code>401</code> both times</td></tr>
+      <tr><td>Looking for a list of keys: <code>/</code>, <code>/statusz</code>, <code>/metrics</code>, <code>/healthz</code>, <code>/list</code>, <code>/?list</code>, <code>/keys</code>, <code>/index</code>, <code>/_list</code>, <code>/.keys</code>, <code>/v1/</code>, <code>/cache/</code></td><td>The front page (also for <code>/?list</code>) showed the version and uptime. <code>/statusz</code> showed counts and <code>/metrics</code> showed counters. <code>/healthz</code> said ok. None of them showed a key. The other paths gave <code>404</code> or <code>400</code></td></tr>
+    </tbody>
+  </table></div>
+  <p class="muted-note">Keys appear in Gradle's own <code>-i</code> output, and the server's index file holds them, so a key is not a secret from someone who can read your build logs or the server's files.</p>
+  <p class="muted-note">Not tested: Maven, Kotlin and Android builds, cacheable packaging tasks such as a shaded jar, which may store your resources, other Gradle plugins, other releases, Linux and Docker file permissions, and entries from builds with a different Java version.</p>
+</main>
+<footer>
+  <div>
+    <p>FosterStack is not affiliated with, endorsed by, or sponsored by Gradle Inc.
+    "Gradle" and "Develocity" are trademarks of Gradle Inc., used here only to identify
+    compatibility. FosterStack contains no Gradle Inc. code; it is a clean-room implementation
+    of the documented remote build cache HTTP protocol. Apache Maven is a trademark of the
+    Apache Software Foundation; the Maven Build Cache Extension is Apache's project, not
+    ours.</p>
+    <p style="margin-top:.6rem">© 2026 FosterStack · <a href="/build-cache-node-end-of-life/">Build Cache Node end of life</a> · <a href="/migrate-build-cache-node/">Migrate</a> · <a href="/build-cache-node-faq/">FAQ</a> · <a href="/jenkins-ci-build-cache/">CI setup</a> · <a href="/how-we-build/">How we build</a> · <a href="/regulated/">For regulated markets</a> · <a href="https://github.com/fosterstack/cache">github.com/fosterstack/cache</a> · <a href="mailto:hello@fosterstack.com">hello@fosterstack.com</a></p>
+  </div>
+</footer>
+</body>
+</html>
