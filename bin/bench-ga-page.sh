@@ -295,3 +295,6 @@ finish)
   ;;
 *) echo "usage: $0 setup|event|fresh|mutate|expect|extra|finish" >&2; exit 2 ;;
 esac
+# every subcommand that did not exit above succeeded: do not let the status of a last guarded command (for example a log tail of a file
+# that does not exist in this case) decide whether the step passes; the checks record their own failures and "finish" turns them red
+exit 0
