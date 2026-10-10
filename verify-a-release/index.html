@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Verify a FosterStack Cache release yourself</title>
-<meta name="description" content="Check a FosterStack Cache release with commands you run: checksum and image signatures, build provenance, SBOM and VEX, with real output from release 0.2.1.">
+<meta name="description" content="Check a FosterStack Cache release yourself: checksum, container image signature with cosign, build provenance, SBOM and VEX, with real output from 0.2.1.">
 <meta property="og:title" content="Verify a FosterStack Cache release yourself">
-<meta property="og:description" content="Check a FosterStack Cache release with commands you run: checksum and image signatures, build provenance, SBOM and VEX, with real output from release 0.2.1.">
+<meta property="og:description" content="Check a FosterStack Cache release yourself: checksum, container image signature with cosign, build provenance, SBOM and VEX, with real output from 0.2.1.">
 <meta property="og:url" content="https://fosterstack.com/verify-a-release/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="FosterStack">
@@ -87,12 +87,15 @@
 </header>
 <main>
   <h1>Verify a FosterStack Cache release yourself</h1>
-  <p class="lede">Check our signature, build provenance, SBOM and vulnerability statements with commands you run yourself. Every command below was run against release 0.2.1, and the output shown is what it printed. No account is needed except where we say so.</p>
+  <p class="lede">Check our signature, build provenance, SBOM and vulnerability statements with commands you run yourself. That includes checking that a container image was signed by our release workflow and built by GitHub's CI, using <code>cosign</code> and the <code>gh</code> tool. No account is needed except where we say so.</p>
 
   <h2>What you need</h2>
   <p><code>cosign</code>, the <code>gh</code> tool (for the build-provenance steps), and <code>jq</code>. Set the version and your platform once:</p>
   <pre tabindex="0"><code>$ VER=0.2.1
 PLATFORM=linux_arm64   # or linux_amd64, darwin_arm64, darwin_amd64</code></pre>
+  <p>To check the latest release instead of 0.2.1, set <code>VER</code> from GitHub with this command in place of the first line above:</p>
+  <pre tabindex="0"><code>VER=$(curl -fsSL https://api.github.com/repos/fosterstack/cache/releases/latest \
+        | sed -n 's/.*"tag_name": *"v\([^"]*\)".*/\1/p')</code></pre>
 
   <h2>1. Download the release files</h2>
   <pre tabindex="0"><code>$ gh release download v${VER} --repo fosterstack/cache \
@@ -116,8 +119,8 @@ Verified OK</code></pre>
 fscache_0.2.1_linux_arm64.tar.gz: OK</code></pre>
   <p>Steps 2 and 3 together are the important pair. The checksum alone only shows the archive matches a file you downloaded beside it. The signature is what ties that file to us.</p>
 
-  <h2>4. Is the container image signed by our release workflow?</h2>
-  <p>Pin the workflow and the release tag, not "any workflow in the repository". No account is needed.</p>
+  <h2 id="verify-container-image-signature-cosign">4. Verify a container image signature with cosign</h2>
+  <p>This answers one question: did our release workflow sign these exact bytes? Pin the workflow and the release tag, not "any workflow in the repository". No account is needed.</p>
   <pre tabindex="0"><code>$ cosign verify ghcr.io/fosterstack/cache:${VER} \
   --certificate-identity-regexp=&quot;^https://github.com/fosterstack/cache/.github/workflows/stage-promote.yml@refs/tags/v${VER}$&quot; \
   --certificate-oidc-issuer=&#x27;https://token.actions.githubusercontent.com&#x27;
@@ -217,12 +220,14 @@ fips sha256:e125fe3f6ed2c18c478453300ba2b787a42999edf66a39403877efb39865ab1b</co
   <ul class="trust">
     <li>A valid signature proves who signed these exact bytes.</li>
     <li>Build provenance proves which repository, workflow and run produced them, which is a public CI run and not a developer machine.</li>
+    <li>Neither says the image was scanned or tested. Those are separate signed statements attached to the same image digest, and you can verify them the same way.</li>
     <li>The SBOM and VEX files are statements we publish. They are as trustworthy as the signature on the release that carries them.</li>
     <li>None of this proves the software has no bugs or that no vulnerability exists. It proves the release is the one we built, in the way we describe.</li>
   </ul>
-  <p>The workflow names above belong to release 0.2.1. They are version-scoped, so for older releases use the <a href="https://github.com/fosterstack/cache/blob/main/docs/verify-images.md">verification guide</a>.</p>
+  <h2>How we checked</h2>
+  <p>Every command above was run against release 0.2.1, and the output shown is what it printed. The workflow names belong to release 0.2.1. They are version-scoped, so for older releases use the <a href="https://github.com/fosterstack/cache/blob/main/docs/verify-images.md">verification guide</a>.</p>
 
-  <p class="muted-note">Related: <a href="/verify-container-image-signature-cosign/">verify a container image signature with cosign</a> and <a href="/how-we-build/">how releases are built and signed</a>.</p>
+  <p class="muted-note">Related: <a href="/how-we-build/">how releases are built and signed</a> and <a href="/air-gapped-build-cache-install/">installing on an air-gapped network</a>.</p>
   <div class="cta-row">
     <a class="btn" href="https://github.com/fosterstack/cache/releases">Releases on GitHub</a>
     <a class="btn btn-secondary" href="/">FosterStack home</a>

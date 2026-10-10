@@ -94,7 +94,7 @@
   <pre tabindex="0"><code>FSCACHE_ADDR=127.0.0.1:8080 FSCACHE_DATA_DIR=./data \
   FSCACHE_USERNAME=gradle FSCACHE_PASSWORD=demo-pass \
   FSCACHE_MAX_BYTES=1073741824 ./fscache</code></pre>
-  <p>Prefer a container? <a href="/gradle-build-cache-docker-compose/">Gradle build cache with Docker Compose</a> has the same settings. (My test run used port 18090 instead of 8080; the outputs below do not show the port.)</p>
+  <p>Prefer a container? <a href="/build-cache-docker-compose-production/#gradle-build-cache-docker-compose">Gradle build cache with Docker Compose</a> has the same settings. (My test run used port 18090 instead of 8080; the outputs below do not show the port.)</p>
 
   <h2>2. A small project</h2>
   <p>Four files. <code>settings.gradle.kts</code> says where the cache is:</p>
@@ -171,7 +171,7 @@ BUILD SUCCESSFUL in 5s
 Using insecure protocols with remote build cache, without explicit opt-in, is unsupported.</code></pre>
   <p>Gradle refuses plain <code>http://</code> unless you set <code>isAllowInsecureProtocol = true</code>. With Gradle 9.8.0, the address <code>127.0.0.1</code> was allowed without it, but the name <code>localhost</code> was refused, with or without a <code>credentials</code> block. That is why the file above uses <code>127.0.0.1</code>. For a real server, use HTTPS and skip the opt-in. Gradle sends the password with every request.</p>
 
-  <p class="muted-note">If your second build shows no <code>FROM-CACHE</code>, work through <a href="/gradle-remote-cache-not-working/">Gradle remote build cache not working</a>. The status codes are explained in <a href="/gradle-build-cache-http-status-codes/">Gradle build cache HTTP status codes</a>.</p>
+  <p class="muted-note">If your second build shows no <code>FROM-CACHE</code>, work through <a href="/gradle-remote-cache-not-working/">Gradle remote build cache not working</a>. The status codes are explained in <a href="/gradle-remote-build-cache-authentication/#gradle-build-cache-http-status-codes">Gradle build cache HTTP status codes</a>.</p>
   <div class="cta-row">
     <a class="btn" href="/migrate-build-cache-node/">Gradle and Maven setup</a>
     <a class="btn btn-secondary" href="/">FosterStack home</a>

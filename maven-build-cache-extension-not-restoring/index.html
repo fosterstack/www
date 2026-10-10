@@ -135,7 +135,7 @@ Unable to parse cache xml element: Unrecognised tag: &#x27;remote&#x27; ...</cod
   <p>With a password on the server, <code>~/.m2/settings.xml</code> needs a matching <code>&lt;server&gt;</code> entry with <code>&lt;id&gt;fosterstack-cache&lt;/id&gt;</code>. The full walk-through is in <a href="/maven-remote-build-cache-setup/">Maven build cache extension: remote server setup</a>.</p>
 
   <h2>Check the server's side</h2>
-  <p>The status page counts what arrived. After the healthy first build it showed <code>store_entries: 3</code>, and after the restoring build <code>cache_hits: 2</code>. If those stay at zero while your builds run, the problem is between Maven and the server, not in the project. See <a href="/gradle-build-cache-http-status-codes/">the HTTP status codes</a>.</p>
+  <p>The status page counts what arrived. After the healthy first build it showed <code>store_entries: 3</code>, and after the restoring build <code>cache_hits: 2</code>. If those stay at zero while your builds run, the problem is between Maven and the server, not in the project. See <a href="/gradle-remote-build-cache-authentication/#gradle-build-cache-http-status-codes">the HTTP status codes</a>.</p>
 
   <p class="muted-note">I did not test other Maven versions, or extension 1.2.0.</p>
   <div class="cta-row">

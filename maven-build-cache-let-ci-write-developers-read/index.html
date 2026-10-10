@@ -145,7 +145,7 @@ org.apache.http.client.HttpResponseException: status code: 403, reason phrase: F
   <p>The developer gets no speed-up, and nothing breaks. If every build looks like this, check the <code>settings.xml</code> login and that its id matches the config.</p>
 
   <h2>What this does not give you</h2>
-  <p>There is no per-person identity. Everyone who holds the read-write login is the same writer, so keep it to CI. Our advice, not a test result: use HTTPS, keep the CI password in your CI secret store and never in the repository. See <a href="/remote-build-cache-security/">who can write to a remote build cache</a>. For the same setup in Gradle, see <a href="/gradle-build-cache-ci-writes-developers-read/">let CI write, developers only read</a>. To see why laptops then reuse CI's work, see <a href="/laptop-builds-reuse-ci-build-cache/">your laptop builds reuse what CI already built</a>.</p>
+  <p>There is no per-person identity. Everyone who holds the read-write login is the same writer, so keep it to CI. Our advice, not a test result: use HTTPS, keep the CI password in your CI secret store and never in the repository. See <a href="/can-someone-poison-our-build-cache/#remote-build-cache-security">who can write to a remote build cache</a>. For the same setup in Gradle, see <a href="/gradle-build-cache-ci-writes-developers-read/">let CI write, developers only read</a>. To see why laptops then reuse CI's work, see <a href="/laptop-builds-reuse-ci-build-cache/">your laptop builds reuse what CI already built</a>.</p>
 
   <h2>How we checked</h2>
   <p>We ran each case below against a real server with both logins.</p>

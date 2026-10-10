@@ -3,3 +3,15 @@
 # tracked here is public and is served, dot-prefixed folders included. Until
 # publication, any stray inbound link lands on the homepage instead of a 404.
 /bcn-removed/* / 302
+
+# Wave 1 consolidation (approved): each removed page redirects to its survivor. Two lines each: a rule with a trailing slash does not match the URL without one.
+/remote-build-cache-security/ /can-someone-poison-our-build-cache/#remote-build-cache-security 301
+/remote-build-cache-security /can-someone-poison-our-build-cache/#remote-build-cache-security 301
+/gradle-build-cache-http-status-codes/ /gradle-remote-build-cache-authentication/#gradle-build-cache-http-status-codes 301
+/gradle-build-cache-http-status-codes /gradle-remote-build-cache-authentication/#gradle-build-cache-http-status-codes 301
+/verify-container-image-signature-cosign/ /verify-a-release/#verify-container-image-signature-cosign 301
+/verify-container-image-signature-cosign /verify-a-release/#verify-container-image-signature-cosign 301
+/long-term-support-build-cache/ /security/#long-term-support-build-cache 301
+/long-term-support-build-cache /security/#long-term-support-build-cache 301
+/gradle-build-cache-docker-compose/ /build-cache-docker-compose-production/#gradle-build-cache-docker-compose 301
+/gradle-build-cache-docker-compose /build-cache-docker-compose-production/#gradle-build-cache-docker-compose 301

@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Can Someone Poison Our Shared Build Cache?</title>
-<meta name="description" content="Real runs against a shared Gradle build cache: what the write login can change, what the read-only login refuses, and why isPush false is no lock.">
+<meta name="description" content="Is a shared build cache safe? Real runs: what the write login can change, what the read-only login refuses, and why isPush false is no lock.">
 <meta property="og:title" content="Can Someone Poison Our Shared Build Cache?">
-<meta property="og:description" content="Real runs against a shared Gradle build cache: what the write login can change, what the read-only login refuses, and why isPush false is no lock.">
+<meta property="og:description" content="Is a shared build cache safe? Real runs: what the write login can change, what the read-only login refuses, and why isPush false is no lock.">
 <meta property="og:url" content="https://fosterstack.com/can-someone-poison-our-build-cache/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="FosterStack">
@@ -100,17 +100,25 @@
     <li><strong>Turning off uploads in Gradle (<code>isPush = false</code>) does not protect the cache.</strong> With it set, the build uploaded nothing, but the write login could still write entries with a direct request.</li>
   </ul>
 
+  <h2 id="remote-build-cache-security">Is a remote build cache safe? Who can write to it</h2>
+  <p>Two kinds of failure, as background and not a test result:</p>
+  <ul class="trust">
+    <li><strong>Down, empty or unreachable.</strong> Builds run slower. Nothing is lost and nothing is wrong. A build cache is only slower in this case. See <a href="/build-cache-server-down-what-happens/">what happens to my build when the cache server is down</a>.</li>
+    <li><strong>Serving wrong files.</strong> If something untrusted can write to the cache, it can change what later builds use as task outputs. This is a different class of problem, and it is the one to plan for.</li>
+  </ul>
+
   <h2>What to do</h2>
   <p>Our advice, not a test result:</p>
   <ul style="padding-left:1.25rem">
-    <li><strong>Give the write login to as few machines as you can.</strong> Usually that means CI only.</li>
-    <li><strong>Give everyone else the read-only login.</strong> That includes laptops. The setup is on <a href="/gradle-build-cache-ci-writes-developers-read/">let CI write, developers only read</a>.</li>
+    <li><strong>Turn on Basic Auth anywhere untrusted parties could reach the port.</strong></li>
+    <li><strong>Give the write login to as few machines as you can.</strong> Usually that means CI only, plus the developers you already trust to change your code.</li>
+    <li><strong>Give everyone else the optional read-only login.</strong> That includes laptops. The setup is on <a href="/gradle-build-cache-ci-writes-developers-read/">let CI write, developers only read</a>, and the CI wiring is on <a href="/jenkins-ci-build-cache/">Jenkins and CI build cache</a>.</li>
     <li><strong>Keep builds of untrusted code on the read-only login.</strong> An example is a pull request from a fork.</li>
     <li><strong>Do not count on <code>isPush = false</code>.</strong> It only controls whether your own build uploads. The login is what the server enforces.</li>
-    <li><strong>Use HTTPS.</strong> Gradle sends the login with its requests. See <a href="/remote-build-cache-security/">is a remote build cache safe</a>.</li>
+    <li><strong>Use HTTPS, on a network you control.</strong> Gradle sends the login with its requests.</li>
     <li><strong>If you doubt an entry, clear the cache.</strong> See <a href="/reset-gradle-build-cache/">how to clear or reset a build cache</a>.</li>
   </ul>
-  <p>FosterStack Cache has one write login and one read-only login. We did not test whether the server records who wrote an entry.</p>
+  <p>FosterStack Cache has one write login and one read-only login. There is no per-person identity: a write login is shared by whoever holds it, so the login alone does not say which writer did what. We did not test whether the server records who wrote an entry.</p>
 
   <h2>How we checked</h2>
   <p>We ran a real FosterStack Cache server with a write login and a read-only login. We built a project, then tried each login against the stored entries with plain HTTP requests.</p>
@@ -132,6 +140,7 @@
   <p class="muted-note">What the damaged entry did: Gradle stopped with <code>Failed to load cache entry ... Could not load from remote cache: Not in GZIP format</code>. It did not skip the entry and compile instead.</p>
   <p class="muted-note">Setup: FosterStack Cache 0.2.1 and Gradle 9.8.0 on a Mac (arm64), Temurin 21.0.12.1, all on one machine over plain HTTP on the loopback address. The project had four modules, 12 small classes each. Every build used a fresh copy of the project and a new empty Gradle home, with Gradle's local cache off, so only the server could supply results.</p>
   <p class="muted-note">Limits: one server and one small project. Gradle only, not Maven. No HTTPS. We tested what each login can do to an entry. We did not test how anyone would get a login.</p>
+  <p class="muted-note">Related: <a href="/security/">security policy</a>.</p>
 </main>
 <footer>
   <div>

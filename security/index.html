@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Security policy: how to report a vulnerability</title>
-<meta name="description" content="How to report a security problem in FosterStack Cache or this website, what we aim for on fixes, and the signed files we publish with each release.">
+<meta name="description" content="How to report a security problem in FosterStack Cache or this website, what we aim for on fixes, which version is supported, and the signed files we publish.">
 <meta property="og:title" content="Security policy: how to report a vulnerability">
-<meta property="og:description" content="How to report a security problem in FosterStack Cache or this website, what we aim for on fixes, and the signed files we publish with each release.">
+<meta property="og:description" content="How to report a security problem in FosterStack Cache or this website, what we aim for on fixes, which version is supported, and the signed files we publish.">
 <meta property="og:url" content="https://fosterstack.com/security/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="FosterStack">
@@ -87,7 +87,7 @@
 </header>
 <main>
   <h1>Security policy: how to report a vulnerability</h1>
-  <p class="lede">Found a security problem in FosterStack Cache or on this website? Tell us privately. Here is how, what happens next, and what we sign and publish so you can check our work.</p>
+  <p class="lede">Found a security problem in FosterStack Cache or on this website? Tell us privately. Here is how, what happens next, which version gets fixes, and what we sign and publish so you can check our work.</p>
 
   <h2>Report a vulnerability</h2>
   <ul class="trust">
@@ -99,7 +99,15 @@
 
   <h2>What we aim for</h2>
   <p>Vulnerable dependencies fixed fast — our target is 48 hours from disclosure. Security patches are never withheld from the free tier: the same fix ships to everyone on the same day.</p>
-  <p>The supported version is the latest minor release.</p>
+
+  <h2 id="long-term-support-build-cache">Long-term support: what is supported</h2>
+  <p>"LTS" means a version that keeps getting fixes for a stated period, so you can stay on it. The supported version is the latest minor release. That is the whole policy. There is no separate long-term-support line, no list of older versions that get fixes, and no support period to quote.</p>
+  <ul class="trust">
+    <li>To get a fix, move to the latest release. Older releases are not on the supported list.</li>
+    <li>Pin the image to an exact version or digest, not <code>latest</code>, so a deploy never changes without you choosing it.</li>
+    <li>Upgrade on a routine. A build cache is disposable, so an upgrade that goes wrong costs you slower builds while it refills, not lost work.</li>
+    <li>Watch the repository's releases on GitHub. It is the one notice channel, and you can stop at any time. We do not collect email.</li>
+  </ul>
 
   <h2>What we sign and publish</h2>
   <p>Releases are built only in CI. Each one comes with files you can check without an account:</p>
@@ -119,8 +127,9 @@
 
   <h2>What we do not claim</h2>
   <ul class="trust">
-    <li>The server has a read-write login and an optional read-only login. There is no per-person identity yet.</li>
+    <li>The server has a read-write login and an optional read-only login. There is no per-person identity.</li>
     <li>The paid tiers are not built.</li>
+    <li>We are not announcing an LTS line, a support period, or a date. The project is early.</li>
   </ul>
 
   <p class="muted-note">Machine-readable contact: <a href="/.well-known/security.txt">security.txt</a>.</p>

@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Production build cache: Docker Compose, nginx and TLS</title>
-<meta name="description" content="A Compose file for a self-hosted build cache behind nginx with TLS and a password, run for real on 0.2.1 and Gradle 9.8.0, with what was and was not tested.">
-<meta property="og:title" content="Production build cache: Docker Compose, nginx and TLS">
-<meta property="og:description" content="A Compose file for a self-hosted build cache behind nginx with TLS and a password, run for real on 0.2.1 and Gradle 9.8.0, with what was and was not tested.">
+<title>Docker Compose build cache: quick start and production</title>
+<meta name="description" content="Run a shared build cache with Docker Compose: a quick start with a password and size limit, then nginx and TLS. The HTTPS setup was run for real on 0.2.1.">
+<meta property="og:title" content="Docker Compose build cache: quick start and production">
+<meta property="og:description" content="Run a shared build cache with Docker Compose: a quick start with a password and size limit, then nginx and TLS. The HTTPS setup was run for real on 0.2.1.">
 <meta property="og:url" content="https://fosterstack.com/build-cache-docker-compose-production/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="FosterStack">
@@ -87,16 +87,54 @@
   <div class="tag">Infrastructure worth keeping — and kept patched.</div>
 </header>
 <main>
-  <h1>Production build cache: Docker Compose, nginx and TLS</h1>
-  <p class="lede">A Compose file for a shared build cache that only answers over HTTPS, with a password, behind nginx. Everything here was run for real on FosterStack Cache 0.2.1 and Gradle 9.8.0. The exact list of what was and was not tested is just below.</p>
+  <h1>Docker Compose build cache: quick start and production</h1>
+  <p class="lede">Run a shared Gradle build cache for your team in one Compose file, with a password and a size limit. For real use, put an HTTPS proxy in front: Gradle sends the password with every request.</p>
 
-  <h2>What was tested, and what was not</h2>
+  <h2 id="gradle-build-cache-docker-compose">Gradle build cache with Docker Compose</h2>
+  <p>Our advice, not a test result. This is the shape we suggest once you go past a first trial.</p>
+
+  <h2>Try it first, on one machine</h2>
+  <pre tabindex="0"><code>docker run -d -p 127.0.0.1:8080:8080 -v fscache-data:/home/nonroot ghcr.io/fosterstack/cache:latest</code></pre>
+  <p>The <code>127.0.0.1:</code> keeps it reachable from this machine only. A bare <code>-p 8080:8080</code> opens the port to every network interface, and on a cloud host that is a cache anyone can write to the moment the command returns. Pin a version tag instead of <code>latest</code> for anything real.</p>
+
+  <h2>Quick start: the Compose file</h2>
+  <p>This one is open to your CI runners, so it has a password on purpose. A cache that untrusted people can write to can feed files into your builds.</p>
+  <pre tabindex="0"><code>services:
+  fscache:
+    image: ghcr.io/fosterstack/cache:latest   # pin a version tag
+    restart: unless-stopped
+    ports:
+      - "8080:8080"                    # all interfaces, so auth is on
+    volumes:
+      - fscache-data:/home/nonroot
+    environment:
+      FSCACHE_MAX_BYTES: "53687091200"   # 50 GiB, size to your CI volume
+      FSCACHE_USERNAME: gradle
+      FSCACHE_PASSWORD: change-me        # generate one: openssl rand -base64 24
+
+volumes:
+  fscache-data:</code></pre>
   <ul class="trust">
-    <li><strong>Tested:</strong> the two files below, with Docker Compose on a Mac, nginx 1.29 as the proxy, a <strong>self-signed</strong> certificate for <code>localhost</code>, and a real Gradle build over HTTPS.</li>
-    <li><strong>Not tested:</strong> a certificate from a public authority or automatic renewal, a public server on port 443, other proxies or load balancers, Kubernetes ingress, and long-running use.</li>
+    <li>The data volume mounts at <code>/home/nonroot</code>, not <code>/data</code>. The server runs as a non-root user.</li>
+    <li><code>FSCACHE_MAX_BYTES</code> is in bytes. 50 GiB is <code>53687091200</code>. See <a href="/build-cache-server-sizing/">server sizing</a> for more values.</li>
   </ul>
 
-  <h2>compose.yaml</h2>
+  <h2>Check it works, with no Gradle project</h2>
+  <pre tabindex="0"><code>curl -s localhost:8080/healthz                                   # ok
+curl -s -X PUT --data-binary 'hello' localhost:8080/testkey123   # 201
+curl -s localhost:8080/testkey123                                # hello</code></pre>
+  <p>Add <code>-u gradle:your-password</code> to those calls once you have set a password.</p>
+
+  <h2>Point Gradle at it</h2>
+  <p>Use the settings from our <a href="/migrate-build-cache-node/">Gradle and Maven setup</a> page, and turn caching on with <code>org.gradle.caching=true</code>. If nothing comes from the cache, work through <a href="/gradle-remote-cache-not-working/">Gradle remote build cache not working</a>.</p>
+
+  <h2>Health checks</h2>
+  <p>The container image has no shell, so there is no health check inside the Compose file. Probe <code>/healthz</code> from outside: your orchestrator's HTTP check, a monitor, or <code>curl -f http://localhost:8080/healthz</code> from the host.</p>
+
+  <h2>Production: nginx and TLS in front</h2>
+  <p>A Compose file for a shared build cache that only answers over HTTPS, with a password, behind nginx. It was run for real on FosterStack Cache 0.2.1 and Gradle 9.8.0.</p>
+
+  <h2>Production: compose.yaml</h2>
   <pre tabindex="0"><code>services:
   fscache:
     image: ghcr.io/fosterstack/cache:0.2.1
@@ -122,9 +160,9 @@
 
 volumes:
   fscache-data:</code></pre>
-  <p>The cache has no <code>ports</code> entry on purpose. Only the proxy is reachable from outside. Generate a real password, for example with <code>openssl rand -base64 24</code>, and never keep <code>change-me</code>.</p>
+  <p>Generate a real password, for example with <code>openssl rand -base64 24</code>, and never keep <code>change-me</code>.</p>
 
-  <h2>nginx.conf</h2>
+  <h2>Production: nginx.conf</h2>
   <pre tabindex="0"><code>server {
     listen 443 ssl;
     server_name localhost;
@@ -139,9 +177,24 @@ volumes:
         proxy_set_header Host $host;
     }
 }</code></pre>
-  <p>The <code>client_max_body_size</code> line matters. See the tests below.</p>
+  <p>The <code>client_max_body_size</code> line matters. See How we checked, below.</p>
 
-  <h2>What I checked, and what I saw</h2>
+  <h2>Gradle over HTTPS</h2>
+  <p>In our runs, with a certificate Gradle does not trust, the build still succeeds, but without the cache, and prints:</p>
+  <pre tabindex="0"><code>Could not load entry d4f2de693b561fd2c5d60b17a9232d6f from remote build cache: (certificate_unknown) PKIX path building failed: sun.security.provider.certpath.SunCertPathBuilderException: unable to find valid certification path to requested target</code></pre>
+  <p>For my self-signed test certificate I made Java trust it:</p>
+  <pre tabindex="0"><code>keytool -importcert -alias fsprod -file certs/cert.pem -keystore trust.jks -storepass changeit -noprompt
+
+# gradle.properties
+systemProp.javax.net.ssl.trustStore=/path/to/trust.jks
+systemProp.javax.net.ssl.trustStorePassword=changeit</code></pre>
+  <p>In our runs, with that, the first build ran <code>:compileJava</code> and the second printed <code>&gt; Task :compileJava FROM-CACHE</code>, through the proxy, over HTTPS, with the password. With a certificate from an authority Java already trusts you would not need the truststore lines. The Gradle side of the setup is in <a href="/gradle-build-cache-tutorial/">the tutorial</a>.</p>
+
+  <h2>How we checked</h2>
+  <ul class="trust">
+    <li><strong>Tested:</strong> the two production files above, with Docker Compose on a Mac, nginx 1.29 as the proxy, a <strong>self-signed</strong> certificate for <code>localhost</code>, and a real Gradle build over HTTPS.</li>
+    <li><strong>Not tested:</strong> a certificate from a public authority or automatic renewal, a public server on port 443, other proxies or load balancers, Kubernetes ingress, and long-running use.</li>
+  </ul>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <tr><th>Check</th><th>Result</th></tr>
     <tr><td><code>https://localhost:8443/healthz</code> with the certificate trusted</td><td><code>ok</code></td></tr>
@@ -153,22 +206,12 @@ volumes:
     <tr><td>Uploads of about 1 MB and 2 MB with nginx's default settings</td><td><strong>413</strong> from nginx, not from the cache</td></tr>
     <tr><td>The same uploads, and 20 MB, after <code>client_max_body_size 1g;</code></td><td>201 each</td></tr>
   </table></div>
-  <p>The size limit is the one to watch. nginx rejects bodies over 1 MB by default, and Gradle's cache entries are often bigger, so uploads of larger entries would be refused. The cache itself accepts up to 1 GiB per entry by default, which is why the example uses <code>1g</code>. See <a href="/gradle-build-cache-http-status-codes/">the status codes page</a>.</p>
+  <p>The size limit is the one to watch. nginx rejects bodies over 1 MB by default, and Gradle's cache entries are often bigger, so uploads of larger entries would be refused. The cache itself accepts up to 1 GiB per entry by default, which is why the example uses <code>1g</code>. See <a href="/gradle-remote-build-cache-authentication/">authentication and status codes</a>.</p>
 
-  <h2>Gradle over HTTPS</h2>
-  <p>With a certificate Gradle does not trust, the build still succeeds, but without the cache, and prints:</p>
-  <pre tabindex="0"><code>Could not load entry d4f2de693b561fd2c5d60b17a9232d6f from remote build cache: (certificate_unknown) PKIX path building failed: sun.security.provider.certpath.SunCertPathBuilderException: unable to find valid certification path to requested target</code></pre>
-  <p>For my self-signed test certificate I made Java trust it:</p>
-  <pre tabindex="0"><code>keytool -importcert -alias fsprod -file certs/cert.pem -keystore trust.jks -storepass changeit -noprompt
-
-# gradle.properties
-systemProp.javax.net.ssl.trustStore=/path/to/trust.jks
-systemProp.javax.net.ssl.trustStorePassword=changeit</code></pre>
-  <p>With that, the first build ran <code>:compileJava</code> and the second printed <code>&gt; Task :compileJava FROM-CACHE</code>, through the proxy, over HTTPS, with the password. With a certificate from an authority Java already trusts you would not need the truststore lines. The Gradle side of the setup is in <a href="/gradle-build-cache-tutorial/">the tutorial</a>.</p>
-
-  <p class="muted-note">Related: <a href="/gradle-build-cache-docker-compose/">Gradle build cache with Docker Compose</a> and <a href="/remote-build-cache-security/">who can write to a remote build cache</a>.</p>
+  <p class="muted-note">Related: <a href="/can-someone-poison-our-build-cache/">can someone poison our shared build cache</a>. Full detail: <a href="https://github.com/fosterstack/cache/blob/main/docs/docker-deploy.md">Docker deploy guide</a>.</p>
   <div class="cta-row">
     <a class="btn" href="/first-15-minutes-build-cache/">Your first 15 minutes</a>
+    <a class="btn" href="/migrate-build-cache-node/">Gradle and Maven setup</a>
     <a class="btn btn-secondary" href="/">FosterStack home</a>
   </div>
 </main>

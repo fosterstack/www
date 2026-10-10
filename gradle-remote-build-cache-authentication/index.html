@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Gradle remote build cache authentication and 401 errors</title>
-<meta name="description" content="Put a password on a self-hosted Gradle build cache and give Gradle the right one: env var, gradle.properties or -P, and what a wrong password looks like.">
-<meta property="og:title" content="Gradle remote build cache authentication and 401 errors">
-<meta property="og:description" content="Put a password on a self-hosted Gradle build cache and give Gradle the right one: env var, gradle.properties or -P, and what a wrong password looks like.">
+<title>Gradle build cache authentication: 401 and status codes</title>
+<meta name="description" content="Put a password on a self-hosted Gradle build cache, give Gradle the right one, and read the 401, 403, 404, 413 and 429 status codes it returns. Tested on 0.2.1.">
+<meta property="og:title" content="Gradle build cache authentication: 401 and status codes">
+<meta property="og:description" content="Put a password on a self-hosted Gradle build cache, give Gradle the right one, and read the 401, 403, 404, 413 and 429 status codes it returns. Tested on 0.2.1.">
 <meta property="og:url" content="https://fosterstack.com/gradle-remote-build-cache-authentication/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="FosterStack">
@@ -86,8 +86,15 @@
   <div class="tag">Infrastructure worth keeping — and kept patched.</div>
 </header>
 <main>
-  <h1>Gradle remote build cache authentication and 401 errors</h1>
-  <p class="lede">How to put a password on a self-hosted build cache and give Gradle the right one, three ways to supply it, and what you see when it is wrong. Every output below is from a real run: a 0.2.1 server and Gradle 9.8.0 on macOS.</p>
+  <h1>Gradle build cache authentication: 401 and status codes</h1>
+  <p class="lede">Gradle does not fail the build when the cache refuses it, so a wrong password or a refused upload often shows up only as a status code. FosterStack Cache takes an optional password, and this page shows how to set it, how to give Gradle the right one, and what each status code means.</p>
+
+  <h2>Our advice, not a test result</h2>
+  <ul class="trust">
+    <li><strong>Use HTTPS.</strong> Gradle sends the password with every request, so over plain HTTP it travels in the clear. Put real servers behind HTTPS.</li>
+    <li><strong>Keep the <code>credentials</code> block even where the server has no password.</strong> One config then works against both a test server and a real one.</li>
+    <li><strong>Give laptops the read-only login.</strong> That is the intended way to give laptops a cache they can read and not change. Use the read-write login for machines that upload, or set the client not to upload.</li>
+  </ul>
 
   <h2>Turn on a password on the server</h2>
   <pre tabindex="0"><code>FSCACHE_USERNAME=gradle FSCACHE_PASSWORD=&lt;a long secret&gt; ./fscache</code></pre>
@@ -107,28 +114,67 @@ buildCache {
         }
     }
 }</code></pre>
-  <p>Keep the <code>credentials</code> block even where the server has no password. I tested a client with this block against a server with authentication switched off: the build stored an entry and the next build got a hit, so one config works against both a test server and a real one.</p>
 
-  <h2>Three ways to supply the password</h2>
-  <p>All three were tested and gave <code>:compileJava FROM-CACHE</code>:</p>
+  <h3 style="margin-top:2rem">Three ways to supply the password</h3>
+  <p>In our runs all three gave <code>:compileJava FROM-CACHE</code>:</p>
   <ul class="trust">
     <li><strong>An environment variable</strong>, as above: <code>export FSCACHE_PASSWORD=...</code>. Good for CI, where the secret store sets it.</li>
     <li><strong>Your user <code>~/.gradle/gradle.properties</code></strong>, with <code>password = providers.gradleProperty("fscachePassword").orNull</code> in the settings file and <code>fscachePassword=...</code> in that file. Never put it in the project's own <code>gradle.properties</code>, which gets committed.</li>
     <li><strong>The command line</strong>: <code>gradle build -PfscachePassword=...</code>. Handy for one-off tests; it also shows up in the process list.</li>
   </ul>
 
-  <h2>What a wrong or missing password looks like</h2>
-  <p>Gradle treats a broken remote cache as non-fatal, so the build still succeeds, just without the cache. In my runs it printed this at the default log level, with a wrong password and with none:</p>
+  <h2 id="gradle-build-cache-http-status-codes">What each status code means</h2>
+  <p>Gradle talks to the cache with plain web requests, and it does not fail the build when the cache says no. So the status code is often the only clue.</p>
+  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
+    <tr><th>Status</th><th>When you get it</th><th>What to do</th></tr>
+    <tr><td><strong>200</strong></td><td>A stored entry was found and sent.</td><td>Nothing. This is a cache hit.</td></tr>
+    <tr><td><strong>201</strong></td><td>An upload was stored.</td><td>Nothing.</td></tr>
+    <tr><td><strong>404</strong></td><td>That key is not stored.</td><td>Usually nothing. It is a cache miss. With a correct password it means the key is not stored.</td></tr>
+    <tr><td><strong>401</strong></td><td>No password, or the wrong one.</td><td>Fix the credentials block. See below.</td></tr>
+    <tr><td><strong>403</strong></td><td>A write sent with the read-only login.</td><td>Use the read-write login for machines that upload, or set the client not to upload.</td></tr>
+    <tr><td><strong>413</strong></td><td>An upload bigger than the server's size limit for one entry, or bigger than the whole cache size cap.</td><td>With no <code>X-FSCache-Reject</code> header, the entry is over the per-entry limit: raise <code>FSCACHE_MAX_BODY_BYTES</code> if it is meant to be cached. With the header set to <code>entry-exceeds-cache-cap</code>, the entry is bigger than <code>FSCACHE_MAX_BYTES</code>: see <a href="/build-cache-eviction-size-limit/">how the size limit works</a>.</td></tr>
+    <tr><td><strong>429</strong></td><td>Too many uploads in progress at once. The server allows 32 by default, and a refused upload stores nothing.</td><td>The build carries on without that entry. If it keeps happening, see <a href="/how-many-builds-one-build-cache-server-at-once/">how many builds can use one cache server at once</a> for the setting.</td></tr>
+  </table></div>
+
+  <h3 style="margin-top:2rem">401: a wrong or missing password</h3>
+  <p>Gradle treats a broken remote cache as non-fatal, so the build still succeeds, just without the cache. In our runs it printed this at the default log level, with a wrong password and with none:</p>
   <pre tabindex="0"><code>Could not load entry d4f2de693b561fd2c5d60b17a9232d6f from remote build cache: Loading entry from &#x27;http://127.0.0.1:18099/d4f2de693b561fd2c5d60b17a9232d6f&#x27; response status 401: Unauthorized</code></pre>
-  <p>If you see that line, the password Gradle sent was wrong or missing. To test the server directly, a 401 means wrong credentials and a 404 means the credentials are right and the key is not stored yet. See <a href="/gradle-build-cache-http-status-codes/">the status codes</a>.</p>
+  <p>If you see that line, the password Gradle sent was wrong or missing. The usual causes are no <code>credentials</code> block, a wrong password, or a typo. Run with <code>-i</code> for more detail. To test the server directly:</p>
+  <pre tabindex="0"><code>curl -s -o /dev/null -w &#x27;%{http_code}\n&#x27; -u gradle:wrong-password https://cache.example.com/some-key</code></pre>
+  <p>A 401 here means the credentials are wrong. A 404 means they are right and the key simply is not stored. More steps are in <a href="/gradle-remote-cache-not-working/">Gradle remote build cache not working</a>.</p>
 
-  <h2>Do I need to restart the Gradle daemon?</h2>
-  <p>Not in my test. I started a daemon with no password, exported the right one in the same shell, and the next build used it (same daemon process, no restart) and got <code>FROM-CACHE</code>. Then I exported a wrong one and the next build printed the 401 line straight away. If a password still seems ignored on your setup, <code>./gradlew --stop</code> is a quick way to rule the daemon out. I only tested macOS with Gradle 9.8.0.</p>
+  <h3 style="margin-top:2rem">403: the login worked but may not write</h3>
+  <p>The server can have an optional read-only login. A client holding it can read (GET and HEAD return 200 as normal) but any write gets a 403. See <a href="/can-someone-poison-our-build-cache/">can someone poison our shared build cache</a>.</p>
 
-  <h2>Use HTTPS</h2>
-  <p>Gradle sends the password with every request, so over plain HTTP it travels in the clear. Gradle refuses plain <code>http://</code> unless you opt in with <code>isAllowInsecureProtocol</code>; in my test the address <code>127.0.0.1</code> was let through without it, but the name <code>localhost</code> was refused. Put real servers behind HTTPS.</p>
+  <h3 style="margin-top:2rem">413: entry size</h3>
+  <p>A single upload over the limit is refused with 413 and nothing is stored, so a later request for that key is a 404. The limit is <code>FSCACHE_MAX_BODY_BYTES</code> and defaults to 1 GiB per entry.</p>
 
-  <p class="muted-note">Related: <a href="/gradle-remote-cache-not-working/">Gradle remote build cache not working</a> and <a href="/remote-build-cache-security/">who can write to a remote build cache</a>.</p>
+  <h3 style="margin-top:2rem">If the password seems ignored</h3>
+  <p><code>./gradlew --stop</code> is a quick way to rule the Gradle daemon out. In our test a changed password was picked up without a restart.</p>
+
+  <h2>How we checked</h2>
+  <p>A 0.2.1 server and Gradle 9.8.0 on macOS, started with a read-write login, a read-only login, and the body limit set to 1024 bytes. Your numbers for the limit will differ, since the default is 1 GiB. This list comes from these runs:</p>
+  <pre tabindex="0"><code>GET /healthz (no credentials)                                  200
+GET /metrics (no credentials)                                  200
+GET key, no credentials                                        401
+GET key, wrong password                                        401
+GET missing key, read-write login                              404
+PUT 5 bytes, read-write login                                  201
+GET stored key, read-write login                               200
+GET stored key, read-only login                                200
+HEAD stored key, read-only login                               200
+PUT, no credentials                                            401
+PUT, read-only login                                           403
+PUT 2048 bytes (limit set to 1024), read-write login           413
+GET the too-large key afterwards                               404
+/statusz, no credentials                                       401</code></pre>
+  <ul class="trust">
+    <li><strong>Credentials block, no password on the server.</strong> We tested a client with the block against a server with authentication switched off: the build stored an entry and the next build got a hit.</li>
+    <li><strong>The Gradle daemon.</strong> We started a daemon with no password, exported the right one in the same shell, and the next build used it (same daemon process, no restart) and got <code>FROM-CACHE</code>. Then we exported a wrong one and the next build printed the 401 line straight away. We only tested macOS with Gradle 9.8.0.</li>
+    <li><strong>Plain HTTP.</strong> Gradle refuses plain <code>http://</code> unless you opt in with <code>isAllowInsecureProtocol</code>. In our test the address <code>127.0.0.1</code> was let through without it, but the name <code>localhost</code> was refused.</li>
+  </ul>
+
+  <p class="muted-note">Related: <a href="/gradle-remote-cache-not-working/">Gradle remote build cache not working</a>, <a href="/build-cache-server-sizing/">server sizing</a> and <a href="/monitor-build-cache-prometheus-grafana/">monitoring</a>.</p>
   <div class="cta-row">
     <a class="btn" href="/gradle-build-cache-tutorial/">Gradle build cache tutorial</a>
     <a class="btn btn-secondary" href="/">FosterStack home</a>
