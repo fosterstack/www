@@ -24,6 +24,7 @@ on:
           - howto-pages-2
           - howto-pages-3
           - k8s-page
+          - ga-page
         default: miss-cost
 
 permissions:
@@ -196,6 +197,205 @@ jobs:
 
       - name: apply the guide's manifests in a kind cluster and check what the page says
         run: bash bin/bench-k8s-page.sh
+
+  # The "Use a remote build cache in GitHub Actions" page, run as a real GitHub Actions job on a hosted runner: the page's workflow
+  # steps (checkout, then the Build step for Gradle and for Maven) word for word, with a cache server started by a step on this runner.
+  # Manual dispatch only, chosen with the "which" input (compared in this `if` only). No token and no secret: the five logins are made-up
+  # values in this job's env, and the page's `secrets.X` is `env.TEST_X` here and its `github.event_name == 'push'` is `env.TEST_EVENT ==
+  # 'push'` (a manual dispatch is neither a push nor a pull request; bin/bench-ga-page.sh says so in its output). The release is verified
+  # (cosign and sha256) before the server starts; Gradle and cosign are checked against pinned sha256 values; the Maven extension and
+  # plugins come from Maven Central (not pinned, said in the output). The helper script takes only fixed words from this file.
+  bench-ga-page:
+    if: github.event_name == 'workflow_dispatch' && inputs.which == 'ga-page'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      TEST_CACHE_URL: http://127.0.0.1:18495/
+      TEST_RW_USER: ci
+      TEST_RW_PASSWORD: ga-page-rw-secret-not-real
+      TEST_RO_USER: dev
+      TEST_RO_PASSWORD: ga-page-ro-secret-not-real
+      TEST_EVENT: push
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: setup (verify the release, start the cache server, generate the two projects)
+        run: bash bin/bench-ga-page.sh setup
+
+      # ---- Gradle, build on main (push): the read-write login, push on
+      - name: empty Gradle home
+        run: bash bin/bench-ga-page.sh fresh gradle
+      - name: pretend event, push on main
+        run: bash bin/bench-ga-page.sh event main
+      - name: Build
+        env:
+          CACHE_URL: ${{ env.TEST_CACHE_URL }}
+          CACHE_USER: ${{ env.TEST_EVENT == 'push' && env.TEST_RW_USER || env.TEST_RO_USER }}
+          CACHE_PASSWORD: ${{ env.TEST_EVENT == 'push' && env.TEST_RW_PASSWORD || env.TEST_RO_PASSWORD }}
+          CACHE_PUSH: ${{ env.TEST_EVENT == 'push' && 'true' || 'false' }}
+        run: ./gradlew build
+      - name: check gradle-main1
+        run: bash bin/bench-ga-page.sh expect gradle-main1
+      # ---- Gradle, build on main again from a fresh checkout
+      - name: empty Gradle home
+        run: bash bin/bench-ga-page.sh fresh gradle
+      - name: pretend event, push on main
+        run: bash bin/bench-ga-page.sh event main
+      - name: Build
+        env:
+          CACHE_URL: ${{ env.TEST_CACHE_URL }}
+          CACHE_USER: ${{ env.TEST_EVENT == 'push' && env.TEST_RW_USER || env.TEST_RO_USER }}
+          CACHE_PASSWORD: ${{ env.TEST_EVENT == 'push' && env.TEST_RW_PASSWORD || env.TEST_RO_PASSWORD }}
+          CACHE_PUSH: ${{ env.TEST_EVENT == 'push' && 'true' || 'false' }}
+        run: ./gradlew build
+      - name: check gradle-main2
+        run: bash bin/bench-ga-page.sh expect gradle-main2
+      # ---- Gradle, pull request: the read-only login, push off, the app changed
+      - name: empty Gradle home
+        run: bash bin/bench-ga-page.sh fresh gradle
+      - name: change the app source
+        run: bash bin/bench-ga-page.sh mutate gradle
+      - name: pretend event, pull request
+        run: bash bin/bench-ga-page.sh event pr
+      - name: Build
+        env:
+          CACHE_URL: ${{ env.TEST_CACHE_URL }}
+          CACHE_USER: ${{ env.TEST_EVENT == 'push' && env.TEST_RW_USER || env.TEST_RO_USER }}
+          CACHE_PASSWORD: ${{ env.TEST_EVENT == 'push' && env.TEST_RW_PASSWORD || env.TEST_RO_PASSWORD }}
+          CACHE_PUSH: ${{ env.TEST_EVENT == 'push' && 'true' || 'false' }}
+        run: ./gradlew build
+      - name: check gradle-pr
+        run: bash bin/bench-ga-page.sh expect gradle-pr
+      # ---- Gradle, fork pull request: every variable empty
+      - name: empty Gradle home
+        run: bash bin/bench-ga-page.sh fresh gradle
+      - name: pretend event, fork pull request (empty secrets)
+        run: bash bin/bench-ga-page.sh event fork
+      - name: Build
+        env:
+          CACHE_URL: ${{ env.TEST_CACHE_URL }}
+          CACHE_USER: ${{ env.TEST_EVENT == 'push' && env.TEST_RW_USER || env.TEST_RO_USER }}
+          CACHE_PASSWORD: ${{ env.TEST_EVENT == 'push' && env.TEST_RW_PASSWORD || env.TEST_RO_PASSWORD }}
+          CACHE_PUSH: ${{ env.TEST_EVENT == 'push' && 'true' || 'false' }}
+        run: ./gradlew build
+      - name: check gradle-fork
+        run: bash bin/bench-ga-page.sh expect gradle-fork
+      # ---- Gradle, by hand: the cases the page lists that the workflow cannot produce (push on with the read-only login; a wrong or empty password)
+      - name: read-only login with push on
+        run: bash bin/bench-ga-page.sh extra gradle-403
+      - name: wrong password
+        run: bash bin/bench-ga-page.sh extra gradle-401
+      - name: address set, login empty
+        run: bash bin/bench-ga-page.sh extra gradle-empty-login
+      # ---- Maven, build on main (push): read-write login, saving on
+      - name: empty local Maven build cache
+        run: bash bin/bench-ga-page.sh fresh maven
+      - name: pretend event, push on main
+        run: bash bin/bench-ga-page.sh event main
+      - name: Build
+        working-directory: mproj
+        env:
+          CACHE_URL: ${{ env.TEST_CACHE_URL }}
+          CACHE_USER: ${{ env.TEST_EVENT == 'push' && env.TEST_RW_USER || env.TEST_RO_USER }}
+          CACHE_PASSWORD: ${{ env.TEST_EVENT == 'push' && env.TEST_RW_PASSWORD || env.TEST_RO_PASSWORD }}
+          CACHE_PUSH: ${{ env.TEST_EVENT == 'push' && 'true' || 'false' }}
+        run: |
+          if [ -n "$CACHE_URL" ]; then
+            mvn -B -s .mvn/ci-settings.xml \
+              -Dmaven.build.cache.remote.enabled=true \
+              -Dmaven.build.cache.remote.url="$CACHE_URL" \
+              -Dmaven.build.cache.remote.save.enabled="${CACHE_PUSH:-false}" \
+              verify
+          else
+            mvn -B verify
+          fi
+      - name: check mvn-main1
+        run: bash bin/bench-ga-page.sh expect mvn-main1
+      # ---- Maven, build on main again from a fresh project
+      - name: empty local Maven build cache
+        run: bash bin/bench-ga-page.sh fresh maven
+      - name: pretend event, push on main
+        run: bash bin/bench-ga-page.sh event main
+      - name: Build
+        working-directory: mproj
+        env:
+          CACHE_URL: ${{ env.TEST_CACHE_URL }}
+          CACHE_USER: ${{ env.TEST_EVENT == 'push' && env.TEST_RW_USER || env.TEST_RO_USER }}
+          CACHE_PASSWORD: ${{ env.TEST_EVENT == 'push' && env.TEST_RW_PASSWORD || env.TEST_RO_PASSWORD }}
+          CACHE_PUSH: ${{ env.TEST_EVENT == 'push' && 'true' || 'false' }}
+        run: |
+          if [ -n "$CACHE_URL" ]; then
+            mvn -B -s .mvn/ci-settings.xml \
+              -Dmaven.build.cache.remote.enabled=true \
+              -Dmaven.build.cache.remote.url="$CACHE_URL" \
+              -Dmaven.build.cache.remote.save.enabled="${CACHE_PUSH:-false}" \
+              verify
+          else
+            mvn -B verify
+          fi
+      - name: check mvn-main2
+        run: bash bin/bench-ga-page.sh expect mvn-main2
+      # ---- Maven, pull request: read-only login, saving off, one file changed
+      - name: empty local Maven build cache
+        run: bash bin/bench-ga-page.sh fresh maven
+      - name: change the source
+        run: bash bin/bench-ga-page.sh mutate maven
+      - name: pretend event, pull request
+        run: bash bin/bench-ga-page.sh event pr
+      - name: Build
+        working-directory: mproj
+        env:
+          CACHE_URL: ${{ env.TEST_CACHE_URL }}
+          CACHE_USER: ${{ env.TEST_EVENT == 'push' && env.TEST_RW_USER || env.TEST_RO_USER }}
+          CACHE_PASSWORD: ${{ env.TEST_EVENT == 'push' && env.TEST_RW_PASSWORD || env.TEST_RO_PASSWORD }}
+          CACHE_PUSH: ${{ env.TEST_EVENT == 'push' && 'true' || 'false' }}
+        run: |
+          if [ -n "$CACHE_URL" ]; then
+            mvn -B -s .mvn/ci-settings.xml \
+              -Dmaven.build.cache.remote.enabled=true \
+              -Dmaven.build.cache.remote.url="$CACHE_URL" \
+              -Dmaven.build.cache.remote.save.enabled="${CACHE_PUSH:-false}" \
+              verify
+          else
+            mvn -B verify
+          fi
+      - name: check mvn-pr
+        run: bash bin/bench-ga-page.sh expect mvn-pr
+      # ---- Maven, fork pull request: every variable empty (no cache flags)
+      - name: empty local Maven build cache
+        run: bash bin/bench-ga-page.sh fresh maven
+      - name: pretend event, fork pull request (empty secrets)
+        run: bash bin/bench-ga-page.sh event fork
+      - name: Build
+        working-directory: mproj
+        env:
+          CACHE_URL: ${{ env.TEST_CACHE_URL }}
+          CACHE_USER: ${{ env.TEST_EVENT == 'push' && env.TEST_RW_USER || env.TEST_RO_USER }}
+          CACHE_PASSWORD: ${{ env.TEST_EVENT == 'push' && env.TEST_RW_PASSWORD || env.TEST_RO_PASSWORD }}
+          CACHE_PUSH: ${{ env.TEST_EVENT == 'push' && 'true' || 'false' }}
+        run: |
+          if [ -n "$CACHE_URL" ]; then
+            mvn -B -s .mvn/ci-settings.xml \
+              -Dmaven.build.cache.remote.enabled=true \
+              -Dmaven.build.cache.remote.url="$CACHE_URL" \
+              -Dmaven.build.cache.remote.save.enabled="${CACHE_PUSH:-false}" \
+              verify
+          else
+            mvn -B verify
+          fi
+      - name: check mvn-fork
+        run: bash bin/bench-ga-page.sh expect mvn-fork
+      # ---- Maven, by hand: flags with an empty address (what the guard prevents) and a wrong password
+      - name: flags with an empty address
+        run: bash bin/bench-ga-page.sh extra mvn-empty-url
+      - name: wrong password
+        run: bash bin/bench-ga-page.sh extra mvn-wrong-password
+
+      - name: result
+        if: always()
+        run: bash bin/bench-ga-page.sh finish
 
   # Does a build result stored from Linux restore on a Mac, and the other way round (the claim of the laptop page)? Manual
   # dispatch only, chosen with the "which" input (compared in each `if` only). Two chains of two jobs: a Linux job builds against a
