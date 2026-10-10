@@ -139,7 +139,7 @@ keytool -importcert -alias testca -file ca/ca.crt -keystore truststore-combined.
   <p>The Java default file uses the password <code>changeit</code>, and that is what worked here. The copy does not follow later updates to Java's list, so make the copy again when you update Java. Run 6 used this combined store and passed, with both the Central download and the cache over HTTPS working. Our combined store held 112 certificates: the 111 that came with Java plus ours.</p>
 
   <h2>How we made the test certificates</h2>
-  <p>These are the exact commands in the setup script we ran before the six builds. The 30-day lifetime is only for the test; choose your own.</p>
+  <p>These are the exact commands in the setup script we ran before the six builds. Run them inside a folder named <code>ca</code>, because the keytool commands above read <code>ca/ca.crt</code>. The 30-day lifetime is only for the test; choose your own.</p>
 <pre tabindex="0"><code>openssl genrsa -out ca.key 2048
 openssl req -x509 -new -key ca.key -sha256 -days 30 -subj "/CN=Test Private CA" -out ca.crt
 openssl genrsa -out server.key 2048
@@ -152,6 +152,7 @@ openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out s
   <p>Work through <a href="/gradle-remote-cache-not-working/">Gradle remote build cache not working</a>. For the server side of HTTPS, see <a href="/build-cache-docker-compose-production/">production Docker Compose with nginx and TLS</a>.</p>
 
   <p class="muted-note">Run on Gradle 9.8.0 with FosterStack Cache 0.2.1 behind a test TLS proxy, macOS (arm64), Java 27 (Homebrew), OpenSSL 3.6.5.</p>
+  <p class="muted-note">We repeated the six runs on a GitHub-hosted Linux machine with release 0.2.2, Gradle 9.8.0, Java 27 (Temurin 27+35) and a small TLS proxy written in Python. Every run gave the result in the table, including the failing run 5. The combined store there held 121 certificates, including ours: the count depends on your Java build. <a href="https://github.com/fosterstack/www/actions/runs/38037262366">The run and its log are public</a>.</p>
 </main>
 
 <footer>

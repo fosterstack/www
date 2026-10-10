@@ -158,13 +158,16 @@ buildCache {
   <p>The extension itself is Apache's project. If your hit rate looks low, start with the extension's own configuration guide.</p>
 
   <h2>Step 4: Check that it works</h2>
-  <p>For Gradle, run the build twice:</p>
-  <pre tabindex="0"><code>./gradlew build --build-cache</code></pre>
-  <p>On the second run, look for <code>FROM-CACHE</code> next to tasks. Gradle also has a local cache that gives hits even when the remote is broken, so to test the remote itself, clear the local one and run with <code>-i</code>:</p>
-  <pre tabindex="0"><code>rm -rf ~/.gradle/caches/build-cache-1
+  <p>For Gradle, build, clean, and build again. Without the clean, the second build prints <code>UP-TO-DATE</code>, which tells you nothing about the cache:</p>
+  <pre tabindex="0"><code>./gradlew build --build-cache
+./gradlew clean
+./gradlew build --build-cache</code></pre>
+  <p>On the second build, look for <code>FROM-CACHE</code> next to tasks. Gradle also has a local cache that gives hits even when the remote is broken, so to test the remote itself, clean, clear the local cache, and build with <code>-i</code>:</p>
+  <pre tabindex="0"><code>./gradlew clean
+rm -rf ~/.gradle/caches/build-cache-1
 ./gradlew --stop
 ./gradlew build --build-cache -i</code></pre>
-  <p>On the server, the hit and miss counters should move:</p>
+  <p>On the server, the hit counter should go up. The output also has comment lines that start with <code>#</code>; the numbers are on the counter lines:</p>
   <pre tabindex="0"><code>curl -s https://cache.example.com/metrics | grep -E 'fscache_cache_(hits|misses)_total'</code></pre>
   <p>For Maven, build twice from a clean checkout and look for cache hits in the log for unchanged modules.</p>
 
@@ -229,6 +232,7 @@ buildCache {
     <tr><td>FosterStack Cache, URL kept with <code>/cache/</code></td><td><code>:compileJava</code> ran: separate entries</td><td><code>:compileJava FROM-CACHE</code></td></tr>
     <tr><td>Back to the old node (rollback)</td><td><code>:compileJava FROM-CACHE</code>: its entries were still there</td><td>not run</td></tr>
   </table></div>
+  <p>We then ran the Gradle steps again on a GitHub-hosted Linux machine with release 0.2.2, Gradle 9.8.0 and Maven 3.10.0: the Kotlin and Groovy settings, build, clean and build again (a second build with nothing changed printed <code>UP-TO-DATE</code>), the cache-clearing commands (the hit counter went up), the <code>/metrics</code> command (no login needed), a URL kept with <code>/cache/</code> (its own entries), a credentials block against a server with no password (ignored, the cache still worked), and <code>mvn install</code> twice (the second build restored from the cache). The old node rows and the rollback were not run again. <a href="https://github.com/fosterstack/www/actions/runs/38037262366">The run and its log are public</a>.</p>
   <p>The new server's status page agreed: two entries stored, two hits, two misses. One small difference you may notice: a successful upload returns 200 from the old node and 201 from FosterStack Cache. Gradle accepted both.</p>
 
   <h2>More than kept patched.</h2>
