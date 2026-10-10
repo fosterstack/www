@@ -95,14 +95,13 @@
     <li><strong>The old login stops working at once.</strong> The server reads its logins when it starts. In our runs the old login was refused (401) right after the restart.</li>
     <li><strong>In our runs the build still succeeded.</strong> A job with the old login built everything locally, restored nothing, and warned. Gradle also printed that it disabled the remote cache for the rest of that build.</li>
     <li><strong>The stored results stay.</strong> After the restart, a job with the new login restored all four cached entries.</li>
-    <li><strong>The server holds one read-write login and one read-only login.</strong> So only one login can store results at a time. The old login can still read, if you give it the read-only slot.</li>
   </ul>
 
   <h2>The order that keeps the cache working</h2>
   <p>Our advice, not a test result. We ran steps 2 and 4 and the checks in the table at the end. Steps 1 and 3 are advice, and so is the simple way below.</p>
   <ol>
     <li><strong>Pick a new username as well as a new password for the read-write login.</strong> The read-only and read-write usernames must differ. In step 2 your old read-write username becomes the read-only username, so the new one has to be different.</li>
-    <li><strong>Restart the server with the new read-write login, and with your old read-write login as the read-only login.</strong> Set <code>FSCACHE_USERNAME</code> and <code>FSCACHE_PASSWORD</code> to the new pair. Set <code>FSCACHE_RO_USERNAME</code> and <code>FSCACHE_RO_PASSWORD</code> to the old read-write pair. A job that still has the old login can now restore results. It cannot store new ones.</li>
+    <li><strong>Restart the server with the new read-write login, and with your old read-write login as the read-only login.</strong> Set <code>FSCACHE_USERNAME</code> and <code>FSCACHE_PASSWORD</code> to the new pair. Set <code>FSCACHE_RO_USERNAME</code> and <code>FSCACHE_RO_PASSWORD</code> to the old read-write pair. A job that still has the old login can now restore results. It cannot store new ones, because the server takes one read-write login and one read-only login.</li>
     <li><strong>Update the secrets in CI.</strong> Jobs that start after that use the new login and can store results again.</li>
     <li><strong>Restart the server once more with the read-only login you want from now on.</strong> This ends the old login. A job that still has it runs without the cache.</li>
   </ol>
