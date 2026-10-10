@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # End-to-end runs on a GitHub-hosted runner, batch 11: do the commands and promised outputs of two Gradle pages really happen?
 #   K  /why-did-this-task-miss-the-build-cache/   the key-diff commands (run twice with --info -Dorg.gradle.caching.debug=true, grep, diff), the six
-#                                                 rows of "what each change looked like", a rerun, the reasons a task has no key, the three-module chain
-#                                                 (Gradle and Maven 3.9.9) and the Gson bump
+#                                                 rows of "what each change looked like", a rerun, the reasons a task has no key
+#                                                 (NOT covered: the three-module chain table and the Gson bump)
 #   G  /what-gradle-stores-in-build-cache/        (the Gradle half) `gradle build -i | grep "Stored cache entry"` on a four-module build: what was stored
 #                                                 and what was not, and a second run with the same Gradle home against a new empty server
 # Run by the "bench-howto-pages-11" job of .github/workflows/hygiene.yml (manual dispatch only, choice "howto-pages-11"). Same method as the other
@@ -422,48 +422,48 @@ kdiff() { diff "$W/$1.keys" "$W/$2.keys"; }
 
 scenario_k() {
   echo; echo "== K  (why-did-this-task-miss-the-build-cache)"
-  local D="$W/k" w; mkdir -p "$D"
+  local D="$W/k" w; mkdir -p "$D"   # every build except the moved one runs in the same folder, $D/p: greetAbs hashes the absolute path
   start_server k "$QPORT" "" "" || return
-  kd_project "$D/b1" 1 "notes one"; kdrun kb1 "$D/b1"
+  kd_project "$D/p" 1 "notes one"; kdrun kb1 "$D/p"
   want "build 1 on an empty server: tasks that ran" "$(ranset kb1)" "$SIX"
-  kd_project "$D/b2" 1 "notes one"; kdrun kb2 "$D/b2"
+  kd_project "$D/p" 1 "notes one"; kdrun kb2 "$D/p"
   want "an unchanged repeat from a fresh copy: tasks that ran" "$(ranset kb2)" ""
   cmp -s "$W/kb1.keys" "$W/kb2.keys" && echo "OBS K the two key files are identical for the unchanged repeat" || fail "K the key files of an unchanged repeat differ"
   # the page's own commands, as written
   cp "$W/q-kb1.out" "$W/run1.log"; cp "$W/q-kb2.out" "$W/run2.log"
   ( cd "$W" && grep -E '^(Appending|Build cache key for task)' run1.log > run1.keys && grep -E '^(Appending|Build cache key for task)' run2.log > run2.keys && diff run1.keys run2.keys >/dev/null ) && echo "OBS K the page's grep and diff commands ran; the unchanged repeat gives no diff (exit 0)" || fail "K the page's grep/diff commands on two unchanged builds did not give an empty diff"
   # --- one change at a time, each against the unchanged repeat
-  kd_project "$D/c1" 2 "notes one"; kdrun kc1 "$D/c1"
+  kd_project "$D/p" 2 "notes one"; kdrun kc1 "$D/p"
   want "row 'A Java source file': tasks that ran" "$(ranset kc1)" "compileJava"
   kdiff kb2 kc1 | grep -q "stableSources" && echo "OBS K the lines that differed include the stableSources fingerprint" || fail "K row 'A Java source file': the page says the stableSources fingerprint differed"
-  kd_project "$D/c2" 1 "notes one"; kdrun kc2 "$D/c2" GREET_LABEL=changed
+  kd_project "$D/p" 1 "notes one"; kdrun kc2 "$D/p" GREET_LABEL=changed
   want "row 'An environment variable the task reads': tasks that ran" "$(ranset kc2)" "greetEnv"
   kdiff kb2 kc2 | grep -q "Appending input value fingerprint for 'label' to build cache key" && echo "OBS K the differing line is the 'label' value fingerprint, as the page shows" || fail "K row 'environment variable': the page says the 'label' value fingerprint differed"
-  kd_project "$D/c3" 1 "notes one"; kdrun kc3 "$D/c3" PROP=-PgreetLabel=changed
+  kd_project "$D/p" 1 "notes one"; kdrun kc3 "$D/p" PROP=-PgreetLabel=changed
   want "row 'A Gradle property, on the command line': tasks that ran" "$(ranset kc3)" "greetProp"
-  kd_project "$D/c3b" 1 "notes one"; printf 'greetLabel=changed\n' >> "$D/c3b/gradle.properties"; kdrun kc3b "$D/c3b"
+  kd_project "$D/p" 1 "notes one"; printf 'greetLabel=changed\n' >> "$D/c3b/gradle.properties"; kdrun kc3b "$D/p"
   want "row 'A Gradle property, in gradle.properties': tasks that ran" "$(ranset kc3b)" "greetProp"
-  kd_project "$D/c4" 1 "notes two"; kdrun kc4 "$D/c4"
+  kd_project "$D/p" 1 "notes two"; kdrun kc4 "$D/p"
   want "row 'The contents of an input file': tasks that ran" "$(ranset kc4)" "copyNotes"
   kdiff kb2 kc4 | grep -q "'src'" && echo "OBS K the differing line names the 'src' file fingerprint" || fail "K row 'input file': the page says the 'src' file fingerprint differed"
   kd_project "$D/moved/inner" 1 "notes one"; kdrun kc5 "$D/moved/inner"
   want "row 'The project moved to another folder': tasks that ran" "$(ranset kc5)" "greetAbs"
-  kd_project "$D/c6" 1 "notes one"; kdrun kc6 "$D/c6" "JAVA=$JDK27_HOME"
+  kd_project "$D/p" 1 "notes one"; kdrun kc6 "$D/p" "JAVA=$JDK27_HOME"
   want "row 'Gradle run on Java 27 instead of Java 21': tasks that ran" "$(ranset kc6)" "$SIX"
   for w in jvmTarget javaVersion sourceCompatibility targetCompatibility; do
     kdiff kb2 kc6 | grep -qi "$w" && echo "OBS K the Java 27 run differed in: $w" || fail "K Java 27 row: the page lists $w among the differing lines; it did not differ"
   done
-  kdiff kb2 kc6 | grep -q "implementation" && echo "OBS K the custom tasks showed a different 'implementation' line" || fail "K Java 27 row: the page says every custom task showed a different implementation line"
+  want "Java 27 row: differing 'implementation' lines (the page: every custom task, five here)" "$(kdiff kb2 kc6 | grep -c '^[<>].*implementation' | awk '{print ($1>=10)?"at least one per custom task":$1}')" "at least one per custom task"
   # --- a rerun is not a miss
-  kd_project "$D/r" 1 "notes one"
-  qrun kr "$D/r" "export JAVA_HOME='$JDK21_HOME' PATH=\"$JDK21_HOME/bin:\$PATH\"; gradle $SIX --rerun-tasks --info -Dorg.gradle.caching.debug=true --console=plain --no-daemon"
+  kd_project "$D/p" 1 "notes one"
+  qrun kr "$D/p" "export JAVA_HOME='$JDK21_HOME' PATH=\"$JDK21_HOME/bin:\$PATH\"; gradle $SIX --rerun-tasks --info -Dorg.gradle.caching.debug=true --console=plain --no-daemon"
   grep -E '^(Appending|Build cache key for task)' "$W/q-kr.out" > "$W/kr.keys"
   want "--rerun-tasks: tasks that ran" "$(ranset kr)" "$SIX"
   cmp -s "$W/kb2.keys" "$W/kr.keys" && echo "OBS K with --rerun-tasks the keys were identical to the unchanged repeat" || fail "K the page says the --rerun-tasks keys were identical to the unchanged repeat"
   grep -qF "Executed with '--rerun-tasks'." "$W/q-kr.out" && grep -qE "^Stored cache entry for task ':greetStable' with cache key [0-9a-f]+" "$W/q-kr.out" && echo "OBS K the log says why (Executed with '--rerun-tasks'.) and the result is stored again" || fail "K the page's two --rerun-tasks log lines were not both there"
   # --- tasks with no key at all
-  kd_project "$D/n" 1 "notes one"
-  qrun kn "$D/n" "export JAVA_HOME='$JDK21_HOME' PATH=\"$JDK21_HOME/bin:\$PATH\"; gradle onlyOnCi noCacheDev notCacheable noOutputs overlapA overlapB --info --console=plain --no-daemon"
+  kd_project "$D/p" 1 "notes one"
+  qrun kn "$D/p" "export JAVA_HOME='$JDK21_HOME' PATH=\"$JDK21_HOME/bin:\$PATH\"; gradle onlyOnCi noCacheDev notCacheable noOutputs overlapA overlapB --info -Dorg.gradle.caching.debug=true --console=plain --no-daemon"
   local t
   for t in onlyOnCi noCacheDev notCacheable noOutputs overlapB; do
     grep -qF "Caching disabled for task ':$t' because:" "$W/q-kn.out" && echo "OBS K ':$t': 'Caching disabled for task ... because:' is printed" || fail "K ':$t': the page says Gradle prints 'Caching disabled for task ... because:'"
