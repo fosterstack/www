@@ -157,7 +157,7 @@
     </tbody>
   </table></div>
   <p class="muted-note">We found no leftover temporary files in the data folder after the first failed uploads. On this small APFS volume, uploads started to fail while <code>df</code> still showed about 1 MiB free, so do not plan around the last megabyte.</p>
-  <p class="muted-note">Not tested: Docker or Kubernetes volumes, file systems other than APFS, Linux, Maven, a very large single upload, a full inode table, a disk quota, other releases, and a disk that fills while many builds upload at once.</p>
+  <p class="muted-note">Not tested: Docker or Kubernetes volumes, file systems other than APFS and, in the note below, a Linux RAM disk, Maven, a very large single upload, a full inode table, a disk quota, other releases, and a disk that fills while many builds upload at once.</p>
 
   <h3>Try the tiny-cap run yourself</h3>
   <pre tabindex="0"><code>FSCACHE_ADDR=127.0.0.1:8080 FSCACHE_DATA_DIR=./data FSCACHE_MAX_BYTES=3500 ./fscache &amp;
@@ -179,6 +179,7 @@ curl -s localhost:8080/statusz | grep -E &#x27;store_bytes|evicted&#x27;
     <a class="btn" href="/build-cache-server-sizing/">Server sizing</a>
     <a class="btn btn-secondary" href="/">FosterStack home</a>
   </div>
+  <p class="muted-note">We ran the tiny-cap table and the size-cap runs again on a GitHub-hosted Linux machine with FosterStack Cache 0.2.2, and the full-disk runs on an 8 MiB RAM disk (tmpfs) there. The 3,500-byte table gave the same rows, the 4,000-byte entry got the same 413, and a 4 MiB cap with forty 256 KiB uploads accepted all forty, removed 24 entries and held 4,194,304 bytes. On the full disk, the first failing upload got <code>500</code> with the body <code>internal error</code>, reads kept working, a build still ended with <code>BUILD SUCCESSFUL</code> and printed one <code>Could not store entry</code> line, and the server accepted uploads again once we freed space, with no restart. The counts depend on the file system: 25 uploads of 256 KiB were accepted before the first failure, not 21, and a 20 MiB cap let 31 of the forty uploads through, not 25. One more thing we saw: with not one free byte, the server did not start, even with its old data. The log said <code>write shutdown marker</code> and <code>no space left on device</code>. With 16 KiB free it started with its old data, and a new, empty data folder failed at <code>open metadata store</code>, as in the table. <a href="https://github.com/fosterstack/www/actions/runs/38061887626">The run and its log are public</a>.</p>
 </main>
 <footer>
   <div>
