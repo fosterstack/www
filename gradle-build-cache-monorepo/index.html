@@ -88,8 +88,8 @@
 </header>
 <main>
   <h1>Gradle build cache: monorepo, buildSrc and included builds</h1>
-  <p class="lede">In a big Gradle repo, an edit should rebuild only the part you edited. FosterStack Cache is a shared cache server that lets the rest come from the cache.</p>
-  <p>In our runs, a module, <code>buildSrc</code> or an included build came from the cache unless its own code changed, or a part it depends on changed its public methods.</p>
+  <p class="lede">In a big Gradle repo, an edit should rebuild only the part you edited. FosterStack Cache is a shared cache server, so in our runs the parts you did not change came from the cache.</p>
+  <p>In our runs, a module, <code>buildSrc</code> or an included build came from the cache unless its own code changed, or something it uses changed its public methods.</p>
 
   <h2>The short answer</h2>
   <ul class="trust">
