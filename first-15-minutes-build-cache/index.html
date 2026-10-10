@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Your first 15 minutes with a self-hosted build cache</title>
-<meta name="description" content="A checklist from nothing to your first FROM-CACHE with a self-hosted Gradle build cache, with the commands timed in a real run on release 0.2.1.">
+<meta name="description" content="A checklist from nothing to your first FROM-CACHE with a self-hosted Gradle build cache, with the commands timed in a real run on release 0.2.2.">
 <meta property="og:title" content="Your first 15 minutes with a self-hosted build cache">
-<meta property="og:description" content="A checklist from nothing to your first FROM-CACHE with a self-hosted Gradle build cache, with the commands timed in a real run on release 0.2.1.">
+<meta property="og:description" content="A checklist from nothing to your first FROM-CACHE with a self-hosted Gradle build cache, with the commands timed in a real run on release 0.2.2.">
 <meta property="og:url" content="https://fosterstack.com/first-15-minutes-build-cache/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="FosterStack">
@@ -89,16 +89,18 @@
 </header>
 <main>
   <h1>Your first 15 minutes with a self-hosted build cache</h1>
-  <p class="lede">A checklist from nothing to your first <code>FROM-CACHE</code>, the line Gradle prints when it reuses a stored result. The commands took about ten seconds when I timed them on a real 0.2.1 release, on a laptop that already had Gradle and Java and a fast network. Plan on about 15 minutes in all, because reading, choosing your values and pointing your own project at the server take you longer than the commands.</p>
+  <p class="lede">A checklist from nothing to your first <code>FROM-CACHE</code>, the line Gradle prints when it reuses a stored result. The commands take 20 seconds or less; we timed them on a clean GitHub-hosted machine that had Gradle and Java. Plan on about 15 minutes in all, because reading, choosing your values and pointing your own project at the server take you longer than the commands.</p>
 
-  <h2>What I timed</h2>
+  <h2>What we timed</h2>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
-    <tr><th>Step</th><th>Took</th></tr>
-    <tr><td>Download the release and verify its signature and checksum</td><td>1 second</td></tr>
-    <tr><td>Unpack it and start the server, with a password and a size cap</td><td>1 second</td></tr>
-    <tr><td>Write the project files</td><td>under 1 second</td></tr>
-    <tr><td>Build, clean, build again, and see <code>FROM-CACHE</code></td><td>8 seconds</td></tr>
+    <tr><th>Step</th><th>First run on the machine</th><th>Gradle had built there before</th></tr>
+    <tr><td>Download the release and verify its signature and checksum</td><td>1.4 seconds</td><td>0.5 seconds</td></tr>
+    <tr><td>Unpack it and start the server, with a password and a size cap</td><td>0.1 seconds</td><td>0.1 seconds</td></tr>
+    <tr><td>Write the project files</td><td>under 0.01 seconds</td><td>under 0.01 seconds</td></tr>
+    <tr><td>Build, clean, build again, and see <code>FROM-CACHE</code></td><td>18.2 seconds</td><td>7.8 seconds</td></tr>
+    <tr><td><strong>All the steps</strong></td><td><strong>19.7 seconds</strong></td><td><strong>8.4 seconds</strong></td></tr>
   </table></div>
+  <p class="muted-note">Release 0.2.2 on a GitHub-hosted machine that had Gradle 9.8.0 and Java 21. These are the commands exactly as written in the checklist below, with Gradle's own cache left on. With it off, as in the tutorial, the same steps took 13.5 and 8.5 seconds. <a href="https://github.com/fosterstack/www/actions/runs/38032103243">The run and its log are public</a>, and the script is <a href="/bin/bench-setup-pages.sh">bin/bench-setup-pages.sh</a>.</p>
 
   <h2>The checklist</h2>
   <h3>1. Decide where it will run</h3>
@@ -152,7 +154,7 @@ gradle build --build-cache
 gradle clean
 gradle build --build-cache
 &gt; Task :compileJava FROM-CACHE</code></pre>
-  <p>In my run the first build printed <code>&gt; Task :compileJava</code> and the second <code>&gt; Task :compileJava FROM-CACHE</code>, and the status page showed one entry and one hit. (I had turned Gradle's local cache off in this test, so the hit had to come from the server. With it on, a hit can come from your own machine instead, and the server's hit counter may not move. I did not test that case.) For a fuller walk-through, see the <a href="#gradle-build-cache-tutorial">Gradle build cache tutorial</a>. If the second build does not show it, see <a href="/gradle-remote-cache-not-working/">Gradle remote build cache not working</a>.</p>
+  <p>In our runs the first build printed <code>&gt; Task :compileJava</code> and the second <code>&gt; Task :compileJava FROM-CACHE</code>. With the settings above, Gradle's own local cache is on, so that hit came from the machine itself: the server's status page showed the stored entries and 0 hits. To see the server do the work, add <code>local { isEnabled = false }</code> inside <code>buildCache</code>, as the tutorial below does. With it off, the status page showed one entry and one hit. For a fuller walk-through, see the <a href="#gradle-build-cache-tutorial">Gradle build cache tutorial</a>. If the second build does not show it, see <a href="/gradle-remote-cache-not-working/">Gradle remote build cache not working</a>.</p>
 
   <h3>7. Before you roll it out to a team</h3>
   <ul class="trust">
@@ -248,7 +250,7 @@ Using insecure protocols with remote build cache, without explicit opt-in, is un
   <p class="muted-note">If your second build shows no <code>FROM-CACHE</code>, work through <a href="/gradle-remote-cache-not-working/">Gradle remote build cache not working</a>. The status codes are explained in <a href="/gradle-remote-build-cache-authentication/#gradle-build-cache-http-status-codes">Gradle build cache HTTP status codes</a>.</p>
 
   <h2>How we checked</h2>
-  <p>In our runs we used release 0.2.1 of the server. The tutorial run used Gradle 9.8.0. The timed commands ran on a laptop that already had Gradle and Java.</p>
+  <p>The tutorial run used release 0.2.1 of the server and Gradle 9.8.0. The timings in the table are from a separate run on a GitHub-hosted machine with release 0.2.2, Gradle 9.8.0 and Java 21, and two repetitions: the first on a machine that had never built, the second after it had.</p>
 
   <p class="muted-note">This is a first try, not a production plan. The project is early, and the paid tiers are not built.</p>
   <div class="cta-row">
