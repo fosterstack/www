@@ -33,6 +33,7 @@ on:
           - howto-pages-9
           - howto-pages-10
           - howto-pages-11
+          - howto-pages-12
         default: miss-cost
 
 permissions:
@@ -545,6 +546,23 @@ jobs:
 
       - name: follow the pages' commands as written and check what they promise
         run: bash bin/bench-howto-pages-11.sh
+
+  # End-to-end runs of three pages: tests from the cache (Gradle and Maven), several projects on one server, and the air-gapped install (the
+  # page's verify commands, the static binary with only a loopback interface, the container load and run). Same rules as the other howto jobs:
+  # manual dispatch only, chosen with the "which" input (compared in this `if` only), no token and no secret, read-only token not persisted.
+  # The release binary is verified (cosign and sha256) before it runs. The one step that needs root is `sudo unshare -n`, which runs the
+  # downloaded server in a network namespace with only a loopback interface. Every server listens on 127.0.0.1 only.
+  bench-howto-pages-12:
+    if: github.event_name == 'workflow_dispatch' && inputs.which == 'howto-pages-12'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: follow the pages' commands as written and check what they promise
+        run: bash bin/bench-howto-pages-12.sh
 
   # Does a build result stored from Linux restore on a Mac, and the other way round (the claim of the laptop page)? Manual
   # dispatch only, chosen with the "which" input (compared in each `if` only). Two chains of two jobs: a Linux job builds against a
