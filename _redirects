@@ -59,3 +59,15 @@
 /maven-build-cache-skip-tests /gradle-test-task-from-cache/#maven-build-cache-skip-tests 301
 /gradle-configuration-cache-vs-build-cache/ /gradle-build-cache-enable-disable/#gradle-configuration-cache-vs-build-cache 301
 /gradle-configuration-cache-vs-build-cache /gradle-build-cache-enable-disable/#gradle-configuration-cache-vs-build-cache 301
+
+# Wave 4 consolidation (approved): each removed page redirects to its survivor. Two lines each: a rule with a trailing slash does not match the URL without one.
+/maven-build-cache-extension-enable-disable/ /maven-remote-build-cache-setup/#maven-build-cache-extension-enable-disable 301
+/maven-build-cache-extension-enable-disable /maven-remote-build-cache-setup/#maven-build-cache-extension-enable-disable 301
+/one-build-cache-server-gradle-and-maven/ /maven-remote-build-cache-setup/#one-build-cache-server-gradle-and-maven 301
+/one-build-cache-server-gradle-and-maven /maven-remote-build-cache-setup/#one-build-cache-server-gradle-and-maven 301
+/maven-build-cache-different-java-versions/ /maven-build-cache-extension-not-restoring/#maven-build-cache-different-java-versions 301
+/maven-build-cache-different-java-versions /maven-build-cache-extension-not-restoring/#maven-build-cache-different-java-versions 301
+/maven-build-cache-let-ci-write-developers-read/ /gradle-build-cache-ci-writes-developers-read/#maven-build-cache-let-ci-write-developers-read 301
+/maven-build-cache-let-ci-write-developers-read /gradle-build-cache-ci-writes-developers-read/#maven-build-cache-let-ci-write-developers-read 301
+/maven-build-cache-corporate-proxy/ /gradle-build-cache-corporate-proxy/#maven-build-cache-corporate-proxy 301
+/maven-build-cache-corporate-proxy /gradle-build-cache-corporate-proxy/#maven-build-cache-corporate-proxy 301

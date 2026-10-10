@@ -160,7 +160,7 @@ Stored cache entry for Kotlin DSL script compilation (Project/TopLevel/stage2) w
 
   <h3>What a restored build adds</h3>
   <p>The second build restored all three modules and built nothing, and it uploaded one file: <code>build-cache-report.xml</code>. So our fully restored build still added one entry, 1,318 bytes (46,128 minus 44,810). We saw two builds, so we cannot say whether every restored build does the same.</p>
-  <p>On the first build, against an empty server, Maven 3.10.0 also printed three <code>[ERROR] Error downloading cache item ... buildinfo.xml</code> lines (Maven 3.9.9 logs these misses as <code>[INFO] Cache item not found</code>). Those were ordinary misses on an empty cache, and the build succeeded; see <a href="/maven-build-cache-extension-enable-disable/">enable or disable the Maven build cache extension</a>.</p>
+  <p>On the first build, against an empty server, Maven 3.10.0 also printed three <code>[ERROR] Error downloading cache item ... buildinfo.xml</code> lines (Maven 3.9.9 logs these misses as <code>[INFO] Cache item not found</code>). Those were ordinary misses on an empty cache, and the build succeeded; see <a href="/maven-remote-build-cache-setup/#maven-build-cache-extension-enable-disable">enable or disable the Maven build cache extension</a>.</p>
 
   <h3>What this means for sizing</h3>
   <p>In this tiny project the <code>buildinfo.xml</code> files were bigger than the jars: about 9 KB each against about 5 KB, and together 27,661 of the 44,810 bytes. We did not test how that balance changes with large jars.</p>
