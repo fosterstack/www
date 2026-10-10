@@ -77,6 +77,7 @@
   a { color: var(--accent); }
   code { overflow-wrap: anywhere; }
   pre code { overflow-wrap: normal; }
+  main h3 { font-size: 1.05rem; margin: 2rem 0 .6rem; }
   .table-scroll { max-width: 100%; overflow-x: auto; }
   :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 </style>
@@ -151,7 +152,7 @@ gradle build --build-cache
 gradle clean
 gradle build --build-cache
 &gt; Task :compileJava FROM-CACHE</code></pre>
-  <p>In my run the first build printed <code>&gt; Task :compileJava</code> and the second <code>&gt; Task :compileJava FROM-CACHE</code>, and the status page showed one entry and one hit. (I had turned Gradle's local cache off in this test, so the hit had to come from the server. With it on, a hit can come from your own machine instead, and the server's hit counter may not move. I did not test that case.) For a fuller walk-through, see the <a href="/gradle-build-cache-tutorial/">Gradle build cache tutorial</a>. If the second build does not show it, see <a href="/gradle-remote-cache-not-working/">Gradle remote build cache not working</a>.</p>
+  <p>In my run the first build printed <code>&gt; Task :compileJava</code> and the second <code>&gt; Task :compileJava FROM-CACHE</code>, and the status page showed one entry and one hit. (I had turned Gradle's local cache off in this test, so the hit had to come from the server. With it on, a hit can come from your own machine instead, and the server's hit counter may not move. I did not test that case.) For a fuller walk-through, see the <a href="#gradle-build-cache-tutorial">Gradle build cache tutorial</a>. If the second build does not show it, see <a href="/gradle-remote-cache-not-working/">Gradle remote build cache not working</a>.</p>
 
   <h3>7. Before you roll it out to a team</h3>
   <ul class="trust">
@@ -160,9 +161,98 @@ gradle build --build-cache
     <li>Know how to empty it: <a href="/reset-gradle-build-cache/">reset</a>, and how to move it: <a href="/upgrade-build-cache-server/#back-up-and-restore-build-cache">back up and restore</a>.</li>
   </ul>
 
+  <h2 id="gradle-build-cache-tutorial">Gradle build cache tutorial: your first FROM-CACHE</h2>
+  <p>Here is the full run behind the checklist, with the real output. The tutorial turns the local cache off, so a hit can only come from the server.</p>
+  <h3>Start the server</h3>
+  <p>This run used a password and a size cap:</p>
+  <pre tabindex="0"><code>FSCACHE_ADDR=127.0.0.1:8080 FSCACHE_DATA_DIR=./data \
+  FSCACHE_USERNAME=gradle FSCACHE_PASSWORD=demo-pass \
+  FSCACHE_MAX_BYTES=1073741824 ./fscache</code></pre>
+  <p>In our runs the port was 18090 instead of 8080. The outputs below do not show the port.</p>
+
+  <h3>A small project</h3>
+  <p>Four files. <code>settings.gradle.kts</code> says where the cache is:</p>
+  <pre tabindex="0"><code>rootProject.name = &quot;demo&quot;
+
+// FosterStack Cache — remote Gradle build cache.
+// https://github.com/fosterstack/cache
+buildCache {
+    local { isEnabled = false }          // so a hit can only come from the remote
+    remote&lt;HttpBuildCache&gt; {
+        url = uri(&quot;http://127.0.0.1:8080/&quot;)
+        isPush = true
+        credentials {
+            username = &quot;gradle&quot;
+            password = System.getenv(&quot;FSCACHE_PASSWORD&quot;)
+        }
+    }
+}</code></pre>
+  <p>Turning the local cache off is only for this test. It means a hit can only have come from the remote. <code>build.gradle.kts</code> is one line, <code>plugins { java }</code>. <code>gradle.properties</code> switches caching on, which the <code>buildCache</code> block does not do by itself:</p>
+  <pre tabindex="0"><code>org.gradle.caching=true</code></pre>
+  <p>And <code>src/main/java/demo/App.java</code> is any small class.</p>
+
+  <h3>Build once</h3>
+  <pre tabindex="0"><code>export FSCACHE_PASSWORD=demo-pass
+gradle build --build-cache
+
+&gt; Task :compileJava
+&gt; Task :processResources NO-SOURCE
+&gt; Task :classes
+&gt; Task :jar
+&gt; Task :assemble
+&gt; Task :compileTestJava NO-SOURCE
+&gt; Task :processTestResources NO-SOURCE
+&gt; Task :testClasses UP-TO-DATE
+&gt; Task :test NO-SOURCE
+&gt; Task :check UP-TO-DATE
+&gt; Task :build
+BUILD SUCCESSFUL in 5s
+2 actionable tasks: 2 executed</code></pre>
+  <p>Nothing came from the cache, and every cacheable task ran. Gradle stored the compile result on the server. The status page agrees:</p>
+  <pre tabindex="0"><code>$ curl -s -u gradle:demo-pass localhost:8080/statusz | grep -E &#x27;&quot;store_entries&quot;|&quot;cache_hits&quot;|&quot;cache_misses&quot;&#x27;
+  &quot;store_entries&quot;: 1,
+  &quot;cache_hits&quot;: 0,
+  &quot;cache_misses&quot;: 1,</code></pre>
+
+  <h3>Clean, and build again</h3>
+  <pre tabindex="0"><code>gradle clean
+gradle build --build-cache
+
+&gt; Task :compileJava FROM-CACHE
+&gt; Task :processResources NO-SOURCE
+&gt; Task :classes UP-TO-DATE
+&gt; Task :jar
+&gt; Task :assemble
+&gt; Task :compileTestJava NO-SOURCE
+&gt; Task :processTestResources NO-SOURCE
+&gt; Task :testClasses UP-TO-DATE
+&gt; Task :test NO-SOURCE
+&gt; Task :check UP-TO-DATE
+&gt; Task :build
+BUILD SUCCESSFUL in 5s
+2 actionable tasks: 1 executed, 1 from cache</code></pre>
+  <p>There it is: <code>:compileJava FROM-CACHE</code> and "1 from cache". The server counted the hit:</p>
+  <pre tabindex="0"><code>$ curl -s -u gradle:demo-pass localhost:8080/statusz | grep -E &#x27;&quot;store_entries&quot;|&quot;cache_hits&quot;|&quot;cache_misses&quot;&#x27;
+  &quot;store_entries&quot;: 1,
+  &quot;cache_hits&quot;: 1,
+  &quot;cache_misses&quot;: 1,</code></pre>
+
+  <h3>The one thing that tripped us up</h3>
+  <p>Our first attempt failed before any build ran, because we used <code>http://localhost:...</code>:</p>
+  <pre tabindex="0"><code>FAILURE: Build failed with an exception.
+
+* What went wrong:
+Using insecure protocols with remote build cache, without explicit opt-in, is unsupported.</code></pre>
+  <p>Gradle refuses plain <code>http://</code> unless you set <code>isAllowInsecureProtocol = true</code>. With Gradle 9.8.0, the address <code>127.0.0.1</code> was allowed without it, but the name <code>localhost</code> was refused, with or without a <code>credentials</code> block. That is why the file above uses <code>127.0.0.1</code>. For a real server, use HTTPS and skip the opt-in. Gradle sends the password with every request.</p>
+
+  <p class="muted-note">If your second build shows no <code>FROM-CACHE</code>, work through <a href="/gradle-remote-cache-not-working/">Gradle remote build cache not working</a>. The status codes are explained in <a href="/gradle-remote-build-cache-authentication/#gradle-build-cache-http-status-codes">Gradle build cache HTTP status codes</a>.</p>
+
+  <h2>How we checked</h2>
+  <p>In our runs we used release 0.2.1 of the server and Gradle 9.8.0. The timed commands ran on a laptop that already had Gradle and Java.</p>
+
   <p class="muted-note">This is a first try, not a production plan. The project is early, and the paid tiers are not built.</p>
   <div class="cta-row">
-    <a class="btn" href="/gradle-build-cache-tutorial/">Gradle build cache tutorial</a>
+    <a class="btn" href="#gradle-build-cache-tutorial">Gradle build cache tutorial</a>
     <a class="btn btn-secondary" href="/">FosterStack home</a>
   </div>
 </main>
@@ -174,7 +264,7 @@ gradle build --build-cache
     of the documented remote build cache HTTP protocol. Apache Maven is a trademark of the
     Apache Software Foundation; the Maven Build Cache Extension is Apache's project, not
     ours.</p>
-    <p style="margin-top:.6rem">© 2026 FosterStack · <a href="/build-cache-node-end-of-life/">Build Cache Node end of life</a> · <a href="/migrate-build-cache-node/">Migrate</a> · <a href="/build-cache-node-faq/">FAQ</a> · <a href="/jenkins-ci-build-cache/">CI setup</a> · <a href="/how-we-build/">How we build</a> · <a href="/regulated/">For regulated markets</a> · <a href="https://github.com/fosterstack/cache">github.com/fosterstack/cache</a> · <a href="mailto:hello@fosterstack.com">hello@fosterstack.com</a></p>
+    <p style="margin-top:.6rem">© 2026 FosterStack · <a href="/build-cache-node-end-of-life/">Build Cache Node end of life</a> · <a href="/migrate-build-cache-node/">Migrate</a> · <a href="/build-cache-node-end-of-life/#build-cache-node-faq">FAQ</a> · <a href="/jenkins-ci-build-cache/">CI setup</a> · <a href="/how-we-build/">How we build</a> · <a href="/regulated/">For regulated markets</a> · <a href="https://github.com/fosterstack/cache">github.com/fosterstack/cache</a> · <a href="mailto:hello@fosterstack.com">hello@fosterstack.com</a></p>
   </div>
 </footer>
 </body>

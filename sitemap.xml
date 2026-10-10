@@ -24,14 +24,6 @@
     <lastmod>2026-10-08</lastmod>
   </url>
   <url>
-    <loc>https://fosterstack.com/build-cache-node-faq/</loc>
-    <lastmod>2026-10-08</lastmod>
-  </url>
-  <url>
-    <loc>https://fosterstack.com/build-cache-node-migration-checklist/</loc>
-    <lastmod>2026-10-08</lastmod>
-  </url>
-  <url>
     <loc>https://fosterstack.com/build-cache-server-sizing/</loc>
     <lastmod>2026-10-08</lastmod>
   </url>
@@ -56,19 +48,7 @@
     <lastmod>2026-10-08</lastmod>
   </url>
   <url>
-    <loc>https://fosterstack.com/gradle-build-cache-hit-rate-low/</loc>
-    <lastmod>2026-10-08</lastmod>
-  </url>
-  <url>
     <loc>https://fosterstack.com/gradle-build-cache-kubernetes/</loc>
-    <lastmod>2026-10-08</lastmod>
-  </url>
-  <url>
-    <loc>https://fosterstack.com/gradle-build-cache-tutorial/</loc>
-    <lastmod>2026-10-08</lastmod>
-  </url>
-  <url>
-    <loc>https://fosterstack.com/gradle-configuration-cache-vs-build-cache/</loc>
     <lastmod>2026-10-08</lastmod>
   </url>
   <url>
@@ -132,10 +112,6 @@
     <lastmod>2026-10-08</lastmod>
   </url>
   <url>
-    <loc>https://fosterstack.com/verify-replacement-build-cache/</loc>
-    <lastmod>2026-10-08</lastmod>
-  </url>
-  <url>
     <loc>https://fosterstack.com/gradle-build-cache-monorepo/</loc>
     <lastmod>2026-10-08</lastmod>
   </url>
@@ -160,14 +136,6 @@
     <lastmod>2026-10-09</lastmod>
   </url>
   <url>
-    <loc>https://fosterstack.com/maven-build-cache-skip-tests/</loc>
-    <lastmod>2026-10-09</lastmod>
-  </url>
-  <url>
-    <loc>https://fosterstack.com/gradle-build-cache-buildsrc-included-builds/</loc>
-    <lastmod>2026-10-09</lastmod>
-  </url>
-  <url>
     <loc>https://fosterstack.com/gradle-remote-build-cache-private-ca-https/</loc>
     <lastmod>2026-10-09</lastmod>
   </url>
@@ -180,15 +148,7 @@
     <lastmod>2026-10-09</lastmod>
   </url>
   <url>
-    <loc>https://fosterstack.com/build-cache-one-module-changed-what-rebuilds/</loc>
-    <lastmod>2026-10-09</lastmod>
-  </url>
-  <url>
     <loc>https://fosterstack.com/laptop-builds-reuse-ci-build-cache/</loc>
-    <lastmod>2026-10-09</lastmod>
-  </url>
-  <url>
-    <loc>https://fosterstack.com/build-cache-cold-after-gradle-or-maven-upgrade/</loc>
     <lastmod>2026-10-09</lastmod>
   </url>
   <url>

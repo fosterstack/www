@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Gradle Build Cache for a Monorepo: Real Multi-Module Run</title>
-<meta name="description" content="A real run of a four-module Gradle monorepo against a self-hosted build cache: what came from the cache, what rebuilt, and why. Release 0.2.1.">
-<meta property="og:title" content="Gradle Build Cache for a Monorepo: Real Multi-Module Run">
-<meta property="og:description" content="A real run of a four-module Gradle monorepo against a self-hosted build cache: what came from the cache, what rebuilt, and why. Release 0.2.1.">
+<title>Gradle build cache: monorepo, buildSrc and included builds</title>
+<meta name="description" content="Real runs show what a shared Gradle build cache restores in a four-module monorepo, in buildSrc and in an included build, and what rebuilds. Release 0.2.1.">
+<meta property="og:title" content="Gradle build cache: monorepo, buildSrc and included builds">
+<meta property="og:description" content="Real runs show what a shared Gradle build cache restores in a four-module monorepo, in buildSrc and in an included build, and what rebuilds. Release 0.2.1.">
 <meta property="og:url" content="https://fosterstack.com/gradle-build-cache-monorepo/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="FosterStack">
@@ -87,21 +87,40 @@
   <div class="tag">Infrastructure worth keeping — and kept patched.</div>
 </header>
 <main>
-  <h1>Gradle build cache for a monorepo: what a multi-module run shows</h1>
-  <p class="lede">A monorepo is many Gradle modules in one build. A shared cache server lets CI and every developer reuse each module's work. Below is a real run with four modules against FosterStack Cache 0.2.1: which modules came from the cache, and which did not.</p>
+  <h1>Gradle build cache: monorepo, buildSrc and included builds</h1>
+  <p class="lede">In a big Gradle repo, one edit should rebuild only the part you edited. FosterStack Cache is a shared cache server, and in our runs each module, <code>buildSrc</code> and an included build came from the cache unless its own inputs changed or a public method it uses changed.</p>
 
   <h2>The short answer</h2>
   <ul class="trust">
-    <li>Change one module's code and the other modules still come from the cache.</li>
-    <li>Change a module's public methods and every module that uses it rebuilds.</li>
-    <li>A teammate who makes the same change gets everything from the cache.</li>
+    <li>Change one module's code and, in our runs, the other modules still came from the cache.</li>
+    <li>Change a module's public methods and every module that uses it rebuilt.</li>
+    <li>A teammate who made the same change got everything from the cache.</li>
+    <li><code>buildSrc</code> and an included build each stored and restored their own <code>compileJava</code> result.</li>
+    <li>The cache was set up once, in the root <code>settings.gradle.kts</code> and <code>gradle.properties</code>. Nothing extra was needed in <code>buildSrc</code> or in the included build's build file.</li>
   </ul>
 
-  <h2>What we ran</h2>
-  <p>A build with four modules. <code>core</code> has no dependencies. <code>util</code> and <code>api</code> use <code>core</code>. <code>app</code> uses <code>util</code> and <code>api</code>. Each module has 12 small Java classes. The cache server was release 0.2.1 (macOS, arm64), with Gradle 9.8.0.</p>
-  <p>Every run below used its own copy of the project folder and an empty Gradle home folder, and the local cache was switched off. The only Gradle state the runs shared was the cache server. An earlier set of runs started from a project folder that still held build output left over from an earlier test; we repeated all six runs from a clean copy and got the same results, down to the same entry count on the server. The table below shows the clean runs. Each run was <code>gradle build --console=plain --no-daemon</code>, and every build finished with <code>BUILD SUCCESSFUL</code>.</p>
+  <h2>Our advice, not a test result</h2>
+  <ul class="trust">
+    <li>In a big monorepo, a small, stable shared module with few public changes keeps more of the build cached.</li>
+    <li>In a real team, let only CI upload (<code>isPush</code>) and have developers read. That setup, with a read-only login, is on the <a href="/gradle-build-cache-ci-writes-developers-read/">CI writes, developers read</a> page.</li>
+  </ul>
 
-  <h2>Results: what each module's compile step did</h2>
+  <h2>Set it up</h2>
+  <p>This is the exact <code>settings.gradle.kts</code> we ran for the four-module build. Replace the address with your server's. We used <code>127.0.0.1</code> over plain HTTP because the test ran on one machine; use HTTPS across a network.</p>
+<pre tabindex="0"><code>buildCache {
+    local { isEnabled = false }
+    remote&lt;HttpBuildCache&gt; {
+        url = uri("http://127.0.0.1:18140/")
+        isPush = true
+        isAllowInsecureProtocol = true
+    }
+}</code></pre>
+  <p>And this is the whole <code>gradle.properties</code>:</p>
+<pre tabindex="0"><code>org.gradle.caching=true
+org.gradle.parallel=true</code></pre>
+
+  <h2>What a multi-module run shows</h2>
+  <p>A build with four modules. <code>core</code> has no dependencies. <code>util</code> and <code>api</code> use <code>core</code>. <code>app</code> uses <code>util</code> and <code>api</code>. Each module has 12 small Java classes. The table shows what each module's compile step did.</p>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <thead><tr><th>Run</th><th>core</th><th>util</th><th>api</th><th>app</th></tr></thead>
     <tbody>
@@ -118,34 +137,60 @@
 &gt; Task :util:compileJava FROM-CACHE
 &gt; Task :api:compileJava FROM-CACHE
 &gt; Task :app:compileJava FROM-CACHE</code></pre>
-
-  <h2>What this means for your monorepo</h2>
   <ul class="trust">
-    <li><strong>Edits inside a method stay local (run 3).</strong> Gradle compares the public shape of a module, not every byte, when it decides whether a module that depends on it must rebuild. A change inside a method body left the other three modules' inputs the same, so they came from the cache.</li>
-    <li><strong>Changes to public methods spread (run 5).</strong> All four modules ran. In a big monorepo, a small, stable shared module with few public changes keeps more of the build cached.</li>
-    <li><strong>The first person pays, everyone else downloads (runs 4 and 6).</strong> The edit in run 3 was uploaded once. In run 4 a separate copy of the project made the same edit and ran nothing.</li>
+    <li><strong>Edits inside a method stayed local (run 3).</strong> Gradle compares the public shape of a module, not every byte, when it decides whether a module that depends on it must rebuild. A change inside a method body left the other three modules' inputs the same, so they came from the cache.</li>
+    <li><strong>Changes to public methods spread (run 5).</strong> All four modules ran.</li>
+    <li><strong>The first person paid, everyone else downloaded (runs 4 and 6).</strong> The edit in run 3 was uploaded once. In run 4 a separate copy of the project made the same edit and ran nothing.</li>
   </ul>
   <p>Only the compile step is shown here, because it is the step that showed the pattern clearly in a small project. The jar steps in this build are not cacheable by default in Gradle, so they ran every time. The project is small, so we are not quoting time saved: the cache pays off as your modules get bigger.</p>
 
-  <h2>Set it up</h2>
-  <p>This is the exact <code>settings.gradle.kts</code> we ran. Replace the address with your server's. We used <code>127.0.0.1</code> over plain HTTP because the test ran on one machine; use HTTPS across a network.</p>
-<pre tabindex="0"><code>buildCache {
+  <h2 id="gradle-build-cache-buildsrc-included-builds">Does Gradle cache buildSrc and included builds?</h2>
+  <p>Yes, in our runs. The build had three parts: a <code>buildSrc</code> folder with one Java class, an included build called <code>lib</code> with one Java class, and an <code>app</code> project that uses <code>lib</code>. The columns show the <code>compileJava</code> task of each part.</p>
+  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
+    <thead><tr><th>Run</th><th>buildSrc</th><th>lib (included build)</th><th>app</th></tr></thead>
+    <tbody>
+      <tr><td>1. First build, as CI would do it</td><td>ran</td><td>ran</td><td>ran</td></tr>
+      <tr><td>2. Fresh copy, same code</td><td>FROM-CACHE</td><td>FROM-CACHE</td><td>FROM-CACHE</td></tr>
+      <tr><td>3. Edit <code>buildSrc</code></td><td>ran</td><td>FROM-CACHE</td><td>FROM-CACHE</td></tr>
+      <tr><td>4. Edit inside a method in <code>lib</code></td><td>FROM-CACHE</td><td>ran</td><td>FROM-CACHE</td></tr>
+      <tr><td>5. Add a public method to <code>lib</code></td><td>FROM-CACHE</td><td>ran</td><td>ran</td></tr>
+      <tr><td>6. Edit only <code>app</code></td><td>FROM-CACHE</td><td>FROM-CACHE</td><td>ran</td></tr>
+    </tbody>
+  </table></div>
+  <p>These are three lines from run 2, with the lines between them left out:</p>
+<pre tabindex="0"><code>&gt; Task :buildSrc:compileJava FROM-CACHE
+...
+&gt; Task :lib:compileJava FROM-CACHE
+...
+&gt; Task :app:compileJava FROM-CACHE</code></pre>
+  <ul class="trust">
+    <li><strong>buildSrc was cached like any other project.</strong> A change to it recompiled it (run 3). It did not recompile <code>lib</code> or <code>app</code> in our run.</li>
+    <li><strong>An included build was cached too.</strong> Its tasks show up as <code>:lib:compileJava</code> and came from the cache in run 2.</li>
+    <li><strong>A change inside a method did not spread (run 4); a new public method did (run 5).</strong> That matches the module runs above.</li>
+  </ul>
+  <p>We tried one small class in each part. We did not test a <code>buildSrc</code> that holds plugins, convention plugins, or other languages, and we did not test an included build that is itself a large multi-module build.</p>
+  <p>The files we used. Root <code>settings.gradle.kts</code>, with the address for a test on one machine over plain HTTP; use your server's address and HTTPS across a network:</p>
+<pre tabindex="0"><code>rootProject.name = "composite"
+includeBuild("lib")
+include(":app")
+
+buildCache {
     local { isEnabled = false }
     remote&lt;HttpBuildCache&gt; {
-        url = uri("http://127.0.0.1:18140/")
+        url = uri("http://127.0.0.1:18220/")
         isPush = true
         isAllowInsecureProtocol = true
     }
 }</code></pre>
-  <p>And this is the whole <code>gradle.properties</code>:</p>
-<pre tabindex="0"><code>org.gradle.caching=true
-org.gradle.parallel=true</code></pre>
-  <p>In a real team, let only CI upload (<code>isPush</code>) and have developers read. That setup, with a read-only login, is on the <a href="/gradle-build-cache-ci-writes-developers-read/">CI writes, developers read</a> page.</p>
+  <p>The root <code>gradle.properties</code> has one line, <code>org.gradle.caching=true</code>. The root <code>build.gradle.kts</code> has one line that prints a value from the <code>buildSrc</code> class. <code>lib/settings.gradle.kts</code> is <code>rootProject.name = "lib"</code>. <code>buildSrc/build.gradle.kts</code> is <code>plugins { java }</code>. <code>lib/build.gradle.kts</code> is <code>plugins { `java-library` }</code> with <code>group = "demo"</code>, and <code>app/build.gradle.kts</code> adds <code>implementation("demo:lib")</code>.</p>
 
   <h2>If you do not see FROM-CACHE</h2>
-  <p>Work through <a href="/gradle-build-cache-hit-rate-low/">why the hit rate is low</a>. To check the server itself, see <a href="/first-15-minutes-build-cache/">your first 15 minutes</a>, and for logins see <a href="/gradle-remote-build-cache-authentication/">authentication</a>.</p>
+  <p>Work through <a href="/gradle-remote-cache-not-working/">why the hit rate is low</a>. To check the server itself, see <a href="/first-15-minutes-build-cache/">your first 15 minutes</a>, for logins see <a href="/gradle-remote-build-cache-authentication/">authentication</a>, and to see what Gradle stores, see <a href="/what-gradle-stores-in-build-cache/">what Gradle stores in the build cache</a>.</p>
 
-  <p class="muted-note">Run on Gradle 9.8.0 with FosterStack Cache 0.2.1 on macOS (arm64), Java 27.</p>
+  <h2>How we checked</h2>
+  <p>All runs used Gradle 9.8.0 with FosterStack Cache 0.2.1 on macOS (arm64), Java 27. Every run used its own copy of the project folder, an empty Gradle home folder, and the local cache switched off. The only Gradle state the runs shared was the cache server. Every build finished with <code>BUILD SUCCESSFUL</code>.</p>
+  <p>Four-module build: six runs, each <code>gradle build --console=plain --no-daemon</code>. An earlier set of runs started from a project folder that still held build output left over from an earlier test. We repeated all six runs from a clean copy and got the same results, down to the same entry count on the server. The table shows the clean runs.</p>
+  <p>buildSrc and included build: six runs, each <code>gradle :app:build --console=plain --no-daemon</code>, with Java 27 from Homebrew and the same Gradle install and Java for every run. Runs 3 to 6 each made one edit on a fresh copy of the original code; the edits were not stacked.</p>
 </main>
 
 <footer>
@@ -156,7 +201,7 @@ org.gradle.parallel=true</code></pre>
     of the documented remote build cache HTTP protocol. Apache Maven is a trademark of the
     Apache Software Foundation; the Maven Build Cache Extension is Apache's project, not
     ours.</p>
-    <p style="margin-top:.6rem">© 2026 FosterStack · <a href="/build-cache-node-end-of-life/">Build Cache Node end of life</a> · <a href="/migrate-build-cache-node/">Migrate</a> · <a href="/build-cache-node-faq/">FAQ</a> · <a href="/jenkins-ci-build-cache/">CI setup</a> · <a href="/how-we-build/">How we build</a> · <a href="/regulated/">For regulated markets</a> · <a href="https://github.com/fosterstack/cache">github.com/fosterstack/cache</a> · <a href="mailto:hello@fosterstack.com">hello@fosterstack.com</a></p>
+    <p style="margin-top:.6rem">© 2026 FosterStack · <a href="/build-cache-node-end-of-life/">Build Cache Node end of life</a> · <a href="/migrate-build-cache-node/">Migrate</a> · <a href="/build-cache-node-end-of-life/#build-cache-node-faq">FAQ</a> · <a href="/jenkins-ci-build-cache/">CI setup</a> · <a href="/how-we-build/">How we build</a> · <a href="/regulated/">For regulated markets</a> · <a href="https://github.com/fosterstack/cache">github.com/fosterstack/cache</a> · <a href="mailto:hello@fosterstack.com">hello@fosterstack.com</a></p>
   </div>
 </footer>
 </body>

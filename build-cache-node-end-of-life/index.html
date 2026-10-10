@@ -49,6 +49,7 @@
   p + p { margin-top: .8rem; }
   .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: .8rem; margin-top: 1rem; }
   .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1rem 1.1rem; }
+  main > h3 { font-size: 1.05rem; margin: 2rem 0 .6rem; }
   .card h3 { font-size: .98rem; margin-bottom: .35rem; }
   .card p { font-size: .9rem; color: var(--muted); }
   ul.trust { list-style: none; margin-top: .5rem; }
@@ -123,6 +124,47 @@
     <li>Vulnerable dependencies fixed fast — our target is 48 hours from disclosure.</li>
   </ul>
   <p><a href="/how-we-build/">How we build</a> · <a href="/security/">Security policy</a> · <a href="/verify-a-release/">Verify a release</a></p>
+
+  <h2 id="build-cache-node-faq">Build Cache Node replacement: questions and answers</h2>
+
+  <h3>Do I have to move my cached data?</h3>
+  <p>No. A build cache only holds results your build can always rebuild. Start the new server empty and your first builds fill it. If the cache is down or empty, builds are slower, not wrong.</p>
+
+  <h3>Does it work with Gradle?</h3>
+  <p>Yes. Gradle talks to it with its normal remote build cache setting, so moving from the old node is mostly a URL change. Our CI builds a real multi-module Gradle project against it on every change and checks that a second build gets real cache hits. See the <a href="/migrate-build-cache-node/">setup page</a>.</p>
+
+  <h3>Does it work with Maven?</h3>
+  <p>The Maven client is Apache's Build Cache Extension, not ours.</p>
+
+  <h3>Is it free?</h3>
+  <p>Yes. Everything you can download today is the free MIT core, including eviction, size limits and metrics. The paid tiers are not built or sold.</p>
+
+  <h3>Is it ready for production?</h3>
+  <p>It is early. A cache fails safe, since a missing cache means slower builds, but decide for yourself with that in mind. The <a href="https://github.com/fosterstack/cache">README</a> lists what has shipped and what has not.</p>
+
+  <h3>Who can write to the cache?</h3>
+  <p>Anyone holding the read-write password. Turn on Basic Auth anywhere untrusted people could reach the port, and share that password only with CI and developers you trust to change your code. You can also set an optional read-only login for everyone else: it can read but any write is refused. Telling Gradle not to upload is a client choice, not a server rule. Per-person identity is not built.</p>
+
+  <h3>Does it have a web page like the old node?</h3>
+  <p>No settings page, on purpose. You configure it with flags and environment variables. A read-only status page shows version, size, entries and hit counts, and metrics are available for Prometheus. To empty the cache, remove its volume and start again.</p>
+
+  <h3>How do I check a release is the real one?</h3>
+  <p>The commands are under "Verifying a release" in <a href="https://github.com/fosterstack/cache/blob/main/RELEASING.md">RELEASING.md</a>. No account is needed for the signature check.</p>
+
+  <h3>Does the server send anything out?</h3>
+  <p>No. The server sends no telemetry and needs no connection to FosterStack. It can run on a network with no route to the internet; see the <a href="https://github.com/fosterstack/cache/blob/main/docs/offline-install.md">disconnected network guide</a>.</p>
+
+  <h3>Can it store its data in S3 or other object storage?</h3>
+  <p>No. It stores cache entries on a local file system volume, with a small index file beside them. It runs as a single instance, so object storage is not used or supported today. Size the volume from the cache size cap. See <a href="/build-cache-server-sizing/">server sizing</a>.</p>
+
+  <h3>Can I run it on Kubernetes?</h3>
+  <p>Yes, with plain manifests in the <a href="https://github.com/fosterstack/cache/blob/main/docs/kubernetes.md">Kubernetes guide</a>. There is no Helm chart.</p>
+
+  <h3>Does it work with Jenkins and other CI?</h3>
+  <p>It is a plain web server, so any runner that can reach it can use it. See <a href="/jenkins-ci-build-cache/">Jenkins and CI build cache</a>.</p>
+
+  <h3>Where do I report a problem or ask for something?</h3>
+  <p>Open an issue on <a href="https://github.com/fosterstack/cache/issues">GitHub</a>. There is no signup, form or mailing list.</p>
 
   <h2>Next step</h2>
   <p>Read the <a href="https://github.com/fosterstack/cache/blob/main/docs/migrate-from-bcn.md">migration guide</a> or the <a href="https://github.com/fosterstack/cache">source on GitHub</a>. There is no signup and no form.</p>

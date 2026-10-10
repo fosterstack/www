@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Enable or Disable the Gradle Build Cache: Flag or Property</title>
-<meta name="description" content="Every way to switch the Gradle build cache on or off, tested against a real self-hosted cache: --build-cache, org.gradle.caching, --no-build-cache and more.">
+<meta name="description" content="Switch the Gradle build cache on or off with --build-cache or org.gradle.caching, and see how it differs from the configuration cache. Tested on a real cache server.">
 <meta property="og:title" content="Enable or Disable the Gradle Build Cache: Flag or Property">
-<meta property="og:description" content="Every way to switch the Gradle build cache on or off, tested against a real self-hosted cache: --build-cache, org.gradle.caching, --no-build-cache and more.">
+<meta property="og:description" content="Switch the Gradle build cache on or off with --build-cache or org.gradle.caching, and see how it differs from the configuration cache. Tested on a real cache server.">
 <meta property="og:url" content="https://fosterstack.com/gradle-build-cache-enable-disable/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="FosterStack">
@@ -74,6 +74,7 @@
   .muted-note { color: var(--muted); font-size: .93rem; margin-top: 1.1rem; }
   footer { border-top: 1px solid var(--line); margin-top: 4rem; padding: 1.5rem 1.25rem 3rem; }
   footer div { max-width: 44rem; margin: 0 auto; color: var(--muted); font-size: .82rem; }
+  main h3 { font-size: 1.05rem; margin: 2rem 0 .6rem; }
   a { color: var(--accent); }
   code { overflow-wrap: anywhere; }
   pre code { overflow-wrap: normal; }
@@ -88,7 +89,7 @@
 </header>
 <main>
   <h1>Enable or disable the Gradle build cache: flag, property or settings</h1>
-  <p class="lede">Gradle uses the build cache only when it is switched on and a cache is set up. Here is every way we tried to switch it on and off, with what each one did against a real cache server (release 0.2.1, Gradle 9.8.0).</p>
+  <p class="lede">Gradle uses the build cache only when it is switched on and a cache is set up. FosterStack Cache is the server that cache points at, and this page shows how to switch it on and off.</p>
 
   <h2>The short answer</h2>
   <ul class="trust">
@@ -96,24 +97,11 @@
     <li>To turn it on for everyone, put <code>org.gradle.caching=true</code> in <code>gradle.properties</code>.</li>
     <li>To turn it off for one build, add <code>--no-build-cache</code>. It wins over the property.</li>
     <li>Switching it on is not enough by itself: the project also needs the cache address in <code>settings.gradle.kts</code>.</li>
+    <li>The configuration cache is a different feature. It does not use the server.</li>
   </ul>
 
-  <h2>What we ran</h2>
-  <p>A four-module project with the cache address set in <code>settings.gradle.kts</code> (shown below). Each run used its own copy of the project and an empty Gradle home, so the only Gradle state shared was the cache server. An earlier set of runs started from a project folder that still held build output left over from an earlier test; we repeated all of them from a clean copy and got the same results. The table below shows the clean runs. We ran only <code>:core:compileJava</code> and looked at what Gradle printed next to it. Every build ended with <code>BUILD SUCCESSFUL</code>.</p>
-  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
-    <thead><tr><th>How it was switched</th><th>Command</th><th>Result</th></tr></thead>
-    <tbody>
-      <tr><td>Flag (first build)</td><td><code>gradle :core:compileJava --build-cache</code></td><td>Ran, and saved the result to the server</td></tr>
-      <tr><td>Nothing set</td><td><code>gradle :core:compileJava</code></td><td>Ran. The cache was not used</td></tr>
-      <tr><td>Flag</td><td><code>gradle :core:compileJava --build-cache</code></td><td><code>FROM-CACHE</code></td></tr>
-      <tr><td>Property in <code>gradle.properties</code></td><td><code>org.gradle.caching=true</code></td><td><code>FROM-CACHE</code></td></tr>
-      <tr><td>Property, and the flag off</td><td><code>org.gradle.caching=true</code> and <code>--no-build-cache</code></td><td>Ran. The flag won</td></tr>
-      <tr><td>System property</td><td><code>gradle :core:compileJava -Dorg.gradle.caching=true</code></td><td><code>FROM-CACHE</code></td></tr>
-      <tr><td>Flag, and rerun everything</td><td><code>--build-cache --rerun-tasks</code></td><td>Ran, even though a result was stored</td></tr>
-    </tbody>
-  </table></div>
-
   <h2>Which one to use</h2>
+  <p>Our advice, not a test result.</p>
   <ul class="trust">
     <li><strong>Everyone, always:</strong> the property in <code>gradle.properties</code>, checked in with the project. New machines then need no flags.</li>
     <li><strong>CI only:</strong> pass <code>--build-cache</code> in the CI command and leave the property out.</li>
@@ -135,8 +123,62 @@
   <h2>Read-only: turn off uploading, not the cache</h2>
   <p>Setting <code>isPush = false</code> lets a build download from the cache but never upload. We tried it against an empty server with the cache switched on. The build succeeded and ran the task, and the server still held 0 entries afterwards. A second build also ran the task, because nothing had ever been stored. Read-only only helps when someone else, such as CI, fills the cache. That setup is described in <a href="/gradle-build-cache-ci-writes-developers-read/">CI writes, developers read</a>.</p>
 
+  <h2 id="gradle-configuration-cache-vs-build-cache">Gradle configuration cache vs build cache</h2>
+  <p>They sound alike and they are not the same thing. One saves Gradle from working out your build again. The other saves your tasks from running again. You can use both, and only the second one uses a cache server.</p>
+  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
+    <tr><th></th><th>Configuration cache</th><th>Build cache</th></tr>
+    <tr><td>What it saves</td><td>The work of reading your build files and planning the tasks</td><td>The work of running a task, by reusing its saved output</td></tr>
+    <tr><td>Where it lives</td><td>A folder in your project, on your machine</td><td>On your machine, and optionally on a server shared with a team</td></tr>
+    <tr><td>Turned on with</td><td><code>--configuration-cache</code></td><td><code>--build-cache</code> (and a server URL for a shared one)</td></tr>
+    <tr><td>Thrown away when</td><td>A build file it depends on changes</td><td>A task's inputs change, so it gets a different key</td></tr>
+    <tr><td>Shows up as</td><td>"Reusing configuration cache."</td><td><code>FROM-CACHE</code> next to a task</td></tr>
+  </table></div>
+  <p>A remote cache server such as FosterStack Cache is for the build cache only. If Gradle suggests enabling the configuration cache, that is a separate local feature and has nothing to do with the server.</p>
+  <p>Our advice, not a test result. They solve different problems. The configuration cache helps most on large builds, where planning takes a while. The build cache helps most where the same work is done on many machines, such as CI runners and developer laptops. To set up a shared build cache, start with <a href="/first-15-minutes-build-cache/">your first 15 minutes with the build cache</a>.</p>
+
   <h2>If you do not see FROM-CACHE</h2>
-  <p>Work through <a href="/gradle-build-cache-hit-rate-low/">why the hit rate is low</a> and <a href="/gradle-remote-cache-not-working/">remote cache not working</a>. To clear stored results, see <a href="/reset-gradle-build-cache/">reset the build cache</a>.</p>
+  <p>Work through <a href="/gradle-remote-cache-not-working/">remote cache not working</a>, which also covers a low hit rate. To clear stored results, see <a href="/reset-gradle-build-cache/">reset the build cache</a>. For the authentication errors, see <a href="/gradle-remote-build-cache-authentication/">authentication and 401 errors</a>.</p>
+
+  <h2>How we checked</h2>
+  <h3>Switching the cache on and off</h3>
+  <p>A four-module project with the cache address set in <code>settings.gradle.kts</code> (shown above). Each run used its own copy of the project and an empty Gradle home, so the only Gradle state shared was the cache server. An earlier set of runs started from a project folder that still held build output left over from an earlier test; we repeated all of them from a clean copy and got the same results. The table below shows the clean runs. We ran only <code>:core:compileJava</code> and looked at what Gradle printed next to it. Every build ended with <code>BUILD SUCCESSFUL</code>.</p>
+  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
+    <thead><tr><th>How it was switched</th><th>Command</th><th>Result</th></tr></thead>
+    <tbody>
+      <tr><td>Flag (first build)</td><td><code>gradle :core:compileJava --build-cache</code></td><td>Ran, and saved the result to the server</td></tr>
+      <tr><td>Nothing set</td><td><code>gradle :core:compileJava</code></td><td>Ran. The cache was not used</td></tr>
+      <tr><td>Flag</td><td><code>gradle :core:compileJava --build-cache</code></td><td><code>FROM-CACHE</code></td></tr>
+      <tr><td>Property in <code>gradle.properties</code></td><td><code>org.gradle.caching=true</code></td><td><code>FROM-CACHE</code></td></tr>
+      <tr><td>Property, and the flag off</td><td><code>org.gradle.caching=true</code> and <code>--no-build-cache</code></td><td>Ran. The flag won</td></tr>
+      <tr><td>System property</td><td><code>gradle :core:compileJava -Dorg.gradle.caching=true</code></td><td><code>FROM-CACHE</code></td></tr>
+      <tr><td>Flag, and rerun everything</td><td><code>--build-cache --rerun-tasks</code></td><td>Ran, even though a result was stored</td></tr>
+    </tbody>
+  </table></div>
+  <h3>Configuration cache and build cache together</h3>
+  <p>The same small project, both flags on, the build cache pointed at a server. We ran this on Gradle 9.8.0 and a 0.2.1 server:</p>
+  <pre tabindex="0"><code>gradle build --configuration-cache --build-cache</code></pre>
+  <p><strong>1. The first build.</strong> In our runs, nothing was cached anywhere yet:</p>
+  <pre tabindex="0"><code>Calculating task graph as no cached configuration is available for tasks: build
+&gt; Task :compileJava
+BUILD SUCCESSFUL in 5s
+Configuration cache entry stored.</code></pre>
+  <p><strong>2. The same build again.</strong> Both caches work, in different ways. The plan is reused, and the task is simply up to date on disk:</p>
+  <pre tabindex="0"><code>Reusing configuration cache.
+&gt; Task :compileJava UP-TO-DATE
+BUILD SUCCESSFUL in 1s
+Configuration cache entry reused.</code></pre>
+  <p><strong>3. After <code>gradle clean</code>.</strong> The build outputs are gone, so the task would have to run again. The plan is still reused, and the output now comes from the server:</p>
+  <pre tabindex="0"><code>Reusing configuration cache.
+&gt; Task :compileJava FROM-CACHE
+BUILD SUCCESSFUL in 1s
+Configuration cache entry reused.</code></pre>
+  <p>In our runs, the server's status page counted one hit for that, and it holds the compiled output only.</p>
+  <p><strong>4. After editing <code>build.gradle.kts</code>, then <code>gradle clean</code>.</strong> Now the configuration cache is thrown away, because a build file changed, but the build cache still works, because the task's inputs did not change:</p>
+  <pre tabindex="0"><code>Calculating task graph as configuration cache cannot be reused because file &#x27;build.gradle.kts&#x27; has changed.
+&gt; Task :compileJava FROM-CACHE
+BUILD SUCCESSFUL in 2s
+Configuration cache entry stored.</code></pre>
+  <p>That fourth step is the clearest way to see they are separate: in our runs, one was invalidated and the other was not.</p>
 
   <p class="muted-note">Run on Gradle 9.8.0 with FosterStack Cache 0.2.1, macOS (arm64), Java 27.</p>
 </main>
@@ -149,7 +191,7 @@
     of the documented remote build cache HTTP protocol. Apache Maven is a trademark of the
     Apache Software Foundation; the Maven Build Cache Extension is Apache's project, not
     ours.</p>
-    <p style="margin-top:.6rem">© 2026 FosterStack · <a href="/build-cache-node-end-of-life/">Build Cache Node end of life</a> · <a href="/migrate-build-cache-node/">Migrate</a> · <a href="/build-cache-node-faq/">FAQ</a> · <a href="/jenkins-ci-build-cache/">CI setup</a> · <a href="/how-we-build/">How we build</a> · <a href="/regulated/">For regulated markets</a> · <a href="https://github.com/fosterstack/cache">github.com/fosterstack/cache</a> · <a href="mailto:hello@fosterstack.com">hello@fosterstack.com</a></p>
+    <p style="margin-top:.6rem">© 2026 FosterStack · <a href="/build-cache-node-end-of-life/">Build Cache Node end of life</a> · <a href="/migrate-build-cache-node/">Migrate</a> · <a href="/jenkins-ci-build-cache/">CI setup</a> · <a href="/how-we-build/">How we build</a> · <a href="/regulated/">For regulated markets</a> · <a href="https://github.com/fosterstack/cache">github.com/fosterstack/cache</a> · <a href="mailto:hello@fosterstack.com">hello@fosterstack.com</a></p>
   </div>
 </footer>
 </body>
