@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Build Cache Server Won't Start: Errors and Fixes</title>
+<meta name="description" content="FosterStack Cache exits right after you start it? The log line we got for a busy port, a bad data folder, a bad size or login setting, and a damaged index.">
+<meta property="og:title" content="Build Cache Server Won&#x27;t Start: Errors and Fixes">
+<meta property="og:description" content="FosterStack Cache exits right after you start it? The log line we got for a busy port, a bad data folder, a bad size or login setting, and a damaged index.">
+<meta property="og:url" content="https://fosterstack.com/build-cache-server-wont-start-errors/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="FosterStack">
+<link rel="canonical" href="https://fosterstack.com/build-cache-server-wont-start-errors/">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<style>
+  :root {
+    --bg: #ffffff; --fg: #16181d; --muted: #5b6472; --line: #e4e7ec;
+    --accent: #0d7a5f; --accent-fg: #ffffff; --card: #f6f8f9; --warn-bg: #fff7ed; --warn-line: #fdba74;
+    --mark: #0f4d66;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #101318; --fg: #e8eaf0; --muted: #98a2b3; --line: #262c36;
+      --accent: #2fbf95; --accent-fg: #08110e; --card: #171c23; --warn-bg: #241a10; --warn-line: #7c4a12;
+      --mark: #e8eaf0;
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 44rem; margin: 0 auto; padding: 0 1.25rem 4rem; }
+  header.site { max-width: 44rem; margin: 0 auto; padding: 1.25rem; display: flex; align-items: baseline; gap: .6rem; }
+  .logo { font-weight: 700; font-size: 1.05rem; letter-spacing: -.01em; }
+  .logo span { color: var(--accent); }
+  .logo .mark { width: 1.2em; height: 1.2em; vertical-align: -.24em; margin-right: .4em; }
+  .tag { color: var(--muted); font-size: .85rem; }
+  .notice {
+    background: var(--warn-bg); border: 1px solid var(--warn-line); border-radius: 8px;
+    padding: .7rem 1rem; font-size: .92rem; margin: 1.5rem 0 2.5rem;
+  }
+  h1 { font-size: 2rem; line-height: 1.2; letter-spacing: -.02em; margin-bottom: 1rem; }
+  .lede { font-size: 1.12rem; color: var(--muted); margin-bottom: 2rem; }
+  h2 { font-size: 1.25rem; margin: 3rem 0 .9rem; letter-spacing: -.01em; }
+  p + p { margin-top: .8rem; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: .8rem; margin-top: 1rem; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1rem 1.1rem; }
+  .card h3 { font-size: .98rem; margin-bottom: .35rem; }
+  .card p { font-size: .9rem; color: var(--muted); }
+  ul.trust { list-style: none; margin-top: .5rem; }
+  ul.trust li { padding: .45rem 0 .45rem 1.6rem; position: relative; }
+  ul.trust li::before { content: "✓"; position: absolute; left: .2rem; color: var(--accent); font-weight: 700; }
+  code, pre { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .88em; }
+  code { background: var(--card); border: 1px solid var(--line); border-radius: 5px; padding: .1em .35em; }
+  pre code { background: none; border: 0; padding: 0; color: inherit; font-size: 1em; }
+  button {
+    padding: .7rem 1.3rem; font-size: 1rem; font-weight: 600; cursor: pointer;
+    background: var(--accent); color: var(--accent-fg); border: 0; border-radius: 8px;
+  }
+  button:disabled { opacity: .6; cursor: default; }
+  table { width: 100%; border-collapse: collapse; font-size: .92rem; margin-top: 1rem; }
+  th, td { text-align: left; padding: .55rem .6rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  pre { background: #0f172a; color: #e2e8f0; padding: .9rem 1rem; border-radius: 8px;
+        overflow-x: auto; font-size: .9rem; line-height: 1.5; }
+  .cta-row { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1.1rem; }
+  .btn { display: inline-block; padding: .55rem 1rem; border-radius: 8px; font-weight: 600;
+         text-decoration: none; background: var(--accent); color: var(--accent-fg); }
+  .btn-secondary { background: transparent; color: inherit; border: 1px solid var(--muted); }
+  .muted-note { color: var(--muted); font-size: .93rem; margin-top: 1.1rem; }
+  footer { border-top: 1px solid var(--line); margin-top: 4rem; padding: 1.5rem 1.25rem 3rem; }
+  footer div { max-width: 44rem; margin: 0 auto; color: var(--muted); font-size: .82rem; }
+  a { color: var(--accent); }
+  code { overflow-wrap: anywhere; }
+  pre code { overflow-wrap: normal; }
+  .table-scroll { max-width: 100%; overflow-x: auto; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+</style>
+</head>
+<body>
+<header class="site">
+  <div class="logo"><svg class="mark" viewBox="0 0 96 96" aria-hidden="true" focusable="false"><rect x="12" y="14" width="72" height="18" rx="5" fill="var(--mark)"/><rect x="12" y="39" width="48" height="18" rx="5" fill="var(--mark)"/><rect x="12" y="64" width="26" height="18" rx="5" fill="var(--accent)"/></svg>foster<span>stack</span></div>
+  <div class="tag">Infrastructure worth keeping — and kept patched.</div>
+</header>
+<main>
+  <h1>My build cache server won't start. What does the error mean?</h1>
+  <p class="lede">If FosterStack Cache exits right after you start it, read the last line of its log. In our runs every startup failure ended with one <code>fscache: fatal</code> line and exit code 1, and the line named the cause.</p>
+
+  <h2>The short answer</h2>
+  <ul class="trust">
+    <li><strong>A rejected setting stops the server before it touches the data folder.</strong> The line names the variable and the value. Sizes must be whole numbers of bytes, so <code>10GB</code> is refused.</li>
+    <li><strong>A problem with the address or the data folder stops it a moment later.</strong> A busy port, a folder it cannot write to and a data path that is a file each gave a clear line.</li>
+    <li><strong>A second server on the same data folder waits about 5 seconds, then exits.</strong> It ends with the same fatal line and code 1. The first one kept serving.</li>
+    <li><strong>Some mistakes do not stop the server.</strong> A misspelled setting name was ignored without a warning, and an emptied index file was accepted without a warning, so lost entries go unnoticed.</li>
+  </ul>
+
+  <h2>Find your error</h2>
+  <p>The first column is what we saw in the log. The other two columns are our advice, not a test result. <code>DIR</code> stands for a folder on our test machine and <code>PORT</code> for the port we used.</p>
+  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
+    <thead><tr><th>The last line of the log</th><th>What it means</th><th>What to do</th></tr></thead>
+    <tbody>
+      <tr><td><code>serve: listen tcp 127.0.0.1:PORT: bind: address already in use</code></td><td>Another program, or another copy of the server, already listens on that address.</td><td>Stop it, or give this server another <code>FSCACHE_ADDR</code>.</td></tr>
+      <tr><td><code>serve: listen tcp: address VALUE: missing port in address</code>, also <code>invalid port</code> and <code>unknown port</code></td><td><code>FSCACHE_ADDR</code> is not a host and a port. We tried <code>garbage</code>, <code>127.0.0.1</code>, <code>18702</code>, <code>:99999</code>, <code>:-1</code> and <code>127.0.0.1:abc</code>.</td><td>Write it as <code>:8080</code> or <code>127.0.0.1:8080</code>.</td></tr>
+      <tr><td><code>write shutdown marker: open DIR/.unclean-shutdown: permission denied</code></td><td>The data folder exists, but the user running the server cannot write to it.</td><td>Give that user write access. In a container, see <a href="/build-cache-permission-denied-data-directory/">permission denied on the data folder</a>.</td></tr>
+      <tr><td><code>write shutdown marker: mkdir DIR: permission denied</code>, or <code>mkdir data: permission denied</code></td><td>The server could not create the data folder. With no <code>FSCACHE_DATA_DIR</code> it uses <code>./data</code>, in the folder you started it from.</td><td>Create the folder first, or set <code>FSCACHE_DATA_DIR</code> to a path you can write.</td></tr>
+      <tr><td><code>check shutdown marker: stat DIR/.unclean-shutdown: not a directory</code></td><td><code>FSCACHE_DATA_DIR</code> points at a file.</td><td>Point it at a folder.</td></tr>
+      <tr><td><code>open metadata store: metadata: open: timeout</code>, after about 5 seconds</td><td>Another server already holds this data folder.</td><td>Stop the other server. See <a href="/run-two-build-cache-servers/">can I run two build cache servers</a>.</td></tr>
+      <tr><td><code>open metadata store: metadata: open: invalid database</code></td><td>The index file <code>meta.db</code> in the data folder is damaged. We overwrote it with random bytes.</td><td>Restore the folder from a backup, or start with a new, empty folder. See <a href="/back-up-and-restore-build-cache/">back up and restore a build cache</a>.</td></tr>
+      <tr><td><code>open metadata store: metadata: open: open DIR/meta.db: permission denied</code></td><td>The server's user cannot read and write the index file. We had made it read-only.</td><td>Fix the file's owner or mode.</td></tr>
+      <tr><td><code>FSCACHE_MAX_BYTES="10GB" is not a valid byte count (whole non-negative decimal number)</code></td><td>Sizes are whole numbers of bytes. A unit, a decimal point, an exponent, a space and letters after the number were all refused.</td><td>Write <code>10737418240</code> for 10 GiB, not <code>10GB</code>.</td></tr>
+      <tr><td><code>FSCACHE_MAX_BYTES="-1" is negative; a byte count cannot be</code></td><td>A negative size. <code>FSCACHE_MAX_CONCURRENT_UPLOADS="-1"</code> gets the same line.</td><td>Use a whole number, or <code>0</code> for no limit.</td></tr>
+      <tr><td><code>FSCACHE_USERNAME and FSCACHE_PASSWORD must both be set or both be empty</code>, and the same line for <code>FSCACHE_RO_USERNAME</code> and <code>FSCACHE_RO_PASSWORD</code></td><td>Only one half of a login pair is set.</td><td>Set both halves, or neither.</td></tr>
+      <tr><td><code>FSCACHE_RO_USERNAME and FSCACHE_RO_PASSWORD require FSCACHE_USERNAME and FSCACHE_PASSWORD</code></td><td>A read-only pair is set without the read-write pair.</td><td>Set the read-write pair as well.</td></tr>
+      <tr><td><code>FSCACHE_RO_USERNAME must differ from FSCACHE_USERNAME</code></td><td>Both pairs use the same username.</td><td>Choose another read-only username. See <a href="/change-build-cache-logins-without-breaking-ci/">change the build cache logins</a>.</td></tr>
+      <tr><td><code>FSCACHE_MAX_CONCURRENT_UPLOADS="abc" is not a valid byte count</code>, and the same for <code>FSCACHE_MAX_BODY_BYTES</code></td><td>The same rule applies. The message says "byte count" even for the upload limit.</td><td>Use a whole number.</td></tr>
+    </tbody>
+  </table></div>
+
+  <h2>When the server starts, but not the way you meant</h2>
+  <ul class="trust">
+    <li><strong>A misspelled setting name was ignored.</strong> With <code>FSCACHE_MAXBYTES=1500</code> the server started with no warning, and its start line said <code>"max_bytes":0</code>. Four uploads of 1,000 bytes were all stored. With <code>FSCACHE_MAX_BYTES=1500</code>, one entry was left and 3 were evicted.</li>
+    <li><strong>An emptied or deleted <code>meta.db</code> was not an error.</strong> The server started and still served an old entry. But <code>/statusz</code> counted only the entry we stored afterwards: 1 entry and 100 bytes, not 4 entries.</li>
+    <li><strong>A bad address still left a data folder behind.</strong> The server created <code>meta.db</code> and <code>blobs</code> before it failed to listen. A rejected setting did not create any folder.</li>
+    <li><strong>An HTTPS address does not work.</strong> The docs say the server speaks plain HTTP and has no certificate handling, so TLS goes in front of it. <code>curl</code> with an <code>https://</code> address to the server's own port failed with exit code 35, and the server logged nothing. See <a href="/build-cache-docker-compose-production/">production build cache with Docker Compose, nginx and TLS</a>.</li>
+  </ul>
+
+  <h2>What to do</h2>
+  <p>Our advice, not a test result:</p>
+  <ul>
+    <li><strong>Read the last line first.</strong> It names the variable, the value or the path.</li>
+    <li><strong>After every change, read the <code>fscache: starting</code> line.</strong> It prints the address, the data folder, the size cap and whether logins are on. A misspelled name shows up there as a setting that did not change.</li>
+    <li><strong>Write sizes in bytes.</strong> <code>10GB</code> will stop the server, which is better than a silent default.</li>
+    <li><strong>Start the server as the user that owns the data folder.</strong></li>
+    <li><strong>Keep one server per data folder.</strong> A start on a full disk is on <a href="/build-cache-disk-full-what-happens/">what happens when the disk fills up</a>.</li>
+  </ul>
+
+  <h2>How we checked</h2>
+  <p>FosterStack Cache 0.2.1 on a Mac (arm64). Each case was one start with a clean environment that held only the address, the data folder and the setting under test, watched for 3 seconds with a check every quarter of a second. Every failed start exited with code 1, and all of them in under a second except the shared folder. A server we stopped with a normal stop exited with code 0.</p>
+  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
+    <thead><tr><th>What we did</th><th>What the server did</th></tr></thead>
+    <tbody>
+      <tr><td>Started a second server on an address in use</td><td>Exited with code 1, under a second</td></tr>
+      <tr><td>Six invalid <code>FSCACHE_ADDR</code> values</td><td>All exited with code 1, under a second</td></tr>
+      <tr><td>Data path was a file; folder not writable; folder inside a read-only parent; no data setting in a read-only folder</td><td>All exited with code 1, under a second</td></tr>
+      <tr><td>Size setting: <code>-1</code>, <code>abc</code>, <code>10GB</code>, <code>10G</code>, <code>1.5</code>, <code>12abc</code>, <code>1e6</code>, <code>" 100"</code></td><td>All exited with code 1, under a second. No data folder was created</td></tr>
+      <tr><td>Size setting: <code>0</code> and <code>5000</code></td><td>Started. The start line showed <code>"max_bytes"</code> as 0 and 5000</td></tr>
+      <tr><td>One half of a login pair; read-only pair without the read-write pair; same usernames</td><td>All exited with code 1, under a second</td></tr>
+      <tr><td>Upload limit: <code>abc</code> and <code>-1</code>; body limit: <code>big</code></td><td>All exited with code 1, under a second</td></tr>
+      <tr><td>Upload limit: <code>0</code> and <code>32</code></td><td>Started</td></tr>
+      <tr><td>A second server on a data folder held by a running server</td><td>Exited with code 1 after about 5 seconds. The first answered <code>/healthz</code> and kept its entry</td></tr>
+      <tr><td>Copies of a data folder with <code>meta.db</code> emptied, and deleted</td><td>Both started with no warning. An old entry was still served, and <code>/statusz</code> showed 1 entry</td></tr>
+      <tr><td>A copy with <code>meta.db</code> overwritten with random bytes; a copy with <code>meta.db</code> read-only</td><td>Both exited with code 1, under a second</td></tr>
+      <tr><td><code>FSCACHE_MAXBYTES</code> and <code>FSCACHE_MAX_BYTES</code>, four 1,000-byte uploads each</td><td>4 entries stored with the misspelled name. 1 entry and 3 evicted with the right one</td></tr>
+      <tr><td><code>curl</code> with <code>https://</code> to the plain HTTP port</td><td><code>curl</code> exit code 35. <code>/healthz</code> over <code>http://</code> answered 200</td></tr>
+    </tbody>
+  </table></div>
+  <p class="muted-note">The log is one JSON line per event. A start that got as far as listening printed <code>fscache: starting</code> first. A rejected setting or a data folder problem printed only the <code>fatal</code> line. We caused one mistake at a time, so we do not know which line shows first when two settings are wrong.</p>
+  <p class="muted-note">Not tested: Docker or Kubernetes starts, Linux, Windows, IPv6 addresses, a data folder on a network disk, and a Gradle build against an HTTPS address that the server does not speak.</p>
+</main>
+<footer>
+  <div>
+    <p>FosterStack is not affiliated with, endorsed by, or sponsored by Gradle Inc.
+    "Gradle" and "Develocity" are trademarks of Gradle Inc., used here only to identify
+    compatibility. FosterStack contains no Gradle Inc. code; it is a clean-room implementation
+    of the documented remote build cache HTTP protocol. Apache Maven is a trademark of the
+    Apache Software Foundation; the Maven Build Cache Extension is Apache's project, not
+    ours.</p>
+    <p style="margin-top:.6rem">© 2026 FosterStack · <a href="/build-cache-node-end-of-life/">Build Cache Node end of life</a> · <a href="/migrate-build-cache-node/">Migrate</a> · <a href="/build-cache-node-faq/">FAQ</a> · <a href="/jenkins-ci-build-cache/">CI setup</a> · <a href="/how-we-build/">How we build</a> · <a href="/regulated/">For regulated markets</a> · <a href="https://github.com/fosterstack/cache">github.com/fosterstack/cache</a> · <a href="mailto:hello@fosterstack.com">hello@fosterstack.com</a></p>
+  </div>
+</footer>
+</body>
+</html>
