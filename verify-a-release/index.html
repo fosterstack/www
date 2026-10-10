@@ -93,7 +93,7 @@
   <p><code>cosign</code>, the <code>gh</code> tool (for the build-provenance steps), and <code>jq</code>. Set the version and your platform once:</p>
   <pre tabindex="0"><code>$ VER=0.2.1
 PLATFORM=linux_arm64   # or linux_amd64, darwin_arm64, darwin_amd64</code></pre>
-  <p>Find the current version:</p>
+  <p>To check the latest release instead of 0.2.1, set <code>VER</code> from GitHub with this command in place of the first line above:</p>
   <pre tabindex="0"><code>VER=$(curl -fsSL https://api.github.com/repos/fosterstack/cache/releases/latest \
         | sed -n 's/.*"tag_name": *"v\([^"]*\)".*/\1/p')</code></pre>
 
