@@ -93,9 +93,9 @@
   <h2>The short answer</h2>
   <ul class="trust">
     <li><strong>Two servers on one data folder.</strong> The second one exited with code 1 after about 5 seconds, in each of three tries. The first kept serving.</li>
-    <li><strong>Two servers on separate folders.</strong> Each stores its own copy. In eight builds, one server restored 25 of 32 compile tasks. Two servers, with builds taking turns, restored 18 of 32.</li>
+    <li><strong>Two servers on separate folders.</strong> Each stores its own copy. In eight builds, one server restored 25 of 32 compile tasks. Two servers, with builds taking turns, restored 18 of 32, fewer than the single server's 25.</li>
     <li><strong>A spare from a copy.</strong> A server started on a copy of a stopped server's folder had all 14 entries. Builds restored them.</li>
-    <li><strong>Gradle takes one remote cache.</strong> With two remote blocks in the settings, only the second one was used.</li>
+    <li><strong>Gradle used one remote cache in our run.</strong> With two remote blocks in the settings, only the second one was used.</li>
   </ul>
 
   <h2>What to do</h2>
@@ -113,8 +113,8 @@
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <thead><tr><th>Setup</th><th>What we did</th><th>What happened</th></tr></thead>
     <tbody>
-      <tr><td>Two servers, one data folder</td><td>Started the first and built. Started a second on the same folder, three times.</td><td>The second exited with code 1 each time, after about 5 seconds, logging <code>open metadata store: metadata: open: timeout</code>. The first answered <code>/healthz</code> and the next build restored 4 of 4.</td></tr>
-      <tr><td>Same, then a build aimed at the second server</td><td>One build pointed at the address of the second server.</td><td>The build succeeded, restored 0 of 4 and printed one <code>Could not load entry</code> warning.</td></tr>
+      <tr><td>Two servers, one data folder</td><td>Started the first and built. Started a second on the same folder, once with a build and then in three timed tries.</td><td>The second exited with code 1 every time. The three timed tries took about 5 seconds each. It logged <code>open metadata store: metadata: open: timeout</code>. The first answered <code>/healthz</code> and the next build restored 4 of 4.</td></tr>
+      <tr><td>Same, then a build aimed at the second server</td><td>One build pointed at the address of the second server, which had already exited.</td><td>The build succeeded, restored 0 of 4 and printed one <code>Could not load entry</code> warning.</td></tr>
       <tr><td>One server, eight builds</td><td>Base, base again, then three edits, each built twice.</td><td>Restored 0, 4, 3, 4, 3, 4, 3 and 4 of 4 compile tasks, 25 of 32. The server logged 16 misses and held 16 entries.</td></tr>
       <tr><td>Two servers, separate folders, builds taking turns</td><td>The same eight builds, the first of each pair to server A and the second to server B.</td><td>Restored 0, 0, 3, 3, 3, 3, 3 and 3, 18 of 32. The two servers logged 16 misses each, 32 in all, and held 16 entries each.</td></tr>
       <tr><td>A spare from a copy</td><td>Built twice on A. Stopped A, copied its data folder, started B on the copy.</td><td>B showed 14 entries. Builds on B restored 4 of 4 for both earlier builds, and 3 of 4 for a new edit. B then held 15 entries.</td></tr>
@@ -123,7 +123,7 @@
     </tbody>
   </table></div>
   <p class="muted-note">The server counters count every request, including the compiled build scripts, so a build adds 13 hits or misses. The compile tasks are the four that the table counts. All builds ended with <code>BUILD SUCCESSFUL</code>.</p>
-  <p class="muted-note">What Gradle says: its <a href="https://docs.gradle.org/current/userguide/build_cache.html">build cache guide</a> says it supports a local and a remote build cache that can be configured separately. The cache documentation says why a shared folder fails: the metadata file is held under an exclusive lock by one process.</p>
+  <p class="muted-note">What Gradle says: its <a href="https://docs.gradle.org/current/userguide/build_cache.html">build cache guide</a> says it supports a local and a remote build cache that can be configured separately. FosterStack's own Kubernetes notes give the reason a shared folder fails: the metadata file is held under an exclusive lock by one process.</p>
   <p class="muted-note">Not tested: Linux, Docker or Kubernetes, a real load balancer, a folder on a network disk, Maven, more than two servers, and copying the folder of a server that is still running.</p>
 </main>
 <footer>
