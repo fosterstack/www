@@ -99,9 +99,9 @@ verifiable against the CI run that produced them.
 
 ## Status
 
-FosterStack Cache is at v0.2 — early. The cache core, HTTP surface, eviction,
-metrics and the signed release pipeline are shipped and testable today. There is no
-published schedule for what follows; the roadmap below says direction, not dates.
+The cache core, HTTP surface, eviction, metrics and the signed release pipeline are
+shipped and testable today. There is no published schedule for what follows; the roadmap
+below says direction, not dates.
 
 Not yet shipped:
 
