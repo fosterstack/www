@@ -256,7 +256,7 @@ extra)
                  grep -q "response status 401: Unauthorized" "$T/gempty.out" || fail "empty login with an address set: no 401 line"; echo "checked: gradle-empty-login"; snap > "$T/last" ;;
     mvn-empty-url) cd "$WS/mproj"; rm -rf "$HOME/.m2/build-cache" target
                  MAVEN_ARGS= CACHE_USER="$RW_USER" CACHE_PASSWORD="$RW_PASS" mvn -B -s .mvn/ci-settings.xml -Dmaven.build.cache.remote.enabled=true -Dmaven.build.cache.remote.url="" -Dmaven.build.cache.remote.save.enabled=false verify > "$T/mempty.out" 2>&1; echo "extra mvn-empty-url: exit $?"
-                 MV="$(mvn -v 2>/dev/null | head -1)"; echo "Maven here: ${MV}"
+                 MV="$(MAVEN_ARGS= mvn -v 2>/dev/null | head -1)"; echo "Maven here: ${MV}"
                  case "$MV" in
                    *"Apache Maven 3.9."*) grep -q "NoTransporterException" "$T/mempty.out" && echo "OBS flags with an empty address: Maven stopped with NoTransporterException, as the page says" || fail "flags with an empty address: no NoTransporterException on ${MV} (the page says Maven stops with an internal error)" ;;
                    *) echo "OBS flags with an empty address on ${MV} (not 3.9.x): $(grep -m1 -E 'NoTransporter|ERROR|BUILD' "$T/mempty.out" | cut -c1-200)" ;;
@@ -268,7 +268,11 @@ extra)
                  read -r E1 _ _ <<< "$(snap)"
                  grep -q "BUILD SUCCESS" "$T/m403.out" || fail "Maven, read-only login with saving on: the build should still succeed"
                  [ "$(grep -c 'Unable to save to remote cache' "$T/m403.out")" -ge 1 ] || fail "Maven, read-only login with saving on: no 'Unable to save to remote cache' line"
-                 grep -qE "status code: 403, reason phrase: Forbidden" "$T/m403.out" || fail "Maven, read-only login with saving on: no 403 Forbidden line"
+                 MV="$(MAVEN_ARGS= mvn -v 2>/dev/null | head -1)"
+                 case "$MV" in
+                   *"Apache Maven 3.9."*) grep -qE "status code: 403, reason phrase: Forbidden" "$T/m403.out" || fail "Maven 3.9.x, read-only login with saving on: no 'status code: 403, reason phrase: Forbidden' line (the page shows it)" ;;
+                   *) grep -q "403" "$T/m403.out" && echo "OBS Maven here is ${MV} (not 3.9.x): the 403 shows as: $(grep -m1 -E 'Unable to save|403' "$T/m403.out" | cut -c1-220)" || fail "Maven ${MV}, read-only login with saving on: no 403 anywhere in the log" ;;
+                 esac
                  [ "$E1" = "$E0" ] || fail "Maven, read-only login with saving on: the server stored entries ($E0 -> $E1)"
                  echo "OBS 'Unable to save to remote cache' lines: $(grep -c 'Unable to save to remote cache' "$T/m403.out") (the page says 3)"; echo "checked: mvn-403"; snap > "$T/last" ;;
     mvn-missing-login) cd "$WS/mproj"; rm -rf "$HOME/.m2/build-cache" target; printf 'package demo;\n\npublic class App {\n    public static String hello() { return "hello 1"; }\n}\n' > src/main/java/demo/App.java
