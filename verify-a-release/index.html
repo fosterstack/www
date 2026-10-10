@@ -148,7 +148,7 @@ The following checks were performed on each of these signatures:
   &quot;signer&quot;: &quot;https://github.com/fosterstack/cache/.github/workflows/stage-image.yml@refs/tags/v0.2.2&quot;,
   &quot;run&quot;: &quot;https://github.com/fosterstack/cache/actions/runs/37957120550/attempts/2&quot;
 }</code></pre>
-  <p>The command exits with status 0 on success. The image digest is the one from step 4, and the run link is the public build that produced it. The link opens attempt 2 of the release run: that attempt built this image, and its later promotion job failed and was re-run in attempt 3.</p>
+  <p>The command exits with status 0 on success. The image digest is the one from step 4, and the run link is the public build that produced it. The link opens attempt 2 of the release run. That attempt built and authorized the image. Attempt 3 re-ran only the publishing and signing step, after a registry login was rejected, so the public signatures come from attempt 3. The digests are the same.</p>
 
   <h2>6. Where was your download built?</h2>
   <pre tabindex="0"><code>$ gh attestation verify &quot;fscache_${VER}_${PLATFORM}.tar.gz&quot; --repo fosterstack/cache \
