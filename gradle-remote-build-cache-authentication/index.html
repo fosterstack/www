@@ -133,7 +133,7 @@ buildCache {
     <tr><td><strong>401</strong></td><td>No password, or the wrong one.</td><td>Fix the credentials block. See below.</td></tr>
     <tr><td><strong>403</strong></td><td>A write sent with the read-only login.</td><td>Use the read-write login for machines that upload, or set the client not to upload.</td></tr>
     <tr><td><strong>413</strong></td><td>An upload bigger than the server's size limit for one entry, or bigger than the whole cache size cap.</td><td>With no <code>X-FSCache-Reject</code> header, the entry is over the per-entry limit: raise <code>FSCACHE_MAX_BODY_BYTES</code> if it is meant to be cached. With the header set to <code>entry-exceeds-cache-cap</code>, the entry is bigger than <code>FSCACHE_MAX_BYTES</code>: see <a href="/build-cache-eviction-size-limit/">how the size limit works</a>.</td></tr>
-    <tr><td><strong>429</strong></td><td>Too many uploads in progress at once. The server allows 32 by default, and a refused upload stores nothing.</td><td>The build carries on without that entry. If it keeps happening, see <a href="/how-many-builds-one-build-cache-server-at-once/">how many builds can use one cache server at once</a> for the setting.</td></tr>
+    <tr><td><strong>429</strong></td><td>Too many uploads in progress at once. The server allows 32 by default, and a refused upload stores nothing.</td><td>The build carries on without that entry. If it keeps happening, see <a href="/build-cache-server-sizing/#how-many-builds-one-build-cache-server-at-once">how many builds can use one cache server at once</a> for the setting.</td></tr>
   </table></div>
 
   <h3 style="margin-top:2rem">401: a wrong or missing password</h3>
@@ -174,7 +174,7 @@ GET the too-large key afterwards                               404
     <li><strong>Plain HTTP.</strong> Gradle refuses plain <code>http://</code> unless you opt in with <code>isAllowInsecureProtocol</code>. In our test the address <code>127.0.0.1</code> was let through without it, but the name <code>localhost</code> was refused.</li>
   </ul>
 
-  <p class="muted-note">Related: <a href="/gradle-remote-cache-not-working/">Gradle remote build cache not working</a>, <a href="/build-cache-server-sizing/">server sizing</a> and <a href="/monitor-build-cache-prometheus-grafana/">monitoring</a>.</p>
+  <p class="muted-note">Related: <a href="/gradle-remote-cache-not-working/">Gradle remote build cache not working</a>, <a href="/build-cache-server-sizing/">server sizing</a> and <a href="/is-the-build-cache-server-healthy-what-to-alert-on/#monitor-build-cache-prometheus-grafana">monitoring</a>.</p>
   <div class="cta-row">
     <a class="btn" href="/gradle-build-cache-tutorial/">Gradle build cache tutorial</a>
     <a class="btn btn-secondary" href="/">FosterStack home</a>

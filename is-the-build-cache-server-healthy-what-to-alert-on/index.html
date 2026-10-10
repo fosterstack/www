@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Is My Build Cache Server Healthy? What to Alert On</title>
-<meta name="description" content="How to tell a FosterStack Cache server is healthy: what /healthz misses, which counters move when the data folder breaks or the cache is full, and what to alert on.">
+<meta name="description" content="How to tell a FosterStack Cache server is healthy: what /healthz misses, which counters move when it breaks, what to alert on, and the Prometheus and Grafana setup.">
 <meta property="og:title" content="Is My Build Cache Server Healthy? What to Alert On">
-<meta property="og:description" content="How to tell a FosterStack Cache server is healthy: what /healthz misses, which counters move when the data folder breaks or the cache is full, and what to alert on.">
+<meta property="og:description" content="How to tell a FosterStack Cache server is healthy: what /healthz misses, which counters move when it breaks, what to alert on, and the Prometheus and Grafana setup.">
 <meta property="og:url" content="https://fosterstack.com/is-the-build-cache-server-healthy-what-to-alert-on/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="FosterStack">
@@ -115,7 +115,72 @@
     <li><strong>A count of 401 or 403 responses.</strong> The server does not count them. Refused logins did not appear in <code>fscache_http_requests_total</code> or in the server log. A wrong login shows up on the client: the build log says <code>response status 401</code> and the build gets no hits from the server.</li>
     <li><strong>Made-up health URLs.</strong> <code>/readyz</code> and <code>/livez</code> returned 404. The server counted each 404 as a cache miss.</li>
   </ul>
-  <p>Counters start again at 0 when the server restarts. Prometheus <code>increase()</code> handles the reset. Reading the raw value does not. The rest of the metric names are on <a href="/monitor-build-cache-prometheus-grafana/">monitoring with Prometheus and Grafana</a>.</p>
+  <p>Counters start again at 0 when the server restarts. Prometheus <code>increase()</code> handles the reset. Reading the raw value does not. The full list of metric names is in <a href="#monitor-build-cache-prometheus-grafana">the monitoring section below</a>.</p>
+
+  <h2 id="monitor-build-cache-prometheus-grafana">Monitor a Gradle build cache with Prometheus and Grafana</h2>
+  <p>The cache server exposes Prometheus metrics and a read-only status page. This section lists what is there, a scrape setting, a few queries, and where to get a ready-made Grafana dashboard.</p>
+  <p>Our advice, not a test result: the scrape setting and the queries are examples.</p>
+
+  <h3>Metrics need no password</h3>
+  <p>The <code>/metrics</code> and <code>/healthz</code> paths stay open even when Basic Auth is on, so a Prometheus scraper needs no credentials. The status page, <code>/statusz</code>, sits behind Basic Auth when it is enabled.</p>
+
+  <h3>A scrape setting</h3>
+  <pre tabindex="0"><code>scrape_configs:
+  - job_name: fscache
+    static_configs:
+      - targets: [&#x27;cache.example.com:8080&#x27;]</code></pre>
+  <p>This is a plain example. Use your own address, and HTTPS if you have put the server behind a proxy.</p>
+
+  <h3>The metrics</h3>
+  <p>These are the names a running 0.2.1 server reports:</p>
+  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
+    <tr><th>Metric</th><th>Type</th><th>What it tells you</th></tr>
+    <tr><td><code>fscache_cache_hits_total</code></td><td>counter</td><td>Requests answered from the cache</td></tr>
+    <tr><td><code>fscache_cache_misses_total</code></td><td>counter</td><td>Requests for something not stored</td></tr>
+    <tr><td><code>fscache_store_bytes</code></td><td>gauge</td><td>How much is stored now. Reads 0 after a restart until the next upload</td></tr>
+    <tr><td><code>fscache_store_entries</code></td><td>gauge</td><td>How many entries are stored. Reads 0 after a restart until the next upload</td></tr>
+    <tr><td><code>fscache_evicted_entries_total</code></td><td>counter</td><td>Entries removed to stay under the size cap</td></tr>
+    <tr><td><code>fscache_http_requests_total</code></td><td>counter</td><td>Requests, by method and status</td></tr>
+    <tr><td><code>fscache_http_request_duration_seconds</code></td><td>histogram</td><td>How long requests take</td></tr>
+    <tr><td><code>fscache_bytes_read_total</code></td><td>counter</td><td>Bytes sent to clients</td></tr>
+    <tr><td><code>fscache_bytes_written_total</code></td><td>counter</td><td>Bytes received from clients</td></tr>
+  </table></div>
+
+  <h3>Queries worth having</h3>
+  <pre tabindex="0"><code># hit rate over the last 5 minutes
+sum(rate(fscache_cache_hits_total[5m]))
+  / clamp_min(sum(rate(fscache_cache_hits_total[5m])) + sum(rate(fscache_cache_misses_total[5m])), 0.0001)
+
+# entries removed per second to stay under the cap
+sum(rate(fscache_evicted_entries_total[5m]))
+
+# 95th percentile request time
+histogram_quantile(0.95, sum by (le, method) (rate(fscache_http_request_duration_seconds_bucket[5m])))</code></pre>
+
+  <h3>A ready-made Grafana dashboard</h3>
+  <p>The repository includes a dashboard with eight panels: hit rate, cache size against the cap, entries, evictions, hits and misses, requests by status, throughput, and request latency. <a href="https://github.com/fosterstack/cache/blob/main/docs/grafana-dashboard.json">Download <code>grafana-dashboard.json</code></a> and import it in Grafana.</p>
+
+  <h3>The status page</h3>
+  <p>For a quick look without Prometheus, <code>/statusz</code> returns the numbers in one place, in a browser or as JSON. This is what a freshly started 0.2.1 server returned after one stored entry and two requests:</p>
+  <pre tabindex="0"><code>$ curl -s localhost:8080/statusz
+{
+  &quot;version&quot;: &quot;v0.2.1&quot;,
+  &quot;revision&quot;: &quot;0bfc498ecfca3e38cb4a456acda44359a1620c5a&quot;,
+  &quot;fips140&quot;: false,
+  &quot;fips140_note&quot;: &quot;off&quot;,
+  &quot;uptime_seconds&quot;: 2.118684875,
+  &quot;uptime&quot;: &quot;2s&quot;,
+  &quot;store_bytes&quot;: 5,
+  &quot;max_bytes&quot;: 1073741824,
+  &quot;store_entries&quot;: 1,
+  &quot;cache_hits&quot;: 1,
+  &quot;cache_misses&quot;: 1,
+  &quot;hit_ratio&quot;: 0.5,
+  &quot;evicted_entries&quot;: 0,
+  &quot;auth_enabled&quot;: false
+}</code></pre>
+
+  <p class="muted-note">Related: <a href="/gradle-remote-cache-not-working/">Gradle remote build cache not working</a> and <a href="/build-cache-docker-compose-production/#gradle-build-cache-docker-compose">Gradle build cache with Docker Compose</a>.</p>
 
   <h2>How we checked</h2>
   <p>We ran real FosterStack Cache servers, one per case, and built a four-module Gradle project against each. After every step we asked <code>/healthz</code> and <code>/statusz</code>, read <code>/metrics</code>, and kept the build log.</p>
@@ -141,7 +206,8 @@
   <p class="muted-note">The two rules: rule 1 is the increase of PUT requests with a 5xx status. Rule 2 is evictions up while hits are flat. We worked out the difference between two saved <code>/metrics</code> scrapes with a small script. We did not run a Prometheus server or an alerting tool, so how you write these rules in your alerting tool is our suggestion.</p>
   <p class="muted-note">Where the figures come from: a build asks the server for 13 things (four compile tasks and nine compiled build scripts), so one build adds 13 hits or misses. <code>fscache_evicted_entries_total</code> counts entries, not builds.</p>
   <p class="muted-note">Setup: FosterStack Cache 0.2.1 and Gradle 9.8.0 on a Mac (arm64), Temurin 21.0.12.1, all on one machine over plain HTTP on the loopback address. Every build used a fresh copy of the project and a new empty Gradle home, with Gradle's local cache off. We broke the data folder with <code>chmod</code> and <code>rm</code> as the same user that ran the server.</p>
-  <p class="muted-note">Limits: we did not fill a real disk, we only used the size cap. We did not test Docker or Kubernetes probes, HTTPS, Maven, Linux, a slow disk, or a very large cache. A disk that fills up may behave differently from a cap or a read-only folder. For the exit with <code>permission denied</code> in a container, see <a href="/build-cache-permission-denied-data-directory/">the data directory page</a>. For what a build does while the server is down, see <a href="/build-cache-server-down-what-happens/">server down</a>.</p>
+  <p class="muted-note">The metric names and the status page output in the monitoring section come from a running 0.2.1 server.</p>
+  <p class="muted-note">Limits: we did not fill a real disk, we only used the size cap. We did not test Docker or Kubernetes probes, HTTPS, Maven, Linux, a slow disk, or a very large cache. A disk that fills up may behave differently from a cap or a read-only folder. For the exit with <code>permission denied</code> in a container, see <a href="/build-cache-server-wont-start-errors/">the startup errors page</a>. For what a build does while the server is down, see <a href="/build-cache-server-down-what-happens/">server down</a>.</p>
 </main>
 
 <footer>

@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>What Happens to My Build When the Cache Server Is Down?</title>
-<meta name="description" content="If the remote cache server is down, does a Gradle or Maven build fail? Real runs on FosterStack Cache 0.2.1: both finish locally; a dead address cost Gradle 30 s.">
+<meta name="description" content="Does a Gradle or Maven build fail if the cache server is down? Real 0.2.1 runs, plus what two servers do. Builds finish locally; a dead address cost Gradle 30 s.">
 <meta property="og:title" content="What Happens to My Build When the Cache Server Is Down?">
-<meta property="og:description" content="If the remote cache server is down, does a Gradle or Maven build fail? Real runs on FosterStack Cache 0.2.1: both finish locally; a dead address cost Gradle 30 s.">
+<meta property="og:description" content="Does a Gradle or Maven build fail if the cache server is down? Real 0.2.1 runs, plus what two servers do. Builds finish locally; a dead address cost Gradle 30 s.">
 <meta property="og:url" content="https://fosterstack.com/build-cache-server-down-what-happens/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="FosterStack">
@@ -46,6 +46,7 @@
   h1 { font-size: 2rem; line-height: 1.2; letter-spacing: -.02em; margin-bottom: 1rem; }
   .lede { font-size: 1.12rem; color: var(--muted); margin-bottom: 2rem; }
   h2 { font-size: 1.25rem; margin: 3rem 0 .9rem; letter-spacing: -.01em; }
+  h3 { font-size: 1.05rem; margin: 1.8rem 0 .6rem; }
   p + p { margin-top: .8rem; }
   .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: .8rem; margin-top: 1rem; }
   .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1rem 1.1rem; }
@@ -88,7 +89,7 @@
 </header>
 <main>
   <h1>What happens to my build when the cache server is down?</h1>
-  <p class="lede">Does a cache server that is down break your build? In our runs with FosterStack Cache as the server, no: Gradle and Maven both finished the build locally and printed a warning.</p>
+  <p class="lede">Does a cache server that is down break your build? In our runs with FosterStack Cache as the server, no: Gradle and Maven both finished the build locally and printed a warning. The page also covers what happens if you run a second server.</p>
 
   <h2>The short answer</h2>
   <ul class="trust">
@@ -97,7 +98,7 @@
     <li><strong>Read-only login that tries to store a result (403):</strong> in Gradle the build succeeded and warned. We did not run this one in Maven.</li>
     <li><strong>An address that never answers:</strong> the build still succeeded. In our timed Gradle runs it first waited about 30 seconds, which took a 13-second build to 44 seconds. Maven also waited; we did not time it. A refused connection showed no clear extra time.</li>
   </ul>
-  <p>The warnings look different. Gradle printed one warning and then a line saying the remote cache was disabled. Maven printed an <code>[ERROR]</code> line, and later a Java stack trace for each upload it could not make, even though the build succeeded.</p>
+  <p>The warnings look different. Gradle printed one warning and then a line saying the remote cache was disabled. Maven printed an <code>[ERROR]</code> line, and then a Java stack trace for each upload it could not make, even though the build succeeded.</p>
   <h2>What to do</h2>
   <p>Our advice, not a test result:</p>
   <ul class="trust">
@@ -108,7 +109,25 @@
   <p>In one local run each, setting them to 2000 made the build return sooner. Maven went from 35 seconds to 8 seconds. We saw a shorter Gradle build too, but did not time it on the hosted machine. We set them with <code>-D</code> on the command line, for example <code>-Daether.connector.connectTimeout=2000</code>. To use the Gradle properties in <code>gradle.properties</code>, prefix them with <code>systemProp.</code>; we did not test that form.</p>
   <p>If the cache is up but nothing is restored, see <a href="/gradle-remote-cache-not-working/">Gradle remote build cache not working</a> or <a href="/maven-build-cache-extension-not-restoring/">Maven build cache extension not restoring</a>. For logins and the 401 and 403 errors, see <a href="/gradle-remote-build-cache-authentication/">Gradle remote build cache authentication</a>.</p>
 
+  <h2 id="run-two-build-cache-servers">Can I run two build cache servers?</h2>
+  <p>FosterStack Cache 0.2.1 runs as one server. In our runs, a second server on the same data folder refused to start, and two servers on separate folders restored fewer results than one. If the host fails, builds still succeed without the cache, and a copy of the data folder gets a replacement running.</p>
+  <ul class="trust">
+    <li><strong>Two servers on one data folder.</strong> The second one exited with code 1 after about 5 seconds, in each of three tries. The first kept serving.</li>
+    <li><strong>Two servers on separate folders.</strong> Each stores its own copy. In eight builds, one server restored 25 of 32 compile tasks from the cache. Two servers, with builds taking turns, restored 18 of 32, fewer than the single server's 25.</li>
+    <li><strong>A spare from a copy.</strong> A server started on a copy of a stopped server's folder had all 14 entries. Builds restored them.</li>
+    <li><strong>Gradle used one remote cache in our run.</strong> With two remote blocks in the settings, only the second one was used.</li>
+  </ul>
+  <p>Our advice, not a test result:</p>
+  <ul>
+    <li><strong>Run one server and keep a copy of its data folder.</strong> The steps are on <a href="/upgrade-build-cache-server/">back up and restore a build cache</a>.</li>
+    <li><strong>If the host fails, start a server on another host from the copy.</strong> Then change the cache address in your build settings. Read the address from one property or environment variable, as on <a href="/github-actions-remote-build-cache/">use a remote build cache in GitHub Actions</a>, so there is one place to change.</li>
+    <li><strong>Do not put a load balancer in front of two servers.</strong> Each build lands on a server that may not hold what the last build stored.</li>
+    <li><strong>Do not start a second server on the same folder.</strong> It refuses to start, so it gains you nothing.</li>
+    <li><strong>A restart is short:</strong> see <a href="/restart-build-cache-server-while-builds-run/">can I restart the cache server while builds run</a>.</li>
+  </ul>
+
   <h2>How we checked</h2>
+  <h3>When the server is down</h3>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <thead><tr><th>What went wrong</th><th>Gradle 9.8.0</th><th>Maven 3.9.9</th></tr></thead>
     <tbody>
@@ -136,6 +155,23 @@
   <p class="muted-note">In every Gradle case the last line of the build said the remote cache was disabled during the build due to errors, and in the builds we printed the failure appeared once. In Maven the one-module project made four attempts: one download and three uploads.</p>
   <p class="muted-note">What: Gradle 9.8.0; Maven 3.9.9 with Build Cache Extension 1.2.3 and all eight plugin versions pinned; Temurin 21.0.12.1; FosterStack Cache 0.2.1. Gradle used a four-module project and the compile tasks, with a new Gradle home and no daemon. Maven used a one-module project with two tests and <code>mvn verify</code>. Both on a Mac (arm64).</p>
   <p class="muted-note">Limits: the behaviour table above comes from a Mac; the times come only from the hosted machine. We did not test a server that dies after serving some entries in the same build, a slow server that is still up, a multi-module Maven build, TLS or DNS errors, or other versions.</p>
+  <h3>Two servers</h3>
+  <p>FosterStack Cache 0.2.1 on a Mac (arm64), no password. Gradle 9.8.0 with Java 21.0.12.1. A four-module Java project, with the compile tasks only. Every build used a fresh copy of the project and a new Gradle home, with the local build cache off. We started each server ourselves and stopped it by its process ID. Each row is one run, and we report counts, not build times.</p>
+  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
+    <thead><tr><th>Setup</th><th>What we did</th><th>What happened</th></tr></thead>
+    <tbody>
+      <tr><td>Two servers, one data folder</td><td>Started the first and built. Started a second on the same folder, once with a build and then in three timed tries.</td><td>The second exited with code 1 every time. The three timed tries took about 5 seconds each. It logged <code>open metadata store: metadata: open: timeout</code>. The first answered <code>/healthz</code> and the next build restored 4 of 4.</td></tr>
+      <tr><td>Same, then a build aimed at the second server</td><td>One build pointed at the address of the second server, which had already exited.</td><td>The build succeeded, restored 0 of 4 and printed one <code>Could not load entry</code> warning.</td></tr>
+      <tr><td>One server, eight builds</td><td>Base, base again, then three edits, each built twice.</td><td>Restored 0, 4, 3, 4, 3, 4, 3 and 4 of 4 compile tasks, 25 of 32. The server logged 16 misses and held 16 entries.</td></tr>
+      <tr><td>Two servers, separate folders, builds taking turns</td><td>The same eight builds, the first of each pair to server A and the second to server B.</td><td>Restored 0, 0, 3, 3, 3, 3, 3 and 3, 18 of 32. The two servers logged 16 misses each, 32 in all, and held 16 entries each.</td></tr>
+      <tr><td>A spare from a copy</td><td>Built twice on A. Stopped A, copied its data folder, started B on the copy.</td><td>B showed 14 entries. Builds on B restored 4 of 4 for both earlier builds, and 3 of 4 for a new edit. B then held 15 entries.</td></tr>
+      <tr><td>Build aimed at the stopped server</td><td>One build pointed at A's address after A stopped.</td><td>The build succeeded, restored 0 of 4 and printed one <code>Could not load entry</code> warning.</td></tr>
+      <tr><td>Two remote blocks in one settings file</td><td>One block for a live server and one for an address with nothing listening, in both orders.</td><td>Gradle accepted both. With the dead address second, the build restored 0 of 4 and the remote cache was disabled for the rest of the build. With the live server second, it restored 4 of 4.</td></tr>
+    </tbody>
+  </table></div>
+  <p class="muted-note">The server counters count every request, including the compiled build scripts, so a build adds 13 hits or misses. The compile tasks are the four that the table counts. All builds ended with <code>BUILD SUCCESSFUL</code>.</p>
+  <p class="muted-note">What Gradle says: its <a href="https://docs.gradle.org/current/userguide/build_cache.html">build cache guide</a> says it supports a local and a remote build cache that can be configured separately. FosterStack's own Kubernetes notes give the reason a shared folder fails: the metadata file is held under an exclusive lock by one process.</p>
+  <p class="muted-note">Not tested: Linux, Docker or Kubernetes, a real load balancer, a folder on a network disk, Maven, more than two servers, and copying the folder of a server that is still running.</p>
 </main>
 <footer>
   <div>

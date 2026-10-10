@@ -105,7 +105,7 @@ grep -c '^&gt; Task .* FROM-CACHE$' build.log      # of those, taken from the ca
   <p>The server counts every lookup it answers. Read the counters, or the same numbers on the status page:</p>
 <pre tabindex="0"><code>curl -s localhost:8080/metrics | grep -E 'fscache_cache_(hits|misses)_total'
 curl -s localhost:8080/statusz            # add -u user:password if login is on</code></pre>
-  <p>The hit rate is hits divided by hits plus misses. These counters run from the start of the server, so for a recent window use the query on <a href="/monitor-build-cache-prometheus-grafana/">Monitor a Gradle build cache with Prometheus and Grafana</a>.</p>
+  <p>The hit rate is hits divided by hits plus misses. These counters run from the start of the server, so for a recent window use the query on <a href="/is-the-build-cache-server-healthy-what-to-alert-on/#monitor-build-cache-prometheus-grafana">Monitor a Gradle build cache with Prometheus and Grafana</a>.</p>
   <p>The server counts requests, not tasks or modules, so it will not match the build log:</p>
   <ul class="trust">
     <li><strong>Gradle:</strong> our 4 cacheable tasks made 13 requests in a build. Gradle also caches its compiled Kotlin build scripts (<code>.gradle.kts</code>), and those lookups count too.</li>

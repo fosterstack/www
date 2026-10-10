@@ -15,3 +15,25 @@
 /long-term-support-build-cache /security/#long-term-support-build-cache 301
 /gradle-build-cache-docker-compose/ /build-cache-docker-compose-production/#gradle-build-cache-docker-compose 301
 /gradle-build-cache-docker-compose /build-cache-docker-compose-production/#gradle-build-cache-docker-compose 301
+
+# Wave 2 consolidation (approved): each removed page redirects to its survivor. Two lines each: a rule with a trailing slash does not match the URL without one.
+/build-cache-survives-restart/ /restart-build-cache-server-while-builds-run/#build-cache-survives-restart 301
+/build-cache-survives-restart /restart-build-cache-server-while-builds-run/#build-cache-survives-restart 301
+/back-up-and-restore-build-cache/ /upgrade-build-cache-server/#back-up-and-restore-build-cache 301
+/back-up-and-restore-build-cache /upgrade-build-cache-server/#back-up-and-restore-build-cache 301
+/migrate-maven-build-cache-to-a-new-server/ /upgrade-build-cache-server/#migrate-maven-build-cache-to-a-new-server 301
+/migrate-maven-build-cache-to-a-new-server /upgrade-build-cache-server/#migrate-maven-build-cache-to-a-new-server 301
+/run-two-build-cache-servers/ /build-cache-server-down-what-happens/#run-two-build-cache-servers 301
+/run-two-build-cache-servers /build-cache-server-down-what-happens/#run-two-build-cache-servers 301
+/run-build-cache-on-a-small-vm-or-laptop/ /build-cache-server-sizing/#run-build-cache-on-a-small-vm-or-laptop 301
+/run-build-cache-on-a-small-vm-or-laptop /build-cache-server-sizing/#run-build-cache-on-a-small-vm-or-laptop 301
+/how-many-builds-one-build-cache-server-at-once/ /build-cache-server-sizing/#how-many-builds-one-build-cache-server-at-once 301
+/how-many-builds-one-build-cache-server-at-once /build-cache-server-sizing/#how-many-builds-one-build-cache-server-at-once 301
+/maven-build-cache-what-is-stored/ /what-gradle-stores-in-build-cache/#maven-build-cache-what-is-stored 301
+/maven-build-cache-what-is-stored /what-gradle-stores-in-build-cache/#maven-build-cache-what-is-stored 301
+/build-cache-disk-full-what-happens/ /build-cache-eviction-size-limit/#build-cache-disk-full-what-happens 301
+/build-cache-disk-full-what-happens /build-cache-eviction-size-limit/#build-cache-disk-full-what-happens 301
+/build-cache-permission-denied-data-directory/ /build-cache-server-wont-start-errors/#build-cache-permission-denied-data-directory 301
+/build-cache-permission-denied-data-directory /build-cache-server-wont-start-errors/#build-cache-permission-denied-data-directory 301
+/monitor-build-cache-prometheus-grafana/ /is-the-build-cache-server-healthy-what-to-alert-on/#monitor-build-cache-prometheus-grafana 301
+/monitor-build-cache-prometheus-grafana /is-the-build-cache-server-healthy-what-to-alert-on/#monitor-build-cache-prometheus-grafana 301

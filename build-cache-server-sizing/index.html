@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>How big a server does a build cache need? CPU, RAM and disk</title>
-<meta name="description" content="Starting CPU, RAM and disk for a self-hosted Gradle and Maven build cache, how to set the size cap in bytes, and two mistakes that make it look useless.">
-<meta property="og:title" content="How big a server does a build cache need? CPU, RAM and disk">
-<meta property="og:description" content="Starting CPU, RAM and disk for a self-hosted Gradle and Maven build cache, how to set the size cap in bytes, and two mistakes that make it look useless.">
+<title>How big a build cache server? CPU, RAM, disk and load</title>
+<meta name="description" content="How big a server a self-hosted build cache needs: CPU, RAM and disk, whether a small VM or laptop is enough, and how many builds at once. Real runs on 0.2.1.">
+<meta property="og:title" content="How big a build cache server? CPU, RAM, disk and load">
+<meta property="og:description" content="How big a server a self-hosted build cache needs: CPU, RAM and disk, whether a small VM or laptop is enough, and how many builds at once. Real runs on 0.2.1.">
 <meta property="og:url" content="https://fosterstack.com/build-cache-server-sizing/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="FosterStack">
@@ -46,6 +46,7 @@
   h1 { font-size: 2rem; line-height: 1.2; letter-spacing: -.02em; margin-bottom: 1rem; }
   .lede { font-size: 1.12rem; color: var(--muted); margin-bottom: 2rem; }
   h2 { font-size: 1.25rem; margin: 3rem 0 .9rem; letter-spacing: -.01em; }
+  main h3 { font-size: 1.05rem; margin: 2rem 0 .6rem; }
   p + p { margin-top: .8rem; }
   .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: .8rem; margin-top: 1rem; }
   .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1rem 1.1rem; }
@@ -87,10 +88,11 @@
   <div class="tag">Infrastructure worth keeping — and kept patched.</div>
 </header>
 <main>
-  <h1>How big a server does a build cache need? CPU, RAM and disk</h1>
+  <h1>How big a server does a build cache need? CPU, RAM, disk and load</h1>
   <p class="lede">You are sizing a disk, not a compute tier. The server is one small program that idles in tens of megabytes, so the question is how much cache you want to keep.</p>
+  <p class="muted-note"><strong>Our advice, not a test result:</strong> the starting sizes, the size cap and the "what to do" and "what to watch" lists. What we measured is described with "in our runs" and shown in <a href="#how-we-checked">How we checked</a>.</p>
 
-  <h2>Starting sizes</h2>
+  <h2 id="starting-sizes">Starting sizes</h2>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <tr><th></th><th>vCPU</th><th>RAM</th><th>Disk</th></tr>
     <tr><td>Absolute minimum</td><td>1</td><td>1 GB</td><td>cache cap + about 5 GB for the system</td></tr>
@@ -99,7 +101,7 @@
   </table></div>
   <p class="muted-note">These are starting points from our deployment guide. Your build graph decides the rest. It is hard to be limited by CPU, because the busy path is reading and writing stored files, not computing.</p>
 
-  <h2>Set a size cap</h2>
+  <h2 id="set-a-size-cap">Set a size cap</h2>
   <p>Choose how much cache you want, set it with <code>FSCACHE_MAX_BYTES</code>, and make the disk about 20% bigger. When the cache reaches the cap it removes the least recently used entries right after each upload until it is back under the cap. The extra room covers file system overhead and uploads in progress.</p>
   <p><strong>The value is in bytes.</strong> It is easy to be wrong by a factor of 1024, so copy one:</p>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
@@ -117,12 +119,45 @@
   </ul>
 
   <h2>What makes the disk grow</h2>
-  <p>The cache grows only when a build makes an output the cache does not have yet. A build that changes nothing adds nothing. In our test, an edit inside one method added one small entry per build, about 2.5 KB. A new public method added four entries, about 11.5 KB, because the other three modules depend on it, directly or through another module, so all four were recompiled.</p>
+  <p>The cache grows only when a build makes an output the cache does not already have. A build that changes nothing adds nothing. In our runs, an edit inside one method added one small entry per build, about 2.5 KB. A new public method added four entries, about 11.5 KB, because the other three modules depend on it, directly or through another module, so all four were recompiled.</p>
   <ul class="trust">
     <li><strong>To size your own:</strong> run your normal builds for a day, then run <code>du -sk</code> on your <code>FSCACHE_DATA_DIR</code> folder. It also counts a 128 KB index file and rounds each small entry up, so on a small project it reads higher than the entries alone.</li>
-    <li><strong>To limit growth:</strong> set a size cap (see <em>Set a size cap</em> above). The oldest-unused entries go first; see <a href="/build-cache-eviction-size-limit/">build cache eviction and the size limit</a>.</li>
+    <li><strong>To limit growth:</strong> set a size cap (see <a href="#set-a-size-cap">Set a size cap</a> above). The oldest-unused entries go first; see <a href="/build-cache-eviction-size-limit/">build cache eviction and the size limit</a>.</li>
   </ul>
-  <p><strong>How we checked</strong></p>
+
+  <h2>Put it near the runners</h2>
+  <p>On bigger setups the network matters more than the processor. A small server in the same region, ideally the same network, as your CI runners beats a large one far away.</p>
+
+  <h2 id="run-build-cache-on-a-small-vm-or-laptop">Can I run the build cache on a small VM or laptop?</h2>
+  <p>In our runs the FosterStack Cache server, which you run yourself, stayed under 19 MiB of memory and used under half a second of CPU in total across 31 builds of the small project. It also kept working inside a container limited to 64 MiB.</p>
+  <p>Our advice, not a test result:</p>
+  <ul class="trust">
+    <li><strong>Memory was not the constraint in our tests.</strong> A 1 GB machine, the minimum in the <a href="#starting-sizes">starting sizes</a> above, leaves plenty of room for loads like these. Plan RAM for the whole machine, not just the server.</li>
+    <li><strong>Disk is the one to plan.</strong> Decide how much cache you want to keep, and set a size cap (see <a href="#set-a-size-cap">Set a size cap</a>).</li>
+    <li><strong>A laptop is fine for a trial.</strong> For a team, use a machine that stays on and that CI and everyone can reach. See <a href="/first-15-minutes-build-cache/">your first 15 minutes with a self-hosted build cache</a>.</li>
+  </ul>
+
+  <h2 id="how-many-builds-one-build-cache-server-at-once">How many builds can use one cache server at once?</h2>
+  <p>In our runs, one FosterStack Cache server handled 8 builds at once, the most we tried, and every build succeeded. It refuses an upload only when 32 uploads are already in progress, which is the default limit.</p>
+  <ul class="trust">
+    <li><strong>Up to 8 builds at once worked.</strong> All 39 builds in our main run ended with <code>BUILD SUCCESSFUL</code>. None printed a cache warning.</li>
+    <li><strong>The server stayed small.</strong> Its memory peaked at about 16 MiB under the builds. It peaked at about 23 MiB under a burst of 100 uploads of 1 MiB each.</li>
+    <li><strong>Uploads have a limit.</strong> By default the server takes 32 uploads at a time. An upload past the limit gets a <code>429</code> with <code>Retry-After: 1</code>, and nothing is stored.</li>
+    <li><strong>A refused upload turns the remote cache off for that build only.</strong> In our run, Gradle printed one warning, switched the remote cache off for the rest of that build and still ended with <code>BUILD SUCCESSFUL</code>. The next build was normal.</li>
+    <li><strong>Reads and repeat uploads behaved correctly in our runs.</strong> No read failed. Two uploads of the same entry at once left one complete entry. A reader got <code>404</code> while a slow upload was running, never half an entry.</li>
+  </ul>
+  <p>Our advice, not a test result, on what to watch:</p>
+  <ul>
+    <li><strong>Watch the refused-upload counter.</strong> It is <code>fscache_http_requests_total{method="PUT",status="429"}</code>. In our main build run it never appeared, because a counter that never fires is absent. If it climbs, uploads are being refused.</li>
+    <li><strong>If it climbs, count how many jobs upload at the same moment.</strong> Many CI jobs that finish together and upload large outputs are the likely cause. Our builds uploaded small entries, 13 of them in about 35 KiB, and none was refused even with the limit set to 1.</li>
+    <li><strong>The limit is a setting.</strong> It is <code>FSCACHE_MAX_CONCURRENT_UPLOADS</code>, and <code>0</code> turns it off. We tested 1, 8, the default of 32 and 0. We did not test what 0 does on a small machine.</li>
+    <li><strong>Keep watching memory and server errors too.</strong> See <a href="/is-the-build-cache-server-healthy-what-to-alert-on/">is my build cache server healthy</a> and <a href="/build-cache-hit-rate-how-to-measure/">how do I know my build cache hit rate</a>.</li>
+  </ul>
+
+  <h2 id="how-we-checked">How we checked</h2>
+  <p>Every build in every run below used a fresh copy of the project and a new Gradle home, with Gradle's local cache off, against FosterStack Cache 0.2.1.</p>
+
+  <h3>Disk growth</h3>
   <div class="table-scroll" role="region" aria-label="Stored files and bytes after each build" tabindex="0"><table>
     <thead><tr><th>After build</th><th>No change: entries / bytes</th><th>Edit inside a method: entries / bytes</th><th>New public method: entries / bytes</th></tr></thead>
     <tbody>
@@ -132,10 +167,58 @@
       <tr><td>11</td><td>13 / 36,090</td><td>23 / 61,434</td><td>53 / 151,657</td></tr>
     </tbody>
   </table></div>
-  <p class="muted-note">Three series of eleven real Gradle builds on the four-module project from <a href="/gradle-build-cache-monorepo/">Gradle build cache for a monorepo</a>. Each series used a new empty FosterStack Cache 0.2.1 server, a fresh project copy and a new Gradle home for every build, with Gradle's local cache off. Each edit was made to a clean copy, not on top of the last. We counted the stored entries (the files in the server's blobs folder) after each build. The project is tiny, so the sizes are small; the pattern is what carries over. Not tested: a real-sized project, tests, Maven, or the cap switched on.</p>
+  <p class="muted-note">Three series of eleven real Gradle builds on the four-module project from <a href="/gradle-build-cache-monorepo/">Gradle build cache for a monorepo</a>. Each series used a new empty FosterStack Cache 0.2.1 server and a new Gradle home for every build. Each edit was made to a clean copy, not on top of the last. We counted the stored entries (the files in the server's blobs folder) after each build. The project is tiny, so the sizes are small; the pattern is what carries over. Not tested: a real-sized project, tests, Maven, or the cap switched on.</p>
 
-  <h2>Put it near the runners</h2>
-  <p>On bigger setups the network matters more than the processor. A small server in the same region, ideally the same network, as your CI runners beats a large one far away.</p>
+  <h3>Memory and CPU on a small machine</h3>
+  <p>We ran the real server and measured the server process only, under Gradle builds of a small and a larger project. Memory was 9 to 16 MiB while idle at startup, and the highest we saw was 18.2 MiB. CPU was 0.46 seconds in total for one cold build, 20 builds restoring everything and 10 builds at once, on the small project. Ten builds at once all succeeded, both restoring and storing. In containers limited to 128 MiB and to 64 MiB, every build succeeded, and the container was never killed for memory or restarted. Their peaks were 16.0 MiB and 13.9 MiB.</p>
+  <div class="table-scroll" role="region" aria-label="Server memory, CPU and stored data per load" tabindex="0"><table>
+    <thead><tr><th>Load on the server</th><th>Peak memory (MiB)</th><th>Server CPU</th><th>Entries / bytes stored after</th></tr></thead>
+    <tbody>
+      <tr><td>Small project: idle for 15 s</td><td>14.9</td><td>0.00 s</td><td>0 / 0</td></tr>
+      <tr><td>Small: one cold build (stores)</td><td>12.5</td><td>0.03 s</td><td>13 / 36,100</td></tr>
+      <tr><td>Small: 20 builds, all restored</td><td>14.1</td><td>0.28 s</td><td>13 / 36,100</td></tr>
+      <tr><td>Small: 10 builds at once, all restored</td><td>14.3</td><td>0.14 s</td><td>13 / 36,100</td></tr>
+      <tr><td>Small: 10 builds at once, all stored (new server)</td><td>15.1</td><td>0.22 s</td><td>49 / 146,944</td></tr>
+      <tr><td>Large project: idle for 15 s</td><td>15.5</td><td>0.00 s</td><td>0 / 0</td></tr>
+      <tr><td>Large: one cold build (stores)</td><td>15.7</td><td>0.03 s</td><td>17 / 531,057</td></tr>
+      <tr><td>Large: 10 builds, all restored</td><td>18.2</td><td>0.17 s</td><td>17 / 531,057</td></tr>
+      <tr><td>Large: 10 builds at once, all restored</td><td>17.7</td><td>0.17 s</td><td>17 / 531,057</td></tr>
+    </tbody>
+  </table></div>
+  <p class="muted-note">What ran: FosterStack Cache 0.2.1 on a Mac (arm64), Gradle 9.8.0, Java 21.0.12.1, compile tasks only. Every build used a new empty Gradle home and no long-lived Gradle daemon. Server memory is the resident size (RSS) read with <code>ps</code> once a second. CPU is the server process's own CPU time, not wall-clock time. We make no claim about build times.</p>
+  <p class="muted-note">Projects: the small one has 4 modules of 12 small classes. The large one is generated: 8 modules of 300 classes each, and its 17 entries are about 531 KB. Both are small next to a real codebase, so the disk numbers will be bigger for you. The memory and CPU figures are for these loads only.</p>
+  <p class="muted-note">Containers: the 0.2.1 image with a hard limit of 128 MiB and then 64 MiB, no swap, with Docker on the same Mac. Each ran a cold build and a few warm builds, then 10 builds at once, for the small and the large project. The container reported no memory kill and no restart, and answered its health check afterwards. Peak memory is from <code>docker stats</code> about every 3 seconds. Not tested: a real-sized project, a long-running server, a smaller limit than 64 MiB, Maven, or a slow disk.</p>
+
+  <h3>Builds at once and the upload limit</h3>
+  <p><strong>Builds at once.</strong> We started the server empty and ran 1, 2, 4 and 8 identical builds at the same moment. Then we ran the same number again against the filled server.</p>
+  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
+    <thead><tr><th>Builds at once</th><th>Cold: builds that succeeded</th><th>Cold: uploads the server took</th><th>Entries stored</th><th>Warm: restores added</th><th>Warm: new misses</th><th>Peak server memory (MiB)</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>1 of 1</td><td>13</td><td>13</td><td>13</td><td>0</td><td>16.2</td></tr>
+      <tr><td>2</td><td>2 of 2</td><td>20</td><td>13</td><td>26</td><td>0</td><td>16.3</td></tr>
+      <tr><td>4</td><td>4 of 4</td><td>42</td><td>13</td><td>52</td><td>0</td><td>16.1</td></tr>
+      <tr><td>8</td><td>8 of 8</td><td>73</td><td>13</td><td>104</td><td>0</td><td>16.3</td></tr>
+    </tbody>
+  </table></div>
+  <p>With identical builds, several of them uploaded the same entry. The server took every upload and kept one copy of each entry. Every warm build restored all four of its compile tasks from the cache.</p>
+  <p><strong>Changed and unchanged builds together.</strong> We filled the server with one build, then ran 4 builds with changed code and 4 with unchanged code at the same moment. All 8 succeeded. The server held 13 entries before and 29 after, which is 4 new entries for each changed build. Each unchanged build restored all four compile tasks. Peak memory was 15.8 MiB.</p>
+  <p><strong>Direct requests.</strong> To test the server without Gradle in the way, we sent uploads and reads with <code>curl</code>, with random contents, once for each setting of the upload limit.</p>
+  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
+    <thead><tr><th>Test</th><th>Limit 32 (default)</th><th>Limit 0 (off)</th><th>Limit 8</th></tr></thead>
+    <tbody>
+      <tr><td>200 uploads of 4 KiB, 50 at a time</td><td>77 accepted, 123 refused (429)</td><td>200 accepted</td><td>84 accepted, 116 refused</td></tr>
+      <tr><td>100 uploads of 1 MiB, 25 at a time</td><td>100 accepted</td><td>100 accepted</td><td>38 accepted, 62 refused</td></tr>
+      <tr><td>50 uploads of the same entry, 50 at a time</td><td>38 accepted, 12 refused</td><td>50 accepted</td><td>34 accepted, 16 refused</td></tr>
+      <tr><td>20 uploads of the same entry with different contents</td><td>20 accepted</td><td>20 accepted</td><td>17 accepted, 3 refused</td></tr>
+      <tr><td>Reading it back after the two same-entry tests</td><td>Identical to the upload; exactly one of the 20</td><td>Identical to the upload; exactly one of the 20</td><td>Identical to the upload; exactly one of the 20</td></tr>
+      <tr><td>14 reads during an 8 MiB upload, then one after</td><td>14 not found, then found and identical</td><td>14 not found, then found and identical</td><td>14 not found, then found and identical</td></tr>
+      <tr><td>Peak server memory (MiB)</td><td>23.3</td><td>23.3</td><td>22.0</td></tr>
+    </tbody>
+  </table></div>
+  <p>Reads were never refused. A read returned <code>200</code> for every entry that was stored and <code>404</code> for every entry that was not, including those whose upload had been refused.</p>
+  <p><strong>A refused upload in a Gradle build.</strong> We set the limit to 1 and held the only upload slot open with a slow upload. A build that stored entries during that time printed one warning, <code>Could not store entry ... response status 429: Too Many Requests</code>, then <code>The remote build cache was disabled during the build due to errors.</code> It ended with <code>BUILD SUCCESSFUL</code>, and Gradle did not retry. The build after it, with the slot free, printed no warning. We also ran 8 builds that all stored at the same moment with the limit at 1. All succeeded and none was refused.</p>
+  <p class="muted-note">What: FosterStack Cache 0.2.1 on a Mac (arm64, 10 CPUs, 16 GiB), no password. Gradle 9.8.0 with Java 21, a four-module project, compile tasks only. Builds did not reuse a Gradle daemon. Memory is the server process only, sampled every second for builds and every 0.2 seconds for the direct requests.</p>
+  <p class="muted-note">Limits: the Mac was heavily loaded by other work, with a load average from about 8 to 160 during these runs. So we report counts and outcomes, not times, and nothing here says how your hardware will behave. One run for each row. Not tested: Maven, more than 8 builds at once, uploads larger than 8 MiB, Linux, Docker and Kubernetes.</p>
 
   <p class="muted-note">Related: <a href="/migrate-build-cache-node/">Gradle and Maven setup</a> and <a href="/jenkins-ci-build-cache/">Jenkins and CI build cache</a>. Full detail is in the <a href="https://github.com/fosterstack/cache/blob/main/docs/docker-deploy.md">Docker deploy guide</a>.</p>
   <div class="cta-row">
