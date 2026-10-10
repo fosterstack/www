@@ -141,7 +141,7 @@ expect release-download-verify "Verified OK" "fscache_${VER}_${PLATFORM}.tar.gz:
 if [ "$RC" != 0 ] || ! grep -qF "Verified OK" "$W/release-download-verify.out"; then fail "the release did not verify: no server is started"; echo "FAILURES $FAILS"; exit 1; fi
 tar -xzf "$REL/fscache_${VER}_${PLATFORM}.tar.gz" -C "$REL" || { echo "could not unpack the verified release" >&2; exit 1; }
 
-start_server() { # NAME PORT USER PASS [KEY=VALUE ...]   (127.0.0.1 only; each server in its own empty folder)
+start_server() { # NAME PORT USER PASS [KEY=VALUE ...]   (each server in its own empty folder; 127.0.0.1 unless the caller passes FSCACHE_ADDR)
   local name="$1" port="$2" user="$3" pass="$4"; shift 4
   local d="$W/srv-$name"; rm -rf "${d:?}"; mkdir -p "$d"; cp "$REL/fscache" "$d/fscache"
   ( cd "$d" && exec env FSCACHE_ADDR="127.0.0.1:${port}" FSCACHE_USERNAME="$user" FSCACHE_PASSWORD="$pass" "$@" ./fscache ) > "$d/server.log" 2>&1 &
@@ -296,6 +296,7 @@ start_proxy() { # LOGFILE [DENIED_HOST ...]
 }
 plog() { grep -F -- "$1" "$2" 2>/dev/null | wc -l | tr -d ' '; }
 HOSTIP="$(python3 -c "import socket;s=socket.socket(socket.AF_INET,socket.SOCK_DGRAM);s.connect(('10.255.255.255',1));print(s.getsockname()[0])")"
+[ -n "$HOSTIP" ] || { echo "no non-loopback address found on this machine" >&2; exit 1; }
 g_project() { # DIR N URL PROPS   one class whose content depends on N (a new cache key per row); PROPS are gradle.properties lines
   local d="$1" n="$2" url="$3" props="$4"; rm -rf "${d:?}"; mkdir -p "$d/src/main/java/demo"
   cat > "$d/settings.gradle.kts" <<EOF

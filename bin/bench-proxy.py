@@ -95,16 +95,28 @@ def handle(conn):
             log("%s %s 403" % (method, target))
             refuse(conn)
             return
-        log("%s %s" % (method, target))
         headers = []
         length = 0
+        expect_continue = False
+        chunked = False
         for h in lines[1:]:
             name = h.split(":", 1)[0].strip().lower()
             if name in ("proxy-connection", "connection", "proxy-authorization"):
                 continue
             if name == "content-length":
                 length = int(h.split(":", 1)[1])
+            if name == "transfer-encoding":
+                chunked = True
+            if name == "expect" and "100-continue" in h.lower():
+                expect_continue = True
             headers.append(h)
+        if chunked:  # this minimal proxy does not forward chunked request bodies
+            log("%s %s 501" % (method, target))
+            conn.sendall(b"HTTP/1.1 501 Not Implemented\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")
+            return
+        log("%s %s" % (method, target))
+        if expect_continue and not rest:
+            conn.sendall(b"HTTP/1.1 100 Continue\r\n\r\n")
         upstream = socket.create_connection((host, port), timeout=60)
         req = ("%s %s HTTP/1.1\r\n" % (method, path)) + "\r\n".join(headers) + "\r\nConnection: close\r\n\r\n"
         upstream.sendall(req.encode("latin-1"))
