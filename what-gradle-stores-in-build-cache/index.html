@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Know what your Gradle build cache stores before you size it</title>
-<meta name="description" content="What one real Gradle build stored in a self-hosted build cache: which tasks make entries, which make none, and how to count them. Tested on release 0.2.1.">
-<meta property="og:title" content="Know what your Gradle build cache stores before you size it">
-<meta property="og:description" content="What one real Gradle build stored in a self-hosted build cache: which tasks make entries, which make none, and how to count them. Tested on release 0.2.1.">
+<title>What does the build cache store? Gradle and Maven</title>
+<meta name="description" content="What a self-hosted build cache holds after real Gradle and Maven builds: which tasks make entries, what each entry weighs, and how to count them. Release 0.2.1.">
+<meta property="og:title" content="What does the build cache store? Gradle and Maven">
+<meta property="og:description" content="What a self-hosted build cache holds after real Gradle and Maven builds: which tasks make entries, what each entry weighs, and how to count them. Release 0.2.1.">
 <meta property="og:url" content="https://fosterstack.com/what-gradle-stores-in-build-cache/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="FosterStack">
@@ -87,22 +87,30 @@
   <div class="tag">Infrastructure worth keeping — and kept patched.</div>
 </header>
 <main>
-  <h1>Know what your Gradle build cache stores before you size it</h1>
-  <p class="lede">Knowing what Gradle puts in the cache tells you what you are paying disk for and which tasks stored nothing in our build. At FosterStack we prove everything, so here is how we proved it to ourselves: one real build, every entry counted, and the tasks that stored nothing.</p>
+  <h1>What does the build cache store? Gradle and Maven</h1>
+  <p class="lede">Knowing what Gradle and Maven put in the cache tells you what you are paying disk for. We ran real Gradle and Maven builds against FosterStack Cache and counted every entry.</p>
 
   <h2>The short answer</h2>
+  <h3>Gradle</h3>
   <ul class="trust">
     <li>Each <code>compileJava</code> task stored one entry.</li>
-    <li>The compiled build scripts stored entries too, which is why there are more entries than compile tasks. On a Gradle home that had already compiled them, they were not stored again.</li>
+    <li>The compiled build scripts stored entries too, which is why there are more entries than compile tasks. On a Gradle home that had already compiled the build scripts, they were not stored again.</li>
     <li>The jar, classes, assemble and build tasks stored nothing in our run.</li>
     <li>The 13 entries from a four-module build took about 36 KB.</li>
   </ul>
+  <h3>Maven</h3>
+  <ul class="trust">
+    <li>Each built module uploaded two files: its jar (about 5 KB here) and a <code>buildinfo.xml</code> (about 9 KB here).</li>
+    <li>Both of our builds also uploaded one <code>build-cache-report.xml</code>.</li>
+    <li>Our three-module build left 7 entries and 44,810 bytes on an empty server.</li>
+    <li>A second build that restored every module added just that one entry, the report.</li>
+  </ul>
 
-  <h2>What we ran</h2>
-  <p>The four-module build from <a href="/gradle-build-cache-monorepo/">Gradle build cache for a monorepo</a>: <code>core</code>, <code>util</code>, <code>api</code> and <code>app</code>, each with 12 small Java classes and a Kotlin build file. Our first run used a project folder that still held build output from an earlier check; we repeated it, with the same 13 entries, from a clean copy and got the same results. We started a new, empty server and ran <code>gradle build --console=plain --no-daemon -i</code> once, with the local cache off and a new, empty Gradle home. The <code>-i</code> flag makes Gradle print a line each time it stores something. The build ended with <code>BUILD SUCCESSFUL</code>. The project has no tests, so there are no test entries here; for those, see <a href="/gradle-test-task-from-cache/">Gradle test task FROM-CACHE</a>.</p>
-  <p>The server's status page then said: 13 entries, 36,054 bytes. When we repeated the run, the entry count was the same and the size varied by a few dozen bytes (36,054 to 36,103 across our runs).</p>
+  <h2>What to do</h2>
+  <p><strong>Our advice, not a test result.</strong> Measure your own project before you pick a limit. The server's status page (<code>/statusz</code>) shows the entry count and the size in bytes. To see how it changes as you build, see <a href="/is-the-build-cache-server-healthy-what-to-alert-on/">is my build cache server healthy, and what to alert on</a>. To pick a size limit, see <a href="/build-cache-server-sizing/">how big a server does a build cache need</a> and <a href="/build-cache-eviction-size-limit/">how the size limit works</a>.</p>
 
-  <h2>What the 13 entries were</h2>
+  <h2>Gradle: what one build stored</h2>
+  <h3>What the 13 entries were</h3>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <thead><tr><th>Stored</th><th>Entries</th></tr></thead>
     <tbody>
@@ -119,18 +127,55 @@
 Stored cache entry for Kotlin DSL script compilation (Project/TopLevel/stage1) with cache key ...
 Stored cache entry for Kotlin DSL script compilation (Project/TopLevel/stage2) with cache key ...</code></pre>
 
-  <h2>What was not stored</h2>
+  <h3>What was not stored</h3>
   <p>These tasks ran and stored nothing: <code>classes</code>, <code>jar</code>, <code>assemble</code> and <code>build</code> for each of the four modules. In our other runs the jar tasks never printed <code>FROM-CACHE</code> either. In our builds you will see them run on every fresh checkout.</p>
 
-  <h2>See it for your own build</h2>
+  <h3>See it for your own build</h3>
   <p>Start from an empty cache, run your build once with <code>-i</code>, and count. We ran exactly this command, with the output saved, and it printed the same 13 entries:</p>
 <pre tabindex="0"><code>gradle build -i | grep "Stored cache entry"</code></pre>
-  <p>If your Gradle home has already compiled your build scripts, you will not see the script entries again: in a second run with the same Gradle home against a new empty server, only the 4 <code>compileJava</code> entries were stored, and the server held 4 entries and 11,425 bytes. The server's status page (<code>/statusz</code>) shows the entry count and the size in bytes. To see how it changes as you build, see <a href="/monitor-build-cache-prometheus-grafana/">monitor the cache with Prometheus and Grafana</a>. To pick a size limit, see <a href="/build-cache-server-sizing/">how big a server does a build cache need</a> and <a href="/build-cache-eviction-size-limit/">how the size limit works</a>.</p>
+  <p>If your Gradle home has already compiled your build scripts, you will not see the script entries again: in a second run with the same Gradle home against a new empty server, only the 4 <code>compileJava</code> entries were stored, and the server held 4 entries and 11,425 bytes.</p>
 
-  <h2>If an entry you expect is missing</h2>
+  <h2 id="maven-build-cache-what-is-stored">Size your Maven build cache: what it stores, in real numbers</h2>
+  <h3>Entries and bytes after each build</h3>
+  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
+    <thead><tr><th>Step</th><th>Entries on the server</th><th>Bytes</th></tr></thead>
+    <tbody>
+      <tr><td>Empty server</td><td>0</td><td>0</td></tr>
+      <tr><td>After the first build (all three modules built)</td><td>7</td><td>44,810</td></tr>
+      <tr><td>After a second build from a fresh copy (all three restored)</td><td>8</td><td>46,128</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>The 7 entries from the first build</h3>
+  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
+    <thead><tr><th>File</th><th>How many</th><th>What it is</th></tr></thead>
+    <tbody>
+      <tr><td><code>core.jar</code>, <code>util.jar</code>, <code>app.jar</code></td><td>3</td><td>The built jar of each module (5,028 to 5,340 bytes each)</td></tr>
+      <tr><td><code>buildinfo.xml</code></td><td>3</td><td>A record for each module that the next build looks up first (9,007 to 9,332 bytes each)</td></tr>
+      <tr><td><code>build-cache-report.xml</code></td><td>1</td><td>A report about the build run itself</td></tr>
+    </tbody>
+  </table></div>
+  <p>The key is shortened to <code>&lt;key&gt;</code> here:</p>
+<pre tabindex="0"><code>[INFO] Saved to remote cache http://127.0.0.1:18180//v1.1/demo/core/&lt;key&gt;/core.jar</code></pre>
+
+  <h3>What a restored build adds</h3>
+  <p>The second build restored all three modules and built nothing, and it uploaded one file: <code>build-cache-report.xml</code>. So our fully restored build still added one entry, 1,318 bytes (46,128 minus 44,810). We saw two builds, so we cannot say whether every restored build does the same.</p>
+  <p>On the first build, against an empty server, Maven 3.10.0 also printed three <code>[ERROR] Error downloading cache item ... buildinfo.xml</code> lines (Maven 3.9.9 logs these misses as <code>[INFO] Cache item not found</code>). Those were ordinary misses on an empty cache, and the build succeeded; see <a href="/maven-build-cache-extension-enable-disable/">enable or disable the Maven build cache extension</a>.</p>
+
+  <h3>What this means for sizing</h3>
+  <p>In this tiny project the <code>buildinfo.xml</code> files were bigger than the jars: about 9 KB each against about 5 KB, and together 27,661 of the 44,810 bytes. We did not test how that balance changes with large jars.</p>
+  <p>We tried one small project with jars of a few kilobytes. We did not test large jars, many versions of the same module, or a project with test reports.</p>
+
+  <h2>If you do not see what you expect</h2>
   <p>Look at <a href="/gradle-build-cache-hit-rate-low/">why the hit rate is low</a> and <a href="/gradle-build-cache-enable-disable/">enable or disable the Gradle build cache</a>. A task that stored nothing in your build, such as the jar tasks in ours, could not come from the cache.</p>
+  <p>See <a href="/maven-build-cache-extension-not-restoring/">Maven build cache not restoring</a>.</p>
 
+  <h2>How we checked</h2>
+  <p><strong>Gradle.</strong> The four-module build from <a href="/gradle-build-cache-monorepo/">Gradle build cache for a monorepo</a>: <code>core</code>, <code>util</code>, <code>api</code> and <code>app</code>, each with 12 small Java classes and a Kotlin build file. Our first run used a project folder that still held build output from an earlier check; we repeated it, with the same 13 entries, from a clean copy and got the same results. We started a new, empty server and ran <code>gradle build --console=plain --no-daemon -i</code> once, with the local cache off and a new, empty Gradle home. The <code>-i</code> flag makes Gradle print a line each time it stores something. The build ended with <code>BUILD SUCCESSFUL</code>. The project has no tests, so there are no test entries here; for those, see <a href="/gradle-test-task-from-cache/">Gradle test task FROM-CACHE</a>.</p>
+  <p>The server's status page then said: 13 entries, 36,054 bytes. When we repeated the run, the entry count was the same and the size varied by a few dozen bytes (36,054 to 36,103 across our runs).</p>
+  <p><strong>Maven.</strong> The three-module project from <a href="/maven-build-cache-extension-multi-module/">Maven build cache extension in a multi-module project</a>: <code>core</code>, <code>util</code> and <code>app</code>. We started a new, empty server and ran <code>mvn verify</code> twice, each time from a fresh copy of the project with an empty local build cache. Both builds ran on the same Mac and shared one already-filled local Maven repository, offline (<code>-o -B</code>, plus options for the repository and the local cache location). Both ended with <code>BUILD SUCCESS</code>. In our runs the extension printed one <code>Saved to remote cache</code> line for each entry that ended up on the server, and the server's status page (<code>/statusz</code>) gave the counts.</p>
   <p class="muted-note">Run on Gradle 9.8.0 with FosterStack Cache 0.2.1, macOS (arm64), Java 27.</p>
+  <p class="muted-note">Run on Maven 3.10.0 with maven-build-cache-extension 1.2.3 and FosterStack Cache 0.2.1, macOS (arm64), Java 27 (Homebrew).</p>
 </main>
 
 <footer>

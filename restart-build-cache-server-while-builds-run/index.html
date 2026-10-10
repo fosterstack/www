@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Can I Restart the Cache Server While Builds Run?</title>
-<meta name="description" content="What a running Gradle build sees when you stop and restart the cache server. We did it mid-build, with a normal stop and a kill. One warning at most, in our runs.">
+<meta name="description" content="What a running Gradle build sees when you restart the cache server, and whether stored results survive a stop or a kill. One warning at most, in our runs.">
 <meta property="og:title" content="Can I Restart the Cache Server While Builds Run?">
-<meta property="og:description" content="What a running Gradle build sees when you stop and restart the cache server. We did it mid-build, with a normal stop and a kill. One warning at most, in our runs.">
+<meta property="og:description" content="What a running Gradle build sees when you restart the cache server, and whether stored results survive a stop or a kill. One warning at most, in our runs.">
 <meta property="og:url" content="https://fosterstack.com/restart-build-cache-server-while-builds-run/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="FosterStack">
@@ -96,6 +96,7 @@
     <li>If it did not, the build printed nothing. That was the case in our 2-second restarts.</li>
     <li>The next build used the cache again and rebuilt only what had not been stored.</li>
     <li>In our runs, a normal stop waited up to 10 seconds for an upload in progress. A longer upload was lost. So was an upload cut off by a kill.</li>
+    <li>The stored results came back after a normal stop and after a kill, as long as the server started on the same data folder.</li>
   </ul>
 
   <h2>What to do</h2>
@@ -104,14 +105,30 @@
     <li><strong>Stop the server with a normal stop, not a kill.</strong> <code>docker stop</code> sends a normal stop first, per Docker's documentation. We started the server binary directly and did not test Docker.</li>
     <li><strong>Restart in a quiet moment.</strong> The server was back in well under a second in our runs, so a quiet moment keeps the chance of a warning small.</li>
     <li><strong>Do not worry about one warning.</strong> The lines to expect are <code>Could not store entry</code> or <code>Could not load entry</code>, then <code>The remote build cache was disabled during the build due to errors</code>. The next build stores what was missed.</li>
-    <li><strong>Keep the same data folder or volume.</strong> That is what keeps the stored results. See <a href="/build-cache-survives-restart/">does the build cache survive a restart</a>.</li>
+    <li><strong>Keep the same data folder or volume.</strong> That is what keeps the stored results. See <a href="#build-cache-survives-restart">does the build cache survive a restart</a>, below.</li>
     <li><strong>For an upgrade, pull the new version first,</strong> then stop and start, so the gap is only the restart. What happens to the data across releases is on <a href="/upgrade-build-cache-server/">upgrade a build cache server</a>.</li>
-    <li><strong>Check that the server answers before you send builds back.</strong> The <code>/healthz</code> address returns <code>200</code> when it is up. See <a href="/monitor-build-cache-prometheus-grafana/">monitor the build cache</a>.</li>
+    <li><strong>Check that the server answers before you send builds back.</strong> The <code>/healthz</code> address returns <code>200</code> when it is up. See <a href="/is-the-build-cache-server-healthy-what-to-alert-on/">is my build cache server healthy</a>.</li>
   </ul>
   <p>If the server is down for a whole build, nothing breaks either. That case is on <a href="/build-cache-server-down-what-happens/">what happens when the cache server is down</a>.</p>
 
+  <h2 id="build-cache-survives-restart">Does the build cache survive a restart?</h2>
+  <p>You restart the cache server, or it crashes, or the container is replaced. Do your stored build results come back? We tested a clean stop, a forced kill and a wrong data folder.</p>
+  <ul class="trust">
+    <li>After a clean stop and start on the same data folder, every result was still there.</li>
+    <li>After the server was killed with <code>kill -9</code> and started again on the same folder, every result was still there.</li>
+    <li>On a different, empty data folder, the cache was empty and the next build rebuilt everything.</li>
+  </ul>
+  <p>The results live in the data folder, not in the running server. If that folder survives, your cache survives.</p>
+  <p><strong>If your cache comes back empty,</strong> the server is looking at a different folder than before. Check that the data folder or volume is still the one you expect:</p>
+  <ul class="trust">
+    <li><strong>Docker:</strong> use a named volume or a mounted folder for the data directory. See <a href="/build-cache-docker-compose-production/#gradle-build-cache-docker-compose">Gradle build cache with Docker Compose</a>.</li>
+    <li><strong>Kubernetes:</strong> the data directory needs a persistent volume claim. See <a href="/gradle-build-cache-kubernetes/">Gradle build cache on Kubernetes</a>.</li>
+    <li><strong>Permissions:</strong> if the server cannot write to the folder, see <a href="/build-cache-server-wont-start-errors/">build cache server won't start: errors and fixes</a>.</li>
+  </ul>
+  <p>To copy the data somewhere safe, or to move it to another server, see <a href="/upgrade-build-cache-server/">upgrade, back up and restore</a>.</p>
+
   <h2>How we checked</h2>
-  <p>FosterStack Cache 0.2.1 on a Mac (arm64), no password. Gradle 9.8.0, Java 21, one fresh copy of the project per build, no reused daemon, the local build cache off. To keep builds open long enough to overlap a restart, each of the four modules had a cacheable task that sleeps for 8 seconds. We sent the signal to the server's process ID and started it again on the same data folder. All builds ended with <code>BUILD SUCCESSFUL</code>. Each row is one run; we did not repeat them.</p>
+  <p><strong>Restarts during a build.</strong> FosterStack Cache 0.2.1 on a Mac (arm64), no password. Gradle 9.8.0, Java 21, one fresh copy of the project per build, no reused daemon, the local build cache off. To keep builds open long enough to overlap a restart, each of the four modules had a cacheable task that sleeps for 8 seconds. We sent the signal to the server's process ID and started it again on the same data folder. All builds ended with <code>BUILD SUCCESSFUL</code>. Each row is one run; we did not repeat them.</p>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <thead><tr><th>Server stopped during the build</th><th>Back after</th><th>What the build printed</th><th>Entries stored</th><th>Next build, from cache</th></tr></thead>
     <tbody>
@@ -143,6 +160,20 @@
     </tbody>
   </table></div>
   <p>In both 20 MiB cases, an entry that was stored earlier stayed readable. We did not test whether a later start removes the temporary file left by the 40 MiB case.</p>
+
+  <p><strong>What survives a restart.</strong> A four-module Gradle 9.8.0 project (the one from <a href="/gradle-build-cache-monorepo/">Gradle build cache for a monorepo</a>) against a server set up with <code>FSCACHE_DATA_DIR</code> pointing at a folder, on FosterStack Cache 0.2.1 (macOS, arm64) with Java 27. Every build used a fresh copy of the project and an empty Gradle home, so the only shared thing was the server. Our first run used a project folder that still held build output from an earlier check; we repeated all four steps from a clean copy and got the same results. All four builds ended with <code>BUILD SUCCESSFUL</code>. "From cache" counts the four <code>compileJava</code> tasks that printed <code>FROM-CACHE</code>.</p>
+  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
+    <thead><tr><th>Step</th><th>Server state before the build</th><th>Entries in the status page</th><th>From cache</th></tr></thead>
+    <tbody>
+      <tr><td>1. First build</td><td>New, empty data folder A</td><td>0, then 13 afterwards</td><td>0 of 4</td></tr>
+      <tr><td>2. Clean restart</td><td>Stopped normally, started on folder A</td><td>13 (same as before)</td><td>4 of 4</td></tr>
+      <tr><td>3. Crash</td><td>Killed with <code>kill -9</code>, started on folder A</td><td>13 (same as before)</td><td>4 of 4</td></tr>
+      <tr><td>4. Wrong folder</td><td>Started on a different empty folder B</td><td>0</td><td>0 of 4</td></tr>
+    </tbody>
+  </table></div>
+  <p>The status page is the server's <code>/statusz</code> address. It showed the same 13 entries and the same size in bytes right after each restart, before any build ran.</p>
+  <p>In this test we killed the server while it was idle. Kills in the middle of an upload are in the upload table above.</p>
+
   <p>Not tested: Docker, Kubernetes or Compose rollouts, Maven builds, other releases, and more than one build running at once.</p>
 </main>
 

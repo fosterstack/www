@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Build Cache Server Won't Start: Errors and Fixes</title>
-<meta name="description" content="FosterStack Cache exits right after you start it? The log line we got for a busy port, a bad data folder, a bad size or login setting, and a damaged index.">
+<meta name="description" content="FosterStack Cache exits at start? The log line we got for a busy port, an unwritable data folder (also in a container), a bad setting and a damaged index.">
 <meta property="og:title" content="Build Cache Server Won&#x27;t Start: Errors and Fixes">
-<meta property="og:description" content="FosterStack Cache exits right after you start it? The log line we got for a busy port, a bad data folder, a bad size or login setting, and a damaged index.">
+<meta property="og:description" content="FosterStack Cache exits at start? The log line we got for a busy port, an unwritable data folder (also in a container), a bad setting and a damaged index.">
 <meta property="og:url" content="https://fosterstack.com/build-cache-server-wont-start-errors/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="FosterStack">
@@ -93,7 +93,7 @@
   <h2>The short answer</h2>
   <ul class="trust">
     <li><strong>A rejected setting stops the server before it touches the data folder.</strong> The line names the variable and the value. Sizes must be whole numbers of bytes, so <code>10GB</code> is refused.</li>
-    <li><strong>A problem with the address or the data folder stops it a moment later.</strong> A busy port, a folder it cannot write to and a data path that is a file each gave a clear line.</li>
+    <li><strong>A problem with the address or the data folder stops it a moment later.</strong> A busy port, a folder it cannot write to and a data path that is a file each gave a clear line. In a container we reproduced the folder case with a data volume that belonged to root: see <a href="#build-cache-permission-denied-data-directory">permission denied on the data folder</a>.</li>
     <li><strong>A second server on the same data folder waits about 5 seconds, then exits.</strong> It ends with the same fatal line and code 1. The first one kept serving.</li>
     <li><strong>Some mistakes do not stop the server.</strong> A misspelled setting name was ignored without a warning, and an emptied index file was accepted without a warning, so lost entries go unnoticed.</li>
   </ul>
@@ -105,11 +105,11 @@
     <tbody>
       <tr><td><code>serve: listen tcp 127.0.0.1:PORT: bind: address already in use</code></td><td>Another program, or another copy of the server, already listens on that address.</td><td>Stop it, or give this server another <code>FSCACHE_ADDR</code>.</td></tr>
       <tr><td><code>serve: listen tcp: address VALUE: missing port in address</code>, also <code>invalid port</code> and <code>unknown port</code></td><td><code>FSCACHE_ADDR</code> is not a host and a port. We tried <code>garbage</code>, <code>127.0.0.1</code>, <code>18702</code>, <code>:99999</code>, <code>:-1</code> and <code>127.0.0.1:abc</code>.</td><td>Write it as <code>:8080</code> or <code>127.0.0.1:8080</code>.</td></tr>
-      <tr><td><code>write shutdown marker: open DIR/.unclean-shutdown: permission denied</code></td><td>The data folder exists, but the user running the server cannot write to it.</td><td>Give that user write access. In a container, see <a href="/build-cache-permission-denied-data-directory/">permission denied on the data folder</a>.</td></tr>
+      <tr><td><code>write shutdown marker: open DIR/.unclean-shutdown: permission denied</code></td><td>The data folder exists, but the user running the server cannot write to it.</td><td>Give that user write access. In a container, see <a href="#build-cache-permission-denied-data-directory">permission denied on the data folder</a> below.</td></tr>
       <tr><td><code>write shutdown marker: mkdir DIR: permission denied</code>, or <code>mkdir data: permission denied</code></td><td>The server could not create the data folder. With no <code>FSCACHE_DATA_DIR</code> it uses <code>./data</code>, in the folder you started it from.</td><td>Create the folder first, or set <code>FSCACHE_DATA_DIR</code> to a path you can write.</td></tr>
       <tr><td><code>check shutdown marker: stat DIR/.unclean-shutdown: not a directory</code></td><td><code>FSCACHE_DATA_DIR</code> points at a file.</td><td>Point it at a folder.</td></tr>
-      <tr><td><code>open metadata store: metadata: open: timeout</code>, after about 5 seconds</td><td>Another server already holds this data folder.</td><td>Stop the other server. See <a href="/run-two-build-cache-servers/">can I run two build cache servers</a>.</td></tr>
-      <tr><td><code>open metadata store: metadata: open: invalid database</code></td><td>The index file <code>meta.db</code> in the data folder is damaged. We overwrote it with random bytes.</td><td>Restore the folder from a backup, or start with a new, empty folder. See <a href="/back-up-and-restore-build-cache/">back up and restore a build cache</a>.</td></tr>
+      <tr><td><code>open metadata store: metadata: open: timeout</code>, after about 5 seconds</td><td>Another server already holds this data folder.</td><td>Stop the other server. See <a href="/build-cache-server-down-what-happens/#run-two-build-cache-servers">can I run two build cache servers</a>.</td></tr>
+      <tr><td><code>open metadata store: metadata: open: invalid database</code></td><td>The index file <code>meta.db</code> in the data folder is damaged. We overwrote it with random bytes.</td><td>Restore the folder from a backup, or start with a new, empty folder. See <a href="/upgrade-build-cache-server/#back-up-and-restore-build-cache">back up and restore a build cache</a>.</td></tr>
       <tr><td><code>open metadata store: metadata: open: open DIR/meta.db: permission denied</code></td><td>The server's user cannot read and write the index file. We had made it read-only.</td><td>Fix the file's owner or mode.</td></tr>
       <tr><td><code>FSCACHE_MAX_BYTES="10GB" is not a valid byte count (whole non-negative decimal number)</code></td><td>Sizes are whole numbers of bytes. A unit, a decimal point, an exponent, a space and letters after the number were all refused.</td><td>Write <code>10737418240</code> for 10 GiB, not <code>10GB</code>.</td></tr>
       <tr><td><code>FSCACHE_MAX_BYTES="-1" is negative; a byte count cannot be</code></td><td>A negative size. <code>FSCACHE_MAX_CONCURRENT_UPLOADS="-1"</code> gets the same line.</td><td>Use a whole number, or <code>0</code> for no limit.</td></tr>
@@ -119,6 +119,29 @@
       <tr><td><code>FSCACHE_MAX_CONCURRENT_UPLOADS="abc" is not a valid byte count</code>, and the same for <code>FSCACHE_MAX_BODY_BYTES</code></td><td>The same rule applies. The message says "byte count" even for the upload limit.</td><td>Use a whole number.</td></tr>
     </tbody>
   </table></div>
+
+  <h2 id="build-cache-permission-denied-data-directory">Build cache server exits with "permission denied" on its data</h2>
+  <p>You start the container and it stops straight away. The log ends with <code>permission denied</code>. The cause we reproduced is who owns the data directory.</p>
+
+  <h3>What you see</h3>
+  <p>The container exits with status 1 within a few seconds, and its log says:</p>
+  <pre tabindex="0"><code>{&quot;level&quot;:&quot;ERROR&quot;,&quot;msg&quot;:&quot;fscache: fatal&quot;,&quot;error&quot;:&quot;write shutdown marker: open data/.unclean-shutdown: permission denied&quot;}</code></pre>
+
+  <h3>Why it happens</h3>
+  <p>The server does not run as root. It runs as user 65532, and it keeps its files in a <code>data</code> folder inside <code>/home/nonroot</code>. If that folder already exists and belongs to someone else, the server cannot write to it and stops.</p>
+  <p>We reproduced it with a volume that already held data owned by root, which is what you get after restoring a backup as root:</p>
+  <pre tabindex="0"><code>/d       0:0   drwxr-xr-x      (owner:group, mode)
+/d/data  0:0   drwxr-xr-x</code></pre>
+
+  <h3>The fix</h3>
+  <p>Give the whole tree to user 65532. The image has no shell, so use a throwaway container to do it:</p>
+  <pre tabindex="0"><code>docker run --rm -v fscache-data:/d ubuntu:24.04 chown -R 65532:65532 /d</code></pre>
+  <p>In our runs, after that the same image started normally: <code>/healthz</code> answered <code>ok</code> and an upload returned 201.</p>
+
+  <h3>What does not cause it</h3>
+  <ul class="trust">
+    <li><strong>A new, empty named volume.</strong> This is what <a href="/first-15-minutes-build-cache/">our first-run steps</a> create, and the volume then belongs to 65532. We also tried a new empty volume whose top folder we had set to root. The server still started, and afterwards the folder belonged to 65532, because Docker copies the image's ownership into an empty volume the first time it is used.</li>
+  </ul>
 
   <h2>When the server starts, but not the way you meant</h2>
   <ul class="trust">
@@ -134,12 +157,12 @@
     <li><strong>Read the last line first.</strong> It names the variable, the value or the path.</li>
     <li><strong>After every change, read the <code>fscache: starting</code> line.</strong> It prints the address, the data folder, the size cap and whether logins are on. A misspelled name shows up there as a setting that did not change.</li>
     <li><strong>Write sizes in bytes.</strong> <code>10GB</code> will stop the server, which is better than a silent default.</li>
-    <li><strong>Start the server as the user that owns the data folder.</strong></li>
-    <li><strong>Keep one server per data folder.</strong> A start on a full disk is on <a href="/build-cache-disk-full-what-happens/">what happens when the disk fills up</a>.</li>
+    <li><strong>Start the server as the user that owns the data folder.</strong> In a container, that means giving the data volume to the user the image runs as, 65532 in our runs. The command is in the permission-denied section above. If you restore a backup into the volume, the restore has to keep that ownership.</li>
+    <li><strong>Keep one server per data folder.</strong> A start on a full disk is on <a href="/build-cache-eviction-size-limit/#build-cache-disk-full-what-happens">what happens when the disk fills up</a>.</li>
   </ul>
 
   <h2>How we checked</h2>
-  <p>FosterStack Cache 0.2.1 on a Mac (arm64). Each case was one start with a clean environment that held only the address, the data folder and the setting under test, watched for 3 seconds with a check every quarter of a second. Every failed start exited with code 1, and all of them in under a second except the shared folder. A server we stopped with a normal stop exited with code 0.</p>
+  <p>FosterStack Cache 0.2.1 on a Mac (arm64). The permission-denied cases used the 0.2.1 container image. Each non-container case was one start with a clean environment that held only the address, the data folder and the setting under test, watched for 3 seconds with a check every quarter of a second. Every failed start exited with code 1. The non-container ones took under a second, except the shared folder. The container cases exited within a few seconds. A server we stopped with a normal stop exited with code 0.</p>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <thead><tr><th>What we did</th><th>What the server did</th></tr></thead>
     <tbody>
@@ -151,6 +174,9 @@
       <tr><td>One half of a login pair; read-only pair without the read-write pair; same usernames</td><td>All exited with code 1, under a second</td></tr>
       <tr><td>Upload limit: <code>abc</code> and <code>-1</code>; body limit: <code>big</code></td><td>All exited with code 1, under a second</td></tr>
       <tr><td>Upload limit: <code>0</code> and <code>32</code></td><td>Started</td></tr>
+      <tr><td>The 0.2.1 container image on a volume that already held data owned by root</td><td>Exited with status 1 within a few seconds. The log ended with <code>permission denied</code></td></tr>
+      <tr><td>The same volume after the <code>chown</code> command above</td><td>Started normally. <code>/healthz</code> answered <code>ok</code> and an upload returned 201</td></tr>
+      <tr><td>A new, empty named volume, and one whose top folder we had set to root</td><td>Both started. Afterwards the folder belonged to 65532</td></tr>
       <tr><td>A second server on a data folder held by a running server</td><td>Exited with code 1 after about 5 seconds. The first answered <code>/healthz</code> and kept its entry</td></tr>
       <tr><td>Copies of a data folder with <code>meta.db</code> emptied, and deleted</td><td>Both started with no warning. An old entry was still served, and <code>/statusz</code> showed 1 entry</td></tr>
       <tr><td>A copy with <code>meta.db</code> overwritten with random bytes; a copy with <code>meta.db</code> read-only</td><td>Both exited with code 1, under a second</td></tr>
@@ -159,7 +185,7 @@
     </tbody>
   </table></div>
   <p class="muted-note">The log is one JSON line per event. A start that got as far as listening printed <code>fscache: starting</code> first. A rejected setting or a data folder problem printed only the <code>fatal</code> line. We caused one mistake at a time, so we do not know which line shows first when two settings are wrong.</p>
-  <p class="muted-note">Not tested: Docker or Kubernetes starts, Linux, Windows, IPv6 addresses, a data folder on a network disk, and a Gradle build against an HTTPS address that the server does not speak.</p>
+  <p class="muted-note">Not tested: container starts other than the permission-denied cases above, a bind mount of a host folder on Linux (the same rule should apply, as the folder has to be writable by 65532, but we ran on a Mac), Kubernetes without the <code>fsGroup</code> setting (the manifests on our <a href="/gradle-build-cache-kubernetes/">Kubernetes page</a> set <code>fsGroup: 65532</code>, and we ran them with it), running the container as root (it is not what we document), Linux, Windows, IPv6 addresses, a data folder on a network disk, and a Gradle build against an HTTPS address that the server does not speak.</p>
 </main>
 <footer>
   <div>

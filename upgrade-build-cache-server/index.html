@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Upgrade a self-hosted build cache and keep its data</title>
-<meta name="description" content="Upgrading FosterStack Cache from 0.1.0 to 0.2.1 on the same data volume, and back, run for real: what was kept, and two differences between the releases.">
-<meta property="og:title" content="Upgrade a self-hosted build cache and keep its data">
-<meta property="og:description" content="Upgrading FosterStack Cache from 0.1.0 to 0.2.1 on the same data volume, and back, run for real: what was kept, and two differences between the releases.">
+<title>Upgrade, back up and move a build cache server</title>
+<meta name="description" content="Upgrade FosterStack Cache from 0.1.0 to 0.2.1 on the same data volume, back up and restore the volume, and move a Maven cache to a new server, all run for real.">
+<meta property="og:title" content="Upgrade, back up and move a build cache server">
+<meta property="og:description" content="Upgrade FosterStack Cache from 0.1.0 to 0.2.1 on the same data volume, back up and restore the volume, and move a Maven cache to a new server, all run for real.">
 <meta property="og:url" content="https://fosterstack.com/upgrade-build-cache-server/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="FosterStack">
@@ -87,13 +87,23 @@
   <div class="tag">Infrastructure worth keeping — and kept patched.</div>
 </header>
 <main>
-  <h1>Upgrade a self-hosted build cache and keep its data</h1>
-  <p class="lede">Can you move a build cache to a newer release without losing what it holds? I tested it with the only two published releases: I stored entries on 0.1.0, started 0.2.1 on the same data volume, wrote more, and then went back to 0.1.0. This is what happened.</p>
+  <h1>Upgrade, back up and move a build cache server</h1>
+  <p class="lede">Can you upgrade a build cache, back it up or move it to a new server without losing what it holds? We ran all three with FosterStack Cache, and this page shows what happened.</p>
 
-  <h2>What was tested, and what was not</h2>
+  <h2>The short answer</h2>
   <ul class="trust">
-    <li><strong>Tested:</strong> Docker, one named volume at <code>/home/nonroot</code>, release 0.1.0 and then 0.2.1 (and back), no password, stopped and started cleanly between versions.</li>
-    <li><strong>Not tested:</strong> any other pair of releases (there is no 0.2.0 release; see <a href="/changelog/">the changelog</a>), upgrading while the server is running, Kubernetes or Compose rollouts, the FIPS image, or a cache that was close to its size cap.</li>
+    <li>In our test an upgrade lost nothing, and a rollback to the old release could still read what the new one had written.</li>
+    <li>You usually do not need a backup. If the cache is lost, builds are slower until it refills, and nothing breaks.</li>
+    <li>To move a Maven cache, change the address in <code>.mvn/maven-build-cache-config.xml</code>. Nothing else in the project changes.</li>
+    <li>If you only change the address, the first build is a normal full build and fills the new server. Nothing fails.</li>
+    <li>If you want the new server to be ready at once, stop the old one, copy its data folder, and start the new server on the copy.</li>
+  </ul>
+
+  <h2>Our advice, not a test result</h2>
+  <ul class="trust">
+    <li>Use the same volume and the same settings (environment variables for the password and size cap) as the old container.</li>
+    <li>Pin the exact tag you want rather than <code>latest</code>.</li>
+    <li>Stop the server before you copy its data. We did not test copying the files while the server is running, so we cannot say that is safe.</li>
   </ul>
 
   <h2>The upgrade</h2>
@@ -102,9 +112,8 @@ docker stop fscache &amp;&amp; docker rm fscache
 docker run -d --name fscache -p 127.0.0.1:8080:8080 \
   -v fscache-data:/home/nonroot \
   ghcr.io/fosterstack/cache:0.2.1</code></pre>
-  <p>Use the same volume and the same settings (environment variables for the password and size cap) as the old container. Pin the exact tag you want, as above, rather than <code>latest</code>.</p>
 
-  <h2>What I saw</h2>
+  <h3>What we saw</h3>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <tr><th>Step</th><th>Result</th></tr>
     <tr><td>0.1.0: store three entries on a fresh volume</td><td>201 each; its metrics show 3 entries, 29 bytes</td></tr>
@@ -112,7 +121,6 @@ docker run -d --name fscache -p 127.0.0.1:8080:8080 \
     <tr><td>0.2.1: store two more</td><td>201 each; 5 entries</td></tr>
     <tr><td>Stop 0.2.1, start 0.1.0 on the same volume again</td><td>starts normally; all values read back, including the two written by 0.2.1</td></tr>
   </table></div>
-  <p>So in my test an upgrade lost nothing, and a rollback to the old release could still read what the new one had written.</p>
 
   <h2>Two differences between the releases</h2>
   <ul class="trust">
@@ -120,8 +128,87 @@ docker run -d --name fscache -p 127.0.0.1:8080:8080 \
     <li><strong>The entry-count metric reads 0 after a restart, on both releases.</strong> After the rollback, 0.1.0's <code>fscache_store_entries</code> read 0 although every value was readable. The upgrade did not cause that: a volume only 0.1.0 ever wrote showed 3 entries before a plain restart and 0 after it, with the data still readable. 0.2.1's metrics read 0 after a restart until the next upload too (see <a href="/is-the-build-cache-server-healthy-what-to-alert-on/">is my build cache server healthy</a>). On 0.2.1, <code>/statusz</code> still showed the real count, 3 entries and 9 bytes, so read it there.</li>
   </ul>
 
-  <h2>If you want a safety net</h2>
-  <p>A build cache can always be rebuilt, so losing one costs time, not work. If refilling would hurt, take a copy first: <a href="/back-up-and-restore-build-cache/">back up and restore a build cache</a>. To start clean instead: <a href="/reset-gradle-build-cache/">clear or reset a build cache</a>.</p>
+  <h2 id="back-up-and-restore-build-cache">Back up and restore a self-hosted build cache</h2>
+  <p>A big cache takes days of builds to fill again, and you may want to move it to a new host. A backup is worth it only if refilling is expensive for you, or if you are moving the cache to a new server. To simply empty a cache, see <a href="/reset-gradle-build-cache/">how to clear or reset a build cache</a>.</p>
+
+  <h3>Where the data lives</h3>
+  <p>The Docker command in our guides mounts a volume at <code>/home/nonroot</code>. The server keeps its blobs and index in a <code>data</code> folder inside it, and it runs as user 65532. Backing up the volume backs up the cache.</p>
+
+  <h3>1. Stop the server, then back up the volume</h3>
+  <p>We stopped the container first. The container image has no shell, so a second small container does the copying:</p>
+  <pre tabindex="0"><code>docker stop fscache
+docker run --rm -v fscache-data:/data:ro -v &quot;$PWD&quot;:/backup ubuntu:24.04 \
+  tar czf /backup/fscache-data.tgz -C /data .</code></pre>
+  <p>In our test, with three small entries, the archive held a <code>data/blobs/</code> folder with one folder per entry prefix, and was 578 bytes.</p>
+
+  <h3>2. Restore it into a new volume</h3>
+  <p>To check it, we deleted the container and the volume, then restored into a new, empty one:</p>
+  <pre tabindex="0"><code>docker volume create fscache-data-restored
+docker run --rm -v fscache-data-restored:/data -v &quot;$PWD&quot;:/backup:ro ubuntu:24.04 \
+  sh -c &#x27;tar xzf /backup/fscache-data.tgz -C /data&#x27;
+ls -ln /data   # inside the helper: the files are owned by 65532</code></pre>
+  <p>Listing the restored volume showed the <code>data</code> folder still owned by user and group 65532, which is what the server runs as. If you restore as a different user, the server will not be able to write.</p>
+
+  <h3>3. Start the server on the restored volume</h3>
+  <pre tabindex="0"><code>docker run -d --name fscache -p 127.0.0.1:8080:8080 \
+  -v fscache-data-restored:/home/nonroot ghcr.io/fosterstack/cache:0.2.1</code></pre>
+  <p>The status page and the entries were all back:</p>
+  <pre tabindex="0"><code>$ curl -s localhost:8080/statusz | grep -E &#x27;&quot;store_entries&quot;|&quot;store_bytes&quot;&#x27;
+  &quot;store_bytes&quot;: 32,
+  &quot;store_entries&quot;: 3,
+$ curl -s localhost:8080/alpha
+value-alpha
+$ curl -s -o /dev/null -w &#x27;%{http_code}\n&#x27; localhost:8080/nothere
+404</code></pre>
+
+  <h2 id="migrate-maven-build-cache-to-a-new-server">Move a Maven build cache to a new server</h2>
+  <p>You are replacing the machine that runs your build cache and your builds use the Apache Maven Build Cache Extension. Here is what to change, what to expect from the first build, and how to keep the cache warm.</p>
+
+  <h3>What we saw</h3>
+  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
+    <thead><tr><th>Build</th><th>Server it used</th><th>Result</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>Old server, empty</td><td>Built the project and saved the result to the server</td></tr>
+      <tr><td>2</td><td>Old server, from another machine</td><td>Restored from the cache, no compile</td></tr>
+      <tr><td>3</td><td>New server, empty, only the address changed</td><td>Full build, saved to the new server</td></tr>
+      <tr><td>4</td><td>New server, from another machine</td><td>Restored from the cache, no compile</td></tr>
+      <tr><td>5</td><td>New server started on a copy of the old data folder</td><td>Restored from the cache, no compile</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Option 1: change the address only</h3>
+  <p>Start the new server, then edit the <code>url</code> in the cache config and commit it. We changed this one line and nothing else:</p>
+<pre tabindex="0"><code>&lt;remote enabled="true" saveToRemote="true" id="fosterstack-cache"&gt;
+  &lt;url&gt;http://127.0.0.1:18151/&lt;/url&gt;
+&lt;/remote&gt;</code></pre>
+  <p>Build 3 had no cached result to find, so Maven compiled the project and saved it:</p>
+<pre tabindex="0"><code>[INFO] Attempting to restore project demo:demo from build cache
+[INFO] Compiling 1 source file with javac [debug release 17] to target/classes
+[INFO] Saved to remote cache http://127.0.0.1:18151//v1.1/demo/demo/ebb9bceba2f7a6bc/demo.jar</code></pre>
+  <p>From then on, every other machine pointing at the new address gets the result from the new server, as build 4 did. Anyone who still has the old address in their config keeps using the old server until they update.</p>
+
+  <h3>Option 2: copy the data folder first</h3>
+  <p>This keeps the new server warm from the first build. Stop the old server, copy its data folder, and start the new server with its data folder set to the copy. See <a href="#back-up-and-restore-build-cache">back up and restore</a> for why the old server should be stopped first.</p>
+<pre tabindex="0"><code>cp -R data-old data-new-copied
+FSCACHE_ADDR=127.0.0.1:18152 FSCACHE_DATA_DIR=$PWD/data-new-copied fscache</code></pre>
+  <p>Build 5 found the result straight away, with no compile:</p>
+<pre tabindex="0"><code>[INFO] Attempting to restore project demo:demo from build cache
+[INFO] Found cached build, restoring demo:demo from cache by checksum ebb9bceba2f7a6bc</code></pre>
+  <p>The new server's status page agreed: 2 hits and 0 misses at that point.</p>
+
+  <h3>How to tell it worked</h3>
+  <p>Look for <code>Found cached build, restoring</code> in the Maven output. You may also see <code>Saved to remote cache</code> lines on a build that restored. In our run these were a small report file that the extension saves each time, not a rebuild. If a build prints <code>Compiling</code> instead of <code>Found cached build</code>, it did not find a stored result.</p>
+
+  <h3>Credentials and other settings</h3>
+  <p>If the new server has logins, Maven reads them from the <code>&lt;server&gt;</code> entry in <code>settings.xml</code> whose id matches the <code>id</code> on the <code>&lt;remote&gt;</code> line. See <a href="/maven-remote-build-cache-setup/">Maven remote build cache setup</a> for that, and <a href="/maven-build-cache-corporate-proxy/">behind a corporate proxy</a> if your builds go through one. To move Gradle builds too, see <a href="/one-build-cache-server-gradle-and-maven/">one server for Gradle and Maven</a>.</p>
+
+  <h2>How we checked</h2>
+  <ul class="trust">
+    <li><strong>Upgrade:</strong> we used the only two published releases. We stored entries on 0.1.0, started 0.2.1 on the same data volume, wrote more, and then went back to 0.1.0. Docker, one named volume at <code>/home/nonroot</code>, release 0.1.0 and then 0.2.1 (and back), no password, stopped and started cleanly between versions.</li>
+    <li><strong>Backup and restore:</strong> run for real on the 0.2.1 image with plain Docker, three small entries.</li>
+    <li><strong>Maven move:</strong> a small Maven project, Maven 3.10.0, extension 1.2.3, macOS (arm64). Every build used a fresh copy of the project and an empty local build cache, so the only thing shared was the cache server. All five builds ended with <code>BUILD SUCCESS</code>. Every step was run for real with FosterStack Cache 0.2.1.</li>
+    <li><strong>Not tested:</strong> upgrading or backing up while the server is running, any other pair of releases (there is no 0.2.0 release; see <a href="/changelog/">the changelog</a>), restoring into a different version of the server than the one that wrote the data, Kubernetes or Compose rollouts (the same idea applies to the volume behind the claim, but we only ran plain Docker), the FIPS image, or a cache that was close to its size cap.</li>
+  </ul>
 
   <p class="muted-note">Related: <a href="/how-we-build/">how releases are built and signed</a> and <a href="/verify-a-release/">verify a release yourself</a>, so you can check the new version before you run it.</p>
   <div class="cta-row">
