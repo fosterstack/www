@@ -89,7 +89,7 @@
 </header>
 <main>
   <h1>Migrate from Build Cache Node: setup, checklist, checks</h1>
-  <p class="lede">The Develocity Build Cache Node is going away, and your builds still need a remote cache. FosterStack Cache replaces it: run a new server, change one URL, and check that it works. About 30 minutes for Gradle. There is no data to move.</p>
+  <p class="lede">The Develocity Build Cache Node is going away, and your builds still need a remote cache. FosterStack Cache replaces it: run a new server, change one URL, and check that it works, about 30 minutes for Gradle with no data to move.</p>
 
   <h2>Before you start</h2>
   <p>A build cache holds copies of things your builds can always rebuild, so there is nothing to export from the old node. Your first build on the new server just fills it. If you have not read why the node is going away, see <a href="/build-cache-node-end-of-life/">Build Cache Node end of life</a>.</p>
@@ -172,7 +172,7 @@ buildCache {
   <p>Once builds hit the new server, stop the old Build Cache Node container. Watch the new one with <a href="/is-the-build-cache-server-healthy-what-to-alert-on/#monitor-build-cache-prometheus-grafana">monitoring</a>, and size its disk with <a href="/build-cache-server-sizing/">server sizing</a>.</p>
 
   <h2 id="build-cache-node-migration-checklist">Build Cache Node migration checklist for Gradle</h2>
-  <p>Our advice, not a test result:</p>
+  <p>Our advice, not a test result. Where a line says "in our runs", it comes from the table under How we checked.</p>
   <h3>Find every place your builds point at the old node</h3>
   <p>Search your repositories and CI settings for <code>HttpBuildCache</code> and for the node's address. The old node's address ends in <code>/cache/</code>. Write the list down: each entry is one line to change.</p>
 
@@ -190,7 +190,7 @@ buildCache {
   <p>You can drop it, as above, or keep it. FosterStack Cache uses the whole request path as the key, so a prefix works. Entries under different paths are separate, so pick one and use it everywhere.</p>
 
   <h3>Keep the old node running until you are sure</h3>
-  <p>With Gradle, rolling back is the same one-line change in reverse. We tested that; see the table below.</p>
+  <p>With Gradle, rolling back is the same one-line change in reverse. In our runs, we tested that; see the table under How we checked.</p>
 
   <h2>What you give up</h2>
   <p>The old node had a small web page with a purge button. FosterStack Cache has no settings page. You set it with flags and environment variables, and a read-only status page shows size and hit counts. To empty the cache, remove its volume and start again.</p>
@@ -220,7 +220,7 @@ buildCache {
   <p><strong>FosterStack Cache:</strong> MIT licensed, one static binary, nothing you need from us to keep running it. Paid tiers are described, not built, and security patches are never withheld from the free tier.</p>
 
   <h2>How we checked</h2>
-  <p>In our runs, we used Gradle 9.8.0 and a small Java project, built twice against each server. The old side was a Build Cache Node image (version 21.2, built June 2025), run locally and set up to allow anonymous reads and writes for the test. The new side was a FosterStack Cache 0.2.1 server with no password. We did not test Maven in this run.</p>
+  <p>In our runs for the table below, we used Gradle 9.8.0 and a small Java project, built twice against each server. The old side was a Build Cache Node image (version 21.2, built June 2025), run locally and set up to allow anonymous reads and writes for the test. The new side was a FosterStack Cache 0.2.1 server with no password. We did not test Maven in this run.</p>
   <p>Each row is two builds of the same project with <code>gradle clean</code> in between and Gradle's own local cache turned off, so a hit can only come from the server:</p>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <tr><th>Pointed at</th><th>First build</th><th>Second build</th></tr>

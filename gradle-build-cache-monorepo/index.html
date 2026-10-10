@@ -88,7 +88,7 @@
 </header>
 <main>
   <h1>Gradle build cache: monorepo, buildSrc and included builds</h1>
-  <p class="lede">In a big Gradle repo, one edit should rebuild only the part you edited. FosterStack Cache is a shared cache server, and in our runs each module, <code>buildSrc</code> and an included build came from the cache unless its own inputs changed or a public method it uses changed.</p>
+  <p class="lede">In a big Gradle repo, one edit should rebuild only the part you edited. FosterStack Cache is a shared cache server, and in our runs each module, <code>buildSrc</code> and an included build came from the cache unless its own code changed or a module it depends on changed its public methods.</p>
 
   <h2>The short answer</h2>
   <ul class="trust">
@@ -96,7 +96,7 @@
     <li>Change a module's public methods and every module that uses it rebuilt.</li>
     <li>A teammate who made the same change got everything from the cache.</li>
     <li><code>buildSrc</code> and an included build each stored and restored their own <code>compileJava</code> result.</li>
-    <li>The cache was set up once, in the root <code>settings.gradle.kts</code> and <code>gradle.properties</code>. Nothing extra was needed in <code>buildSrc</code> or in the included build's build file.</li>
+    <li>In our runs the cache was set up once, in the root <code>settings.gradle.kts</code> and <code>gradle.properties</code>. Nothing extra was needed in <code>buildSrc</code> or in the included build's build file.</li>
   </ul>
 
   <h2>Our advice, not a test result</h2>

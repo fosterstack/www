@@ -42,7 +42,7 @@ verifiable against the CI run that produced them.
 - [Why Did This One Task Miss the Build Cache?](https://fosterstack.com/why-did-this-task-miss-the-build-cache/): how to find the one input that changed when a task misses the cache, by logging and diffing the keys.
 - [Build Cache Server Won't Start: Errors and Fixes](https://fosterstack.com/build-cache-server-wont-start-errors/): what each startup error means and how to fix it, including the settings that fail silently.
 - [Jenkins and CI build cache](https://fosterstack.com/jenkins-ci-build-cache/): one shared cache for CI runners.
-- [Gradle build cache not working or hit rate low: causes](https://fosterstack.com/gradle-remote-cache-not-working/): six checks when nothing comes from the cache.
+- [Gradle build cache not working or hit rate low: causes](https://fosterstack.com/gradle-remote-cache-not-working/): six checks when nothing comes from the cache, then a low hit rate, and slow builds after a Gradle or Maven upgrade.
 - [Maven remote build cache setup](https://fosterstack.com/maven-remote-build-cache-setup/): extension, config, credentials, checking hits.
 - [Gradle build cache on Kubernetes](https://fosterstack.com/gradle-build-cache-kubernetes/): one replica, sizing, security context.
 - [Security policy](https://fosterstack.com/security/): how to report a vulnerability, what we sign and publish.

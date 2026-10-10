@@ -157,7 +157,7 @@
   <h3>Configuration cache and build cache together</h3>
   <p>The same small project, both flags on, the build cache pointed at a server. We ran this on Gradle 9.8.0 and a 0.2.1 server:</p>
   <pre tabindex="0"><code>gradle build --configuration-cache --build-cache</code></pre>
-  <p><strong>1. The first build.</strong> In our runs, nothing was cached anywhere yet:</p>
+  <p><strong>1. The first build.</strong> In our runs, nothing was cached anywhere:</p>
   <pre tabindex="0"><code>Calculating task graph as no cached configuration is available for tasks: build
 &gt; Task :compileJava
 BUILD SUCCESSFUL in 5s
@@ -180,7 +180,7 @@ BUILD SUCCESSFUL in 2s
 Configuration cache entry stored.</code></pre>
   <p>That fourth step is the clearest way to see they are separate: in our runs, one was invalidated and the other was not.</p>
 
-  <p class="muted-note">Run on Gradle 9.8.0 with FosterStack Cache 0.2.1, macOS (arm64), Java 27.</p>
+  <p class="muted-note">The on/off runs: Gradle 9.8.0 with FosterStack Cache 0.2.1, macOS (arm64), Java 27.</p>
 </main>
 
 <footer>

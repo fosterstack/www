@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Why Did This One Task Miss the Build Cache?</title>
-<meta name="description" content="Most tasks come from the cache and one keeps running. Log the cache keys on two builds, diff them, and the line that differs names the input. Tested on Gradle 9.8.0.">
+<meta name="description" content="One task keeps missing the cache, or a small change reruns the whole build? Diff the cache keys to find the input. Tested on Gradle 9.8.0 and Maven 3.9.9.">
 <meta property="og:title" content="Why Did This One Task Miss the Build Cache?">
-<meta property="og:description" content="Most tasks come from the cache and one keeps running. Log the cache keys on two builds, diff them, and the line that differs names the input. Tested on Gradle 9.8.0.">
+<meta property="og:description" content="One task keeps missing the cache, or a small change reruns the whole build? Diff the cache keys to find the input. Tested on Gradle 9.8.0 and Maven 3.9.9.">
 <meta property="og:url" content="https://fosterstack.com/why-did-this-task-miss-the-build-cache/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="FosterStack">
@@ -179,9 +179,9 @@ Stored cache entry for task ':greetStable' with cache key f1bf5e9a...</code></pr
   <p>For the dependency bump we used two modules: <code>lib</code> with no dependencies and <code>app</code> using Gson. Five builds ran on one server: Gson 2.10.1, 2.10.1 again, 2.11.0, 2.11.0 again, then back to 2.10.1. After the bump, <code>lib</code> came from the cache and <code>app</code> was recompiled (Gradle) or rebuilt (Maven). The builds after that restored both modules. The result was the same in Gradle and in Maven.</p>
 
   <h2>How we checked</h2>
-  <p>FosterStack Cache 0.2.1 on a Mac (arm64), no password, a new empty server for every scenario and a fresh project copy for every build. Gradle 9.8.0, <code>--no-daemon</code>, <code>--console=plain</code>, <code>--max-workers=1</code>, a new Gradle home for every build in the key-diff runs, the local build cache off. Java 21 for every build except the Java 27 row, which used Homebrew OpenJDK 27 for the Gradle run. The key-diff project had one Java class and five small cacheable tasks. Each row is one run, we did not repeat them, and we report counts and log lines, not times.</p>
-  <p>The three-module chain ran only the Gradle compile tasks. Its Maven runs used Maven 3.9.9 with Build Cache Extension 1.2.3, <code>mvn verify</code>, all eight default plugin versions pinned and Java release 17, on Temurin 21.0.12.1. Downloads (the Gradle home for the Gson runs, the Maven repository) were shared across builds and held no cache entries.</p>
-  <p class="muted-note">Not tested: other Gradle versions, Kotlin or Android builds, a second machine, inputs that come from dependencies, Gradle <code>api</code> dependencies, test and jar tasks in Gradle, annotation processors, a change to a public constant, a change in the middle module, a library used by both modules, bigger projects, Linux, build times, and Maven in the key-diff runs.</p>
+  <p>Key-diff runs: FosterStack Cache 0.2.1 on a Mac (arm64), no password. Gradle 9.8.0, <code>--no-daemon</code>, <code>--console=plain</code>, <code>--max-workers=1</code>, a new Gradle home for every build in the key-diff runs, the local build cache off. Java 21 for every build except the Java 27 row, which used Homebrew OpenJDK 27 for the Gradle run. The key-diff project had one Java class and five small cacheable tasks. Each row is one run, we did not repeat them, and we report counts and log lines, not times.</p>
+  <p>Chain and Gson runs: FosterStack Cache 0.2.1 on a Mac (arm64), every scenario on a new, empty server with a fresh project copy for every build. Gradle 9.8.0 ran only the compile tasks, with its local cache off. Maven ran in the same runs: Maven 3.9.9 with Build Cache Extension 1.2.3, <code>mvn verify</code>, all eight default plugin versions pinned and Java release 17. Both used Temurin 21.0.12.1. Downloads (the Gradle home for the Gson runs, the Maven repository) were shared across builds and held no cache entries.</p>
+  <p class="muted-note">Not tested: other Gradle versions, other Maven versions, Kotlin or Android builds, a second machine, inputs that come from dependencies, Gradle <code>api</code> dependencies, test and jar tasks in Gradle, annotation processors, a change to a public constant, a change in the middle module, a library used by both modules, bigger projects, Linux, build times, and Maven in the key-diff runs.</p>
   <div class="cta-row">
     <a class="btn" href="/gradle-remote-cache-not-working/">Not working at all?</a>
     <a class="btn btn-secondary" href="/">FosterStack home</a>

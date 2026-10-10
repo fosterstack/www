@@ -128,7 +128,7 @@
   <p>To copy the data somewhere safe, or to move it to another server, see <a href="/upgrade-build-cache-server/">upgrade, back up and restore</a>.</p>
 
   <h2>How we checked</h2>
-  <p>We ran the Gradle builds on this page twice, once with Java 21 and once with Java 27. The results were the same in every step: the same tasks ran, the same entries were stored, and the same tasks came from the cache.</p>
+  <p>We ran the Gradle builds on this page twice, once with Java 21 and once with Java 27, with the same results.</p>
   <p><strong>Restarts during a build.</strong> FosterStack Cache 0.2.1 on a Mac (arm64), no password. Gradle 9.8.0, one fresh copy of the project per build, no reused daemon, the local build cache off. To keep builds open long enough to overlap a restart, each of the four modules had a cacheable task that sleeps for 8 seconds. We sent the signal to the server's process ID and started it again on the same data folder. All builds ended with <code>BUILD SUCCESSFUL</code>. Each row is one run; we did not repeat them.</p>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <thead><tr><th>Server stopped during the build</th><th>Back after</th><th>What the build printed</th><th>Entries stored</th><th>Next build, from cache</th></tr></thead>

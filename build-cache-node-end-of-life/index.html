@@ -118,9 +118,9 @@
   <ul class="trust">
     <li>Signed releases you can verify in minutes.</li>
     <li>Build record, parts list (SBOM) and vulnerability statements published with every release.</li>
-    <li>Scanned before every release, rescanned every day.</li>
+    <li>Two different scanners, with different vulnerability databases, check each release candidate before it ships, and every published image is scanned again daily.</li>
     <li>Images assembled twice on separate machines; the results must match.</li>
-    <li>Minimal image, no telemetry. FIPS variant available.</li>
+    <li>Minimal image, with one static program and no shell. No telemetry. FIPS variant available.</li>
     <li>Vulnerable dependencies fixed fast — our target is 48 hours from disclosure.</li>
   </ul>
   <p><a href="/how-we-build/">How we build</a> · <a href="/security/">Security policy</a> · <a href="/verify-a-release/">Verify a release</a></p>
@@ -134,7 +134,7 @@
   <p>Yes. Gradle talks to it with its normal remote build cache setting, so moving from the old node is mostly a URL change. Our CI builds a real multi-module Gradle project against it on every change and checks that a second build gets real cache hits. See the <a href="/migrate-build-cache-node/">setup page</a>.</p>
 
   <h3>Does it work with Maven?</h3>
-  <p>The Maven client is Apache's Build Cache Extension, not ours.</p>
+  <p>Yes, through the Apache Maven Build Cache Extension. The Maven client is Apache's Build Cache Extension, not ours.</p>
 
   <h3>Is it free?</h3>
   <p>Yes. Everything you can download today is the free MIT core, including eviction, size limits and metrics. The paid tiers are not built or sold.</p>

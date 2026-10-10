@@ -89,8 +89,9 @@
 </header>
 <main>
   <h1>Gradle build cache not working or hit rate low: causes</h1>
-  <p class="lede">Your build runs and nothing fails, but tasks that should come from the remote cache run again. FosterStack Cache is the server behind that cache, and this page lists what to check, in order.</p>
+  <p class="lede">Your build runs and nothing fails, but tasks that should come from the remote cache run again. FosterStack Cache is a remote build cache server, and this page lists what to check, in order, with real output from it.</p>
   <p>Gradle treats a broken remote cache as non-fatal, so the build carries on without it and the only sign may be one line in the log. Work down this list.</p>
+  <p>Most tasks still run? See <a href="#gradle-build-cache-hit-rate-low">hit rate low</a>. Slow after a Gradle or Maven upgrade? See <a href="#build-cache-cold-after-gradle-or-maven-upgrade">the upgrade section</a>.</p>
 
   <h2>1. Is the build cache switched on?</h2>
   <p>The <code>buildCache</code> block in <code>settings.gradle(.kts)</code> says where the cache is. It does not turn caching on. Without this line the block does nothing:</p>
