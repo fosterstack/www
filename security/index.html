@@ -119,7 +119,7 @@
     <li>A <code>release-manifest.json</code> listing every file and its digest.</li>
   </ul>
   <p>The commands are under "Verifying a release" in <a href="https://github.com/fosterstack/cache/blob/main/RELEASING.md">RELEASING.md</a>. See also <a href="/how-we-build/">how we build</a>.</p>
-  <p>Every published image is scanned again every day, so a vulnerability disclosed against something we already shipped raises an issue.</p>
+  <p>The current release's images are scanned again every day, so a vulnerability disclosed against something we already shipped raises an issue.</p>
 
   <h2>What the server does with your data</h2>
   <p>The server sends no telemetry and needs no connection to FosterStack: no usage reporting, no licence check, no update ping. It stores what your build tool sends it, which is cache keys and the files they point to. You can check that it makes no outbound connections, and the command is in the <a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md">security policy</a> on GitHub.</p>
