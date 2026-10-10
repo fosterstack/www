@@ -144,6 +144,7 @@ The remote build cache was disabled during the build due to errors.</code></pre>
   <p>Work through <a href="/gradle-remote-cache-not-working/#gradle-build-cache-hit-rate-low">why the hit rate is low</a> and <a href="/jenkins-ci-build-cache/">Jenkins and CI build cache</a>. For read-only developer logins, see <a href="/gradle-build-cache-ci-writes-developers-read/">CI writes, developers read</a>.</p>
 
   <p class="muted-note">Run on Gradle 9.8.0 (image gradle:9.8.0-jdk21, Linux aarch64, Java 21) with FosterStack Cache 0.2.1, Docker Desktop 4.87 on macOS (arm64).</p>
+  <p class="muted-note">We ran the five runs again on a GitHub-hosted Linux machine (amd64) with FosterStack Cache 0.2.2 and the same image, each on a fresh copy of the project folder. The results were the same, including the 401 line and <code>BUILD SUCCESSFUL</code> in run 5, and the case with Gradle&rsquo;s background process. A Linux Docker engine does not define <code>host.docker.internal</code> by itself, so there the command needs <code>--add-host=host.docker.internal:host-gateway</code>. Use a clean copy of the project for each build: when we ran the same command a second time on the same folder, the build printed <code>:core:compileJava UP-TO-DATE</code> instead of <code>FROM-CACHE</code>, because the build output was still in the folder. <a href="https://github.com/fosterstack/www/actions/runs/38059197460">The run and its log are public</a>.</p>
 </main>
 
 <footer>
