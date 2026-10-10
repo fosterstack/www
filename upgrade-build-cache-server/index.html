@@ -114,6 +114,7 @@ docker run -d --name fscache -p 127.0.0.1:8080:8080 \
   ghcr.io/fosterstack/cache:0.2.2</code></pre>
 
   <h3>What we saw</h3>
+  <p>First, from 0.1.0 to 0.2.1 and back:</p>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <tr><th>Step</th><th>Result</th></tr>
     <tr><td>0.1.0: store three entries on a fresh volume</td><td>201 each; its metrics show 3 entries, 29 bytes</td></tr>
@@ -134,7 +135,7 @@ docker run -d --name fscache -p 127.0.0.1:8080:8080 \
   <h2>Two differences between the releases</h2>
   <ul class="trust">
     <li><strong>0.1.0 has no status page.</strong> <code>/statusz</code> returned 404 there. 0.2.1 has it. The metrics page is on both.</li>
-    <li><strong>The entry-count metric reads 0 after a restart, on both releases.</strong> After the rollback, 0.1.0's <code>fscache_store_entries</code> read 0 although every value was readable. The upgrade did not cause that: a volume only 0.1.0 ever wrote showed 3 entries before a plain restart and 0 after it, with the data still readable. 0.2.1's metrics read 0 after a restart until the next upload too, and so did 0.2.2's: right after we started it on the 0.2.1 volume, <code>fscache_store_entries</code> read 0 while <code>/statusz</code> showed 3 entries (see <a href="/is-the-build-cache-server-healthy-what-to-alert-on/">is my build cache server healthy</a>). On 0.2.1, <code>/statusz</code> still showed the real count, 3 entries and 9 bytes, so read it there.</li>
+    <li><strong>The entry-count metric reads 0 after a restart, on both releases.</strong> After the rollback, 0.1.0's <code>fscache_store_entries</code> read 0 although every value was readable. The upgrade did not cause that: a volume only 0.1.0 ever wrote showed 3 entries before a plain restart and 0 after it, with the data still readable. 0.2.1's metrics read 0 after a restart until the next upload too, and so did 0.2.2's: right after we started it on the 0.2.1 volume, <code>fscache_store_entries</code> read 0 while <code>/statusz</code> showed 3 entries (see <a href="/is-the-build-cache-server-healthy-what-to-alert-on/">is my build cache server healthy</a>). In the 0.1.0 to 0.2.1 run, 0.2.1's <code>/statusz</code> still showed the real count, 3 entries and 9 bytes, so read it there.</li>
   </ul>
 
   <h2 id="back-up-and-restore-build-cache">Back up and restore a self-hosted build cache</h2>
@@ -151,7 +152,7 @@ docker run --rm -v fscache-data:/data:ro -v &quot;$PWD&quot;:/backup ubuntu:24.0
   <p>In our test, with three small entries, the archive held a <code>data/blobs/</code> folder with one folder per entry prefix, and was 578 bytes.</p>
 
   <h3>2. Restore it into a new volume</h3>
-  <p>To check it, we deleted the container and the volume, then restored into a new, empty one:</p>
+  <p>To check it, we deleted the container and the volume, then restored into a new, empty one. We ran this on the 0.2.1 image; use the release that wrote the backup:</p>
   <pre tabindex="0"><code>docker volume create fscache-data-restored
 docker run --rm -v fscache-data-restored:/data -v &quot;$PWD&quot;:/backup:ro ubuntu:24.04 \
   sh -c &#x27;tar xzf /backup/fscache-data.tgz -C /data&#x27;
