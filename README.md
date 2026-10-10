@@ -87,6 +87,7 @@ asking us.
   marketing filler. Changes to it are an owner decision.
 - No fabricated testimonials, logos, or usage numbers — FTC posture per brief §4.
 - No calendar commitments. No launch dates, no "beta in <month>", no phase language.
-  The dateless roadmap and the honest maturity label (v0.1, early) stay; a schedule
+  The dateless roadmap stays (the homepage no longer carries a version or "early" label,
+  owner, Oct 10); a schedule
   we might miss does not go on a public page.
 - No email capture, ever. See "No data collection" above.

@@ -112,7 +112,7 @@
     <li>MIT licensed. One static binary or one container image on GitHub's registry.</li>
     <li>Releases are signed, and the evidence (SBOM, build provenance, vulnerability statements) is public.</li>
   </ul>
-  <p>It is early. The paid tiers are not built. Everything you can download today is the free core.</p>
+  <p>The paid tiers are not built. Everything you can download today is the free core.</p>
 
   <h2>More than kept patched.</h2>
   <ul class="trust">
@@ -140,7 +140,7 @@
   <p>Yes. Everything you can download today is the free MIT core, including eviction, size limits and metrics. The paid tiers are not built or sold.</p>
 
   <h3>Is it ready for production?</h3>
-  <p>It is early. A cache fails safe, since a missing cache means slower builds, but decide for yourself with that in mind. The <a href="https://github.com/fosterstack/cache">README</a> lists what has shipped and what has not.</p>
+  <p>A cache fails safe, since a missing cache means slower builds, but decide for yourself with that in mind. The <a href="https://github.com/fosterstack/cache">README</a> lists what has shipped and what has not.</p>
 
   <h3>Who can write to the cache?</h3>
   <p>Anyone holding the read-write password. Turn on Basic Auth anywhere untrusted people could reach the port, and share that password only with CI and developers you trust to change your code. You can also set an optional read-only login for everyone else: it can read but any write is refused. Telling Gradle not to upload is a client choice, not a server rule. Per-person identity is not built.</p>
