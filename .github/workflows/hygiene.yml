@@ -19,6 +19,7 @@ on:
           - github-actions
           - verify-release
           - setup-pages
+          - howto-pages
         default: miss-cost
 
 permissions:
@@ -114,6 +115,26 @@ jobs:
 
       - name: follow the two setup pages' commands as written, timed, twice
         run: bash bin/bench-setup-pages.sh
+
+  # End-to-end runs of three how-to pages (laptop-builds-reuse-ci, CI-writes-developers-read, Docker Compose production): the
+  # commands as written, the server's own counters checked, every output line the page promises asserted. Same rules as the other
+  # jobs: manual dispatch only, chosen with the "which" input (compared in this `if` only), no token and no secret, read-only
+  # token not persisted. Gradle, Maven 3.10.0 and 3.9.9, JDK 27 and cosign are downloaded and checked against pinned checksums;
+  # the Maven extension and plugins come from Maven Central (not pinned), the page's nginx tag is resolved once to a digest that
+  # is logged and used. Docker and Compose are the runner's own: the cache image is verified with cosign before it is run, and
+  # the page's published ports are used as written (the quick-start stack listens on this runner for a few minutes behind a
+  # made-up password).
+  bench-howto-pages:
+    if: github.event_name == 'workflow_dispatch' && inputs.which == 'howto-pages'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: follow the three pages' commands as written and check what they promise
+        run: bash bin/bench-howto-pages.sh
 
   # Which tasks does the Gradle remote build cache restore in an Android build? Same rules as the other jobs: manual
   # dispatch only, chosen with the "which" input (compared in this `if` only, never put into a shell command), no
