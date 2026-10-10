@@ -128,7 +128,7 @@
   <p>To copy the data somewhere safe, or to move it to another server, see <a href="/upgrade-build-cache-server/">upgrade, back up and restore</a>.</p>
 
   <h2>How we checked</h2>
-  <p>We ran the Gradle builds on this page twice, once with Java 21 and once with Java 27, with the same results.</p>
+  <p>We ran the Gradle builds on this page twice on a Mac, once with Java 21 and once with Java 27, with the same results. A third run on Linux is in the last section.</p>
   <p><strong>Restarts during a build.</strong> FosterStack Cache 0.2.1 on a Mac (arm64), no password. Gradle 9.8.0, one fresh copy of the project per build, no reused daemon, the local build cache off. To keep builds open long enough to overlap a restart, each of the four modules had a cacheable task that sleeps for 8 seconds. We sent the signal to the server's process ID and started it again on the same data folder. All builds ended with <code>BUILD SUCCESSFUL</code>. Each row is one run; we did not repeat them.</p>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <thead><tr><th>Server stopped during the build</th><th>Back after</th><th>What the build printed</th><th>Entries stored</th><th>Next build, from cache</th></tr></thead>
@@ -175,7 +175,22 @@
   <p>The status page is the server's <code>/statusz</code> address. It showed the same 13 entries and the same size in bytes right after each restart, before any build ran.</p>
   <p>In this test we killed the server while it was idle. Kills in the middle of an upload are in the upload table above.</p>
 
-  <p>Not tested: Docker, Kubernetes or Compose rollouts, Maven builds, other releases, and more than one build running at once.</p>
+  <p>Not tested: Docker, Kubernetes or Compose rollouts, Maven builds, releases other than 0.2.1 and 0.2.2, and more than one build running at once.</p>
+
+  <h3>Second run: Linux, 0.2.2</h3>
+  <p>The runs above were on a Mac with 0.2.1. We ran the same steps again on a GitHub-hosted Linux machine with FosterStack Cache 0.2.2, Gradle 9.8.0 and Java 21. In the build tests we stopped the server while the build's third 8-second task was running, 2 seconds after the second one finished.</p>
+  <ul class="trust">
+    <li>The four rows of the first table came out the same. Back after 2 seconds: no cache message, and the next build took 4 of 4 from the cache. Back after 14 seconds: one <code>Could not store entry</code>, the remote cache was then disabled, and the next build took 2 of 4. A normal stop and <code>kill -9</code> gave the same results.</li>
+    <li>A build started while the server was stopped printed one <code>Could not load entry</code> warning, disabled the remote cache and built all four modules locally.</li>
+    <li>The next build, with the server back, built and stored all four. The one after that took all four from the cache.</li>
+    <li>Every restart we timed took 0.01 to 0.07 seconds, with 20 entries and with 5,000 entries (about 48 MiB).</li>
+    <li>After a kill the log said <code>unclean shutdown detected, reconciling stores before serving</code>, and after five kills the 5,000 entries were all still there.</li>
+    <li>We sent uploads at 2 MiB per second and stopped the server after 3 seconds. A 20 MiB upload with a normal stop finished with <code>201</code>. The server exited with code 0 after 7.3 seconds.</li>
+    <li>A 20 MiB upload with a kill broke. A 6 MiB temporary file stayed behind, the entry was not found (404), and the next start removed the file.</li>
+    <li>A 40 MiB upload with a normal stop broke when the server gave up at 10.0 seconds and exited with code 1. A 26 MiB temporary file stayed on disk and the entry was not found. An entry stored earlier stayed readable in all three cases.</li>
+    <li>After a clean stop and after a kill, the status page showed the same entries and bytes (11 entries on this test project; the Mac run had 13) and the next build took everything from the cache. A build using a different, empty cache folder took none from the cache.</li>
+  </ul>
+  <p class="muted-note"><a href="https://github.com/fosterstack/www/actions/runs/38067965540">The run and its log are public</a>.</p>
 </main>
 
 <footer>
