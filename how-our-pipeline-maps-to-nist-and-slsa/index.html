@@ -88,16 +88,16 @@
 </header>
 <main>
   <h1>How our release pipeline maps to NIST SP 800-204C, 800-204D and SLSA</h1>
-  <p class="lede">This page takes the release pipeline that built FosterStack Cache v0.2.1 and puts each stage next to the NIST practice it maps to. It says where a stage only partly implements a practice, and it says which SLSA Build level we assess v0.2.1 at.</p>
+  <p class="lede">This page takes the release pipeline that built FosterStack Cache v0.2.1 and puts each stage next to the NIST practice it maps to. It says where a stage only partly implements a practice, and it says which SLSA Build level we assess v0.2.1 at: Level 2, not Level 3.</p>
   <p class="muted-note">Words used here: <strong>SBOM</strong> is a parts list of what is inside a build. <strong>VEX</strong> is a note saying a known flaw does not affect us. <strong>Provenance</strong> is a signed record of how and where something was built. <strong>Digest</strong> is the fingerprint of a file or image. <strong>SLSA</strong> is a public scale of how well a build can be trusted, from Level 1 to Level 3 in its Build track.</p>
-  <p><strong>Guidance we designed against, not a certification we hold.</strong></p>
+  <p><strong>This is guidance we followed when designing the pipeline. It is not a certification.</strong></p>
 
   <h2>The two NIST documents</h2>
   <ul>
-    <li><strong>NIST SP 800-204C</strong>, Implementation of DevSecOps for a Microservices-based Application with Service Mesh. We use its pipeline sections, mainly 4.6 "Securing the CI/CD Pipeline" and 4.8 "Security Testing".</li>
-    <li><strong>NIST SP 800-204D</strong>, Strategies for the Integration of Software Supply Chain Security in DevSecOps CI/CD Pipelines. We use sections 4 and 5, mainly 5.1.1 "Secure Build" and 5.2 "Securing Workflows in CD Pipelines".</li>
+    <li><strong>NIST SP 800-204C</strong>, Implementation of DevSecOps for a Microservices-based Application with Service Mesh. We use its pipeline sections, mainly sections 4.6 and 4.8.</li>
+    <li><strong>NIST SP 800-204D</strong>, Strategies for the Integration of Software Supply Chain Security in DevSecOps CI/CD Pipelines. We use sections 4 and 5, mainly sections 5.1.1 and 5.2.</li>
   </ul>
-  <p>Parts of both documents are about running services in your own cluster: service mesh, runtime monitoring, deployment by GitOps. That part happens in your environment, not in our release pipeline, so this page does not map it.</p>
+  <p>Parts of both documents cover running services in your own cluster, such as service mesh and GitOps. That is your environment, not our release pipeline, so this page does not map it.</p>
 
   <h2>Stage by stage: what runs, and which practice it maps to</h2>
   <p>This describes the workflow files as they were at the v0.2.1 tag. "Signs" means the stage writes a statement about its work and signs it with keyless signing tied to that stage's own workflow identity, logged in a public transparency log.</p>
@@ -208,7 +208,7 @@
     <li><a href="https://github.com/fosterstack/cache/tree/v0.2.1/.github/workflows">The workflow files at v0.2.1</a>, starting with <a href="https://github.com/fosterstack/cache/blob/v0.2.1/.github/workflows/release.yml">release.yml</a> and <a href="https://github.com/fosterstack/cache/blob/v0.2.1/.github/workflows/stage-authorize.yml">stage-authorize.yml</a>.</li>
   </ul>
 
-  <p class="muted-note">Section numbers refer to the final published versions of NIST SP 800-204C and NIST SP 800-204D. <strong>Guidance we designed against, not a certification we hold.</strong></p>
+  <p class="muted-note">Section numbers refer to the final published versions of NIST SP 800-204C and NIST SP 800-204D. <strong>This is guidance we followed when designing the pipeline. It is not a certification.</strong></p>
 
   <div class="cta-row">
     <a class="btn" href="/verify-a-release/">Verify a release</a>

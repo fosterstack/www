@@ -87,6 +87,9 @@
   <h1>For teams entering regulated markets</h1>
 
   <p class="lede">
+    FosterStack Cache gives the build-cache part of your pipeline public, checkable evidence: a FIPS 140-3 build, an SBOM, SLSA provenance, signatures and VEX statements. It does not make you compliant.
+  </p>
+  <p>
     It usually starts with one customer. A contract lands on the table with
     federal or compliance requirements attached — FIPS-validated cryptography,
     SBOMs, provenance, a security questionnaire with two hundred rows — and
@@ -101,7 +104,7 @@
   <h2>What our piece does — and does not do</h2>
   <p>
     FosterStack Cache is one component in your pipeline: a self-hosted remote
-    build cache. Maven too, through the Apache Maven Build Cache Extension. For that component, we do the evidence work a compliance
+    build cache. It also serves Maven, through the Apache Maven Build Cache Extension. For that component, we do the evidence work a compliance
     program needs: the <code>-fips</code> build links Go's FIPS 140-3
     validated cryptographic module (CMVP certificate #5247), and every
     release ships with an SBOM, SLSA provenance, keyless signatures, and
@@ -110,10 +113,8 @@
   </p>
   <p>
     What it does not do: make you compliant. FedRAMP and CMMC attach to your
-    service and your organization, never to a component you deploy. What a
-    component can be is <em>evidence and validated crypto for your
-    program</em> — one row of that questionnaire where the answer is written,
-    signed, and checkable instead of a shrug.
+    service and your organization, never to a component you deploy. What a component can offer is <em>evidence and validated crypto for your
+    program</em>: one row of that questionnaire, answered with something written, signed and checkable instead of a shrug.
   </p>
 
   <h2>More than kept patched.</h2>
