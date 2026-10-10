@@ -148,6 +148,9 @@
   <p>See <a href="/maven-build-cache-extension-not-restoring/">Maven build cache not restoring</a>. To turn the cache off or skip it for one build, see <a href="/maven-remote-build-cache-setup/#maven-build-cache-extension-enable-disable">enable or disable the extension</a>.</p>
 
   <p class="muted-note">Run on Maven 3.10.0 with maven-build-cache-extension 1.2.3 and FosterStack Cache 0.2.1, macOS (arm64).</p>
+  <h3>Second run: Linux, 0.2.2</h3>
+  <p>The run above was on a Mac with 0.2.1. We ran the table again on a GitHub-hosted Linux machine with FosterStack Cache 0.2.2, Maven 3.10.0, extension 1.2.3 and Java 21, each build on a fresh copy of the project with an empty local build cache. All six rows came out the same, and every build ended with <code>BUILD SUCCESS</code>.</p>
+  <p class="muted-note"><a href="https://github.com/fosterstack/www/actions/runs/38070836344">The run and its log are public</a>.</p>
 </main>
 
 <footer>

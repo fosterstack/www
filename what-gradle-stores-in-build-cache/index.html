@@ -176,6 +176,14 @@ Stored cache entry for Kotlin DSL script compilation (Project/TopLevel/stage2) w
   <p><strong>Maven.</strong> The three-module project from <a href="/maven-build-cache-extension-multi-module/">Maven build cache extension in a multi-module project</a>: <code>core</code>, <code>util</code> and <code>app</code>. We started a new, empty server and ran <code>mvn verify</code> twice, each time from a fresh copy of the project with an empty local build cache. Both builds ran on the same Mac and shared one already-filled local Maven repository, offline (<code>-o -B</code>, plus options for the repository and the local cache location). Both ended with <code>BUILD SUCCESS</code>. In our runs the extension printed one <code>Saved to remote cache</code> line for each entry that ended up on the server, and the server's status page (<code>/statusz</code>) gave the counts.</p>
   <p class="muted-note">Run on Gradle 9.8.0 with FosterStack Cache 0.2.1, macOS (arm64), Java 27.</p>
   <p class="muted-note">Run on Maven 3.10.0 with maven-build-cache-extension 1.2.3 and FosterStack Cache 0.2.1, macOS (arm64), Java 27 (Homebrew).</p>
+  <h3>Second run: Linux, 0.2.2 (the Maven half)</h3>
+  <p>The Maven runs above were on a Mac with 0.2.1. We ran the three-module build again on a GitHub-hosted Linux machine with FosterStack Cache 0.2.2, Maven 3.10.0 and Java 21.</p>
+  <ul class="trust">
+    <li>The first build against an empty server saved 7 entries: 3 jars, 3 <code>buildinfo.xml</code> files and 1 <code>build-cache-report.xml</code>, with three <code>[ERROR] Error downloading cache item ... buildinfo.xml</code> lines for the misses.</li>
+    <li>The sizes were different: the 3 jars came to 10,077 bytes in all (the Mac run: 5 KB each), the 3 <code>buildinfo.xml</code> files to 27,781 bytes (about the same as before), and the server held 39,311 bytes (the Mac run: 44,810). The <code>buildinfo.xml</code> files were again bigger than the jars. We counted the entries by asking the server for each file; the sizes added up to the server's number.</li>
+    <li>A second build from a fresh copy restored all three modules and added one entry, the report, of 1,318 bytes, the same size as on the Mac.</li>
+  </ul>
+  <p class="muted-note"><a href="https://github.com/fosterstack/www/actions/runs/38070836344">The run and its log are public</a>.</p>
 </main>
 
 <footer>
