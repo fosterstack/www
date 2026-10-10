@@ -27,12 +27,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # two commits, so the parent is there: on a pull request HEAD^1 is the base, on a push it is the previous main
+          fetch-depth: 2
 
       - name: check every tracked file against the allowlist
         run: git ls-files | ./bin/check-file-allowlist.sh
 
       - name: self-test the allowlist (dot-prefixed paths are served, so they are held to a short list)
         run: bash bin/test-check-file-allowlist.sh
+
+      # Keeps the site from rotting: broken links and #anchors, a removed page without its two 301 lines,
+      # sitemap / llms.txt / home-page mismatches, a title over 60 characters. Reads files only.
+      - name: check the site for rot
+        run: python3 bin/check-site-rot.py --base HEAD^1
+
+      - name: self-test the site-rot check
+        run: bash bin/test-check-site-rot.sh
 
   # Timed runs for the "what does a cache miss cost" page. Manual dispatch only; never runs on push or
   # pull request. No secrets, no write permission, no third-party action beyond the pinned checkout above.

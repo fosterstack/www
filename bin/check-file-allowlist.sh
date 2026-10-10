@@ -36,6 +36,8 @@ ALLOW_PATTERNS=(
   '^\.githooks/pre-commit$'
   '^bin/check-file-allowlist\.sh$'
   '^bin/test-check-file-allowlist\.sh$'
+  '^bin/check-site-rot\.py$'
+  '^bin/test-check-site-rot\.sh$'
   '^bin/bench-miss-cost\.sh$'
   '^bin/bench-server-down\.sh$'
   '^bin/bench-android\.sh$'
