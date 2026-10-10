@@ -16,17 +16,25 @@
 # verified with cosign by digest, then loaded into the cluster, so the cluster pulls nothing at run time (kind pulls its node image).
 set -uo pipefail
 
-VER=0.2.2
+VER="${BENCH_VER:-0.2.2}"
+[[ "$VER" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "bad release version: $VER" >&2; exit 2; }
 LOCAL="${BENCH_LOCAL:-0}"
 KIND_VER=v0.33.0
 KIND_SHA=aee6151561422756b764a4ae28e7f44cda5af5a9eead3cc9985112b1de8d8e0d      # kind-linux-amd64.sha256sum of v0.33.0
 KUBECTL_VER=v1.37.0
 KUBECTL_SHA=6129359f4e1f3848a5572ccb0b26cf28b8ca08cef38c95a765b2f64a2c961a2f   # dl.k8s.io/release/v1.37.0/bin/linux/amd64/kubectl.sha256
 NODE_IMAGE="kindest/node:v1.37.0@sha256:a1ed56cfb0e7b93589bdf97c8cd566405a265939e3620fc4f5de89adff580ae5"   # from the kind v0.33.0 release notes
-GUIDE_URL="https://raw.githubusercontent.com/fosterstack/cache/v0.2.2/docs/kubernetes.md"
-GUIDE_SHA=9531258862058907a1ab8e1de8268a5d35c003e19d0fb4256c5fa3ff84668db0     # docs/kubernetes.md at tag v0.2.2 (commit 0ac0586dc1b2de70318b82469fa5b35bfa090068)
+GUIDE_URL="https://raw.githubusercontent.com/fosterstack/cache/v${VER}/docs/kubernetes.md"
+GUIDE_SHA_022=9531258862058907a1ab8e1de8268a5d35c003e19d0fb4256c5fa3ff84668db0     # docs/kubernetes.md at tag v0.2.2 (commit 0ac0586dc1b2de70318b82469fa5b35bfa090068)
 IMG=ghcr.io/fosterstack/cache
-IMG_022=sha256:f2b330cf27b3814405230cc001a771909ae5bbf3b1e223a90ee7a9ee5d0e53dd
+# The production image digest of the release under test comes from the release's OWN published release-manifest.json (no per-version
+# digest is kept in this file). Trust does not rest on that file: the image pulled by tag must have exactly this digest, and the
+# digest is then verified with cosign against the release workflow's identity for the tag, before anything runs it.
+release_digest() { # VERSION -> sha256:...
+  local d; d="$(gh release download "v$1" --repo fosterstack/cache -p release-manifest.json -O - 2>/dev/null | python3 -c 'import sys,json; m=json.load(sys.stdin); print([i["digest"] for i in m["images"] if i["variant"]=="production"][0])' 2>/dev/null)" || return 1
+  [[ "$d" =~ ^sha256:[0-9a-f]{64}$ ]] || return 1; printf '%s' "$d"
+}
+IMG_REL="$(release_digest "$VER")" || { echo "could not read the production image digest from the release manifest of v${VER}" >&2; exit 2; }
 GR_VER=9.8.0
 GR_URL="https://services.gradle.org/distributions/gradle-${GR_VER}-all.zip"
 GR_SHA=46ac66d47f30f3dacfdf306e0b714a91a34fb94a22ba0a744b280933f47bc0cf
@@ -73,8 +81,8 @@ echo "kind: $(kind version)   kubectl: $(kubectl version --client 2>/dev/null | 
 if [ "$LOCAL" = 1 ]; then echo "tools: LOCAL tools in use, nothing checked (a developer's dry run: do not quote these times)"; else
   echo "tools: kind ${KIND_VER}, kubectl ${KUBECTL_VER}, cosign ${COSIGN_VER} and Gradle ${GR_VER} are downloaded and checked against pinned sha256 values before use; the runner's own Docker and Java 21"; fi
 echo "node image (pinned by digest): ${NODE_IMAGE}"
-echo "manifests: the Secret, PVC, Deployment and Service blocks of docs/kubernetes.md at the v0.2.2 tag of fosterstack/cache (file sha256 ${GUIDE_SHA} checked), applied as written with two replacements: the image tag X.Y.Z becomes ${VER}, and the password CHANGE-ME becomes a test value; they are applied in the namespace ${NS} (the guide's in-cluster example uses it), which enforces the Pod Security 'restricted' profile"
-echo "FosterStack Cache ${VER} image: pulled, compared with the pinned digest ${IMG_022}, verified with cosign by digest, then loaded into the cluster with 'kind load docker-image' (the cluster itself pulls nothing from the internet at run time except kind's node image, pulled by the runner's Docker)"
+echo "manifests: the Secret, PVC, Deployment and Service blocks of docs/kubernetes.md at the v${VER} tag of fosterstack/cache (${GUIDE_NOTE}), applied as written with two replacements: the image tag X.Y.Z becomes ${VER}, and the password CHANGE-ME becomes a test value; they are applied in the namespace ${NS} (the guide's in-cluster example uses it), which enforces the Pod Security 'restricted' profile"
+echo "FosterStack Cache ${VER} image: pulled, compared with the digest the release manifest names (${IMG_REL}), verified with cosign by digest, then loaded into the cluster with 'kind load docker-image' (the cluster itself pulls nothing from the internet at run time except kind's node image, pulled by the runner's Docker)"
 echo "invented by this script (the guide shows none): the Gradle project (rootProject.name, build.gradle.kts, App.java) and the build from outside through the guide's own port-forward; the variant Deployment without FSCACHE_DATA_DIR used to test the guide's warning"
 echo "limits of this cluster: kind is ONE node with the default local-path StorageClass, so a second pod can mount the same ReadWriteOnce volume (on a multi-node cluster the failure would be a Multi-Attach error instead); the replica test uses 'kubectl scale'; the user ids are read from the pod spec, not from the running process; the fsGroup requirement ('without it the pod crash-loops') is NOT tested, and kind's volumes may be writable anyway"
 echo "NOT tested here: a real cloud cluster, a StorageClass other than kind's default, the LoadBalancer Service, Gateway API and Ingress examples, in-cluster runners and the in-cluster DNS name, node sizing, the Kyverno policy, upgrades (Recreate rollouts)"
@@ -95,7 +103,9 @@ metric() { curl -s --max-time 10 "localhost:8080/metrics" | sed -n "s/^$1 \([0-9
 for p in 8080; do curl -sf --max-time 3 "localhost:$p/healthz" >/dev/null 2>&1 && { echo "something already answers on port $p: not starting" >&2; exit 1; }; done
 
 # ---------- the guide, checked, and its four manifests ----------
-curl -fsSL -o "$W/kubernetes.md" "$GUIDE_URL"; sha_check "$W/kubernetes.md" "$GUIDE_SHA"
+curl -fsSL -o "$W/kubernetes.md" "$GUIDE_URL"
+if [ "$VER" = 0.2.2 ]; then sha_check "$W/kubernetes.md" "$GUIDE_SHA_022"; GUIDE_NOTE="file sha256 ${GUIDE_SHA_022} checked"
+else GUIDE_NOTE="file sha256 $(sha256sum "$W/kubernetes.md" | cut -d' ' -f1), read from the v${VER} tag and NOT pinned in this script"; fi
 python3 - "$W/kubernetes.md" "$W/manifests.yaml" "$VER" "$PASS" <<'PYEOF'
 import re,sys
 md=open(sys.argv[1]).read(); out=sys.argv[2]; ver=sys.argv[3]; pw=sys.argv[4]
@@ -113,15 +123,15 @@ print('manifests: %d lines, 4 documents'%text.count('\n'))
 PYEOF
 [ -s "$W/manifests.yaml" ] || { fail "could not extract the four manifests from the guide"; echo "FAILURES $FAILS"; exit 1; }
 
-# ---------- the image: pinned digest, cosign, then into the cluster ----------
+# ---------- the image: manifest digest, cosign, then into the cluster ----------
 pull() { local n; for n in 1 2 3; do docker pull -q "$1" >/dev/null 2>&1 && return 0; sleep 5; done; return 1; }
 pull "$IMG:${VER}" || { fail "could not pull $IMG:${VER}"; echo "FAILURES $FAILS"; exit 1; }
 got="$(docker inspect --format '{{index .RepoDigests 0}}' "$IMG:${VER}")"
-[ "${got#*@}" = "$IMG_022" ] || { fail "$IMG:${VER} is ${got#*@}, not the pinned ${IMG_022}: no image is loaded"; echo "FAILURES $FAILS"; exit 1; }
+[ "${got#*@}" = "$IMG_REL" ] || { fail "$IMG:${VER} is ${got#*@}, not the digest the release manifest names (${IMG_REL}): no image is loaded"; echo "FAILURES $FAILS"; exit 1; }
 run k-cosign "$W" <<EOF
-cosign verify ${IMG}@${IMG_022} --certificate-identity-regexp="^https://github.com/fosterstack/cache/.github/workflows/stage-promote.yml@refs/tags/v${VER}\$" --certificate-oidc-issuer='https://token.actions.githubusercontent.com'
+cosign verify ${IMG}@${IMG_REL} --certificate-identity-regexp="^https://github.com/fosterstack/cache/.github/workflows/stage-promote.yml@refs/tags/v${VER}\$" --certificate-oidc-issuer='https://token.actions.githubusercontent.com'
 EOF
-expect k-cosign "${IMG_022}"; [ "$RC" = 0 ] || { fail "the image signature did not verify: nothing is loaded"; echo "FAILURES $FAILS"; exit 1; }
+expect k-cosign "${IMG_REL}"; [ "$RC" = 0 ] || { fail "the image signature did not verify: nothing is loaded"; echo "FAILURES $FAILS"; exit 1; }
 
 # ---------- the cluster ----------
 kind delete cluster --name "$CLUSTER" >/dev/null 2>&1 || true

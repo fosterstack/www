@@ -10,7 +10,7 @@
 # that fails or prints something else is RECORDED (FAIL) and fails the job at the end; observations that are not failures are OBS lines.
 #
 # No token and no secret. Gradle and cosign are downloaded and checked against pinned sha256 values; the release binary is verified
-# (cosign + sha256) before it runs; the cache image is pinned by digest and verified with cosign by digest before docker runs it.
+# (cosign + sha256) before it runs; the cache image digest is read from the release's own manifest, must equal the pulled tag, and is verified with cosign by digest before docker runs it.
 set -uo pipefail
 
 VER="${BENCH_VER:-0.2.2}"   # the release the pages name; a scheduled proof run passes the newest release tag (checked by the workflow, and again here)
@@ -76,7 +76,7 @@ echo "runner: $(uname -sr); cpus: $(nproc 2>/dev/null || sysctl -n hw.ncpu); ima
 echo "java: $("$JDK21_HOME/bin/java" -version 2>&1 | head -1)   gradle: $(gradle --version 2>/dev/null | grep -E '^Gradle ' | head -1)   cosign: $(cosign version 2>/dev/null | grep -i GitVersion | head -1)   docker: $(docker --version)"
 if [ "$LOCAL" = 1 ]; then echo "tools: LOCAL tools in use, nothing checked (a developer's dry run: do not quote these times)"; else
   echo "tools: Gradle ${GR_VER} and cosign ${COSIGN_VER} are downloaded and checked against pinned sha256 values before use; Java 21 and Docker are the runner's own"; fi
-echo "release under test: FosterStack Cache ${VER}, downloaded with no login and verified (cosign + sha256) before it runs (binary servers); the image is pulled by tag, must equal the pinned digest, and is verified with cosign by digest before docker runs it"
+echo "release under test: FosterStack Cache ${VER}, downloaded with no login and verified (cosign + sha256) before it runs (binary servers); the image is pulled by tag, must equal the digest the release's own manifest names, and is verified with cosign by digest before docker runs it"
 echo "invented by this script (the pages show none): the Gradle projects (four modules for L, one for M) and their sources, test passwords; the Docker Compose file for N is the quick-start file of /build-cache-docker-compose-production/ with the password the page itself prints (change-me), published on 0.0.0.0:8080 of the runner until the script takes it down; the pages' hard-coded ports (18141, 18099) are used as written"
 echo "differences from the pages' own runs: Linux amd64 (the pages: macOS arm64), release ${VER} (the pages: 0.2.1), Gradle ${GR_VER} with the runner's Java 21 (the pages: Java 27 for L)"
 echo "Gradle runs use a new empty Gradle home and a fresh project copy each, no wrapper; Gradle's own local cache is switched off where the enable/disable page switches it off (its settings block); in scenario M this script switches it off as well, which the authentication page's block does not show, so that a hit can only come from the server"
@@ -150,9 +150,16 @@ gradle_code() { # DIR N  (N changes what is compiled)
   printf 'package demo;\n\npublic class App {\n    public static void main(String[] args) {\n        System.out.println("hello %s");\n    }\n}\n' "$2" > "$1/src/main/java/demo/App.java"
 }
 # =====================================================================================
-# images (scenario N): the pinned digest of the release under test
+# images (scenario N): the digest of the release under test, from its own release manifest
 IMG=ghcr.io/fosterstack/cache
-IMG_022=sha256:f2b330cf27b3814405230cc001a771909ae5bbf3b1e223a90ee7a9ee5d0e53dd
+# The production image digest of the release under test comes from the release's OWN published release-manifest.json (no per-version
+# digest is kept in this file). Trust does not rest on that file: the image pulled by tag must have exactly this digest, and the
+# digest is then verified with cosign against the release workflow's identity for the tag, before anything runs it.
+release_digest() { # VERSION -> sha256:...
+  local d; d="$(gh release download "v$1" --repo fosterstack/cache -p release-manifest.json -O - 2>/dev/null | python3 -c 'import sys,json; m=json.load(sys.stdin); print([i["digest"] for i in m["images"] if i["variant"]=="production"][0])' 2>/dev/null)" || return 1
+  [[ "$d" =~ ^sha256:[0-9a-f]{64}$ ]] || return 1; printf '%s' "$d"
+}
+IMG_REL="$(release_digest "$VER")" || { echo "could not read the production image digest from the release manifest of v${VER}" >&2; exit 2; }
 
 # =====================================================================================
 # SCENARIO L: /gradle-build-cache-enable-disable/
@@ -399,14 +406,14 @@ scenario_n() {
   echo; echo "== N  (reset-gradle-build-cache)"
   local D="$W/n" S got
   mkdir -p "$D"
-  # the image: pinned digest, cosign by digest, then docker
+  # the image: manifest digest, cosign by digest, then docker
   local n; for n in 1 2 3; do docker pull -q "$IMG:${VER}" >/dev/null 2>&1 && break; sleep 5; done
   got="$(docker inspect --format '{{index .RepoDigests 0}}' "$IMG:${VER}" 2>/dev/null)"
-  [ "${got#*@}" = "$IMG_022" ] || { fail "N: $IMG:${VER} is '${got#*@}', not the pinned ${IMG_022}: no image is run"; return; }
+  [ "${got#*@}" = "$IMG_REL" ] || { fail "N: $IMG:${VER} is '${got#*@}', not the digest the release manifest names (${IMG_REL}): no image is run"; return; }
   run n-cosign "$D" <<EOF
-cosign verify ${IMG}@${IMG_022} --certificate-identity-regexp="^https://github.com/fosterstack/cache/.github/workflows/stage-promote.yml@refs/tags/v${VER}\$" --certificate-oidc-issuer='https://token.actions.githubusercontent.com'
+cosign verify ${IMG}@${IMG_REL} --certificate-identity-regexp="^https://github.com/fosterstack/cache/.github/workflows/stage-promote.yml@refs/tags/v${VER}\$" --certificate-oidc-issuer='https://token.actions.githubusercontent.com'
 EOF
-  expect n-cosign "${IMG_022}"; [ "$RC" = 0 ] || { fail "N: the image signature did not verify: no image is run"; return; }
+  expect n-cosign "${IMG_REL}"; [ "$RC" = 0 ] || { fail "N: the image signature did not verify: no image is run"; return; }
   docker rm -f fscache >/dev/null 2>&1; docker volume rm fscache-data >/dev/null 2>&1
   # --- plain Docker: the page's original docker run, one stored entry, the reset block, the printed output
   CONTAINERS="$CONTAINERS fscache"
@@ -452,7 +459,7 @@ volumes:
   fscache-data:
 EOF
   docker pull -q "$IMG:latest" >/dev/null 2>&1; got="$(docker inspect --format '{{index .RepoDigests 0}}' "$IMG:latest" 2>/dev/null)"
-  [ "${got#*@}" = "$IMG_022" ] || { fail "N Compose: $IMG:latest is '${got#*@}', not the verified ${IMG_022}: it is not run"; return; }
+  [ "${got#*@}" = "$IMG_REL" ] || { fail "N Compose: $IMG:latest is '${got#*@}', not the verified ${IMG_REL}: it is not run"; return; }
   COMPOSE_PROJECTS="$COMPOSE_PROJECTS compose"
   run n-compose-up "$D/compose" <<'EOF'
 docker compose up -d

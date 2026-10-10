@@ -10,7 +10,7 @@
 # fails or prints something else is RECORDED (FAIL) and fails the job at the end; observations that are not failures are OBS lines.
 #
 # No token and no secret. Gradle, Maven 3.9.9 and cosign are downloaded and checked against pinned checksums; the release binary is verified
-# (cosign + sha256) before it runs; the cache image (scenario P) is pinned by digest and verified with cosign by digest before docker runs it.
+# (cosign + sha256) before it runs; the cache image (scenario P) has the digest the release's own manifest names, and is verified with cosign by digest before docker runs it.
 set -uo pipefail
 
 VER="${BENCH_VER:-0.2.2}"   # the release the pages name; a scheduled proof run passes the newest release tag (checked by the workflow, and again here)
@@ -24,7 +24,14 @@ MVN399_URL="https://archive.apache.org/dist/maven/maven-3/3.9.9/binaries/apache-
 MVN399_SHA512=a555254d6b53d267965a3404ecb14e53c3827c09c3b94b5678835887ab404556bfaf78dcfe03ba76fa2508649dca8531c74bca4d5846513522404d48e8c4ac8b
 EXT_VER=1.2.3
 IMG=ghcr.io/fosterstack/cache
-IMG_022=sha256:f2b330cf27b3814405230cc001a771909ae5bbf3b1e223a90ee7a9ee5d0e53dd
+# The production image digest of the release under test comes from the release's OWN published release-manifest.json (no per-version
+# digest is kept in this file). Trust does not rest on that file: the image pulled by tag must have exactly this digest, and the
+# digest is then verified with cosign against the release workflow's identity for the tag, before anything runs it.
+release_digest() { # VERSION -> sha256:...
+  local d; d="$(gh release download "v$1" --repo fosterstack/cache -p release-manifest.json -O - 2>/dev/null | python3 -c 'import sys,json; m=json.load(sys.stdin); print([i["digest"] for i in m["images"] if i["variant"]=="production"][0])' 2>/dev/null)" || return 1
+  [[ "$d" =~ ^sha256:[0-9a-f]{64}$ ]] || return 1; printf '%s' "$d"
+}
+IMG_REL="$(release_digest "$VER")" || { echo "could not read the production image digest from the release manifest of v${VER}" >&2; exit 2; }
 COSIGN_VER=3.1.3
 COSIGN_SHA=4629c757b7618056f8ddd7e2625ae9fdd94c0372a65049520bc7d9df9efc7f71
 
@@ -85,7 +92,7 @@ echo "maven 3.9.9: $("$MVN399_HOME/bin/mvn" --version 2>/dev/null | head -1)"
 echo "java: $("$JDK21_HOME/bin/java" -version 2>&1 | head -1)   gradle: $(gradle --version 2>/dev/null | grep -E '^Gradle ' | head -1)   cosign: $(cosign version 2>/dev/null | grep -i GitVersion | head -1)   docker: $(docker --version)"
 if [ "$LOCAL" = 1 ]; then echo "tools: LOCAL tools in use, nothing checked (a developer's dry run: do not quote these times)"; else
   echo "tools: Gradle ${GR_VER}, Maven 3.9.9 and cosign ${COSIGN_VER} are downloaded and checked against pinned checksums before use; Java 21 and Docker are the runner's own"; fi
-echo "release under test: FosterStack Cache ${VER}, downloaded with no login and verified (cosign + sha256) before it runs (binary servers); the image is pulled by tag, must equal the pinned digest, and is verified with cosign by digest before docker runs it"
+echo "release under test: FosterStack Cache ${VER}, downloaded with no login and verified (cosign + sha256) before it runs (binary servers); the image is pulled by tag, must equal the digest the release's own manifest names, and is verified with cosign by digest before docker runs it"
 echo "NOT checksum-pinned: the ubuntu:24.04 image (only runs chown and stat on a volume), the Maven build-cache extension 1.2.3 and the Maven plugin jars (their eight versions are pinned in the pom, the files come from Maven Central), JUnit"
 echo "invented by this script (the pages show none): the Gradle projects (four modules of 12 small classes for S, four modules for O) and the three-module Maven chain for S, test logins and passwords, the stand-in ports (the pages' own ports 18702 etc. are not all used)"
 echo "differences from the pages' own runs: Linux amd64 (the pages: macOS arm64), release ${VER} (the pages: 0.2.1), Gradle ${GR_VER} with the runner's Java 21 and Maven 3.9.9 (as the pages)"
@@ -468,11 +475,11 @@ scenario_p() {
   # --- the container image on a volume that belongs to root
   local got; for n in 1 2 3; do docker pull -q "$IMG:${VER}" >/dev/null 2>&1 && break; sleep 5; done
   got="$(docker inspect --format '{{index .RepoDigests 0}}' "$IMG:${VER}" 2>/dev/null)"
-  [ "${got#*@}" = "$IMG_022" ] || { fail "P: $IMG:${VER} is '${got#*@}', not the pinned ${IMG_022}: no image is run"; return; }
+  [ "${got#*@}" = "$IMG_REL" ] || { fail "P: $IMG:${VER} is '${got#*@}', not the digest the release manifest names (${IMG_REL}): no image is run"; return; }
   run p-cosign "$D" <<EOF
-cosign verify ${IMG}@${IMG_022} --certificate-identity-regexp="^https://github.com/fosterstack/cache/.github/workflows/stage-promote.yml@refs/tags/v${VER}\$" --certificate-oidc-issuer='https://token.actions.githubusercontent.com'
+cosign verify ${IMG}@${IMG_REL} --certificate-identity-regexp="^https://github.com/fosterstack/cache/.github/workflows/stage-promote.yml@refs/tags/v${VER}\$" --certificate-oidc-issuer='https://token.actions.githubusercontent.com'
 EOF
-  expect p-cosign "${IMG_022}"; [ "$RC" = 0 ] || { fail "P: the image signature did not verify: no image is run"; return; }
+  expect p-cosign "${IMG_REL}"; [ "$RC" = 0 ] || { fail "P: the image signature did not verify: no image is run"; return; }
   docker rm -f fscache >/dev/null 2>&1; docker volume rm fscache-data >/dev/null 2>&1; CONTAINERS="$CONTAINERS fscache"
   run p-vol "$D" <<'EOF'
 docker volume create fscache-data
