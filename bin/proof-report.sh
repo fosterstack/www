@@ -15,7 +15,10 @@ MODE="${MODE:-schedule}"; TAG="${TAG:-}"; REASON="${WATCH_REASON:-}"; WATCH_RUN=
 HERE="$(cd "$(dirname "$0")" && pwd)"
 LABEL=proof-failure; [ "$MODE" = selftest ] && LABEL=proof-selftest
 
-safe() { printf '%s' "$1" | tr -d '`\r' | cut -c1-300; }   # log text goes into a fenced block: no backticks, no CR, bounded
+safe() { printf '%s' "$1" | tr -d '`\r' | tr -d '\000-\010\013-\037' | cut -c1-300; }   # no backticks, no control characters, bounded
+joblog() { # one job's log; gh refuses logs with terminal escape sequences unless told (older gh: no such flag)
+  gh api "repos/${REPO}/actions/jobs/${1}/logs" --allow-escape-sequences 2>/dev/null || gh api "repos/${REPO}/actions/jobs/${1}/logs" 2>/dev/null
+}   # log text goes into a fenced block: no backticks, no CR, bounded
 pages_of() { awk -F'\t' -v j="$1" '$1 == j { print $2; exit }' "$HERE/proof-pages.txt"; }
 
 jobs_json="$(gh api "repos/${REPO}/actions/runs/${RUN_ID}/jobs?per_page=100" --paginate 2>/dev/null)" || { echo "proof-report: the jobs of this run could not be read: not reporting green" >&2; exit 1; }
@@ -43,7 +46,7 @@ if [ -n "$failed" ]; then
     [[ "$jid" =~ ^[0-9]+$ ]] || continue
     pages="$(pages_of "$jname")"; [ -n "$pages" ] || pages="(job not in bin/proof-pages.txt)"
     body+=$'\n'"### ${jname}"$'\n'"Pages: ${pages}"$'\n'"Failing step: ${jsteps}"$'\n'"Job: ${RUN_URL}/job/${jid}"$'\n'
-    lines="$(gh api "repos/${REPO}/actions/jobs/${jid}/logs" 2>/dev/null | sed -n -E 's/^[0-9T:.Z-]+ (FAIL.*)$/\1/p' | head -n 5)"
+    lines="$(joblog "$jid" | sed -n -E 's/^[0-9T:.Z-]+ (FAIL.*)$/\1/p' | head -n 5)"
     if [ -n "$lines" ]; then body+=$'\n''```'$'\n'; while IFS= read -r l; do body+="$(safe "$l")"$'\n'; done <<< "$lines"; body+='```'$'\n'; fi
   done <<< "$failed"
 fi
