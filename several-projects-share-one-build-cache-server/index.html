@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Can Several Projects Share One Build Cache Server?</title>
+<meta name="description" content="Many repos, one cache server? In our runs they shared identical work, could read each other's results and shared one size cap. Use one server per team.">
+<meta property="og:title" content="Can Several Projects Share One Build Cache Server?">
+<meta property="og:description" content="Many repos, one cache server? In our runs they shared identical work, could read each other&#x27;s results and shared one size cap. Use one server per team.">
+<meta property="og:url" content="https://fosterstack.com/several-projects-share-one-build-cache-server/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="FosterStack">
+<link rel="canonical" href="https://fosterstack.com/several-projects-share-one-build-cache-server/">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<style>
+  :root {
+    --bg: #ffffff; --fg: #16181d; --muted: #5b6472; --line: #e4e7ec;
+    --accent: #0d7a5f; --accent-fg: #ffffff; --card: #f6f8f9; --warn-bg: #fff7ed; --warn-line: #fdba74;
+    --mark: #0f4d66;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #101318; --fg: #e8eaf0; --muted: #98a2b3; --line: #262c36;
+      --accent: #2fbf95; --accent-fg: #08110e; --card: #171c23; --warn-bg: #241a10; --warn-line: #7c4a12;
+      --mark: #e8eaf0;
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 44rem; margin: 0 auto; padding: 0 1.25rem 4rem; }
+  header.site { max-width: 44rem; margin: 0 auto; padding: 1.25rem; display: flex; align-items: baseline; gap: .6rem; }
+  .logo { font-weight: 700; font-size: 1.05rem; letter-spacing: -.01em; }
+  .logo span { color: var(--accent); }
+  .logo .mark { width: 1.2em; height: 1.2em; vertical-align: -.24em; margin-right: .4em; }
+  .tag { color: var(--muted); font-size: .85rem; }
+  .notice {
+    background: var(--warn-bg); border: 1px solid var(--warn-line); border-radius: 8px;
+    padding: .7rem 1rem; font-size: .92rem; margin: 1.5rem 0 2.5rem;
+  }
+  h1 { font-size: 2rem; line-height: 1.2; letter-spacing: -.02em; margin-bottom: 1rem; }
+  .lede { font-size: 1.12rem; color: var(--muted); margin-bottom: 2rem; }
+  h2 { font-size: 1.25rem; margin: 3rem 0 .9rem; letter-spacing: -.01em; }
+  p + p { margin-top: .8rem; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: .8rem; margin-top: 1rem; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1rem 1.1rem; }
+  .card h3 { font-size: .98rem; margin-bottom: .35rem; }
+  .card p { font-size: .9rem; color: var(--muted); }
+  ul.trust { list-style: none; margin-top: .5rem; }
+  ul.trust li { padding: .45rem 0 .45rem 1.6rem; position: relative; }
+  ul.trust li::before { content: "✓"; position: absolute; left: .2rem; color: var(--accent); font-weight: 700; }
+  code, pre { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .88em; }
+  code { background: var(--card); border: 1px solid var(--line); border-radius: 5px; padding: .1em .35em; }
+  pre code { background: none; border: 0; padding: 0; color: inherit; font-size: 1em; }
+  button {
+    padding: .7rem 1.3rem; font-size: 1rem; font-weight: 600; cursor: pointer;
+    background: var(--accent); color: var(--accent-fg); border: 0; border-radius: 8px;
+  }
+  button:disabled { opacity: .6; cursor: default; }
+  table { width: 100%; border-collapse: collapse; font-size: .92rem; margin-top: 1rem; }
+  th, td { text-align: left; padding: .55rem .6rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  pre { background: #0f172a; color: #e2e8f0; padding: .9rem 1rem; border-radius: 8px;
+        overflow-x: auto; font-size: .9rem; line-height: 1.5; }
+  .cta-row { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1.1rem; }
+  .btn { display: inline-block; padding: .55rem 1rem; border-radius: 8px; font-weight: 600;
+         text-decoration: none; background: var(--accent); color: var(--accent-fg); }
+  .btn-secondary { background: transparent; color: inherit; border: 1px solid var(--muted); }
+  .muted-note { color: var(--muted); font-size: .93rem; margin-top: 1.1rem; }
+  footer { border-top: 1px solid var(--line); margin-top: 4rem; padding: 1.5rem 1.25rem 3rem; }
+  footer div { max-width: 44rem; margin: 0 auto; color: var(--muted); font-size: .82rem; }
+  a { color: var(--accent); }
+  code { overflow-wrap: anywhere; }
+  pre code { overflow-wrap: normal; }
+  .table-scroll { max-width: 100%; overflow-x: auto; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+</style>
+</head>
+<body>
+<header class="site">
+  <div class="logo"><svg class="mark" viewBox="0 0 96 96" aria-hidden="true" focusable="false"><rect x="12" y="14" width="72" height="18" rx="5" fill="var(--mark)"/><rect x="12" y="39" width="48" height="18" rx="5" fill="var(--mark)"/><rect x="12" y="64" width="26" height="18" rx="5" fill="var(--accent)"/></svg>foster<span>stack</span></div>
+  <div class="tag">Infrastructure worth keeping — and kept patched.</div>
+</header>
+<main>
+  <h1>Can several projects share one build cache server?</h1>
+  <p class="lede">Yes, several projects can use one FosterStack Cache server. In our runs they shared the results of identical work and could read each other's results. If a group must not see another group's results, give that group its own server.</p>
+
+  <h2>The short answer</h2>
+  <ul class="trust">
+    <li><strong>Different code does not clash.</strong> Project B's own compile missed and stored its own entry next to project A's.</li>
+    <li><strong>Identical work is shared.</strong> A copy of project A in another folder restored A's compile result. Project B also restored one entry from A: the compiled build script, because both build files hold the same text.</li>
+    <li><strong>One login reaches every project.</strong> The login that B's builds used also fetched A's entry. The read-only login read both, and its write got a <code>403</code>.</li>
+    <li><strong>One size cap covers every project.</strong> With a small cap, B's store pushed out A's entry, and a copy of A pushed B's out again.</li>
+    <li><strong>Separate servers separate teams.</strong> Team 2's server restored nothing from team 1's. Each team's login got a <code>401</code> on the other server.</li>
+  </ul>
+
+  <h2>What to do</h2>
+  <p>Our advice, not a test result:</p>
+  <ul>
+    <li><strong>One server is fine when everyone may see everyone's results.</strong> Many repos in one company often fit. You also save time when two repos build the same thing.</li>
+    <li><strong>Use one server for each group that must not read another group's results.</strong> Each server has its own data folder and logins.</li>
+    <li><strong>Treat everything in the cache as readable by anyone with a login.</strong> Do not rely on a project name to hide it.</li>
+    <li><strong>Give CI the read-write login and everyone else the read-only one.</strong> See <a href="/gradle-build-cache-ci-writes-developers-read/">let CI write and developers read</a> and <a href="/can-someone-poison-our-build-cache/">can someone poison our shared build cache</a>.</li>
+    <li><strong>Size the cap for all projects together.</strong> See <a href="/build-cache-server-sizing/">how big a server a build cache needs</a> and <a href="/build-cache-eviction-size-limit/">how the size limit works</a>.</li>
+  </ul>
+  <p>Gradle and Maven builds can use the same server too. See <a href="/one-build-cache-server-gradle-and-maven/">one build cache server for Gradle and Maven</a>.</p>
+
+  <h2>How we checked</h2>
+  <p>FosterStack Cache 0.2.1 and Gradle 9.8.0 with Java 21 on a Mac (arm64), one machine. Project A has three classes, project B has four different ones, and project C is an exact copy of A in a different folder. Each build ran <code>compileJava</code> and <code>jar</code> with a new Gradle home, no daemon and the local build cache off. The cache address and login reached the build only as environment variables. All logins were made up for the test. Each row is one run.</p>
+
+  <p><strong>One server, no size cap.</strong> The same read-write login for all three builds.</p>
+  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
+    <thead><tr><th>Build</th><th>Compile task</th><th>Entries on the server afterwards</th><th>Restored from the server</th></tr></thead>
+    <tbody>
+      <tr><td>A</td><td>Ran</td><td>2</td><td>Nothing</td></tr>
+      <tr><td>B, different code</td><td>Ran</td><td>3</td><td>1: the compiled build script</td></tr>
+      <tr><td>C, a copy of A in another folder</td><td><code>FROM-CACHE</code></td><td>3</td><td>2: A's compile result and the build script</td></tr>
+    </tbody>
+  </table></div>
+  <p>The <code>jar</code> task ran in every build, so it is left out of the rows. The key of A's compile result was the same in the copy as in A, so folder names do not matter here.</p>
+
+  <p><strong>Direct requests to the same server.</strong> The key is the request path. The docs say the whole request path is the key, and we found no project or namespace setting in them.</p>
+  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
+    <thead><tr><th>Request</th><th>Answer</th></tr></thead>
+    <tbody>
+      <tr><td>A's compile key, with the read-write login</td><td><code>200</code>, 1,659 bytes</td></tr>
+      <tr><td>B's compile key, with the same login</td><td><code>200</code>, 1,803 bytes</td></tr>
+      <tr><td>Both keys, with the read-only login</td><td><code>200</code> each</td></tr>
+      <tr><td>A write with the read-only login</td><td><code>403</code>, entries stayed at 3</td></tr>
+      <tr><td>A's key with no login, or a wrong password</td><td><code>401</code></td></tr>
+      <tr><td>A project name in front of the key</td><td><code>404</code> for both keys</td></tr>
+      <tr><td>Builds of A and B with the read-only login and pushing off</td><td>Each restored its compile result</td></tr>
+    </tbody>
+  </table></div>
+
+  <p><strong>Two servers, one for each team.</strong> Each has its own data folder and logins.</p>
+  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
+    <thead><tr><th>Build</th><th>What happened</th></tr></thead>
+    <tbody>
+      <tr><td>A on team 1's server</td><td>Ran and stored 2 entries</td></tr>
+      <tr><td>C on team 1's server</td><td>Compile result restored</td></tr>
+      <tr><td>C on team 2's server, sending team 1's login</td><td><code>401</code>, the build warned, switched the remote cache off for the rest of that build, and ran everything</td></tr>
+      <tr><td>C on team 2's server, with team 2's login</td><td>Restored nothing and stored 2 entries</td></tr>
+      <tr><td>The same build again on team 2's server</td><td>Compile result restored</td></tr>
+    </tbody>
+  </table></div>
+  <p>Each team's login got a <code>401</code> on the other team's server when we asked for A's key directly.</p>
+
+  <p><strong>One small size cap.</strong> A server with a 5,000-byte cap, where A's two entries take 4,472 bytes.</p>
+  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
+    <thead><tr><th>Build</th><th>Compile task</th><th>Evicted so far</th><th>Entries afterwards</th></tr></thead>
+    <tbody>
+      <tr><td>A</td><td>Ran</td><td>0</td><td>A's compile result, the build script</td></tr>
+      <tr><td>B</td><td>Ran</td><td>1</td><td>B's compile result, the build script</td></tr>
+      <tr><td>C, a copy of A</td><td>Ran</td><td>2</td><td>A's compile result, the build script</td></tr>
+      <tr><td>B again</td><td>Ran</td><td>3</td><td>B's compile result, the build script</td></tr>
+    </tbody>
+  </table></div>
+  <p>The cap belongs to the server, not to a project. Whichever project built last kept its entry. This cap is far smaller than a real one. We tested only that one cap is shared.</p>
+  <p class="muted-note">Limits: Gradle only, three small projects, one run of each case. We did not test Maven, many projects building at once, or real project sizes.</p>
+</main>
+<footer>
+  <div>
+    <p>FosterStack is not affiliated with, endorsed by, or sponsored by Gradle Inc.
+    "Gradle" and "Develocity" are trademarks of Gradle Inc., used here only to identify
+    compatibility. FosterStack contains no Gradle Inc. code; it is a clean-room implementation
+    of the documented remote build cache HTTP protocol. Apache Maven is a trademark of the
+    Apache Software Foundation; the Maven Build Cache Extension is Apache's project, not
+    ours.</p>
+    <p style="margin-top:.6rem">© 2026 FosterStack · <a href="/build-cache-node-end-of-life/">Build Cache Node end of life</a> · <a href="/migrate-build-cache-node/">Migrate</a> · <a href="/build-cache-node-faq/">FAQ</a> · <a href="/jenkins-ci-build-cache/">CI setup</a> · <a href="/how-we-build/">How we build</a> · <a href="/regulated/">For regulated markets</a> · <a href="https://github.com/fosterstack/cache">github.com/fosterstack/cache</a> · <a href="mailto:hello@fosterstack.com">hello@fosterstack.com</a></p>
+  </div>
+</footer>
+</body>
+</html>

@@ -283,4 +283,8 @@
     <loc>https://fosterstack.com/change-build-cache-logins-without-breaking-ci/</loc>
     <lastmod>2026-10-09</lastmod>
   </url>
+  <url>
+    <loc>https://fosterstack.com/several-projects-share-one-build-cache-server/</loc>
+    <lastmod>2026-10-09</lastmod>
+  </url>
 </urlset>
