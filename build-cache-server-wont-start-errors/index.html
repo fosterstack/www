@@ -93,7 +93,7 @@
   <h2>The short answer</h2>
   <ul class="trust">
     <li><strong>A rejected setting stops the server before it touches the data folder.</strong> The line names the variable and the value. Sizes must be whole numbers of bytes, so <code>10GB</code> is refused.</li>
-    <li><strong>A problem with the address or the data folder stops it a moment later.</strong> A busy port, a folder it cannot write to and a data path that is a file each gave a clear line. In a container we reproduced the folder case with a data volume that belonged to root.</li>
+    <li><strong>A problem with the address or the data folder stops it a moment later.</strong> A busy port, a folder it cannot write to and a data path that is a file each gave a clear line. In a container we reproduced the folder case with a data volume that belonged to root: see <a href="#build-cache-permission-denied-data-directory">permission denied on the data folder</a>.</li>
     <li><strong>A second server on the same data folder waits about 5 seconds, then exits.</strong> It ends with the same fatal line and code 1. The first one kept serving.</li>
     <li><strong>Some mistakes do not stop the server.</strong> A misspelled setting name was ignored without a warning, and an emptied index file was accepted without a warning, so lost entries go unnoticed.</li>
   </ul>
@@ -157,12 +157,12 @@
     <li><strong>Read the last line first.</strong> It names the variable, the value or the path.</li>
     <li><strong>After every change, read the <code>fscache: starting</code> line.</strong> It prints the address, the data folder, the size cap and whether logins are on. A misspelled name shows up there as a setting that did not change.</li>
     <li><strong>Write sizes in bytes.</strong> <code>10GB</code> will stop the server, which is better than a silent default.</li>
-    <li><strong>Start the server as the user that owns the data folder.</strong> In a container, that means giving the data volume to the user the image runs as, 65532 in our runs. The command is in the permission-denied section above.</li>
+    <li><strong>Start the server as the user that owns the data folder.</strong> In a container, that means giving the data volume to the user the image runs as, 65532 in our runs. The command is in the permission-denied section above. If you restore a backup into the volume, the restore has to keep that ownership.</li>
     <li><strong>Keep one server per data folder.</strong> A start on a full disk is on <a href="/build-cache-eviction-size-limit/#build-cache-disk-full-what-happens">what happens when the disk fills up</a>.</li>
   </ul>
 
   <h2>How we checked</h2>
-  <p>FosterStack Cache 0.2.1 on a Mac (arm64). The permission-denied cases used the 0.2.1 container image. Each case was one start with a clean environment that held only the address, the data folder and the setting under test, watched for 3 seconds with a check every quarter of a second. Every failed start exited with code 1, and all of them in under a second except the shared folder. A server we stopped with a normal stop exited with code 0.</p>
+  <p>FosterStack Cache 0.2.1 on a Mac (arm64). The permission-denied cases used the 0.2.1 container image. Each non-container case was one start with a clean environment that held only the address, the data folder and the setting under test, watched for 3 seconds with a check every quarter of a second. Every failed start exited with code 1. The non-container ones took under a second, except the shared folder. The container cases exited within a few seconds. A server we stopped with a normal stop exited with code 0.</p>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <thead><tr><th>What we did</th><th>What the server did</th></tr></thead>
     <tbody>
@@ -185,7 +185,7 @@
     </tbody>
   </table></div>
   <p class="muted-note">The log is one JSON line per event. A start that got as far as listening printed <code>fscache: starting</code> first. A rejected setting or a data folder problem printed only the <code>fatal</code> line. We caused one mistake at a time, so we do not know which line shows first when two settings are wrong.</p>
-  <p class="muted-note">Not tested: container starts other than the permission-denied cases above, a bind mount of a host folder on Linux (the same rule should apply, as the folder has to be writable by 65532, but we ran on a Mac), Kubernetes without the <code>fsGroup</code> setting (the manifests on our <a href="/gradle-build-cache-kubernetes/">Kubernetes page</a> set <code>fsGroup: 65532</code>, and we ran them with it), running the container as root, Linux, Windows, IPv6 addresses, a data folder on a network disk, and a Gradle build against an HTTPS address that the server does not speak.</p>
+  <p class="muted-note">Not tested: container starts other than the permission-denied cases above, a bind mount of a host folder on Linux (the same rule should apply, as the folder has to be writable by 65532, but we ran on a Mac), Kubernetes without the <code>fsGroup</code> setting (the manifests on our <a href="/gradle-build-cache-kubernetes/">Kubernetes page</a> set <code>fsGroup: 65532</code>, and we ran them with it), running the container as root (it is not what we document), Linux, Windows, IPv6 addresses, a data folder on a network disk, and a Gradle build against an HTTPS address that the server does not speak.</p>
 </main>
 <footer>
   <div>

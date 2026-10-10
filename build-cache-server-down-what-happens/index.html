@@ -119,7 +119,7 @@
   </ul>
   <p>Our advice, not a test result:</p>
   <ul>
-    <li><strong>Run one server and keep a copy of its data folder.</strong> The steps are on <a href="/upgrade-build-cache-server/">back up and restore a build cache</a>.</li>
+    <li><strong>Run one server and keep a copy of its data folder.</strong> The steps are on <a href="/upgrade-build-cache-server/#back-up-and-restore-build-cache">back up and restore a build cache</a>.</li>
     <li><strong>If the host fails, start a server on another host from the copy.</strong> Then change the cache address in your build settings. Read the address from one property or environment variable, as on <a href="/github-actions-remote-build-cache/">use a remote build cache in GitHub Actions</a>, so there is one place to change.</li>
     <li><strong>Do not put a load balancer in front of two servers.</strong> Each build lands on a server that may not hold what the last build stored.</li>
     <li><strong>Do not start a second server on the same folder.</strong> It refuses to start, so it gains you nothing.</li>

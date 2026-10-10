@@ -49,6 +49,7 @@
   p + p { margin-top: .8rem; }
   .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: .8rem; margin-top: 1rem; }
   .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1rem 1.1rem; }
+  main h3 { font-size: 1.05rem; margin: 2rem 0 .6rem; }
   .card h3 { font-size: .98rem; margin-bottom: .35rem; }
   .card p { font-size: .9rem; color: var(--muted); }
   ul.trust { list-style: none; margin-top: .5rem; }
@@ -98,7 +99,7 @@
   <ul class="trust">
     <li>In our run with a 3,500-byte cap, the stored size never went above the cap. Each time something new did not fit, the entry that had gone longest without being used was removed.</li>
     <li>Reading counts as using: a cache hit keeps an entry alive. In the last step of our run k1 went too, even though we had read it earlier, because our own checks after storing k4 read k1, k3 and k4 in that order, which made k1 the oldest again.</li>
-    <li>An entry bigger than the whole cap is refused. We stored 4,000 bytes against the 3,500 cap. The server refused it with a 413 and stored nothing, and nothing else was evicted to make room. The other limit, <code>FSCACHE_MAX_BODY_BYTES</code>, is separate and defaults to 1 GiB per entry. See <a href="/gradle-remote-build-cache-authentication/#gradle-build-cache-http-status-codes">the status codes page</a>.</li>
+    <li>An entry bigger than the whole cap is refused. We tried storing 4,000 bytes against the 3,500 cap. The server refused it with a 413 and stored nothing, and nothing else was evicted to make room. The other limit, <code>FSCACHE_MAX_BODY_BYTES</code>, is separate and defaults to 1 GiB per entry. See <a href="/gradle-remote-build-cache-authentication/#gradle-build-cache-http-status-codes">the status codes page</a>.</li>
   </ul>
 
   <h2 id="build-cache-disk-full-what-happens">What happens when the build cache disk fills up?</h2>
