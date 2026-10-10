@@ -5,7 +5,7 @@
 #   R  /gradle-build-cache-docker-ci-fresh-container/   the page's docker run command (five runs, a mount at another path, no password) and the
 #                                                       daemon case (a password set after Gradle's background process had started)
 # Run by the "bench-howto-pages-6" job of .github/workflows/hygiene.yml (manual dispatch only, choice "howto-pages-6"). Same method as the other
-# bench scripts: the page's commands word for word (differences are said in the output), the server's own counters checked, every output line the
+# bench scripts: the page's commands word for word (differences are said in the output), every output line the
 # page promises asserted; a step that fails or prints something else is RECORDED (FAIL) and fails the job at the end; the rest are OBS lines.
 #
 # No token and no secret. Gradle and cosign are downloaded and checked against pinned checksums; the release binary is verified (cosign + sha256)
@@ -35,6 +35,7 @@ sha_check() { # file sha256
 }
 
 if [ -n "${BENCH_WORK:-}" ]; then W="$BENCH_WORK"; mkdir -p "$W"; else W="$(mktemp -d)"; fi
+: "${W:?}"
 SERVER_PID=""; SERVER_PORT=""
 stop_server() {
   local i
@@ -77,9 +78,9 @@ echo "== DISCLOSURE"
 echo "runner: $(uname -sr); cpus: $(nproc 2>/dev/null || sysctl -n hw.ncpu); image: ${ImageOS:-?} ${ImageVersion:-?}"
 echo "java: $("$JDK21_HOME/bin/java" -version 2>&1 | head -1)   gradle: $(gradle --version 2>/dev/null | grep -E '^Gradle ' | head -1)   cosign: $(cosign version 2>/dev/null | grep -i GitVersion | head -1)   docker: $(docker --version)"
 if [ "$LOCAL" = 1 ]; then echo "tools: LOCAL tools in use, nothing checked (a developer's dry run: do not quote these times)"; else
-  echo "tools: Gradle ${GR_VER}, Maven 3.9.9 and cosign ${COSIGN_VER} are downloaded and checked against pinned checksums before use; Java 21 and Docker are the runner's own"; fi
+  echo "tools: Gradle ${GR_VER} and cosign ${COSIGN_VER} are downloaded and checked against pinned checksums before use; Java 21 and Docker are the runner's own"; fi
 echo "release under test: FosterStack Cache ${VER}, downloaded with no login and verified (cosign + sha256) before it runs (binary servers); the gradle container image is pulled by tag, resolved to a digest at run time, and that digest is used for every container (it is not cosign-verified)"
-echo "NOT checksum-pinned beforehand: the gradle:9.8.0-jdk21 image (digest printed at run time), the ubuntu:24.04 image (only used to remove files the container created)"
+echo "NOT checksum-pinned beforehand: the gradle:9.8.0-jdk21 image (digest printed at run time); files the containers create in the project folders are removed with sudo on the runner"
 echo "invented by this script (the pages show their settings and one sentence on their build files, not the files): the Java classes (12 per module), the build.gradle.kts files of the modules, buildSrc and the included build; made-up password and username"
 echo "differences from the pages' own runs: Linux amd64 (Q: the page ran on macOS arm64 with Java 27; R: Linux aarch64 under Docker Desktop), release ${VER} (the pages: 0.2.1), Java 21 for Q; R adds --add-host=host.docker.internal:host-gateway to the docker run (a Linux Docker engine does not define that name by itself); the cache server for R listens on all interfaces of this runner so a container can reach it (password set; the runner is thrown away)"
 echo "Q runs use a new empty Gradle home and a fresh project copy each, no daemon (as the page), the local cache switched off; R runs use a new container each (no volumes for the Gradle home)"
@@ -298,8 +299,12 @@ scenario_q() {
   q_project "$D/r4" core-method; qrun r4 "$D/r4" "$CMD";  qcheck "table 1, run 4 (a teammate makes the same edit)" r4 "cache cache cache cache" "${T[@]}"
   q_project "$D/r5" core-public; qrun r5 "$D/r5" "$CMD";  qcheck "table 1, run 5 (add a public method to core)" r5 "ran ran ran ran" "${T[@]}"
   q_project "$D/r6" app-method;  qrun r6 "$D/r6" "$CMD";  qcheck "table 1, run 6 (edit only app)" r6 "cache cache cache ran" "${T[@]}"
-  for t in r1 r2 r3 r4 r5 r6; do grep -qxF "> Task :core:jar FROM-CACHE" "$W/q-$t.out" && fail "Q the page says the jar steps are not cacheable by default and ran every time; :core:jar came from the cache in $t"; done
-  echo "OBS Q the jar steps were never taken from the cache in the six runs, as the page says"
+  for t in r1 r2 r3 r4 r5 r6; do
+    for m in core util api app; do
+      grep -qxF "> Task :$m:jar" "$W/q-$t.out" || fail "Q the page says the jar steps ran every time; ':$m:jar' has no plain 'ran' line in $t"
+    done
+  done
+  echo "OBS Q the four jar steps printed as executed (no FROM-CACHE, no UP-TO-DATE) in all six runs, as the page says"
   grep -xF -e "> Task :core:compileJava" -e "> Task :util:compileJava FROM-CACHE" -e "> Task :api:compileJava FROM-CACHE" -e "> Task :app:compileJava FROM-CACHE" "$W/q-r3.out" | sed 's/^/OBS Q run 3 printed: /'
   stop_server
   # --- buildSrc and an included build
@@ -312,6 +317,7 @@ scenario_q() {
   c_project "$D/c4" lib-method;  qrun c4 "$D/c4" "$CC"; qcheck "table 2, run 4 (edit inside a method in lib)" c4 "cache ran cache" "${C[@]}"
   c_project "$D/c5" lib-public;  qrun c5 "$D/c5" "$CC"; qcheck "table 2, run 5 (add a public method to lib)" c5 "cache ran ran" "${C[@]}"
   c_project "$D/c6" app-method;  qrun c6 "$D/c6" "$CC"; qcheck "table 2, run 6 (edit only app)" c6 "cache cache ran" "${C[@]}"
+  for t in c1 c2 c3 c4 c5 c6; do grep -qF "FROM-CACHE" "$W/q-$t.out" && grep -E "^> Task :.*jar FROM-CACHE" "$W/q-$t.out" && fail "Q table 2: a jar step came from the cache in $t"; done
   grep -xF -e "> Task :buildSrc:compileJava FROM-CACHE" -e "> Task :lib:compileJava FROM-CACHE" -e "> Task :app:compileJava FROM-CACHE" "$W/q-c2.out" | sed 's/^/OBS Q run 2 printed: /'
   stop_server
 }
@@ -359,21 +365,21 @@ scenario_r() {
   local t=":core:compileJava"
   # run 1: first container
   r_project "$D/run1/project"; rdocker run1 /work/one 1
-  expect r-run1 "BUILD SUCCESSFUL" "> Task ${t}"; absent r-run1 "FROM-CACHE" "response status 401"
-  echo "OBS R run 1 (first container): :core:compileJava ran, no 401 line, BUILD SUCCESSFUL"
+  expect r-run1 "BUILD SUCCESSFUL"; grep -qxF "> Task ${t}" "$W/r-run1.out" || fail "R run 1: the page says :core:compileJava ran (an exact '> Task :core:compileJava' line); it is missing"; absent r-run1 "FROM-CACHE" "response status 401" "The remote build cache was disabled"
+  grep -qxF "> Task ${t}" "$W/r-run1.out" && echo "OBS R run 1 (first container): :core:compileJava ran, no 401 line, BUILD SUCCESSFUL"
   # a note on the folder: the same folder again, no clean
   mkdir -p "$D/run1b"; cp -R "$D/run1/project" "$D/run1b/project"; rdocker run1b /work/one 1
   grep -qF "> Task ${t} UP-TO-DATE" "$W/r-run1b.out" && echo "OBS R the page's command run again on the SAME project folder (build output left in it) printed ':core:compileJava UP-TO-DATE', not FROM-CACHE" || echo "OBS R the same folder again printed: $(grep -F "> Task ${t}" "$W/r-run1b.out" | head -n 1)"
-  rmproj "$D/run1b/project"
+  rmproj "$D/run1b/project" "$D/run1/project"
   # run 2: new container, same code, same mount path (a fresh copy of the project)
   r_project "$D/run2/project"; rdocker run2 /work/one 1
-  expect r-run2 "BUILD SUCCESSFUL" "> Task ${t} FROM-CACHE"; absent r-run2 "response status 401"; rmproj "$D/run2/project"
+  expect r-run2 "BUILD SUCCESSFUL" "> Task ${t} FROM-CACHE"; absent r-run2 "response status 401" "The remote build cache was disabled"; rmproj "$D/run2/project"
   # run 3: mounted at a different path
   r_project "$D/run3/project"; rdocker run3 /work/two 1
-  expect r-run3 "BUILD SUCCESSFUL" "> Task ${t} FROM-CACHE"; absent r-run3 "response status 401"; rmproj "$D/run3/project"
+  expect r-run3 "BUILD SUCCESSFUL" "> Task ${t} FROM-CACHE"; absent r-run3 "response status 401" "The remote build cache was disabled"; rmproj "$D/run3/project"
   # run 4: a line of main code edited
   r_project "$D/run4/project"; q_cls "$D/run4/project" core method; rdocker run4 /work/one 1
-  expect r-run4 "BUILD SUCCESSFUL" "> Task ${t}"; absent r-run4 "FROM-CACHE" "response status 401"; rmproj "$D/run4/project"
+  expect r-run4 "BUILD SUCCESSFUL"; grep -qxF "> Task ${t}" "$W/r-run4.out" || fail "R run 4: the page says :core:compileJava ran (an exact '> Task :core:compileJava' line); it is missing"; absent r-run4 "FROM-CACHE" "response status 401" "The remote build cache was disabled"; rmproj "$D/run4/project"
   # run 5: no password passed (the edited code, which the cache now holds)
   r_project "$D/run5/project"; q_cls "$D/run5/project" core method; rdocker run5 /work/one 0
   expect r-run5 "BUILD SUCCESSFUL" "> Task ${t}" "response status 401: Unauthorized" "The remote build cache was disabled during the build due to errors."; absent r-run5 "FROM-CACHE"
@@ -383,8 +389,12 @@ scenario_r() {
   run r-daemon "$D/daemon" <<EOF
 docker run --rm --add-host=host.docker.internal:host-gateway -v "\$PWD/project:/work/one" -w /work/one ${RIMG} sh -c 'gradle :core:compileJava --console=plain; echo ==== SECOND; export FSCACHE_PASSWORD=${RPW}; rm -rf core/build; gradle :core:compileJava --console=plain'
 EOF
-  expect r-daemon "response status 401: Unauthorized" "==== SECOND"
-  awk '/==== SECOND/{f=1} f' "$W/r-daemon.out" | grep -qxF "> Task ${t} FROM-CACHE" && echo "OBS R the daemon picked up the password set later in the same shell: :core:compileJava FROM-CACHE in the second build, as the page says" || fail "R the page says the second build printed :core:compileJava FROM-CACHE after the password was set in the same shell"
+  expect r-daemon "==== SECOND"
+  awk '/==== SECOND/{exit} {print}' "$W/r-daemon.out" > "$W/r-daemon-1.out"; awk 'f{print} /==== SECOND/{f=1}' "$W/r-daemon.out" > "$W/r-daemon-2.out"
+  grep -qF "BUILD SUCCESSFUL" "$W/r-daemon-1.out" && grep -qF "response status 401: Unauthorized" "$W/r-daemon-1.out" || fail "R daemon case: the first build (no password) should have printed the 401 line and ended with BUILD SUCCESSFUL"
+  grep -qF "BUILD SUCCESSFUL" "$W/r-daemon-2.out" && grep -qxF "> Task ${t} FROM-CACHE" "$W/r-daemon-2.out" && ! grep -qF "response status 401" "$W/r-daemon-2.out" || fail "R daemon case: the second build (password set in the same shell) should have printed :core:compileJava FROM-CACHE, no 401 line, and BUILD SUCCESSFUL"
+  [ "$(grep -c 'Starting a Gradle Daemon' "$W/r-daemon.out")" = 1 ] || fail "R daemon case: the page says Gradle's background process stayed on between the two builds; 'Starting a Gradle Daemon' appears $(grep -c 'Starting a Gradle Daemon' "$W/r-daemon.out") times (the page expects once)"
+  echo "OBS R daemon case: first build 401 line, then in the same container the password set in the same shell and core/build deleted: second build :core:compileJava FROM-CACHE, no 401 line; one background process was started, as the page says"
   rmproj "$D/daemon/project"
   stop_server
 }
