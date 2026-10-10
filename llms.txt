@@ -45,6 +45,9 @@ verifiable against the CI run that produced them.
 - [Can a Failed or Cancelled Build Poison the Cache?](https://fosterstack.com/failed-or-cancelled-build-bad-results-in-cache/): what a failed test, a failed compile, Ctrl-C or a killed job leaves in the cache, from real runs.
 - [Can I Run Two Build Cache Servers?](https://fosterstack.com/run-two-build-cache-servers/): what happened with a second server on one data folder, on separate folders and from a copy.
 - [What Happens When the Build Cache Disk Fills Up?](https://fosterstack.com/build-cache-disk-full-what-happens/): what a full disk did to uploads, reads and builds on a real 8 MiB volume, and what to alert on.
+- [Does a Build Cache Entry Contain My Source Code or Secrets?](https://fosterstack.com/does-build-cache-entry-contain-source-code-or-secrets/): what a stored cache entry holds: class files and test output yes, source files no, and who can read it.
+- [Why Did This One Task Miss the Build Cache?](https://fosterstack.com/why-did-this-task-miss-the-build-cache/): how to find the one input that changed when a task misses the cache, by logging and diffing the keys.
+- [Build Cache Server Won't Start: Errors and Fixes](https://fosterstack.com/build-cache-server-wont-start-errors/): what each startup error means and how to fix it, including the settings that fail silently.
 - [Jenkins and CI build cache](https://fosterstack.com/jenkins-ci-build-cache/): one shared cache for CI runners.
 - [Gradle remote build cache not working](https://fosterstack.com/gradle-remote-cache-not-working/): six checks when nothing comes from the cache.
 - [Maven remote build cache setup](https://fosterstack.com/maven-remote-build-cache-setup/): extension, config, credentials, checking hits.
