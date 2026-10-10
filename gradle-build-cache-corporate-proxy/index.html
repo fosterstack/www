@@ -121,7 +121,7 @@ systemProp.http.nonProxyHosts=cache.internal.example.com|localhost|127.*</code><
   <p><strong>1. Testing against localhost skips the proxy.</strong> With the cache at <code>127.0.0.1</code>, Gradle never used the proxy even though it was configured. A setup that works on your laptop against a local cache proves nothing about the proxy path. Test against the real address.</p>
   <p><strong>2. A refusing proxy looks like a cache error.</strong> When the proxy answered 403 to the tunnel, Gradle printed:</p>
   <pre tabindex="0"><code>Could not load entry d4f2de693b561fd2c5d60b17a9232d6f from remote build cache: Loading entry from &#x27;https://&lt;cache-ip&gt;:18443/d4f2de693b561fd2c5d60b17a9232d6f&#x27; response status 403: Forbidden</code></pre>
-  <p>That is the same text you would get from the cache refusing a write with the read-only login (see <a href="/gradle-build-cache-http-status-codes/">the status codes</a>). To tell them apart, take Gradle out of it and try the same route with curl:</p>
+  <p>That is the same text you would get from the cache refusing a write with the read-only login (see <a href="/gradle-remote-build-cache-authentication/#gradle-build-cache-http-status-codes">the status codes</a>). To tell them apart, take Gradle out of it and try the same route with curl:</p>
   <pre tabindex="0"><code>$ curl -sS -x http://proxy.example.com:3128 https://cache.example.com/healthz
 curl: (56) CONNECT tunnel failed, response 403      # the proxy said no
 $ curl -sS --noproxy &#x27;*&#x27; https://cache.example.com/healthz

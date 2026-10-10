@@ -133,7 +133,7 @@ The remote build cache was disabled during the build due to errors.</code></pre>
   <p>The server stored nothing: it stayed at 1 entry. The same change built by CI with the read-write login was stored (2 entries). So a misconfigured laptop cannot add to the cache, and its build is not broken by that. Note that Gradle switches the remote cache off for the rest of that build once a store fails, so a laptop in this state also stops reading from it for that build.</p>
 
   <h2>What this does not give you</h2>
-  <p>There is no per-person identity yet. Everyone who holds the read-write login is the same writer to the server, so keep it to CI. See <a href="/remote-build-cache-security/">who can write to a remote build cache</a> and <a href="/gradle-build-cache-http-status-codes/">the HTTP status codes</a>.</p>
+  <p>There is no per-person identity yet. Everyone who holds the read-write login is the same writer to the server, so keep it to CI. See <a href="/can-someone-poison-our-build-cache/#remote-build-cache-security">who can write to a remote build cache</a> and <a href="/gradle-remote-build-cache-authentication/#gradle-build-cache-http-status-codes">the HTTP status codes</a>.</p>
 
   <div class="cta-row">
     <a class="btn" href="/jenkins-ci-build-cache/">Jenkins and CI build cache</a>

@@ -117,7 +117,7 @@
   <h2>If your cache comes back empty</h2>
   <p>An empty cache after a restart means the server is looking at a different folder than before. It is the same as step 4. Check that the data folder or volume is still the one you expect:</p>
   <ul class="trust">
-    <li><strong>Docker:</strong> use a named volume or a mounted folder for the data directory. See <a href="/gradle-build-cache-docker-compose/">Gradle build cache with Docker Compose</a>.</li>
+    <li><strong>Docker:</strong> use a named volume or a mounted folder for the data directory. See <a href="/build-cache-docker-compose-production/#gradle-build-cache-docker-compose">Gradle build cache with Docker Compose</a>.</li>
     <li><strong>Kubernetes:</strong> the data directory needs a persistent volume claim. See <a href="/gradle-build-cache-kubernetes/">Gradle build cache on Kubernetes</a>.</li>
     <li><strong>Permissions:</strong> if the server cannot write to the folder, see <a href="/build-cache-permission-denied-data-directory/">permission denied on the data directory</a>.</li>
   </ul>

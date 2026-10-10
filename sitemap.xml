@@ -64,15 +64,7 @@
     <lastmod>2026-10-08</lastmod>
   </url>
   <url>
-    <loc>https://fosterstack.com/gradle-build-cache-docker-compose/</loc>
-    <lastmod>2026-10-08</lastmod>
-  </url>
-  <url>
     <loc>https://fosterstack.com/gradle-build-cache-hit-rate-low/</loc>
-    <lastmod>2026-10-08</lastmod>
-  </url>
-  <url>
-    <loc>https://fosterstack.com/gradle-build-cache-http-status-codes/</loc>
     <lastmod>2026-10-08</lastmod>
   </url>
   <url>
@@ -108,10 +100,6 @@
     <lastmod>2026-10-08</lastmod>
   </url>
   <url>
-    <loc>https://fosterstack.com/long-term-support-build-cache/</loc>
-    <lastmod>2026-10-08</lastmod>
-  </url>
-  <url>
     <loc>https://fosterstack.com/maven-build-cache-corporate-proxy/</loc>
     <lastmod>2026-10-08</lastmod>
   </url>
@@ -140,10 +128,6 @@
     <lastmod>2026-10-08</lastmod>
   </url>
   <url>
-    <loc>https://fosterstack.com/remote-build-cache-security/</loc>
-    <lastmod>2026-10-08</lastmod>
-  </url>
-  <url>
     <loc>https://fosterstack.com/reset-gradle-build-cache/</loc>
     <lastmod>2026-10-08</lastmod>
   </url>
@@ -157,10 +141,6 @@
   </url>
   <url>
     <loc>https://fosterstack.com/verify-a-release/</loc>
-    <lastmod>2026-10-08</lastmod>
-  </url>
-  <url>
-    <loc>https://fosterstack.com/verify-container-image-signature-cosign/</loc>
     <lastmod>2026-10-08</lastmod>
   </url>
   <url>

@@ -115,7 +115,7 @@ cosign verify-blob --bundle checksums.txt.bundle \
   --certificate-identity-regexp=&#x27;^https://github.com/fosterstack/cache/&#x27; \
   --certificate-oidc-issuer=&#x27;https://token.actions.githubusercontent.com&#x27; checksums.txt
 sha256sum -c &lt;(grep &quot;fscache_${VER}_${PLATFORM}.tar.gz&quot; checksums.txt | grep -v sbom)</code></pre>
-  <p>You should see <code>Verified OK</code> and then <code>...tar.gz: OK</code>. More checks are in <a href="/verify-a-release/">Verify a release yourself</a>. Prefer a container? See <a href="/gradle-build-cache-docker-compose/">Gradle build cache with Docker Compose</a>.</p>
+  <p>You should see <code>Verified OK</code> and then <code>...tar.gz: OK</code>. More checks are in <a href="/verify-a-release/">Verify a release yourself</a>. Prefer a container? See <a href="/build-cache-docker-compose-production/#gradle-build-cache-docker-compose">Gradle build cache with Docker Compose</a>.</p>
 
   <h3>3. Start it with a password and a size cap</h3>
   <pre tabindex="0"><code>tar xzf fscache_${VER}_${PLATFORM}.tar.gz

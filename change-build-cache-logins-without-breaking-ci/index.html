@@ -119,7 +119,7 @@
   </ul>
 
   <h2>If it goes wrong</h2>
-  <p>The warning to search for in a Gradle log is <code>response status 401: Unauthorized</code>. It means the job sent a login the server does not accept. Check the secret, then check the username as well as the password. A wrong username with the right password was refused too. See <a href="/gradle-build-cache-http-status-codes/">Gradle build cache HTTP status codes</a> and <a href="/gradle-remote-build-cache-authentication/">Gradle remote build cache authentication</a>.</p>
+  <p>The warning to search for in a Gradle log is <code>response status 401: Unauthorized</code>. It means the job sent a login the server does not accept. Check the secret, then check the username as well as the password. A wrong username with the right password was refused too. See <a href="/gradle-remote-build-cache-authentication/#gradle-build-cache-http-status-codes">Gradle build cache HTTP status codes</a> and <a href="/gradle-remote-build-cache-authentication/">Gradle remote build cache authentication</a>.</p>
   <p>The server did not print any password in its log, in <code>/statusz</code> or in <code>/metrics</code>. About logins, <code>/statusz</code> only says whether login is on.</p>
   <p>For how to give CI the read-write login and developers the read-only one, see <a href="/gradle-build-cache-ci-writes-developers-read/">let CI write and developers read</a> and <a href="/github-actions-remote-build-cache/">use a remote build cache in GitHub Actions</a>.</p>
 
