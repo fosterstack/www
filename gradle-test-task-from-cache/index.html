@@ -139,19 +139,8 @@
   <p>Runs 1 to 5 ended with <code>BUILD SUCCESSFUL</code>. Runs 6 and 7 ended with <code>BUILD FAILED</code>, as intended. This is the line Gradle run 2 printed:</p>
 <pre tabindex="0"><code>&gt; Task :test FROM-CACHE</code></pre>
 
-  <p><strong>How much time does it save? (Gradle)</strong></p>
-  <p>On the first project the tests are so quick that the totals were 3 seconds and 2 seconds, which tells you nothing. So we made a second project, set up the same way as above, with three more tests that each wait 10 seconds, made slow on purpose so the time is visible. It still has the two quick tests. Each build used its own copy of the project and the local build cache was off. The Mac was busy with other jobs the whole time, so all the totals are high; the gap is what matters.</p>
-  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
-    <thead><tr><th>Run</th><th><code>:test</code> task</th><th>Gradle's total</th></tr></thead>
-    <tbody>
-      <tr><td>1. First build</td><td>ran</td><td>1m 23s</td></tr>
-      <tr><td>2. Fresh copy, same code</td><td><code>FROM-CACHE</code></td><td>35s</td></tr>
-      <tr><td>3. Main code changed</td><td>ran</td><td>1m 12s</td></tr>
-      <tr><td>4. Fresh copy, same code again</td><td><code>FROM-CACHE</code></td><td>32s</td></tr>
-    </tbody>
-  </table></div>
-  <p>The builds where the tests came from the cache finished about 40 to 50 seconds sooner: 48 seconds sooner for run 2 against run 1, and 40 seconds sooner for run 4 against run 3. (Run 3 also recompiled the main code, so it is not the same two builds as run 1.) The three sleeping tests account for at least 30 seconds of that; the rest is compiling and starting the tests, which the cached builds skipped too. Even the fully cached builds took 32 to 35 seconds on this busy Mac. Each total is a single run. Your tests will differ, so measure your own build.</p>
-
+  <p><strong>What about time? (Gradle)</strong></p>
+  <p>We do not quote times for these runs. They ran on a Mac that was busy with other jobs, so the totals were not a fair measure, and a project whose tests are quick tells you nothing. What we can say is what ran: in runs 2 and 5 the <code>:test</code> task was not executed, so those builds did not spend time running the tests. How much time that is depends on how slow your tests are, so measure your own build.</p>
 
   <p><strong>Gradle files.</strong> <code>build.gradle.kts</code>:</p>
 <pre tabindex="0"><code>plugins { java }
