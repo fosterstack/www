@@ -5,6 +5,9 @@
 # Environment: VER ("0.2.1", or "latest" to set it with the page's own command), PLATFORM, TOKEN_FOR_STEPS_5_TO_7.
 # The token is exported as GH_TOKEN only for steps 5 to 7, because the page says only those need one.
 set -u
+# take the token out of the environment right away: only steps 5 to 7 may see it
+TOK="${TOKEN_FOR_STEPS_5_TO_7:-}"
+unset TOKEN_FOR_STEPS_5_TO_7
 VER_ARG="${VER:-0.2.1}"
 PLATFORM="${PLATFORM:-linux_amd64}"
 OUT=/tmp/out; mkdir -p "$OUT" /work
@@ -28,7 +31,7 @@ echo "${GH_SHA}  gh.tgz" | sha256sum -c - >/dev/null || { echo "TOOL CHECKSUM MI
 tar -xzf gh.tgz && install -m 0755 "gh_${GH_VER}_linux_amd64/bin/gh" /usr/local/bin/gh
 T1=$(now)
 echo "TOOLS curl=$(curl --version | head -1 | cut -d' ' -f2) jq=$(jq --version) cosign=v${COSIGN_VER} gh=${GH_VER}"
-echo "INSTALL_SECONDS $(secs "$T0" "$T1")  (apt: curl ca-certificates jq tar; cosign and gh pinned and checked)"
+echo "INSTALL_SECONDS $(secs "$T0" "$T1")  (apt: curl ca-certificates jq tar, from Debian, not version-pinned; cosign and gh pinned and checked. NOT included in the step totals below)"
 
 # ---------- the page, step by step ----------
 cd /work
@@ -58,6 +61,7 @@ EOF
 else
   VER="$VER_ARG"
 fi
+[[ "$VER" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "VERSION NOT A VERSION NUMBER: refusing to continue"; exit 2; }
 export VER PLATFORM
 TAR="fscache_${VER}_${PLATFORM}.tar.gz"
 echo "VERSION_UNDER_TEST $VER $PLATFORM (asked for: $VER_ARG)"
@@ -86,7 +90,8 @@ sha256sum -c <(grep "fscache_${VER}_${PLATFORM}.tar.gz" checksums.txt | grep -v 
 EOF
 run_step 3-checksum-match "${TAR}: OK"
 
-PROD=$(jq -r '.images[] | select(.variant=="production") | .digest' release-manifest.json)
+PROD=$(jq -r '.images[] | select(.variant=="production") | .digest' release-manifest.json 2>/dev/null || true)
+if [[ ! "$PROD" =~ ^sha256:[0-9a-f]{64}$ ]]; then echo "NO PRODUCTION DIGEST in release-manifest.json (step 1 failed?): the digest checks below will fail"; FAILS=$((FAILS+1)); PROD="sha256:MISSING"; fi
 cat >"$OUT/cmd" <<'EOF'
 cosign verify ghcr.io/fosterstack/cache:${VER} \
  --certificate-identity-regexp="^https://github.com/fosterstack/cache/.github/workflows/stage-promote.yml@refs/tags/v${VER}$" \
@@ -101,7 +106,7 @@ EOF
 run_step 4b-image-signature-dockerio "The cosign claims were validated" "$PROD"
 
 # steps 5 to 7: the page says these need a token (GH_TOKEN or gh auth login)
-export GH_TOKEN="${TOKEN_FOR_STEPS_5_TO_7:-}"
+export GH_TOKEN="$TOK"
 cat >"$OUT/cmd" <<'EOF'
 gh attestation verify oci://ghcr.io/fosterstack/cache:${VER} \
  --repo fosterstack/cache \
