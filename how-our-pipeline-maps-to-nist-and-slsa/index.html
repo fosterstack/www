@@ -89,7 +89,7 @@
 <main>
   <h1>How our release pipeline maps to NIST SP 800-204C, 800-204D and SLSA</h1>
   <p class="lede">This page takes the release pipeline that built FosterStack Cache v0.2.2 and puts each stage next to the NIST practice it maps to. It says where a stage only partly implements a practice, and it says which SLSA Build level we assess v0.2.2 at: Level 2, not Level 3.</p>
-  <p class="muted-note">Words used here: <strong>SBOM</strong> is a parts list of what is inside a build. <strong>VEX</strong> is a note saying a known flaw does not affect us. <strong>Provenance</strong> is a signed record of how and where something was built. <strong>Digest</strong> is the fingerprint of a file or image. <strong>SLSA</strong> is a public scale of how well a build can be trusted, from Level 1 to Level 3 in its Build track.</p>
+  <p class="muted-note">Words used here: <strong>SBOM</strong> is a parts list of what is inside a build. <strong>VEX</strong> is a note on whether a known flaw affects us. <strong>Provenance</strong> is a signed record of how and where something was built. <strong>Digest</strong> is the fingerprint of a file or image. <strong>SLSA</strong> is a public scale for how far you can trust the way software was built. Its Build track has Levels 1 to 3.</p>
   <p><strong>This is guidance we followed when designing the pipeline. It is not a certification.</strong></p>
 
   <h2>The two NIST documents</h2>
@@ -100,7 +100,7 @@
   <p>Parts of both documents cover running services in your own cluster, such as service mesh and GitOps. That is your environment, not our release pipeline, so this page does not map it.</p>
 
   <h2>Stage by stage: what runs, and which practice it maps to</h2>
-  <p>This describes the workflow files as they were at the v0.2.2 tag. What changed since v0.2.1 is listed after the table. "Signs" means the stage writes a statement about its work and signs it with keyless signing tied to that stage's own workflow identity, logged in a public transparency log.</p>
+  <p>This describes the workflow files as they were at the v0.2.2 tag. What changed since v0.2.1 is listed after the table. "Signs" means the stage records what it did and signs it, with a short-lived key and no stored signing key. The signature is tied to that stage's own workflow and logged in a public transparency log.</p>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <thead>
       <tr><th>Stage</th><th>What it does in v0.2.2</th><th>NIST practice</th><th>How much</th></tr>
@@ -108,7 +108,7 @@
     <tbody>
       <tr>
         <td>Source admission</td>
-        <td>Checks that the tag is a signed, annotated tag with a strict version name, and that it is signed by the owner's key (or, for an automatic patch tag only, by the release workflow's own keyless identity). Checks that the tagged commit is signed (by the owner's key, or GitHub's own key for merges made on github.com) and is on <code>main</code>, that every required check passed on that exact commit, and that an owner-approved requirements list exists for the version. The list of allowed signers and required checks is read from <code>main</code>, not from the tagged commit. Signs.</td>
+        <td>The tag must be annotated, signed and strictly named: signed by the owner's key or, for an automatic patch tag only, by the release workflow's own keyless identity. The commit must be signed (by the owner's key, or GitHub's own key for merges made on github.com) and be on <code>main</code>. Every required check must pass on that exact commit or, for the checks that run only on pull requests, on the pull request that produced it. An owner-approved requirements list must exist for the version. The lists of allowed signers and required checks are read from <code>main</code>, not from the tagged commit. Signs.</td>
         <td>800-204D 5.1.4 "Secure Code Commits" (commit-signing enforcement, COMMIT-REQ-2); 5.1.2 "Secure Pull-Push Operations on Repositories" (automated checks before code is trusted)</td>
         <td>Partly. There is one maintainer, so no second person reviews or approves a change.</td>
       </tr>
@@ -122,7 +122,7 @@
         <td>Image assembly</td>
         <td>Checks every archive against the signed build statement before opening it. Adds one binary to a base image pinned by digest, with no commands run inside the image, using a BuildKit image that is also pinned by digest. Pushes by digest only, with no version tags, to a separate candidates package. Signs, recording the base digest and binary hashes, plus SLSA provenance.</td>
         <td>800-204D 4.2: "The inputs and outputs of each build step should be verified"</td>
-        <td>Implements the practice.</td>
+        <td>Matches the practice as we read it.</td>
       </tr>
       <tr>
         <td>Reproducibility check</td>
@@ -132,7 +132,7 @@
       </tr>
       <tr>
         <td>Scans</td>
-        <td>Two different scanners with different vulnerability databases, each on its own machine, check the image-assembly and reproducibility statements first, then scan every platform image of every variant. One also scans the archives, the other the Go module files. A finding at any severity blocks the release. For one of the two scanners, a published VEX statement can clear a finding. Each scanner signs its verdict for the exact digests.</td>
+        <td>Two scanners with different vulnerability databases run, each on its own machine. They first check the image-assembly and reproducibility statements, then scan every platform image of every variant. One also scans the archives, the other the Go module files. Any finding blocks the release, at any severity. For one of the two scanners, a published VEX statement can clear a finding. Each scanner signs its verdict for the exact digests.</td>
         <td>800-204C 4.8 and 4.8.1 (container image scans, software composition analysis); 800-204D 5.2, DEPLOY_REQ-4 (evidence the image was scanned)</td>
         <td>Partly. The release pipeline runs no static or dynamic application security testing itself. The signed verdict records a pass, not the full scan report.</td>
       </tr>
@@ -140,7 +140,7 @@
         <td>Acceptance tests</td>
         <td>Run against the exact candidate images: the Linux archives and binaries (macOS archives are checked, not run), the images on both CPU architectures, the image variants, the Gradle and Maven test suites, the Kubernetes setup from our docs, and a test that the server makes no outbound connections. A final job checks that every release-blocking acceptance test in the approved list passed, then signs one statement.</td>
         <td>800-204C 3.3.1 (tests run in the pipeline; an organisation may choose to stop the pipeline when a test fails); 4.6 (stop further pipeline tasks if a test fails)</td>
-        <td>Implements the practice. The individual test jobs do not sign their own results.</td>
+        <td>Matches the practice as we read it. The individual test jobs do not sign their own results.</td>
       </tr>
       <tr>
         <td>Release authorization</td>
@@ -150,9 +150,9 @@
       </tr>
       <tr>
         <td>Promotion and publish</td>
-        <td>Will not start without the signed approval. Copies the approved digests to GitHub's registry and the Docker Hub mirror with no rebuild, and checks the digests did not change. Signs the public images and the checksums file. Publishes the VEX statements in three forms: OpenVEX, Inspector suppression rules and CSAF 2.0. Uploads the release files, re-checks the image signatures, the signed checksums and every tag the way a customer would, without credentials, then makes the release page public.</td>
+        <td>Will not start without the signed approval. Copies the approved digests to GitHub's registry and the Docker Hub mirror with no rebuild, and checks the digests did not change. Signs the public images and the checksums file. Publishes the VEX statements in three forms: OpenVEX, scanner suppression rules and CSAF 2.0. Uploads the release files, re-checks the image signatures, the signed checksums and every tag the way a customer would, without credentials, then makes the release page public.</td>
         <td>800-204D 5.2, DEPLOY-REQ-3 (only an artifact made by the approved build process is cleared)</td>
-        <td>Partly. We refuse to publish anything the approved build did not make. Enforcing that at deploy time is up to your own environment.</td>
+        <td>Partly. Promotion only copies the digests named in the signed approval. Enforcing that at deploy time is up to your own environment.</td>
       </tr>
       <tr>
         <td>Signing, across all stages</td>
@@ -164,7 +164,7 @@
         <td>Evidence bundle</td>
         <td><code>release-manifest.json</code> lists every digest, the hash of the approved requirements list, per-test results, and the transparency-log entry of every statement the authorization verified. It is attached to each image in GitHub's registry as a signed statement and published with the SBOMs, VEX file and signed checksums.</td>
         <td>800-204D 4 (record provenance, with a way to verify and authenticate it)</td>
-        <td>Implements the practice. Neither document has a section on VEX.</td>
+        <td>Matches the practice as we read it. Neither document has a section on VEX.</td>
       </tr>
     </tbody>
   </table></div>
@@ -176,22 +176,22 @@
     <li><strong>Image assembly and reproducibility.</strong> The BuildKit image is pinned by digest.</li>
     <li><strong>Authorization.</strong> It reads the requirements list that admission chose, and it has the new VEX risk-acceptance check described in the table.</li>
     <li><strong>Promotion.</strong> It publishes the VEX statements in three forms, takes the release notes of an automatic patch release from the tag message, and records the requirements list it used in the manifest.</li>
-    <li><strong>Acceptance tests.</strong> The two test workflows were merged into one file. The same suites still run.</li>
+    <li><strong>Acceptance tests.</strong> The two test workflows were merged into one file. The suites are the same, and the four acceptance stage files had small edits.</li>
     <li><strong>The release workflow.</strong> It also runs on pushes to <code>main</code> and once a day, but on those runs only the new <code>decide</code> and <code>patch-notes</code> jobs can run. A new <code>patch-failed</code> job opens an issue when a release run fails. The release run for v0.2.2 has 19 jobs where the v0.2.1 run had 16, and the three new jobs are not on the build, sign and promote path.</li>
   </ul>
 
-  <h2>Which SLSA Build level does v0.2.2 meet?</h2>
+  <h2>Which SLSA Build level do we assess v0.2.2 at?</h2>
   <p>We assess v0.2.2 at <strong>SLSA Build Level 2</strong>, against the <a href="https://slsa.dev/spec/v1.0/requirements">SLSA v1.0 requirements</a> and <a href="https://slsa.dev/spec/v1.0/levels">levels</a>. We do not claim Build Level 3.</p>
   <ul class="trust">
-    <li><strong>Consistent build process (L1).</strong> Met. One workflow builds every release. Only a tag push starts the build, and the first stage stops any tag not signed by an allowed signer.</li>
-    <li><strong>Provenance exists (L1).</strong> Met. SLSA v1 provenance covers the binary archives, their SBOMs, <code>checksums.txt</code>, and the three container images, naming each digest, the source commit and the workflow run.</li>
-    <li><strong>Distribute provenance (L1).</strong> Met. It is in GitHub's attestation store, and <code>gh attestation verify</code> returns it.</li>
-    <li><strong>Hosted build platform (L2).</strong> Met. The build and image jobs ran on GitHub-hosted <code>ubuntu-latest</code> machines (image ubuntu-24.04, version 20261004.327.1 in this run), never on a workstation.</li>
-    <li><strong>Provenance is authentic (L2).</strong> Met. The provenance is signed with a short-lived certificate issued to the building workflow, and the signature is logged in a public transparency log. Every later stage, and the release authorization, check the signing workflow, the source commit and the tag, and you can check them yourself.</li>
+    <li><strong>Consistent build process (L1).</strong> Met, by our reading. One workflow builds every release. Only a tag push starts the build job, and the first stage stops any tag not signed by the owner's key or, for an automatic patch tag, the release workflow's own identity.</li>
+    <li><strong>Provenance exists (L1).</strong> Met, by our reading. SLSA v1 provenance covers the binary archives, their SBOMs, <code>checksums.txt</code>, and the three container images, naming each digest, the source commit and the workflow run.</li>
+    <li><strong>Distribute provenance (L1).</strong> Met, by our reading. It is in GitHub's attestation store, and <code>gh attestation verify</code> returns it.</li>
+    <li><strong>Hosted build platform (L2).</strong> Met, by our reading. The build and image jobs ran on GitHub-hosted <code>ubuntu-latest</code> machines, never on a workstation. The build job's log shows image ubuntu-24.04, version 20261004.327.1.</li>
+    <li><strong>Provenance is authentic (L2).</strong> Met, by our reading. The provenance is signed with a short-lived certificate issued to the building workflow, and the signature is logged in a public transparency log. Every later stage checks who signed the statement before it. The release authorization and the publishing step also check the source commit and the tag. You can check them yourself.</li>
   </ul>
-  <p>Level 3 is not claimed. It asks the build platform to "prevent runs from influencing one another, even within the same project" and to "prevent secret material used to sign the provenance from being accessible to the user-defined build steps". We have not shown either. In v0.2.2 the build job, and the image job, can request a signing identity for the whole job and run commands from this repository, such as the Go compiler and the goreleaser configuration, so the build steps and the provenance signing are not separated. The build job also restored a GitHub Actions cache written by earlier runs, and we have not shown that other workflows or branches cannot write to it. The spec calls that "cache poisoning" under its "Isolated" requirement. Build Level 3 is not claimed for v0.2.2.</p>
+  <p>Level 3 is not claimed. It asks the build platform to "prevent runs from influencing one another, even within the same project" and to "prevent secret material used to sign the provenance from being accessible to the user-defined build steps". We have not shown either. In v0.2.2 the build job can ask for a signing identity for the whole job, and it also runs this repository's code and configuration: the Go build and the goreleaser hooks. The image job can ask for a signing identity too, and it builds this repository's Dockerfiles. So the build steps could reach the signing, and Level 3 needs that kept apart. The build job also restored a GitHub Actions cache written by earlier runs, and we have not shown that other workflows or branches cannot write to it. The spec calls that "cache poisoning" under its "Isolated" requirement. Build Level 3 is not claimed for v0.2.2.</p>
 
-  <h2>What is not met today</h2>
+  <h2>What we do not meet</h2>
   <ul>
     <li>SLSA Build Level 3.</li>
     <li>We rely on GitHub-hosted machines being a fresh, isolated machine for each job. We have not checked that ourselves.</li>
@@ -218,7 +218,7 @@
     <li><a href="https://github.com/fosterstack/cache/actions/runs/37957120550">The v0.2.2 release run</a>: 19 jobs, in three attempts. The images were built and authorized in attempt 2, and attempt 3 published them (see <a href="/verify-a-release/">Verify a release</a>).</li>
     <li><a href="https://github.com/fosterstack/cache/actions/runs/35554556056">The v0.2.1 release run</a>: all 16 jobs.</li>
     <li><a href="https://github.com/fosterstack/cache/compare/v0.2.1...v0.2.2">What changed from v0.2.1 to v0.2.2</a>, including the workflow files.</li>
-    <li><a href="https://github.com/fosterstack/cache/releases/tag/v0.2.2">The v0.2.2 release</a>: SBOMs, VEX file, signed checksums and <code>release-manifest.json</code>.</li>
+    <li><a href="https://github.com/fosterstack/cache/releases/tag/v0.2.2">The v0.2.2 release</a>: SBOMs, VEX files, signed checksums and <code>release-manifest.json</code>.</li>
     <li><a href="https://github.com/fosterstack/cache/blob/v0.2.2/RELEASING.md">RELEASING.md at v0.2.2</a>: the pipeline in the maintainer's words.</li>
     <li><a href="https://github.com/fosterstack/cache/tree/v0.2.2/.github/workflows">The workflow files at v0.2.2</a>, starting with <a href="https://github.com/fosterstack/cache/blob/v0.2.2/.github/workflows/release.yml">release.yml</a> and <a href="https://github.com/fosterstack/cache/blob/v0.2.2/.github/workflows/stage-authorize.yml">stage-authorize.yml</a>.</li>
   </ul>
