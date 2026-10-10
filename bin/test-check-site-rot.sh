@@ -106,4 +106,27 @@ fresh; git -C "$site" init -q; gitc add -A; gitc commit -q -m "only commit"
 expect_fail "--base fails closed when the parent commit is missing" "cannot find HEAD^1" --base HEAD^1
 expect_fail "--base fails closed on a ref that does not exist" "cannot find no-such-ref" --base no-such-ref
 
+# a page renamed (git mv) without redirects is a removed page: git would report it as a rename, not a delete
+fresh; git -C "$site" init -q; gitc add -A; gitc commit -q -m "before the rename"
+git -C "$site" mv "$first" renamed-page-xyz; gitc commit -q -m "rename a page"
+expect_fail "--base treats a renamed page as removed" "was removed but has no 301" --base HEAD^1
+
+# every way of writing a link is read: single quotes, upper case, no quotes
+fresh; edit "$site/$first/index.html" "</main>" "<p><A HREF='/no-such-single/'>x</A> <a href=/no-such-bare/>y</a></p></main>"
+expect_fail "single-quoted and upper-case links are checked" "no-such-single"
+expect_fail "unquoted links are checked" "no-such-bare"
+
+# data-id is not an id, so it cannot satisfy an #anchor
+fresh; edit "$site/$second/index.html" "</main>" '<p data-id="fake-anchor-xyz">x</p></main>'
+edit "$site/$first/index.html" "</main>" "<p><a href=\"/$second/#fake-anchor-xyz\">x</a></p></main>"
+expect_fail "data-id does not count as an id" "id is not on the page"
+
+# a 302 line is not the 301 twin
+fresh; append "$site/_redirects" "/gone-page-xyz/ /$first/ 301"; append "$site/_redirects" "/gone-page-xyz /$first/ 302"
+expect_fail "a 302 line is not a 301 twin" "no matching"
+
+# a symlinked page is refused
+fresh; rm -rf "$site/$second"; ln -s "$site/$first" "$site/$second"
+expect_fail "a symbolic link in the site is refused" "symbolic link"
+
 [ "$fail" = 0 ] && echo "all site-rot self-tests passed" || { echo "site-rot self-test FAILED"; exit 1; }

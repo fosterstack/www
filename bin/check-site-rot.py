@@ -42,7 +42,12 @@ def read(path):
 
 
 def ids_of(text):
-    return set(re.findall(r'\bid="([^"]+)"', text))
+    # an id attribute, not data-id or aria-id (the lookbehind), double or single quoted
+    return set(a or b for a, b in re.findall(r'(?<![\w-])id\s*=\s*(?:"([^"]+)"|\'([^\']+)\')', text, re.I))
+
+
+# href="..." / src='...' / href=bare, any case: every way a link can be written
+LINK_RE = re.compile(r'(?<![\w-])(href|src)\s*=\s*(?:"([^"]*)"|\'([^\']*)\'|([^\s"\'>]+))', re.I)
 
 
 def main():
@@ -58,14 +63,19 @@ def main():
     if args.base:
         # fail closed: a missing parent must never quietly turn into "nothing was removed"
         shown = re.sub(r"[\x00-\x1f\x7f]", " ", args.base)
+        if not re.fullmatch(r"[A-Za-z0-9_./~^@{}][A-Za-z0-9_./~^@{}-]*", args.base):
+            print("FAIL base: %s is not a plain git ref" % shown)
+            return 1
         ref = subprocess.run(["git", "-C", root, "rev-parse", "--verify", "--quiet", args.base + "^{commit}"],
                              capture_output=True, text=True)
         if ref.returncode != 0:
             print("FAIL base: cannot find %s, so removed pages cannot be checked "
                   "(is the checkout too shallow? it needs two commits)" % shown)
             return 1
-        diff = subprocess.run(["git", "-C", root, "diff", "--diff-filter=D", "--name-only", args.base, "HEAD",
-                               "--", "*/index.html"], capture_output=True, text=True)
+        # --no-renames: a renamed page must show up as removed (git would call it "R"), or a rename
+        # without redirects would pass
+        diff = subprocess.run(["git", "-C", root, "diff", "--no-renames", "--diff-filter=D", "--name-only",
+                               args.base, "HEAD", "--", "*/index.html"], capture_output=True, text=True)
         if diff.returncode != 0:
             print("FAIL base: git diff against %s failed, so removed pages cannot be checked" % shown)
             return 1
@@ -76,14 +86,25 @@ def main():
         # (GitHub Actions reads such a line as a workflow command) or smuggle in a newline
         problems.append(re.sub(r"[\x00-\x1f\x7f]", " ", msg))
 
-    pages = page_dirs(root)
+    # a symlink could point a page (or its title) at a file outside the site: refuse them
+    for name in sorted(os.listdir(root)):
+        if name == ".git":
+            continue
+        for path in (os.path.join(root, name), os.path.join(root, name, "index.html")):
+            if os.path.islink(path):
+                bad("symlink: %s is a symbolic link (not allowed in the site)" % os.path.relpath(path, root))
+    pages = [p for p in page_dirs(root)
+             if not os.path.islink(os.path.join(root, p)) and not os.path.islink(os.path.join(root, p, "index.html"))]
     page_set = set(pages)
     files = {"": os.path.join(root, "index.html")}
     for p in pages:
         files[p] = os.path.join(root, p, "index.html")
     if os.path.isfile(os.path.join(root, "404.html")):
         files["404.html"] = os.path.join(root, "404.html")
-    texts = {k: read(v) for k, v in files.items()}
+    texts = {k: read(v) for k, v in files.items() if not os.path.islink(v)}
+    for k, v in files.items():
+        if k not in texts:
+            texts[k] = ""  # a symlink was reported above; do not read through it
     ids = {k: ids_of(t) for k, t in texts.items()}
 
     # 5. titles
@@ -112,8 +133,9 @@ def main():
 
     for key, t in texts.items():
         label = key or "/"
-        for attr, val in re.findall(r'\b(href|src)="([^"]*)"', t):
-            val = html.unescape(val)
+        for attr, v1, v2, v3 in LINK_RE.findall(t):
+            attr = attr.lower()
+            val = html.unescape(v1 or v2 or v3)
             if not val or val.startswith(("http://", "https://", "mailto:", "tel:", "//", "data:", "javascript:")):
                 continue
             frag = ""
@@ -146,7 +168,7 @@ def main():
                 bad("redirects: line %d does not have three fields: %s" % (n, s))
                 continue
             redirects.append((n, parts[0], parts[1], parts[2]))
-    sources = {src for _, src, _, _ in redirects}
+    sources = {src for _, src, _, code in redirects if code == "301"}
     for n, src, tgt, code in redirects:
         if "*" in src:
             continue
