@@ -85,7 +85,7 @@ echo "java: $("$JDK21_HOME/bin/java" -version 2>&1 | head -1)   gradle: $(gradle
 if [ "$LOCAL" = 1 ]; then echo "tools: LOCAL tools in use, nothing checked (a developer's dry run: do not quote these times)"; else
   echo "tools: Gradle ${GR_VER}, Maven 3.9.9 and cosign ${COSIGN_VER} are downloaded and checked against pinned checksums before use; Java 21 and Docker are the runner's own"; fi
 echo "release under test: FosterStack Cache ${VER}, downloaded with no login and verified (cosign + sha256) before it runs (binary servers); the image is pulled by tag, must equal the pinned digest, and is verified with cosign by digest before docker runs it"
-echo "NOT checksum-pinned: the Maven build-cache extension 1.2.3 and the Maven plugin jars (their eight versions are pinned in the pom, the files come from Maven Central), JUnit"
+echo "NOT checksum-pinned: the ubuntu:24.04 image (only runs chown and stat on a volume), the Maven build-cache extension 1.2.3 and the Maven plugin jars (their eight versions are pinned in the pom, the files come from Maven Central), JUnit"
 echo "invented by this script (the pages show none): the Gradle projects (four modules of 12 small classes for S, four modules for O) and the three-module Maven chain for S, test logins and passwords, the stand-in ports (the pages' own ports 18702 etc. are not all used)"
 echo "differences from the pages' own runs: Linux amd64 (the pages: macOS arm64), release ${VER} (the pages: 0.2.1), Gradle ${GR_VER} with the runner's Java 21 and Maven 3.9.9 (as the pages)"
 echo "Gradle runs use a new empty Gradle home and a fresh project copy each, no daemon reuse, Gradle's own local cache switched off (as the pages' runs did); startup cases run ./fscache from a clean environment (env -i) with one mistake at a time"
@@ -189,6 +189,7 @@ casefail() { # LABEL TEXT...  the start must fail with exit code 1 and the log m
   local label="$1" w ok=1; shift
   [ "$CASE_RC" = 1 ] || ok=0
   for w in "$@"; do grep -qF -- "$w" "$CASE_LOG" || ok=0; done
+  case "$(tail -n 1 "$CASE_LOG")" in *'"msg":"fscache: fatal"'*) ;; *) ok=0;; esac   # the last line is the fatal line
   if [ "$ok" = 1 ]; then echo "OBS $label: exit code 1 after ${CASE_SECS} s; last line: ${CASE_LAST}"
   else fail "$label: the page says exit code 1 and a log holding '$*'; got exit '${CASE_RC}', last line: ${CASE_LAST}"; fi
 }
@@ -279,6 +280,7 @@ scenario_o() {
   ofill o1 || return
   obuild r1b ci-old oldrw-secret; owant "row 1: read-write again, old logins" 4 no
   S="$(statusz "$OPORT" ci-old oldrw-secret)"; echo "OBS O the server after row 1: ${S}"
+  [ "$(entries_of "$S")" -ge 4 ] 2>/dev/null || fail "O row 1: the first build should have stored its four results on the server; ${S}"
   obuild r2 dev-old oldro-secret; owant "row 2: read-only, old logins" 4 no
   # --- rows 3 and 4: restart with new passwords
   orestart o1 FSCACHE_USERNAME=ci-old FSCACHE_PASSWORD=newrw-secret FSCACHE_RO_USERNAME=dev-old FSCACHE_RO_PASSWORD=newro-secret || return
@@ -336,9 +338,9 @@ scenario_o() {
   [ "$N" = 1 ] && echo "OBS O the four steps (3 jobs in between, all restored 4 of 4): $N job got a 401, as the page says" || fail "O the four steps: the page says 1 job got a 401; $N did"
   stop_server
   # --- the two refusals to start
-  startcase o-same FSCACHE_USERNAME=aaa FSCACHE_PASSWORD=bbb FSCACHE_RO_USERNAME=aaa FSCACHE_RO_PASSWORD=ccc
+  startcase o-same FSCACHE_USERNAME=aaa FSCACHE_PASSWORD=bbb-secret FSCACHE_RO_USERNAME=aaa FSCACHE_RO_PASSWORD=ccc-secret
   casefail "O identical read-only and read-write usernames" "FSCACHE_RO_USERNAME must differ from FSCACHE_USERNAME"
-  startcase o-roonly FSCACHE_RO_USERNAME=rrr FSCACHE_RO_PASSWORD=sss
+  startcase o-roonly FSCACHE_RO_USERNAME=rrr FSCACHE_RO_PASSWORD=sss-secret
   casefail "O a read-only login without a read-write login" "FSCACHE_RO_USERNAME and FSCACHE_RO_PASSWORD require FSCACHE_USERNAME and FSCACHE_PASSWORD"
   # --- nowhere did the server print a password
   local leaks; leaks="$(grep -l 'secret' "$W"/srv-o*/server.log "$D/statusz.txt" "$D/metrics.txt" "$W"/p-o-*/log 2>/dev/null | tr '\n' ' ')"
@@ -354,7 +356,7 @@ scenario_p() {
   mkdir -p "$D"
   # --- a second server on an address in use; the first keeps serving
   start_server p0 "$PA" "" "" || return
-  curl -s -X PUT --data-binary x "http://127.0.0.1:${PA}/held" >/dev/null
+  curl -s --max-time 30 -X PUT --data-binary x "http://127.0.0.1:${PA}/held" >/dev/null
   CASE_PORT=$PA startcase p-inuse
   casefail "P an address already in use" "listen tcp 127.0.0.1:${PA}: bind: address already in use"
   [ "$(http_code "http://127.0.0.1:${PA}/healthz")" = 200 ] && echo "OBS P the first server still answers /healthz" || fail "P the first server stopped answering after the second one failed"
@@ -366,9 +368,7 @@ scenario_p() {
     if [ "$CASE_RC" = 1 ] && { grep -qF "missing port in address" "$CASE_LOG" || grep -qF "invalid port" "$CASE_LOG" || grep -qF "unknown port" "$CASE_LOG"; }; then
       echo "OBS P FSCACHE_ADDR=$v: exit code 1 after ${CASE_SECS} s; last line: ${CASE_LAST}"
     else fail "P FSCACHE_ADDR=$v: the page says exit code 1 with 'missing port in address', 'invalid port' or 'unknown port'; got exit '${CASE_RC}', last line: ${CASE_LAST}"; fi
-    if [ "$v" = :99999 ]; then
-      if [ -e "$W/p-p-addr$i/data/meta.db" ] && [ -e "$W/p-p-addr$i/data/blobs" ]; then echo "OBS P a bad address still left meta.db and blobs behind"; else fail "P the page says a bad address leaves meta.db and blobs in the data folder; they are not there"; fi
-    fi
+    if [ -e "$W/p-p-addr$i/data/meta.db" ] && [ -e "$W/p-p-addr$i/data/blobs" ]; then echo "OBS P FSCACHE_ADDR=$v still left meta.db and blobs behind"; else fail "P the page says a bad address leaves meta.db and blobs in the data folder; for $v they are not there"; fi
   done
   grep -qF "listen tcp: address garbage: missing port in address" "$W/p-p-addr1/log" && echo "OBS P FSCACHE_ADDR=garbage printed the line shown in the table" || fail "P the table's line 'listen tcp: address VALUE: missing port in address' did not appear for garbage: $(tail -n 1 "$W/p-p-addr1/log" | cut -c1-200)"
   # --- the data folder
@@ -382,7 +382,7 @@ scenario_p() {
   casefail "P no data setting, started in a read-only folder" "mkdir data: permission denied"
   # --- the index file meta.db: four 100-byte entries first
   start_server p1 18162 "" "" || return
-  for k in k1 k2 k3 k4; do head -c 100 /dev/zero | curl -s -o /dev/null -X PUT --data-binary @- "http://127.0.0.1:18162/$k"; done
+  for k in k1 k2 k3 k4; do head -c 100 /dev/zero | curl -s --max-time 30 -o /dev/null -X PUT --data-binary @- "http://127.0.0.1:18162/$k"; done
   S="$(statusz 18162 x y)"; check_entries "P before the meta.db cases" "$S" 4
   stop_server
   local BASE="$W/srv-p1/data"
@@ -395,7 +395,7 @@ scenario_p() {
     if [ "$CASE_RC" = running ]; then
       wait_up 18163 || fail "P meta.db $v: nothing answered"
       check_code "P meta.db $v: an old entry is still served" 200 "http://127.0.0.1:18163/k1"
-      head -c 100 /dev/zero | curl -s -o /dev/null -X PUT --data-binary @- "http://127.0.0.1:18163/newkey"
+      head -c 100 /dev/zero | curl -s --max-time 30 -o /dev/null -X PUT --data-binary @- "http://127.0.0.1:18163/newkey"
       S="$(statusz 18163 x y)"; echo "OBS P meta.db $v: /statusz after one new 100-byte upload: ${S}; store_bytes=$(sfield 18163 store_bytes)"
       [ "$(entries_of "$S")" = 1 ] || fail "P meta.db $v: the page says /statusz counts only the entry stored afterwards (1 entry); the server says ${S}"
       [ "$(sfield 18163 store_bytes)" = 100 ] || fail "P meta.db $v: the page says 100 bytes; the server says $(sfield 18163 store_bytes)"
@@ -410,7 +410,7 @@ scenario_p() {
   casefail "P meta.db read-only" "open metadata store: metadata: open: open $W/mcopy-ro/meta.db: permission denied"
   # --- a second server on a data folder held by a running server
   start_server p2 18164 "" "" || return
-  curl -s -o /dev/null -X PUT --data-binary x "http://127.0.0.1:18164/held"
+  curl -s --max-time 30 -o /dev/null -X PUT --data-binary x "http://127.0.0.1:18164/held"
   CASE_TICKS=48 CASE_PORT=18165 startcase p-held "FSCACHE_DATA_DIR=$W/srv-p2/data"
   casefail "P a second server on a data folder held by a running server" "open metadata store: metadata: open: timeout"
   awk -v s="$CASE_SECS" 'BEGIN { exit !(s >= 4 && s <= 8) }' && echo "OBS P the second server gave up after ${CASE_SECS} s, as the page says (about 5 seconds)" || fail "P the page says about 5 seconds; the second server took ${CASE_SECS} s"
@@ -439,12 +439,14 @@ scenario_p() {
   startcase p-l2 FSCACHE_RO_USERNAME=rrr;              casefail "P one half of the read-only pair" "FSCACHE_RO_USERNAME and FSCACHE_RO_PASSWORD must both be set or both be empty"
   startcase p-l3 FSCACHE_RO_USERNAME=rrr FSCACHE_RO_PASSWORD=sss; casefail "P a read-only pair without the read-write pair" "FSCACHE_RO_USERNAME and FSCACHE_RO_PASSWORD require FSCACHE_USERNAME and FSCACHE_PASSWORD"
   startcase p-l4 FSCACHE_USERNAME=aaa FSCACHE_PASSWORD=bbb FSCACHE_RO_USERNAME=aaa FSCACHE_RO_PASSWORD=ccc; casefail "P the same username twice" "FSCACHE_RO_USERNAME must differ from FSCACHE_USERNAME"
+  for n in up1 up2 body l1 l2 l3 l4; do [ ! -e "$W/p-p-$n/data" ] || fail "P a rejected setting ($n): the page says no data folder was created; there is one"; done
+  echo "OBS P a rejected login, upload-limit or body-limit setting created no data folder"
   # --- starts, but not the way you meant: a misspelled name; the right name
   CASE_KEEP=1 CASE_PORT=18166 startcase p-typo FSCACHE_MAXBYTES=1500
   casestarts "P FSCACHE_MAXBYTES=1500 (misspelled)" '"max_bytes":0'
   if [ "$CASE_RC" = running ]; then
     wait_up 18166 || fail "P the misspelled-name server did not answer"
-    for k in a b c d; do head -c 1000 /dev/zero | curl -s -o /dev/null -X PUT --data-binary @- "http://127.0.0.1:18166/$k"; done
+    for k in a b c d; do head -c 1000 /dev/zero | curl -s --max-time 30 -o /dev/null -X PUT --data-binary @- "http://127.0.0.1:18166/$k"; done
     S="$(statusz 18166 x y)"; check_entries "P misspelled name: four 1,000-byte uploads" "$S" 4
     # HTTPS to the plain HTTP port: the server logs nothing
     n="$(wc -l < "$CASE_LOG")"; curl -sk --max-time 10 -o /dev/null "https://127.0.0.1:18166/healthz"; v=$?
@@ -457,7 +459,7 @@ scenario_p() {
   casestarts "P FSCACHE_MAX_BYTES=1500 (right name)" '"max_bytes":1500'
   if [ "$CASE_RC" = running ]; then
     wait_up 18166 || fail "P the right-name server did not answer"
-    for k in a b c d; do head -c 1000 /dev/zero | curl -s -o /dev/null -X PUT --data-binary @- "http://127.0.0.1:18166/$k"; done
+    for k in a b c d; do head -c 1000 /dev/zero | curl -s --max-time 30 -o /dev/null -X PUT --data-binary @- "http://127.0.0.1:18166/$k"; done
     S="$(statusz 18166 x y)"; check_entries "P right name: one entry left after four uploads" "$S" 1
     [ "$(sfield 18166 evicted_entries)" = 3 ] && echo "OBS P right name: 3 entries evicted, as the page says" || fail "P the page says 3 evicted; the server says $(sfield 18166 evicted_entries)"
     casestop
@@ -548,7 +550,7 @@ gradle --stop >/dev/null 2>&1
 true
 EOF
   expect "s-g-$name" "BUILD SUCCESSFUL"
-  SKEYS="$(sed -n 1p "$W/s-g-$name.out")"; SFC="$(sed -n 2p "$W/s-g-$name.out")"; SSUM="$(grep -F 'actionable tasks' "$W/s-g-$name.out" | head -n 1)"
+  SKEYS="$(grep -E '^[0-9]+$' "$W/s-g-$name.out" | sed -n 1p)"; SFC="$(grep -E '^[0-9]+$' "$W/s-g-$name.out" | sed -n 2p)"; SSUM="$(grep -F 'actionable tasks' "$W/s-g-$name.out" | head -n 1)"
   rm -rf "$W/sg-$name" "$d"
 }
 s_mproject() { # DIR CHANGE(0|1)  (a three-module chain a <- b <- c under a parent pom, the eight plugin versions pinned)
@@ -626,7 +628,7 @@ grep -F 'BUILD SUCCESS' build.log
 true
 EOF
   expect "s-m-$name" "BUILD SUCCESS"
-  SMFC="$(sed -n 1p "$W/s-m-$name.out")"; rm -rf "$d"
+  SMFC="$(grep -E '^[0-9]+$' "$W/s-m-$name.out" | sed -n 1p)"; rm -rf "$d"
 }
 sline() { # LABEL GOT WANT
   if [ "$2" = "$3" ]; then echo "OBS S $1: $2, as the page says"; else fail "S $1: the page says $3; got $2"; fi
@@ -641,6 +643,7 @@ scenario_s() {
     IFS=: read -r name ch _ w_miss w_hit w_keys w_fc <<<"$b"
     # fields: name change(0|1) <unused> misses hits keys fromcache  (see the list above)
     B="$(statusz "$SPORT" x y)"; sgbuild "$name" "$ch"; A="$(statusz "$SPORT" x y)"
+    case "$(hits_of "$A")$(misses_of "$A")$(hits_of "$B")$(misses_of "$B")" in *unreadable*) fail "S Gradle $name: /statusz was unreadable"; continue;; esac
     hd=$(( $(hits_of "$A") - $(hits_of "$B") )); ms=$(( $(misses_of "$A") - $(misses_of "$B") ))
     sline "Gradle $name: tasks that can be cached ('Build cache key for task')" "$SKEYS" "4"
     sline "Gradle $name: taken from the cache (FROM-CACHE lines)" "$SFC" "$w_fc"
@@ -654,12 +657,18 @@ scenario_s() {
     echo "OBS S Gradle $name: summary line: ${SSUM}"
     [ "$name" = repeat ] && { case "$SSUM" in *"8 actionable tasks: 4 executed, 4 from cache"*) echo "OBS S the repeat build said '8 actionable tasks: 4 executed, 4 from cache', as the page says";; *) fail "S the page says the repeat build printed '8 actionable tasks: 4 executed, 4 from cache'; it printed '${SSUM}'";; esac; }
   done
+  run s-metrics "$W" <<EOF
+curl -s localhost:${SPORT}/metrics | grep -E 'fscache_cache_(hits|misses)_total'
+curl -s localhost:${SPORT}/statusz            # add -u user:password if login is on
+EOF
+  expect s-metrics "fscache_cache_hits_total" "fscache_cache_misses_total" '"cache_hits"' '"cache_misses"'
   stop_server
   # --- Maven: a new empty server, three builds
   start_server s2 "$SPORT" "" "" || return
   for b in cold:0:0:3:0:0 repeat:0:0:0:6:3 change:1:0:3:0:0; do
     IFS=: read -r name ch _ w_miss w_hit w_fc <<<"$b"
     B="$(statusz "$SPORT" x y)"; smbuild "$name" "$ch"; A="$(statusz "$SPORT" x y)"
+    case "$(hits_of "$A")$(misses_of "$A")$(hits_of "$B")$(misses_of "$B")" in *unreadable*) fail "S Maven $name: /statusz was unreadable"; continue;; esac
     hd=$(( $(hits_of "$A") - $(hits_of "$B") )); ms=$(( $(misses_of "$A") - $(misses_of "$B") ))
     sline "Maven $name: modules restored ('Found cached build, restoring')" "$SMFC" "$w_fc"
     sline "Maven $name: the server's hits in this build" "$hd" "$w_hit"
