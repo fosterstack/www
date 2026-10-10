@@ -170,16 +170,17 @@ GET the too-large key afterwards                               404
 /statusz, no credentials                                       401</code></pre>
   <ul class="trust">
     <li><strong>Credentials block, no password on the server.</strong> We tested a client with the block against a server with authentication switched off: the build stored an entry and the next build got a hit.</li>
-    <li><strong>The Gradle daemon.</strong> We started a daemon with no password, exported the right one in the same shell, and the next build used it (same daemon process, no restart) and got <code>FROM-CACHE</code>. Then we exported a wrong one and the next build printed the 401 line straight away. We only tested macOS with Gradle 9.8.0.</li>
+    <li><strong>The Gradle daemon.</strong> We started a daemon with no password, exported the right one in the same shell, and the next build used it (same daemon process, no restart) and got <code>FROM-CACHE</code>. Then we exported a wrong one and the next build printed the 401 line straight away. We tested this only on macOS with Gradle 9.8.0; the Linux run below did not repeat it.</li>
     <li><strong>Plain HTTP.</strong> Gradle refuses plain <code>http://</code> unless you opt in with <code>isAllowInsecureProtocol</code>. In our test the address <code>127.0.0.1</code> was let through without it, but the name <code>localhost</code> was refused.</li>
   </ul>
 
-  <p>We ran the page again on a GitHub-hosted Linux machine with FosterStack Cache 0.2.2 and Gradle 9.8.0. Everything matched:</p>
+  <p><strong>Second run, on a GitHub-hosted Linux machine with FosterStack Cache 0.2.2 and Gradle 9.8.0.</strong> The results:</p>
   <ul class="trust">
-    <li>All fourteen results in the list above came out the same.</li>
+    <li>All fourteen status codes in the list above were the same.</li>
     <li>Each of the three ways to supply the password gave <code>:compileJava FROM-CACHE</code>. A wrong password, and none at all, printed the 401 line at the default log level and the build succeeded.</li>
-    <li>An entry over the whole cache size cap got a 413 with the header <code>X-FSCache-Reject: entry-exceeds-cache-cap</code>. The server sent it as <code>X-Fscache-Reject</code>, which is the same header (header names are not case-sensitive). An entry over the per-entry limit got a 413 with no such header.</li>
-    <li>At the default limit, 40 uploads started at once gave 8 answers of 429 and 32 that were accepted. The server held no entries afterwards.</li>
+    <li>An entry bigger than the total cache size limit got a 413 with the header <code>X-FSCache-Reject: entry-exceeds-cache-cap</code>. The server sent the name as <code>X-Fscache-Reject</code>, which is the same header, because header names are not case-sensitive.</li>
+    <li>An entry over the per-entry limit got a 413 with no such header.</li>
+    <li>With the default limit, we started 40 uploads at once and left them unfinished. 8 were refused with a 429 straight away and 32 were still open. The server held no entries afterwards, because no upload was completed.</li>
     <li>A <code>DELETE</code> with the read-only login also got a 403.</li>
   </ul>
   <p class="muted-note"><a href="https://github.com/fosterstack/www/actions/runs/38052086898">The run and its log are public</a>. Not tested there: the 1 GiB default for <code>FSCACHE_MAX_BODY_BYTES</code>, which needs an entry bigger than that.</p>

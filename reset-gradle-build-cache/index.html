@@ -123,7 +123,7 @@ kubectl -n fscache-ns scale deploy/fscache --replicas=1</code></pre>
   <h2>Check it worked</h2>
   <p>The status page at <code>/statusz</code> shows the entry count and the stored size. Both should be zero straight after a reset. For a size cap that fills up on its own, see <a href="/build-cache-server-sizing/">server sizing</a>.</p>
 
-  <p class="muted-note">We ran the Docker, Docker Compose and plain-binary resets again on a GitHub-hosted Linux machine with FosterStack Cache 0.2.2. After each one the server held 0 entries, the key stored before returned 404, and a new write got 201. For the binary, a plain restart first kept the entry, so the empty result came from deleting the data directory. The Kubernetes steps were not run there. <a href="https://github.com/fosterstack/www/actions/runs/38052086898">The run and its log are public</a>.</p>
+  <p class="muted-note">We ran the Docker, Docker Compose and plain-binary resets again on a GitHub-hosted Linux machine with FosterStack Cache 0.2.2. After each one the server held 0 entries and the key stored before returned 404. After the Docker and Docker Compose resets, a new write got 201. For the binary, a plain restart first kept the entry, so the empty result came from deleting the data directory. The Kubernetes steps were not run there. <a href="https://github.com/fosterstack/www/actions/runs/38052086898">The run and its log are public</a>.</p>
 
   <p class="muted-note">Full detail: <a href="https://github.com/fosterstack/cache/blob/main/docs/docker-deploy.md">Docker deploy guide</a>. Related: <a href="/build-cache-docker-compose-production/#gradle-build-cache-docker-compose">Gradle build cache with Docker Compose</a>.</p>
   <div class="cta-row">
