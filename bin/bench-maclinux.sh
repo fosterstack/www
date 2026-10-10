@@ -68,6 +68,7 @@ export JAVA_HOME="$W/tools/jdk/${JDK_HOME_SUB}"
 [ -x "$JAVA_HOME/bin/java" ] || { echo "no usable Java at $JAVA_HOME" >&2; exit 1; }
 export PATH="$W/tools/bin:$JAVA_HOME/bin:$PATH"
 command -v sha256sum >/dev/null 2>&1 || { printf '#!/bin/sh\nexec shasum -a 256 "$@"\n' > bin/sha256sum; chmod +x bin/sha256sum; }
+unset GH_TOKEN GITHUB_TOKEN
 for t in gh cosign gradle curl python3 tar; do command -v "$t" >/dev/null || { echo "missing tool: $t" >&2; exit 1; }; done
 
 echo "== DISCLOSURE"
@@ -78,6 +79,8 @@ echo "release under test: FosterStack Cache ${VER} (${PLATFORM}), downloaded wit
 echo "NOT pinned: the Maven build-cache extension ${EXT_VER}, the Maven plugins (all versions pinned in the pom but fetched from Maven Central) and JUnit"
 echo "invented here: the Gradle project (rootProject.name, build.gradle.kts, App.java), the Maven pom with two tests, test passwords; the server listens on 127.0.0.1:${PORT} only"
 echo "Gradle's own local cache is off (local { isEnabled = false }), the Gradle home and ~/.m2 are new and empty, so a hit can only come from the server"
+echo "differences from the page's own runs (said again on the page): ONE Gradle module here (the page's run had four); a login is set (the page's runs had none); both systems here are GitHub-hosted VMs (Linux amd64, macOS arm64), not a Linux container on the Mac; the cache server runs on the machine that restores, on a data folder carried over from the machine that stored; the same Java build on both sides (the page's Maven run had 21.0.12.1 on the Mac and 21.0.7 on Linux)"
+echo "gh runs with no login (the release downloads without one); gh $(gh --version | head -1 | cut -d' ' -f3), python3 $(python3 --version 2>&1 | cut -d' ' -f2), curl $(curl --version | head -1 | cut -d' ' -f2) are the runner's own, not pinned"
 echo "what crosses between the two jobs: only the cache server's data folder, packed from a server that was stopped first; it holds the made-up projects' build results and nothing else"
 
 # ---------- helpers ----------
@@ -104,18 +107,22 @@ expect release-download-verify "Verified OK" "fscache_${VER}_${PLATFORM}.tar.gz:
 if [ "$RC" != 0 ] || ! grep -qF "Verified OK" "$W/release-download-verify.out"; then fail "the release did not verify: no server is started"; echo "FAILURES $FAILS"; exit 1; fi
 tar -xzf "$REL/fscache_${VER}_${PLATFORM}.tar.gz" -C "$REL" || { echo "could not unpack the verified release" >&2; exit 1; }
 
-DATA="$W/data"; mkdir -p "$DATA"
+DATA="$W/data"; mkdir -p "$DATA"; EXPECT_ENTRIES=""
 if [ "$ROLE" = restore ]; then
   [ -f "$IN/cache-data.tgz" ] || { fail "no data folder was handed over from the other job (expected $IN/cache-data.tgz)"; echo "FAILURES $FAILS"; exit 1; }
-  tar -xzf "$IN/cache-data.tgz" -C "$DATA" || { fail "could not unpack the handed-over data folder"; echo "FAILURES $FAILS"; exit 1; }
-  echo "OBS handed over: $(find "$DATA" -type f | wc -l | tr -d ' ') files from the other operating system's server"
+  mkdir -p "$W/unpack"
+  tar -xzf "$IN/cache-data.tgz" -C "$W/unpack" || { fail "could not unpack the handed-over data folder"; echo "FAILURES $FAILS"; exit 1; }
+  [ -d "$W/unpack/data" ] && [ -f "$W/unpack/entries.txt" ] || { fail "the handed-over file does not hold a data folder and entries.txt"; echo "FAILURES $FAILS"; exit 1; }
+  rm -rf "${DATA:?}"; mv "$W/unpack/data" "$DATA"; EXPECT_ENTRIES="$(tr -d ' \n' < "$W/unpack/entries.txt")"
+  echo "OBS handed over: $(find "$DATA" -type f | wc -l | tr -d ' ') files from the other operating system's server; its server held ${EXPECT_ENTRIES} entries when it was stopped"
 fi
+curl -sf --max-time 5 "localhost:${PORT}/healthz" >/dev/null 2>&1 && { echo "something already answers on port ${PORT}: not starting" >&2; exit 1; }
 ( cd "$W" && exec env FSCACHE_ADDR="127.0.0.1:${PORT}" FSCACHE_DATA_DIR="$DATA" FSCACHE_USERNAME="$USER_NAME" FSCACHE_PASSWORD="$PASS" "$REL/fscache" ) > "$W/server.log" 2>&1 &
 SERVER_PID=$!
-wait_up || { fail "the server did not answer on ${PORT}"; sed 's/^/    | /' "$W/server.log" | tail -5; echo "FAILURES $FAILS"; exit 1; }
+wait_up && kill -0 "$SERVER_PID" 2>/dev/null || { fail "the server did not answer on ${PORT}"; sed 's/^/    | /' "$W/server.log" | tail -5; echo "FAILURES $FAILS"; exit 1; }
 S0="$(statusz)"; echo "OBS server at the start: ${S0}"
 if [ "$ROLE" = store ]; then [ "$(num "$S0" entries)" = 0 ] || fail "the store job's server did not start empty (${S0})"; fi
-if [ "$ROLE" = restore ]; then [ "$(num "$S0" entries)" -gt 0 ] 2>/dev/null || fail "the handed-over server holds no entries (${S0})"; fi
+if [ "$ROLE" = restore ]; then [ "$(num "$S0" entries)" = "$EXPECT_ENTRIES" ] 2>/dev/null || fail "the restored server holds $(num "$S0" entries) entries, but the other job's server held ${EXPECT_ENTRIES} when it stopped (${S0})"; fi
 
 # ---------- the two projects (identical text on both operating systems) ----------
 gradle_project() { # DIR
@@ -222,7 +229,9 @@ if [ "$ROLE" = store ]; then
   [ "$(num "$HA" entries)" -gt "$(num "$HB" entries)" ] 2>/dev/null || fail "Gradle (store): nothing was stored on the server (${HB} -> ${HA})"
 else
   expect gradle-build "BUILD SUCCESSFUL" "> Task :compileJava FROM-CACHE"
+  grep -E "^> Task :compileJava$" "$W/gradle-build.out" >/dev/null && fail "Gradle (restore): compileJava ran instead of coming from the cache"
   [ "$(num "$HA" hits)" -gt "$(num "$HB" hits)" ] 2>/dev/null || fail "Gradle (restore): FROM-CACHE was printed but the server counted no hit (${HB} -> ${HA})"
+  echo "OBS Gradle (restore): the FROM-CACHE line is the proof for compileJava; the hit counter is supporting (it also counts the compiled build script, which is why one build can show 2 hits); misses before/after: $(num "$HB" misses)/$(num "$HA" misses)"
 fi
 gradle --stop >/dev/null 2>&1 || true
 
@@ -244,14 +253,17 @@ if [ "$ROLE" = store ]; then
   [ "$(num "$HA" entries)" -gt "$(num "$HB" entries)" ] 2>/dev/null || fail "Maven (store): nothing was stored on the server (${HB} -> ${HA})"
 else
   expect maven-build "Found cached build, restoring demo:mtest from cache by checksum" "BUILD SUCCESS"
+  grep -qF "Compiling" "$W/maven-build.out" && fail "Maven (restore): the build printed Compiling, so it did not restore everything from the cache"
+  echo "OBS Maven (restore): a restored build can still save a small report file (entries ${HB} -> ${HA}); misses before/after: $(num "$HB" misses)/$(num "$HA" misses)"
   [ "$(num "$HA" hits)" -gt "$(num "$HB" hits)" ] 2>/dev/null || fail "Maven (restore): the build said it restored but the server counted no hit (${HB} -> ${HA})"
 fi
 export HOME="$ORIGHOME"; unset MAVEN_OPTS
 
 # ---------- hand the data folder over (store role) ----------
-stop_server
+FINAL="$(statusz)"; stop_server
 if [ "$ROLE" = store ]; then
-  tar -czf "$OUT/cache-data.tgz" -C "$DATA" . || fail "could not pack the server's data folder"
+  mkdir -p "$W/pack"; cp -R "$DATA" "$W/pack/data"; printf '%s\n' "$(num "$FINAL" entries)" > "$W/pack/entries.txt"
+  tar -czf "$OUT/cache-data.tgz" -C "$W/pack" data entries.txt || fail "could not pack the server's data folder"
   echo "OBS packed the server's data folder: $(find "$DATA" -type f | wc -l | tr -d ' ') files, $(wc -c < "$OUT/cache-data.tgz" | tr -d ' ') bytes (the only thing that leaves this job)"
 fi
 echo
