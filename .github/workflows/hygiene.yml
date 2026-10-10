@@ -25,6 +25,7 @@ on:
           - howto-pages-3
           - k8s-page
           - ga-page
+          - howto-pages-4
         default: miss-cost
 
 permissions:
@@ -400,6 +401,23 @@ jobs:
       - name: result
         if: always()
         run: bash bin/bench-ga-page.sh finish
+
+  # End-to-end runs of three more how-to pages (enable/disable the build cache, authentication and status codes, reset the cache).
+  # Same rules as the other howto jobs: manual dispatch only, chosen with the "which" input (compared in this `if` only), no token and
+  # no secret, read-only token not persisted. Gradle and cosign are checked against pinned sha256 values; the release binary is
+  # verified (cosign and sha256) before it runs; the cache image is pinned by digest and verified with cosign by digest before docker
+  # runs it. The Docker Compose file of the reset page publishes 8080 on this runner for a few seconds behind a made-up password.
+  bench-howto-pages-4:
+    if: github.event_name == 'workflow_dispatch' && inputs.which == 'howto-pages-4'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: follow the pages' commands as written and check what they promise
+        run: bash bin/bench-howto-pages-4.sh
 
   # Does a build result stored from Linux restore on a Mac, and the other way round (the claim of the laptop page)? Manual
   # dispatch only, chosen with the "which" input (compared in each `if` only). Two chains of two jobs: a Linux job builds against a
