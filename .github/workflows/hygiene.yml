@@ -807,6 +807,7 @@ jobs:
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           TAG: ${{ needs.proof-watch.outputs.tag }}
           WATCH_REASON: ${{ needs.proof-watch.outputs.reason }}
+          WATCH_RUN: ${{ needs.proof-watch.outputs.run }}
           MODE: ${{ github.event_name == 'schedule' && 'schedule' || 'selftest' }}
           OUT_FILE: proven-release.txt
         run: bash bin/proof-report.sh

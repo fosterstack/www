@@ -23,14 +23,15 @@ pages_of() { awk -F'\t' -v j="$1" '$1 == j { print $2; exit }' "$HERE/proof-page
 
 jobs_json="$(gh api "repos/${REPO}/actions/runs/${RUN_ID}/jobs?per_page=100" --paginate 2>/dev/null)" || { echo "proof-report: the jobs of this run could not be read: not reporting green" >&2; exit 1; }
 failed="$(printf '%s' "$jobs_json" | python3 -c '
-import sys, json
+import sys, json, os
 dec = json.JSONDecoder(); s = sys.stdin.read().strip(); i = 0; jobs = []
 while i < len(s):
     obj, n = dec.raw_decode(s, i); i = n
     while i < len(s) and s[i] in " \n": i += 1
     jobs += obj.get("jobs", [])
 for j in jobs:
-    if j.get("conclusion") not in ("success", "skipped", None) or (j.get("conclusion") is None and j.get("status") == "completed"):
+    skipped_bench = os.environ.get("WATCH_RUN") == "true" and j.get("conclusion") == "skipped" and j.get("name", "").startswith(("bench-", "demo-"))   # a proof run that skipped a bench job proved nothing for it
+    if skipped_bench or j.get("conclusion") not in ("success", "skipped", None) or (j.get("conclusion") is None and j.get("status") == "completed"):
         steps = [st["name"] for st in j.get("steps", []) if st.get("conclusion") == "failure"]
         print("%s\t%s\t%s" % (j["id"], j["name"], "; ".join(steps) or "(no failing step recorded; job result: %s)" % j.get("conclusion")))
 if not jobs: sys.exit(3)
