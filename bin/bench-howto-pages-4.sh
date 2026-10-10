@@ -11,8 +11,6 @@
 #
 # No token and no secret. Gradle and cosign are downloaded and checked against pinned sha256 values; the release binary is verified
 # (cosign + sha256) before it runs; the cache image is pinned by digest and verified with cosign by digest before docker runs it.
-# against pinned checksums; Docker and Compose are the runner's own, and the cache image is verified with cosign before it is run. NOT
-# pinned (said again in the output): the Maven build-cache extension, the Maven plugins and JUnit from Maven Central.
 set -uo pipefail
 
 VER=0.2.2                                    # the release the pages name
@@ -23,10 +21,6 @@ GR_URL="https://services.gradle.org/distributions/gradle-${GR_VER}-all.zip"
 GR_SHA=46ac66d47f30f3dacfdf306e0b714a91a34fb94a22ba0a744b280933f47bc0cf
 COSIGN_VER=3.1.3
 COSIGN_SHA=4629c757b7618056f8ddd7e2625ae9fdd94c0372a65049520bc7d9df9efc7f71
-EXT_VER=1.2.3
-RW_USER=ci;  RW_PASS='rw-test-secret-not-real'
-RO_USER=dev; RO_PASS='ro-test-secret-not-real'
-COMPOSE_PASS='change-me'                     # the password the production page's files show
 
 FAILS=0
 now() { date +%s.%N; }
@@ -36,7 +30,6 @@ sha_check() { # file sha256
   if command -v sha256sum >/dev/null 2>&1; then echo "$2  $1" | sha256sum -c - >/dev/null || { echo "CHECKSUM MISMATCH: $1" >&2; exit 2; }
   else echo "$2  $1" | shasum -a 256 -c - >/dev/null || { echo "CHECKSUM MISMATCH: $1" >&2; exit 2; }; fi
 }
-sha512_check() { echo "$2  $1" | { sha512sum -c - 2>/dev/null || shasum -a 512 -c - ; } >/dev/null || { echo "CHECKSUM MISMATCH: $1" >&2; exit 2; }; }
 
 if [ -n "${BENCH_WORK:-}" ]; then W="$BENCH_WORK"; mkdir -p "$W"; else W="$(mktemp -d)"; fi
 SERVER_PID=""; SERVER_PORT=""
@@ -83,14 +76,13 @@ echo "java: $("$JDK21_HOME/bin/java" -version 2>&1 | head -1)   gradle: $(gradle
 if [ "$LOCAL" = 1 ]; then echo "tools: LOCAL tools in use, nothing checked (a developer's dry run: do not quote these times)"; else
   echo "tools: Gradle ${GR_VER} and cosign ${COSIGN_VER} are downloaded and checked against pinned sha256 values before use; Java 21 and Docker are the runner's own"; fi
 echo "release under test: FosterStack Cache ${VER}, downloaded with no login and verified (cosign + sha256) before it runs (binary servers); the image is pulled by tag, must equal the pinned digest, and is verified with cosign by digest before docker runs it"
-echo "invented by this script (the pages show none): the Gradle projects (four modules for L, one for M) and their sources, test passwords; the Docker Compose file for N is the quick-start file of /build-cache-docker-compose-production/; the pages' hard-coded ports (18141, 18099) are used as written"
+echo "invented by this script (the pages show none): the Gradle projects (four modules for L, one for M) and their sources, test passwords; the Docker Compose file for N is the quick-start file of /build-cache-docker-compose-production/ with the password the page itself prints (change-me), published on 0.0.0.0:8080 of the runner until the script takes it down; the pages' hard-coded ports (18141, 18099) are used as written"
 echo "differences from the pages' own runs: Linux amd64 (the pages: macOS arm64), release ${VER} (the pages: 0.2.1), Gradle ${GR_VER} with the runner's Java 21 (the pages: Java 27 for L)"
-echo "Gradle runs use a new empty Gradle home and a fresh project copy each, no wrapper; Gradle's own local cache is switched off exactly where the pages switch it off"
-echo "NOT tested here: the Kubernetes reset of /reset-gradle-build-cache/ (kubectl scale, delete pvc, apply, scale: covered by a later kind job), Maven, a daemon picking up a changed password (tested in the not-working page's job)"
+echo "Gradle runs use a new empty Gradle home and a fresh project copy each, no wrapper; Gradle's own local cache is switched off where the enable/disable page switches it off (its settings block); in scenario M this script switches it off as well, which the authentication page's block does not show, so that a hit can only come from the server"
+echo "NOT tested here: the Kubernetes reset of /reset-gradle-build-cache/ (kubectl scale, delete pvc, apply, scale: covered by a later kind job), Maven, a daemon picking up a changed password (tested in the not-working page's job), FSCACHE_MAX_BODY_BYTES defaulting to 1 GiB (the largest entry here is 8 KiB), the plain-HTTP bullet and a credentials block against a server with no password (tested in the not-working and migrate pages' jobs), writes other than PUT (a DELETE with the read-only login is only reported), the 'Configuration cache' walk-through's project is one module (the page's table runs use four)"
 echo "page commands run with 'bash -o pipefail'; a runner times commands, not people"
 
 export GRADLE_USER_HOME="$W/gradle-home"
-mvnhome="$W/mvn-home"; mkdir -p "$mvnhome/.m2"
 
 # ---------- helpers ----------
 run() { # NAME DIR  (command text on stdin)
@@ -153,114 +145,10 @@ start_server() { # NAME PORT USER PASS [KEY=VALUE ...]   (127.0.0.1 only; each s
 }
 
 # ---------- project writers ----------
-gradle_project() { # DIR URL PUSHEXPR USEREXPR PASSEXPR  (settings as the CI-writes page shows it, plus the line that turns Gradle's own cache off)
-  local d="$1"; rm -rf "${d:?}"; mkdir -p "$d/src/main/java/demo"
-  cat > "$d/settings.gradle.kts" <<EOF
-rootProject.name = "demo"
-
-// FosterStack Cache — remote Gradle build cache.
-// https://github.com/fosterstack/cache
-buildCache {
-    local { isEnabled = false } // so a hit can only come from the remote
-    remote<HttpBuildCache> {
-        url = uri("$2")
-        // CI pushes; everyone else only reads
-        isPush = $3
-        credentials {
-            username = $4
-            password = $5
-        }
-    }
-}
-EOF
-  printf 'org.gradle.caching=true\n' > "$d/gradle.properties"
-  printf 'plugins { java }\n' > "$d/build.gradle.kts"
-  gradle_code "$d" 1
-}
 gradle_code() { # DIR N  (N changes what is compiled)
   printf 'package demo;\n\npublic class App {\n    public static void main(String[] args) {\n        System.out.println("hello %s");\n    }\n}\n' "$2" > "$1/src/main/java/demo/App.java"
 }
-mvn_project() { # DIR PIN(0|1) SAVEFILE(0|1) URL CODE
-  local d="$1" pin="$2" save="$3" url="$4" code="$5"
-  rm -rf "${d:?}"; mkdir -p "$d/.mvn" "$d/src/main/java/demo" "$d/src/test/java/demo"
-  cat > "$d/.mvn/extensions.xml" <<EOF
-<extensions>
-  <extension>
-    <groupId>org.apache.maven.extensions</groupId>
-    <artifactId>maven-build-cache-extension</artifactId>
-    <version>${EXT_VER}</version>
-  </extension>
-</extensions>
-EOF
-  local remote='<remote enabled="true" id="fosterstack-cache">'
-  [ "$save" = 1 ] && remote='<remote enabled="true" saveToRemote="true" id="fosterstack-cache">'
-  cat > "$d/.mvn/maven-build-cache-config.xml" <<EOF
-<?xml version="1.0" encoding="UTF-8"?>
-<cache xmlns="http://maven.apache.org/BUILD-CACHE-CONFIG/1.2.0"
-       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-       xsi:schemaLocation="http://maven.apache.org/BUILD-CACHE-CONFIG/1.2.0 https://maven.apache.org/xsd/build-cache-config-1.2.0.xsd">
-  <configuration>
-    <enabled>true</enabled>
-    ${remote}
-      <url>${url}</url>
-    </remote>
-  </configuration>
-</cache>
-EOF
-  local mgmt=""
-  if [ "$pin" = 1 ]; then mgmt='<pluginManagement><plugins>
-      <plugin><artifactId>maven-clean-plugin</artifactId><version>3.4.0</version></plugin>
-      <plugin><artifactId>maven-resources-plugin</artifactId><version>3.3.1</version></plugin>
-      <plugin><artifactId>maven-compiler-plugin</artifactId><version>3.13.0</version></plugin>
-      <plugin><artifactId>maven-surefire-plugin</artifactId><version>3.5.2</version></plugin>
-      <plugin><artifactId>maven-jar-plugin</artifactId><version>3.4.2</version></plugin>
-      <plugin><artifactId>maven-install-plugin</artifactId><version>3.1.3</version></plugin>
-      <plugin><artifactId>maven-deploy-plugin</artifactId><version>3.1.3</version></plugin>
-      <plugin><artifactId>maven-site-plugin</artifactId><version>3.12.1</version></plugin>
-    </plugins></pluginManagement>'; fi
-  cat > "$d/pom.xml" <<EOF
-<project xmlns="http://maven.apache.org/POM/4.0.0">
-  <modelVersion>4.0.0</modelVersion>
-  <groupId>demo</groupId>
-  <artifactId>mtest</artifactId>
-  <version>1.0</version>
-  <packaging>jar</packaging>
-  <properties>
-    <maven.compiler.release>17</maven.compiler.release>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-  </properties>
-  <dependencies>
-    <dependency><groupId>org.junit.jupiter</groupId><artifactId>junit-jupiter</artifactId><version>5.11.4</version><scope>test</scope></dependency>
-  </dependencies>
-  <build>
-    ${mgmt}
-  </build>
-</project>
-EOF
-  printf 'package demo;\n\npublic class App {\n    public static String hello() { return "hello %s"; }\n}\n' "$code" > "$d/src/main/java/demo/App.java"
-  cat > "$d/src/test/java/demo/AppTest.java" <<'EOF'
-package demo;
-
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import org.junit.jupiter.api.Test;
-
-class AppTest {
-    @Test void startsWithHello() { assertTrue(App.hello().startsWith("hello")); }
-    @Test void isNotEmpty() { assertTrue(App.hello().length() > 0); }
-}
-EOF
-}
-write_settings() { # SIDE(rw|ro|none)  -> ~/.m2/settings.xml of the isolated home
-  case "$1" in
-    rw)   printf '<settings>\n  <servers>\n    <server>\n      <id>fosterstack-cache</id>\n      <username>%s</username>\n      <password>%s</password>\n    </server>\n  </servers>\n</settings>\n' "$RW_USER" "$RW_PASS" > "$mvnhome/.m2/settings.xml";;
-    ro)   printf '<settings>\n  <servers>\n    <server>\n      <id>fosterstack-cache</id>\n      <username>%s</username>\n      <password>%s</password>\n    </server>\n  </servers>\n</settings>\n' "$RO_USER" "$RO_PASS" > "$mvnhome/.m2/settings.xml";;
-    none) printf '<settings>\n</settings>\n' > "$mvnhome/.m2/settings.xml";;
-  esac
-}
-mvn_env() { ORIGHOME="$HOME"; export HOME="$mvnhome"; export MAVEN_OPTS="-Duser.home=${mvnhome}"; }
-mvn_env_off() { export HOME="$ORIGHOME"; unset MAVEN_OPTS; }
-
-
+# =====================================================================================
 # images (scenario N): the pinned digest of the release under test
 IMG=ghcr.io/fosterstack/cache
 IMG_022=sha256:f2b330cf27b3814405230cc001a771909ae5bbf3b1e223a90ee7a9ee5d0e53dd
@@ -312,6 +200,7 @@ scenario_l() {
   l_project "$D/p2"; S="$(statusn)"
   lgradle nothing "$D/p2" 0 ':core:compileJava'
   expect l-nothing "BUILD SUCCESSFUL" "> Task :core:compileJava"; absent l-nothing "FROM-CACHE"
+  [ "$(entries_of "$S")" -ge 0 ] 2>/dev/null || fail "L row 2: the server's status page could not be read ($S)"
   [ "$(statusn)" = "$S" ] && echo "OBS L row 2 (nothing set): ran, the cache was not used (the server's counters did not move)" || fail "L row 2: with nothing set the server saw requests ($S -> $(statusn))"
   l_project "$D/p3"; lgradle flag2 "$D/p3" 0 ':core:compileJava --build-cache'
   expect l-flag2 "BUILD SUCCESSFUL" "> Task :core:compileJava FROM-CACHE"
@@ -406,6 +295,7 @@ scenario_m() {
   check_code "M PUT 2048 bytes (limit set to 1024), read-write login" 413 -X PUT --data-binary @"$D/two-kb" -u "gradle:$RWP" "$B/toolarge"
   check_code "M GET the too-large key afterwards" 404 -u "gradle:$RWP" "$B/toolarge"
   check_code "M /statusz, no credentials" 401 "$B/statusz"
+  echo "OBS M a DELETE with the read-only login answers HTTP $(http_code -X DELETE -u "reader:$ROP" "$B/storedkey") (the page says any write gets 403; only PUT is asserted)"
   # 413 for a per-entry limit has no X-FSCache-Reject header
   k="$(curl -s --max-time 20 -D - -o /dev/null -X PUT --data-binary @"$D/two-kb" -u "gradle:$RWP" "$B/toolarge2" | tr -d '\r')"
   case "$(printf '%s' "$k" | tr 'A-Z' 'a-z')" in *"x-fscache-reject"*) fail "M 413 over the per-entry limit: the page says no X-FSCache-Reject header, but the response has one ($k)";; *) echo "OBS M 413 over the per-entry limit: no X-FSCache-Reject header, as the page says";; esac
@@ -458,9 +348,9 @@ EOF
   echo "OBS M way 3 (the command line, -P): :compileJava FROM-CACHE"
   # the 401 line at the default log level, with a wrong password and with none
   m_project "$D/g5" 'System.getenv("FSCACHE_PASSWORD")'; m_run wrong "$D/g5" none "wrong-password"
-  expect m-wrong "BUILD SUCCESSFUL" "response status 401: Unauthorized" "Could not load entry"
+  expect m-wrong "BUILD SUCCESSFUL" "Could not load entry" "from remote build cache: Loading entry from 'http://127.0.0.1:18099/" "response status 401: Unauthorized"
   m_project "$D/g6" 'System.getenv("FSCACHE_PASSWORD")'; m_run none "$D/g6" none ""
-  expect m-none "BUILD SUCCESSFUL" "response status 401: Unauthorized" "Could not load entry"
+  expect m-none "BUILD SUCCESSFUL" "Could not load entry" "from remote build cache: Loading entry from 'http://127.0.0.1:18099/" "response status 401: Unauthorized"
   echo "OBS M 401: with a wrong password and with none, the default log level printed 'Could not load entry ... response status 401: Unauthorized' and the build succeeded"
   for g in "$W"/mg-*; do GRADLE_USER_HOME="$g" "$GRADLE_BIN" --stop >/dev/null 2>&1; done
   stop_server
@@ -495,8 +385,9 @@ print("429:", codes.count("429"), "waiting:", codes.count("waiting"), "other:", 
 for s in socks: s.close()
 PYEOF
   cat "$W/m-429.out"
-  grep -q "^429: 8 " "$W/m-429.out" && echo "OBS M 429: 40 uploads started at once, 32 were accepted and 8 got 429, as the page says (the server allows 32 by default)" || fail "M 429: expected 8 of 40 simultaneous uploads to get 429 at the default limit of 32 ($(cat "$W/m-429.out"))"
-  S="$(statusz "$P" gradle "$RWP")"; echo "OBS M after the 429 test the server holds: ${S} (a refused upload stores nothing)"
+  grep -qx "429: 8 waiting: 32 other: \[\]" "$W/m-429.out" && echo "OBS M 429: 40 uploads started at once, 32 were accepted and 8 got 429, as the page says (the server allows 32 by default)" || fail "M 429: expected 8 of 40 simultaneous uploads to get 429 at the default limit of 32 ($(cat "$W/m-429.out"))"
+  S="$(statusz "$P" gradle "$RWP")"
+  [ "$(entries_of "$S")" = 0 ] && echo "OBS M after the 429 test the server holds 0 entries (${S}): a refused upload stores nothing, as the page says" || fail "M after the 429 test the server holds entries (${S}), but the page says a refused upload stores nothing"
   stop_server
 }
 
@@ -539,6 +430,7 @@ curl -s localhost:8080/statusz | grep -E '"store_entries"|"store_bytes"'
 curl -s localhost:8080/testkey -o /dev/null -w 'GET testkey %{http_code}\n'
 EOF
   expect n-check '"store_bytes": 0,' '"store_entries": 0,' "GET testkey 404"
+  check_code "N plain Docker: a write after the reset (the fresh volume is writable by the server)" 201 -X PUT --data-binary 'x' localhost:8080/afterreset
   docker rm -f fscache >/dev/null 2>&1; docker volume rm fscache-data >/dev/null 2>&1
   # --- Docker Compose: the page's one line, with the quick-start Compose file of the Docker page
   mkdir -p "$D/compose"
@@ -572,10 +464,17 @@ EOF
   expect n-compose-reset; wait_up 8080 || { fail "N Compose: nothing answered on 8080 after the reset"; return; }
   S="$(statusz 8080 gradle change-me)"; [ "$(entries_of "$S")" = 0 ] && echo "OBS N Compose: after docker compose down -v && docker compose up -d the server holds 0 entries (${S})" || fail "N Compose: after the reset the server should hold 0 entries (${S})"
   check_code "N Compose: the stored key after the reset" 404 -u gradle:change-me localhost:8080/testkey
-  docker compose down -v >/dev/null 2>&1
+  check_code "N Compose: a write after the reset (the fresh volume is writable by the server)" 201 -X PUT --data-binary 'x' -u gradle:change-me localhost:8080/afterreset
+  ( cd "$D/compose" && docker compose down -v >/dev/null 2>&1 )
   # --- a plain binary: stop the process, delete the data directory, start it again
   start_server n-bin 8081 "" "" || return
   check_code "N binary: store one entry" 201 -X PUT --data-binary 'x' localhost:8081/testkey
+  stop_server
+  [ -d "$W/srv-n-bin/data" ] || { fail "N binary: the server's data directory (data, next to the binary) does not exist, so the page's 'delete the data directory' has nothing to delete here"; return; }
+  # control: a plain restart keeps the entry (otherwise 0 entries after the delete would prove nothing)
+  ( cd "$W/srv-n-bin" && exec env FSCACHE_ADDR="127.0.0.1:8081" ./fscache ) > "$W/srv-n-bin/again0.log" 2>&1 &
+  SERVER_PID=$!; SERVER_PORT=8081; wait_up 8081 || { fail "N binary: the server did not restart"; stop_server; return; }
+  S="$(statusz 8081 x y)"; [ "$(entries_of "$S")" = 1 ] && echo "OBS N binary control: after a plain restart the entry is still there (${S})" || fail "N binary control: after a plain restart the stored entry is gone (${S}), so deleting the data directory proves nothing"
   stop_server; rm -rf "${W:?}/srv-n-bin/data"
   ( cd "$W/srv-n-bin" && exec env FSCACHE_ADDR="127.0.0.1:8081" ./fscache ) > "$W/srv-n-bin/again.log" 2>&1 &
   SERVER_PID=$!; SERVER_PORT=8081; wait_up 8081 || { fail "N binary: the server did not start after its data directory was deleted"; stop_server; return; }

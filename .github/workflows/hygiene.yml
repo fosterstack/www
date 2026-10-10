@@ -406,7 +406,8 @@ jobs:
   # Same rules as the other howto jobs: manual dispatch only, chosen with the "which" input (compared in this `if` only), no token and
   # no secret, read-only token not persisted. Gradle and cosign are checked against pinned sha256 values; the release binary is
   # verified (cosign and sha256) before it runs; the cache image is pinned by digest and verified with cosign by digest before docker
-  # runs it. The Docker Compose file of the reset page publishes 8080 on this runner for a few seconds behind a made-up password.
+  # runs it. The Docker Compose file of the reset page publishes 8080 on all interfaces of this runner, behind the password change-me
+  # that the page itself prints, until the script takes it down (the runner has no inbound traffic and is thrown away after the job).
   bench-howto-pages-4:
     if: github.event_name == 'workflow_dispatch' && inputs.which == 'howto-pages-4'
     runs-on: ubuntu-latest
