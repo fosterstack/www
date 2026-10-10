@@ -96,7 +96,7 @@
     <li><strong>Server not running, or gone since the last build:</strong> the build succeeded in Gradle and in Maven. Everything was built locally, and a warning was printed.</li>
     <li><strong>Wrong password (401):</strong> the same. The build succeeded and warned.</li>
     <li><strong>Read-only login that tries to store a result (403):</strong> in Gradle the build succeeded and warned. We did not run this one in Maven.</li>
-    <li><strong>An address that never answers:</strong> the build still succeeded. In our timed Gradle runs it first waited about 30 seconds, which took a 13-second build to 44 seconds. Maven also waited; we did not time it. A refused connection showed no clear extra time.</li>
+    <li><strong>An address that never answers:</strong> the build still succeeded. In our timed Gradle runs it first waited about 30 seconds, which took a 13-second build to 44 seconds. Maven also waited; we did not time it. A refused connection, where nothing listens at the address, showed no clear extra time.</li>
   </ul>
   <p>The warnings look different. Gradle printed one warning and then a line saying the remote cache was disabled. Maven printed an <code>[ERROR]</code> line, and then a Java stack trace for each upload it could not make, even though the build succeeded.</p>
   <h2>What to do</h2>
