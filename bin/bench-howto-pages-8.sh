@@ -330,8 +330,9 @@ ubuild_wait() { # NAME   -> waits for the build to end
   [ -f "$W/u-$name.rc" ] || { fail "U build $name did not end in 5 minutes"; return 1; }
   rm -rf "$W/ug-$name"
 }
-ubuild() { # NAME DIR  -> runs the build and waits
+ubuild() { # NAME DIR  -> runs the build and waits; the page says every build ended with BUILD SUCCESSFUL
   ubuild_start "$1" "$2"; ubuild_wait "$1"
+  uok "$1" || fail "U build $1: the page says every build ended with BUILD SUCCESSFUL; it did not (exit $(cat "$W/u-$1.rc" 2>/dev/null))"
 }
 uheaders() { grep -cE '^> Task :[a-z]+:slow$' "$W/u-$1.out" 2>/dev/null || true; }
 ufc() { grep -cE '^> Task :[a-z]+:slow FROM-CACHE$' "$W/u-$1.out" 2>/dev/null || true; }
@@ -373,6 +374,7 @@ scenario_u() {
   stop_server
   u_project "$D/d1"; ubuild d1 "$D/d1"
   want "a build while the server is stopped: 'Could not load entry' lines" "$(grep -cF 'Could not load entry' "$W/u-d1.out")" 1
+  grep -qF "The remote build cache was disabled during the build due to errors" "$W/u-d1.out" && echo "OBS U ...then the remote cache was disabled for the rest of that build" || fail "U the page says the remote cache was disabled after the warning (build while the server is stopped)"
   want "...and it built all four modules locally (tasks from cache)" "$(ufc d1)" 0
   [ "$(uheaders d1)" = 4 ] || fail "U the page says it built all four modules; $(uheaders d1) slow tasks ran"
   ( cd "$W/srv-u-down" && exec env FSCACHE_ADDR="127.0.0.1:${P}" FSCACHE_DATA_DIR="$W/srv-u-down/data" ./fscache ) >> "$W/srv-u-down/server.log" 2>&1 &
@@ -418,7 +420,7 @@ PYEOF
   done
   # --- an upload in progress when the server stops
   head -c 20971520 /dev/zero > "$W/u/f20"; head -c 41943040 /dev/zero > "$W/u/f40"
-  local up rc el_stop exit_rc tmpsz
+  local up rc el_stop exit_rc tmpsz tmpmb
   for row in 20:normal 20:kill 40:normal; do
     n="${row%%:*}"; mode="${row##*:}"
     start_server u-up "$P" "" "" || return
@@ -432,9 +434,14 @@ PYEOF
     wait "$UPLOAD_PID" 2>/dev/null
     up="$(cat "$W/u/up.code" 2>/dev/null)"; rc="$(cat "$W/u/up.rc" 2>/dev/null)"
     tmpsz="$(find "$W/srv-u-up/data" -type f -size +1M -exec ls -l {} \; 2>/dev/null | awk '{print int($5/1048576)" MiB"}' | tr '\n' ' ')"
+    tmpmb="$(find "$W/srv-u-up/data" -type f -size +1M -exec ls -l {} \; 2>/dev/null | awk '{print int($5/1048576)}' | sort -n | tail -n 1)"   # measured before the server is started again
     echo "OBS U ${n} MiB upload at 2 MiB/s, $mode stop after 3 s: the server exited after ${el_stop} s with code ${exit_rc}; the upload ended with HTTP '${up}' (curl exit ${rc}); files over 1 MiB left in the data folder: ${tmpsz:-none}"
     ( cd "$W/srv-u-up" && exec env FSCACHE_ADDR="127.0.0.1:${P}" FSCACHE_DATA_DIR="$W/srv-u-up/data" ./fscache ) >> "$W/srv-u-up/server.log" 2>&1 &
     SERVER_PID=$!; SERVER_PORT=$P; wait_up "$P" || fail "U the server did not restart after the upload row $row"
+    case "$row" in
+      20:kill)  [ "${tmpmb:-0}" -ge 3 ] && [ "${tmpmb:-0}" -le 9 ] && echo "OBS U ...a ${tmpmb} MiB temporary file stayed behind after the kill (the page: 6 MiB)" || fail "U 20 MiB kill: the page says a 6 MiB temporary file stayed behind; the largest file over 1 MiB was '${tmpmb:-none}' MiB";;
+      40:normal) [ "${tmpmb:-0}" -ge 20 ] && [ "${tmpmb:-0}" -le 32 ] && echo "OBS U ...a ${tmpmb} MiB temporary file stayed on disk after the stop (the page: 26 MiB)" || fail "U 40 MiB stop: the page says a 26 MiB temporary file stayed on disk; the largest file over 1 MiB was '${tmpmb:-none}' MiB";;
+    esac
     case "$row" in
       20:normal) want "20 MiB, normal stop: the upload finished with" "$up" 201; want "...the server exited cleanly (code)" "$exit_rc" 0
                  awk -v e="$el_stop" 'BEGIN { exit !(e >= 5 && e <= 10) }' && echo "OBS U ...after ${el_stop} s (the page: 7.4 s)" || fail "U 20 MiB normal stop: the page says the server exited cleanly after 7.4 s; it took ${el_stop} s"
