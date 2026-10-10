@@ -117,7 +117,7 @@ docker run -d --name fscache -p 127.0.0.1:8080:8080 \
   <h2>Two differences between the releases</h2>
   <ul class="trust">
     <li><strong>0.1.0 has no status page.</strong> <code>/statusz</code> returned 404 there. 0.2.1 has it. The metrics page is on both.</li>
-    <li><strong>0.1.0's entry count resets after a restart.</strong> After the rollback its metric <code>fscache_store_entries</code> read 0 although every value was readable. I checked whether that was caused by the upgrade: it is not. A volume only 0.1.0 ever wrote showed 3 entries before a plain restart and 0 after it, with the data still readable. 0.2.1, restarted the same way, reported 3 entries and 9 bytes correctly.</li>
+    <li><strong>The entry-count metric reads 0 after a restart, on both releases.</strong> After the rollback, 0.1.0's <code>fscache_store_entries</code> read 0 although every value was readable. The upgrade did not cause that: a volume only 0.1.0 ever wrote showed 3 entries before a plain restart and 0 after it, with the data still readable. 0.2.1's metrics read 0 after a restart until the next upload too (see <a href="/is-the-build-cache-server-healthy-what-to-alert-on/">is my build cache server healthy</a>). On 0.2.1, <code>/statusz</code> still showed the real count, 3 entries and 9 bytes, so read it there.</li>
   </ul>
 
   <h2>If you want a safety net</h2>

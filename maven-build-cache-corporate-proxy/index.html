@@ -148,7 +148,7 @@ PUT http://&lt;cache-ip&gt;:18132/v1.1/demo/demo/&lt;id&gt;/build-cache-report.x
   <ul class="trust">
     <li><strong>A local test can fail because of the proxy.</strong> If you try the cache on <code>127.0.0.1</code> with a proxy configured in <code>settings.xml</code>, Maven sends it to the proxy, which may not be able to reach your machine's loopback. List it in <code>&lt;nonProxyHosts&gt;</code>.</li>
     <li><strong>A refusing proxy looks like a cache error.</strong> The 403 comes from the proxy, not from the cache. To check, run the same request from the build machine with and without the proxy; see the curl check on <a href="/gradle-build-cache-corporate-proxy/">the Gradle page</a>.</li>
-    <li><strong>Failure does not break the build.</strong> A build behind a blocking proxy just stops using the cache, so look for <code>Error downloading cache item</code> and for missing <code>Saved to remote cache</code> lines.</li>
+    <li><strong>Failure does not break the build.</strong> A build behind a blocking proxy just stops using the cache, so look for <code>Error downloading cache item</code> and for missing <code>Saved to remote cache</code> lines. On Maven 3.10.0 an ordinary first miss also logs the first line, so read it together with the missing second one.</li>
   </ul>
 
   <p class="muted-note">Related: <a href="/maven-build-cache-extension-not-restoring/">Maven build cache extension not restoring</a> and <a href="/build-cache-docker-compose-production/">a production setup with TLS</a>.</p>

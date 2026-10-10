@@ -110,7 +110,7 @@
   <p>I also tried storing 4,000 bytes against the 3,500 cap. The server refused it with a 413 and stored nothing, and nothing else was evicted to make room. The other limit, <code>FSCACHE_MAX_BODY_BYTES</code>, is separate and defaults to 1 GiB per entry. See <a href="/gradle-build-cache-http-status-codes/">the status codes page</a>.</p>
 
   <h2>Watching it on a real cache</h2>
-  <p>The same numbers are in <code>/statusz</code> as <code>store_bytes</code>, <code>max_bytes</code>, <code>store_entries</code> and <code>evicted_entries</code>, and in the Prometheus metrics (<code>fscache_evicted_entries_total</code> and <code>fscache_store_bytes</code>). A rising eviction count together with a hit rate that never climbs means the cap is too small for your build. See <a href="/monitor-build-cache-prometheus-grafana/">monitoring</a>.</p>
+  <p>The same numbers are in <code>/statusz</code> as <code>store_bytes</code>, <code>max_bytes</code>, <code>store_entries</code> and <code>evicted_entries</code>, and in the Prometheus metrics (<code>fscache_evicted_entries_total</code> and <code>fscache_store_bytes</code>), except that the two store gauges read 0 after a restart until the next upload. A rising eviction count together with a hit rate that never climbs means the cap is too small for your build. See <a href="/monitor-build-cache-prometheus-grafana/">monitoring</a>.</p>
 
   <h2>Try it yourself</h2>
   <pre tabindex="0"><code>FSCACHE_ADDR=127.0.0.1:8080 FSCACHE_DATA_DIR=./data FSCACHE_MAX_BYTES=3500 ./fscache &amp;
