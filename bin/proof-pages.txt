@@ -1,0 +1,26 @@
+# job id <TAB> the public pages whose commands that job runs (read by bin/proof-report.sh to name pages in a failure issue)
+bench-miss-cost	remote-build-cache-miss-cost
+bench-server-down	build-cache-server-down-what-happens
+bench-verify-release	verify-a-release
+bench-setup-pages	first-15-minutes-build-cache, maven-remote-build-cache-setup
+bench-howto-pages	laptop-builds-reuse-ci-build-cache, gradle-build-cache-ci-writes-developers-read, build-cache-docker-compose-production
+bench-howto-pages-2	gradle-remote-build-cache-private-ca-https, migrate-build-cache-node, build-cache-docker-compose-production
+bench-howto-pages-3	gradle-remote-cache-not-working, upgrade-build-cache-server
+bench-k8s-page	gradle-build-cache-kubernetes
+bench-ga-page	github-actions-remote-build-cache
+bench-howto-pages-4	gradle-build-cache-enable-disable, gradle-remote-build-cache-authentication, reset-gradle-build-cache
+bench-howto-pages-5	change-build-cache-logins-without-breaking-ci, build-cache-server-wont-start-errors, build-cache-hit-rate-how-to-measure
+bench-howto-pages-6	gradle-build-cache-monorepo, gradle-build-cache-docker-ci-fresh-container
+bench-howto-pages-7	is-the-build-cache-server-healthy-what-to-alert-on, build-cache-eviction-size-limit
+bench-howto-pages-8	restart-build-cache-server-while-builds-run
+bench-howto-pages-9	gradle-build-cache-corporate-proxy
+bench-howto-pages-10	maven-build-cache-extension-multi-module, maven-build-cache-extension-not-restoring, what-gradle-stores-in-build-cache
+bench-howto-pages-11	why-did-this-task-miss-the-build-cache, what-gradle-stores-in-build-cache
+bench-howto-pages-12	gradle-test-task-from-cache, several-projects-share-one-build-cache-server, air-gapped-build-cache-install
+bench-maclinux-linux-store	laptop-builds-reuse-ci-build-cache
+bench-maclinux-mac-restore	laptop-builds-reuse-ci-build-cache
+bench-maclinux-mac-store	laptop-builds-reuse-ci-build-cache
+bench-maclinux-linux-restore	laptop-builds-reuse-ci-build-cache
+bench-android	kotlin-android-gradle-build-cache
+demo-github-actions	github-actions-remote-build-cache
+proof-selftest	(self-test: no page)
