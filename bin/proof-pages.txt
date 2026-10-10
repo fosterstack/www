@@ -24,3 +24,4 @@ bench-maclinux-linux-restore	laptop-builds-reuse-ci-build-cache
 bench-android	kotlin-android-gradle-build-cache
 demo-github-actions	github-actions-remote-build-cache
 proof-selftest	(self-test: no page)
+proof-watch	(the daily watch itself: it could not read the release or the earlier record)

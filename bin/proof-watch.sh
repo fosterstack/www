@@ -31,7 +31,7 @@ if ! [[ "$newest" =~ $TAG_RE ]]; then emit false "" "the newest release tag '$(c
 last=""
 if [ -n "${PROOF_TEST_LAST:-}" ]; then last="$PROOF_TEST_LAST"
 else
-  id="$(gh api "repos/${WWW_REPO}/actions/artifacts?name=proven-release&per_page=1" --jq '.artifacts[0] | select(.expired == false) | .id' 2>/dev/null)"
+  id="$(gh api "repos/${WWW_REPO}/actions/artifacts?name=proven-release&per_page=30" --jq '[.artifacts[] | select(.expired == false and .workflow_run.head_branch == "main" and .workflow_run.head_repository_id == .workflow_run.repository_id)][0].id' 2>/dev/null)"
   if [[ "$id" =~ ^[0-9]+$ ]]; then
     tmp="$(mktemp -d)"
     if gh api "repos/${WWW_REPO}/actions/artifacts/${id}/zip" > "$tmp/a.zip" 2>/dev/null; then

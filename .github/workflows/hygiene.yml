@@ -264,11 +264,10 @@ jobs:
   bench-ga-page:
     needs: proof-watch
     if: ${{ !cancelled() && ((github.event_name == 'workflow_dispatch' && inputs.which == 'ga-page') || (github.event_name == 'schedule' && needs.proof-watch.outputs.run == 'true')) }}
-    env:
-      BENCH_VER: ${{ needs.proof-watch.outputs.ver }}   # empty on a manual run: the script's own default release
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
+      BENCH_VER: ${{ needs.proof-watch.outputs.ver }}   # empty on a manual run: the script's own default release
       TEST_CACHE_URL: http://127.0.0.1:18495/
       TEST_RW_USER: ci
       TEST_RW_PASSWORD: ga-page-rw-secret-not-real
@@ -782,13 +781,16 @@ jobs:
   # proof-report: the LAST job of a scheduled proof run. The only job in this file with `issues: write` (job level, nothing else
   # gets it). It reads this run's jobs with the run's own token and keeps exactly ONE open issue labelled proof-failure naming the
   # page(s), the failing step and the release (a second failure adds a comment), or closes it when everything is green again; see
-  # bin/proof-report.sh. It then leaves the one-line artifact "proven-release" (tag, result, run id) that proof-watch reads the
-  # next day. Nothing is committed back and no page is edited by a workflow.
+  # bin/proof-report.sh. After a fully GREEN scheduled run only, it leaves the one-line artifact "proven-release" (tag, run id) that
+  # proof-watch reads the next day (so a red run is tried again the next day when the tag is new). Nothing is committed back and no page is edited by a workflow.
   proof-report:
     needs: [proof-watch, bench-miss-cost, bench-server-down, bench-verify-release, bench-setup-pages, bench-howto-pages, bench-howto-pages-2, bench-howto-pages-3, bench-k8s-page, bench-ga-page, bench-howto-pages-4, bench-howto-pages-5, bench-howto-pages-6, bench-howto-pages-7, bench-howto-pages-8, bench-howto-pages-9, bench-howto-pages-10, bench-howto-pages-11, bench-howto-pages-12, bench-maclinux-linux-store, bench-maclinux-mac-restore, bench-maclinux-mac-store, bench-maclinux-linux-restore, bench-android, demo-github-actions, proof-selftest]
-    if: ${{ always() && ((github.event_name == 'schedule' && needs.proof-watch.result == 'success' && (needs.proof-watch.outputs.run == 'true' || startsWith(needs.proof-watch.outputs.reason, 'the newest release tag') || startsWith(needs.proof-watch.outputs.reason, 'release lookup failed'))) || (github.event_name == 'workflow_dispatch' && inputs.which == 'proof-selftest')) }}
+    if: ${{ always() && ((github.event_name == 'schedule' && (needs.proof-watch.result == 'failure' || (needs.proof-watch.result == 'success' && (needs.proof-watch.outputs.run == 'true' || startsWith(needs.proof-watch.outputs.reason, 'the newest release tag') || startsWith(needs.proof-watch.outputs.reason, 'release lookup failed'))))) || (github.event_name == 'workflow_dispatch' && inputs.which == 'proof-selftest')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    concurrency:
+      group: proof-report
+      cancel-in-progress: false
     permissions:
       contents: read
       actions: read
@@ -809,7 +811,7 @@ jobs:
           OUT_FILE: proven-release.txt
         run: bash bin/proof-report.sh
 
-      - if: github.event_name == 'schedule'
+      - if: github.event_name == 'schedule' && hashFiles('proven-release.txt') != ''
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: proven-release
