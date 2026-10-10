@@ -101,13 +101,14 @@ org.gradle.caching=true</code></pre>
 
   <h2>2. Is the local cache hiding the problem?</h2>
   <p>Gradle's local cache is on by default and gives hits even when the remote is failing. So <code>FROM-CACHE</code> on its own does not prove the remote works. Take the local cache out of the picture and show remote errors:</p>
-  <pre tabindex="0"><code>rm -rf ~/.gradle/caches/build-cache-1
+  <pre tabindex="0"><code>./gradlew clean
+rm -rf ~/.gradle/caches/build-cache-1
 ./gradlew --stop
 ./gradlew build --build-cache -i</code></pre>
-  <p>Run it twice. The second run is the one that tells you something.</p>
+  <p>Run it twice. The second run is the one that tells you something. Without the <code>clean</code>, Gradle prints <code>UP-TO-DATE</code> and never asks the cache.</p>
 
   <h2>3. Is the password reaching Gradle?</h2>
-  <p>If the server uses a password and Gradle sends none, every request gets a 401. In our test with Gradle 9.8.0 on macOS, Gradle printed <code>Could not load entry ... response status 401: Unauthorized</code> at the default log level and carried on without the cache. Two things to check:</p>
+  <p>If the server uses a password and Gradle sends none, every request gets a 401. In our test with Gradle 9.8.0 on macOS, Gradle printed <code>Could not load entry ... response status 401: Unauthorized</code> at the default log level and carried on without the cache. If Gradle can serve the task from its own local cache, it never asks the server and no 401 appears, so clear the local cache first, as in step 2. Two things to check:</p>
   <ul class="trust">
     <li>Keep a <code>credentials</code> block in the config. A server with no password ignores it, so one config works everywhere.</li>
     <li>Check that the variable is set in the shell or CI job that runs Gradle. In our test with Gradle 9.8.0 on macOS, a password exported after the background daemon was already running was used by the very next build (same daemon, no restart), and a wrong one gave the 401 straight away. If a password still seems ignored, run <code>./gradlew --stop</code> to rule the daemon out, or put it in <code>~/.gradle/gradle.properties</code> (never in the repo).</li>
@@ -219,6 +220,7 @@ Build cache key for task &#x27;:greetAbsPath&#x27; is b7b4f69d180d1dc577a36f2869
       <tr><td>Maven, all eight pinned (both orders)</td><td>restored</td></tr>
     </tbody>
   </table></div>
+  <p class="muted-note">We ran the page again on a GitHub-hosted Linux machine with release 0.2.2, Gradle 9.8.0 (and 9.7.1 and 9.5.1 for the version table), Maven 3.10.0 and 3.9.9, and Java 21 and 27. Steps 2 to 5, the three low-hit-rate causes and all nine version series gave the results on this page. Differences from the runs above: the version table used one module and <code>:compileJava</code> instead of four modules and <code>:core:compileJava</code>, and Maven ran on Java 21. Step 2 as it was first written (no <code>clean</code>) printed <code>UP-TO-DATE</code>, which is why the page now has the <code>clean</code>. <a href="https://github.com/fosterstack/www/actions/runs/38041159465">The run and its log are public</a>.</p>
   <p class="muted-note">In all nine series, going back to the first version restored its own entry. One build per step. Each Maven row is two series, one per order. A new empty cache server per series, a fresh project copy for every build. Gradle: a four-module project, the <code>:core:compileJava</code> task, Temurin 21.0.12.1. Maven: one module with two tests, <code>mvn verify</code>, Build Cache Extension 1.2.3, OpenJDK 27. FosterStack Cache 0.2.1 on a Mac (arm64). Not tested: other versions, a build that uses other Maven plugins, Gradle test or jar tasks, the Gradle wrapper, a multi-module Maven build, Linux.</p>
 
   <div class="cta-row">
