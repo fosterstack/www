@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>What Happens When the Build Cache Disk Fills Up?</title>
+<meta name="description" content="We filled a real disk under FosterStack Cache 0.2.1. Uploads got a 500, reads and builds kept working, and it recovered when we freed space. Real runs.">
+<meta property="og:title" content="What Happens When the Build Cache Disk Fills Up?">
+<meta property="og:description" content="We filled a real disk under FosterStack Cache 0.2.1. Uploads got a 500, reads and builds kept working, and it recovered when we freed space. Real runs.">
+<meta property="og:url" content="https://fosterstack.com/build-cache-disk-full-what-happens/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="FosterStack">
+<link rel="canonical" href="https://fosterstack.com/build-cache-disk-full-what-happens/">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<style>
+  :root {
+    --bg: #ffffff; --fg: #16181d; --muted: #5b6472; --line: #e4e7ec;
+    --accent: #0d7a5f; --accent-fg: #ffffff; --card: #f6f8f9; --warn-bg: #fff7ed; --warn-line: #fdba74;
+    --mark: #0f4d66;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #101318; --fg: #e8eaf0; --muted: #98a2b3; --line: #262c36;
+      --accent: #2fbf95; --accent-fg: #08110e; --card: #171c23; --warn-bg: #241a10; --warn-line: #7c4a12;
+      --mark: #e8eaf0;
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 44rem; margin: 0 auto; padding: 0 1.25rem 4rem; }
+  header.site { max-width: 44rem; margin: 0 auto; padding: 1.25rem; display: flex; align-items: baseline; gap: .6rem; }
+  .logo { font-weight: 700; font-size: 1.05rem; letter-spacing: -.01em; }
+  .logo span { color: var(--accent); }
+  .logo .mark { width: 1.2em; height: 1.2em; vertical-align: -.24em; margin-right: .4em; }
+  .tag { color: var(--muted); font-size: .85rem; }
+  .notice {
+    background: var(--warn-bg); border: 1px solid var(--warn-line); border-radius: 8px;
+    padding: .7rem 1rem; font-size: .92rem; margin: 1.5rem 0 2.5rem;
+  }
+  h1 { font-size: 2rem; line-height: 1.2; letter-spacing: -.02em; margin-bottom: 1rem; }
+  .lede { font-size: 1.12rem; color: var(--muted); margin-bottom: 2rem; }
+  h2 { font-size: 1.25rem; margin: 3rem 0 .9rem; letter-spacing: -.01em; }
+  p + p { margin-top: .8rem; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: .8rem; margin-top: 1rem; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1rem 1.1rem; }
+  .card h3 { font-size: .98rem; margin-bottom: .35rem; }
+  .card p { font-size: .9rem; color: var(--muted); }
+  ul.trust { list-style: none; margin-top: .5rem; }
+  ul.trust li { padding: .45rem 0 .45rem 1.6rem; position: relative; }
+  ul.trust li::before { content: "✓"; position: absolute; left: .2rem; color: var(--accent); font-weight: 700; }
+  code, pre { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .88em; }
+  code { background: var(--card); border: 1px solid var(--line); border-radius: 5px; padding: .1em .35em; }
+  pre code { background: none; border: 0; padding: 0; color: inherit; font-size: 1em; }
+  button {
+    padding: .7rem 1.3rem; font-size: 1rem; font-weight: 600; cursor: pointer;
+    background: var(--accent); color: var(--accent-fg); border: 0; border-radius: 8px;
+  }
+  button:disabled { opacity: .6; cursor: default; }
+  table { width: 100%; border-collapse: collapse; font-size: .92rem; margin-top: 1rem; }
+  th, td { text-align: left; padding: .55rem .6rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  pre { background: #0f172a; color: #e2e8f0; padding: .9rem 1rem; border-radius: 8px;
+        overflow-x: auto; font-size: .9rem; line-height: 1.5; }
+  .cta-row { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1.1rem; }
+  .btn { display: inline-block; padding: .55rem 1rem; border-radius: 8px; font-weight: 600;
+         text-decoration: none; background: var(--accent); color: var(--accent-fg); }
+  .btn-secondary { background: transparent; color: inherit; border: 1px solid var(--muted); }
+  .muted-note { color: var(--muted); font-size: .93rem; margin-top: 1.1rem; }
+  footer { border-top: 1px solid var(--line); margin-top: 4rem; padding: 1.5rem 1.25rem 3rem; }
+  footer div { max-width: 44rem; margin: 0 auto; color: var(--muted); font-size: .82rem; }
+  a { color: var(--accent); }
+  code { overflow-wrap: anywhere; }
+  pre code { overflow-wrap: normal; }
+  .table-scroll { max-width: 100%; overflow-x: auto; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+</style>
+</head>
+<body>
+<header class="site">
+  <div class="logo"><svg class="mark" viewBox="0 0 96 96" aria-hidden="true" focusable="false"><rect x="12" y="14" width="72" height="18" rx="5" fill="var(--mark)"/><rect x="12" y="39" width="48" height="18" rx="5" fill="var(--mark)"/><rect x="12" y="64" width="26" height="18" rx="5" fill="var(--accent)"/></svg>foster<span>stack</span></div>
+  <div class="tag">Infrastructure worth keeping — and kept patched.</div>
+</header>
+<main>
+  <h1>What happens when the build cache disk fills up?</h1>
+  <p class="lede">In our runs, a full disk did not break builds. The cache server refused new uploads and kept serving what it already held. Gradle still ended with <code>BUILD SUCCESSFUL</code>.</p>
+
+  <h2>The short answer</h2>
+  <ul class="trust">
+    <li><strong>New uploads failed with a 500.</strong> The server logged <code>no space left on device</code> each time. It counted them in the <code>fscache_http_requests_total</code> metric, as <code>PUT</code> requests with status 500.</li>
+    <li><strong>Reads kept working.</strong> Entries already stored came back with a 200. A build restored 4 of 4 cacheable tasks from the cache while the disk was full.</li>
+    <li><strong>A build that needed to store got one warning.</strong> Gradle printed <code>Could not store entry</code>, then turned the remote cache off for the rest of that build. The build still passed.</li>
+    <li><strong>The server stayed up.</strong> <code>/healthz</code> still answered ok, so it does not tell you the disk is full.</li>
+    <li><strong>It recovered once we freed space.</strong> No restart was needed. Uploads were accepted again until the space ran out.</li>
+  </ul>
+
+  <h2>What to do</h2>
+  <p>Our advice, not a test result:</p>
+  <ul>
+    <li><strong>Set a size cap below the disk size.</strong> The server then removes the least recently used entries instead of failing. In our runs a 4 MiB cap on an 8 MiB volume never failed an upload. A 20 MiB cap, bigger than the volume, did not help. See <a href="/build-cache-server-sizing/">how big a server a build cache needs</a> and <a href="/build-cache-eviction-size-limit/">how the size limit works</a>.</li>
+    <li><strong>Alert on failed uploads.</strong> Watch for <code>fscache_http_requests_total</code> with <code>method="PUT"</code> and <code>status="500"</code> going up. Your builds will not tell you. See <a href="/is-the-build-cache-server-healthy-what-to-alert-on/">what to alert on</a>.</li>
+    <li><strong>To recover, free space on the volume.</strong> In our runs the running server noticed and needed no restart.</li>
+    <li><strong>Free space before you start a new, empty data folder.</strong> On a full disk the server would not start. The log said <code>open metadata store</code> and <code>no space left on device</code>.</li>
+  </ul>
+
+  <h2>How we checked</h2>
+  <p>FosterStack Cache 0.2.1 on a Mac (arm64), no password, and no size cap unless a row says so. We made a real 8 MiB disk image with APFS, mounted it, and put the data folder on it. Gradle 9.8.0 and Java 21 built a four-module project with a new Gradle home each time, no reused daemon and the local build cache off. Each row is one run, and we did not repeat them.</p>
+  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
+    <thead><tr><th>What we did</th><th>What happened</th></tr></thead>
+    <tbody>
+      <tr><td>Cold build, disk had room</td><td>Stored 13 entries, 36,091 bytes</td></tr>
+      <tr><td>Sent 256 KiB uploads until one failed</td><td>21 accepted, the 22nd got <code>500</code> with the body <code>internal error</code></td></tr>
+      <tr><td>Then 4 KiB uploads</td><td>34 accepted, the 35th got <code>500</code>. A 1 KiB upload then also got <code>500</code></td></tr>
+      <tr><td>Looked at the full server</td><td>Process running. <code>/healthz</code> answered ok. <code>/statusz</code> showed 68 entries and 5,680,379 bytes. Four <code>PUT</code> requests with status 500 were counted</td></tr>
+      <tr><td>Read stored entries</td><td><code>200</code> for both keys we tried. A key never stored gave <code>404</code></td></tr>
+      <tr><td>Same build again, disk full</td><td><code>BUILD SUCCESSFUL</code>, 4 tasks from the cache</td></tr>
+      <tr><td>Changed build that needed to store, disk full</td><td><code>BUILD SUCCESSFUL</code>. One <code>Could not store entry ... response status 500: Internal Server Error</code>, then <code>The remote build cache was disabled during the build due to errors.</code></td></tr>
+      <tr><td>Deleted a 1 MiB file outside the data folder</td><td>A 1 KiB upload and three 256 KiB uploads were accepted. The next two got <code>500</code>. No restart</td></tr>
+      <tr><td>Changed build again, with room</td><td><code>BUILD SUCCESSFUL</code> and no warning</td></tr>
+      <tr><td>Stopped the server and started it on a full volume with its old data</td><td>It started. <code>/healthz</code> answered ok, <code>/statusz</code> showed 127 entries, a stored entry read <code>200</code>, a new upload got <code>500</code></td></tr>
+      <tr><td>Started it with a new, empty data folder on a full volume (a 4 MiB size cap was set)</td><td>It exited and never answered. The log held <code>fscache: fatal</code> and <code>open metadata store</code></td></tr>
+      <tr><td>Size cap 4 MiB, 40 uploads of 256 KiB (10 MiB in all)</td><td>All 40 accepted. 24 entries removed. Stored size stayed at 4,194,304 bytes</td></tr>
+      <tr><td>Size cap 20 MiB, the same 40 uploads</td><td>25 accepted, 15 got <code>500</code>. Nothing was removed</td></tr>
+    </tbody>
+  </table></div>
+  <p class="muted-note">We found no leftover temporary files in the data folder after the first failed uploads. On this small APFS volume, uploads started to fail while <code>df</code> still showed about 1 MiB free, so do not plan around the last megabyte.</p>
+  <p class="muted-note">Not tested: Docker or Kubernetes volumes, file systems other than APFS, Linux, Maven, a very large single upload, a full inode table, a disk quota, other releases, and a disk that fills while many builds upload at once.</p>
+</main>
+<footer>
+  <div>
+    <p>FosterStack is not affiliated with, endorsed by, or sponsored by Gradle Inc.
+    "Gradle" and "Develocity" are trademarks of Gradle Inc., used here only to identify
+    compatibility. FosterStack contains no Gradle Inc. code; it is a clean-room implementation
+    of the documented remote build cache HTTP protocol. Apache Maven is a trademark of the
+    Apache Software Foundation; the Maven Build Cache Extension is Apache's project, not
+    ours.</p>
+    <p style="margin-top:.6rem">© 2026 FosterStack · <a href="/build-cache-node-end-of-life/">Build Cache Node end of life</a> · <a href="/migrate-build-cache-node/">Migrate</a> · <a href="/build-cache-node-faq/">FAQ</a> · <a href="/jenkins-ci-build-cache/">CI setup</a> · <a href="/how-we-build/">How we build</a> · <a href="/regulated/">For regulated markets</a> · <a href="https://github.com/fosterstack/cache">github.com/fosterstack/cache</a> · <a href="mailto:hello@fosterstack.com">hello@fosterstack.com</a></p>
+  </div>
+</footer>
+</body>
+</html>
