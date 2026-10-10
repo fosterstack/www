@@ -93,7 +93,7 @@
   <h2>The short answer</h2>
   <ul class="trust">
     <li><strong>Different code did not clash in our runs.</strong> Project B's own compile found nothing stored, so it ran and stored its own entry next to project A's.</li>
-    <li><strong>Identical work is shared.</strong> A copy of project A in another folder restored A's compile result. Project B also restored one entry from A: the compiled build script, because both build files hold the same text.</li>
+    <li><strong>Identical work is shared.</strong> A copy of project A in another folder restored A's compile result. Project B also restored one entry from A: the compiled build script. Both build files contain the same text, so the result is the same. That reuse is harmless.</li>
     <li><strong>One login reaches every project, which is a warning, not a feature.</strong> The login that B's builds used also fetched A's entry, so anyone with it sees every project's results. The read-only login read both, and its write got a <code>403</code>.</li>
     <li><strong>One size cap covers every project.</strong> With a small cap, B's store pushed out A's entry, and a copy of A pushed B's out again.</li>
     <li><strong>Separate servers kept teams apart in our runs.</strong> Team 2's server restored nothing from team 1's. Each team's login got a <code>401</code> on the other server.</li>
