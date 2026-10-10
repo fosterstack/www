@@ -95,7 +95,7 @@
   <h2 id="gradle-test-task-from-cache">Does Gradle skip tests whose code didn't change?</h2>
   <ul class="trust">
     <li>In our runs, a fresh copy of the project with the same code got <code>:test FROM-CACHE</code>. The tests were not run.</li>
-    <li>In our runs 3 and 4, changing the main code or the test code made the tests run again.</li>
+    <li>In Gradle runs 3 and 4 (table below), changing the main code or the test code made the tests run again.</li>
     <li>A comment added on the same line recompiled the main code, but the tests still came from the cache.</li>
     <li>In our runs, a failing test ran each time. It was never taken from the cache.</li>
   </ul>
