@@ -110,7 +110,7 @@
   <ul class="trust">
     <li><strong>Look for FROM-CACHE on the compile and test lines.</strong> That is where a Kotlin build shows its hits. See <a href="/build-cache-hit-rate-how-to-measure/">how to measure your hit rate</a>.</li>
     <li><strong>Do not count the jar and APK packaging tasks as misses.</strong> They ran in every build, and 31 Android tasks ran even in a repeat build.</li>
-    <li><strong>Keep the Kotlin plugin version and the Java version the same</strong> on laptops and CI, so entries should be shared. If the hit rate is low, see <a href="/gradle-build-cache-hit-rate-low/">why the Gradle hit rate is low</a>.</li>
+    <li><strong>Keep the Kotlin plugin version and the Java version the same</strong> on laptops and CI, so entries should be shared. If the hit rate is low, see <a href="/gradle-remote-cache-not-working/#gradle-build-cache-hit-rate-low">why the Gradle hit rate is low</a>.</li>
   </ul>
 
   <h2>How we checked</h2>
@@ -150,7 +150,7 @@
     of the documented remote build cache HTTP protocol. Apache Maven is a trademark of the
     Apache Software Foundation; the Maven Build Cache Extension is Apache's project, not
     ours.</p>
-    <p style="margin-top:.6rem">© 2026 FosterStack · <a href="/build-cache-node-end-of-life/">Build Cache Node end of life</a> · <a href="/migrate-build-cache-node/">Migrate</a> · <a href="/build-cache-node-faq/">FAQ</a> · <a href="/jenkins-ci-build-cache/">CI setup</a> · <a href="/how-we-build/">How we build</a> · <a href="/regulated/">For regulated markets</a> · <a href="https://github.com/fosterstack/cache">github.com/fosterstack/cache</a> · <a href="mailto:hello@fosterstack.com">hello@fosterstack.com</a></p>
+    <p style="margin-top:.6rem">© 2026 FosterStack · <a href="/build-cache-node-end-of-life/">Build Cache Node end of life</a> · <a href="/migrate-build-cache-node/">Migrate</a> · <a href="/build-cache-node-end-of-life/#build-cache-node-faq">FAQ</a> · <a href="/jenkins-ci-build-cache/">CI setup</a> · <a href="/how-we-build/">How we build</a> · <a href="/regulated/">For regulated markets</a> · <a href="https://github.com/fosterstack/cache">github.com/fosterstack/cache</a> · <a href="mailto:hello@fosterstack.com">hello@fosterstack.com</a></p>
   </div>
 </footer>
 </body>

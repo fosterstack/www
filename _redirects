@@ -37,3 +37,25 @@
 /build-cache-permission-denied-data-directory /build-cache-server-wont-start-errors/#build-cache-permission-denied-data-directory 301
 /monitor-build-cache-prometheus-grafana/ /is-the-build-cache-server-healthy-what-to-alert-on/#monitor-build-cache-prometheus-grafana 301
 /monitor-build-cache-prometheus-grafana /is-the-build-cache-server-healthy-what-to-alert-on/#monitor-build-cache-prometheus-grafana 301
+
+# Wave 3 consolidation (approved): each removed page redirects to its survivor. Two lines each: a rule with a trailing slash does not match the URL without one.
+/build-cache-node-faq/ /build-cache-node-end-of-life/#build-cache-node-faq 301
+/build-cache-node-faq /build-cache-node-end-of-life/#build-cache-node-faq 301
+/build-cache-node-migration-checklist/ /migrate-build-cache-node/#build-cache-node-migration-checklist 301
+/build-cache-node-migration-checklist /migrate-build-cache-node/#build-cache-node-migration-checklist 301
+/verify-replacement-build-cache/ /migrate-build-cache-node/#verify-replacement-build-cache 301
+/verify-replacement-build-cache /migrate-build-cache-node/#verify-replacement-build-cache 301
+/gradle-build-cache-tutorial/ /first-15-minutes-build-cache/#gradle-build-cache-tutorial 301
+/gradle-build-cache-tutorial /first-15-minutes-build-cache/#gradle-build-cache-tutorial 301
+/gradle-build-cache-hit-rate-low/ /gradle-remote-cache-not-working/#gradle-build-cache-hit-rate-low 301
+/gradle-build-cache-hit-rate-low /gradle-remote-cache-not-working/#gradle-build-cache-hit-rate-low 301
+/build-cache-cold-after-gradle-or-maven-upgrade/ /gradle-remote-cache-not-working/#build-cache-cold-after-gradle-or-maven-upgrade 301
+/build-cache-cold-after-gradle-or-maven-upgrade /gradle-remote-cache-not-working/#build-cache-cold-after-gradle-or-maven-upgrade 301
+/build-cache-one-module-changed-what-rebuilds/ /why-did-this-task-miss-the-build-cache/#build-cache-one-module-changed-what-rebuilds 301
+/build-cache-one-module-changed-what-rebuilds /why-did-this-task-miss-the-build-cache/#build-cache-one-module-changed-what-rebuilds 301
+/gradle-build-cache-buildsrc-included-builds/ /gradle-build-cache-monorepo/#gradle-build-cache-buildsrc-included-builds 301
+/gradle-build-cache-buildsrc-included-builds /gradle-build-cache-monorepo/#gradle-build-cache-buildsrc-included-builds 301
+/maven-build-cache-skip-tests/ /gradle-test-task-from-cache/#maven-build-cache-skip-tests 301
+/maven-build-cache-skip-tests /gradle-test-task-from-cache/#maven-build-cache-skip-tests 301
+/gradle-configuration-cache-vs-build-cache/ /gradle-build-cache-enable-disable/#gradle-configuration-cache-vs-build-cache 301
+/gradle-configuration-cache-vs-build-cache /gradle-build-cache-enable-disable/#gradle-configuration-cache-vs-build-cache 301

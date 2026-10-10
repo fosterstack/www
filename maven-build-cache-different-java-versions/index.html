@@ -124,7 +124,7 @@
   <ul class="trust">
     <li><strong>Switching Java still restored from the cache.</strong> In our runs the extension restored the existing result and did not rebuild on the new Java.</li>
     <li><strong>In our runs, the first build decided what everyone got.</strong> If a Java 21 build fills the cache, a Java 27 build restores a jar that says it was built on Java 21. Here that was harmless, because the class was identical. We did not test a project whose output depends on the Java that compiles it.</li>
-    <li><strong>For Gradle it was the other way round.</strong> Our Gradle run on a different Java ran its tasks again and made its own entries; see <a href="/gradle-build-cache-hit-rate-low/">Gradle build cache hit rate low</a>, cause 3.</li>
+    <li><strong>For Gradle it was the other way round.</strong> Our Gradle run on a different Java ran its tasks again and made its own entries; see <a href="/gradle-remote-cache-not-working/#gradle-build-cache-hit-rate-low">Gradle build cache hit rate low</a>, cause 3.</li>
   </ul>
   <p>Our advice, not a test result: use one Java version for the builds that fill a shared cache, so you know which Java made what you restore.</p>
   <p>We did not test other Java vendors, other Maven or extension versions, a project whose build settings change with the Java version (for example, profiles that switch on by JDK), or Linux or Windows.</p>
@@ -143,7 +143,7 @@
     of the documented remote build cache HTTP protocol. Apache Maven is a trademark of the
     Apache Software Foundation; the Maven Build Cache Extension is Apache's project, not
     ours.</p>
-    <p style="margin-top:.6rem">© 2026 FosterStack · <a href="/build-cache-node-end-of-life/">Build Cache Node end of life</a> · <a href="/migrate-build-cache-node/">Migrate</a> · <a href="/build-cache-node-faq/">FAQ</a> · <a href="/jenkins-ci-build-cache/">CI setup</a> · <a href="/how-we-build/">How we build</a> · <a href="/regulated/">For regulated markets</a> · <a href="https://github.com/fosterstack/cache">github.com/fosterstack/cache</a> · <a href="mailto:hello@fosterstack.com">hello@fosterstack.com</a></p>
+    <p style="margin-top:.6rem">© 2026 FosterStack · <a href="/build-cache-node-end-of-life/">Build Cache Node end of life</a> · <a href="/migrate-build-cache-node/">Migrate</a> · <a href="/build-cache-node-end-of-life/#build-cache-node-faq">FAQ</a> · <a href="/jenkins-ci-build-cache/">CI setup</a> · <a href="/how-we-build/">How we build</a> · <a href="/regulated/">For regulated markets</a> · <a href="https://github.com/fosterstack/cache">github.com/fosterstack/cache</a> · <a href="mailto:hello@fosterstack.com">hello@fosterstack.com</a></p>
   </div>
 </footer>
 </body>

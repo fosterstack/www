@@ -107,7 +107,7 @@
     <li><strong>Gradle:</strong> a different Gradle version, or a different Java version (we tested Java 21 against 27).</li>
     <li><strong>Maven:</strong> a different Maven version, when plugin versions are left unpinned. Pin every plugin version your build uses, including clean, install, deploy and site, or keep the Maven version the same.</li>
   </ul>
-  <p>Keep those the same on laptops and CI. For what to expect after an upgrade, see <a href="/build-cache-cold-after-gradle-or-maven-upgrade/">we upgraded Gradle or Maven and builds got slow</a>. If your laptop still rebuilds, see <a href="/gradle-build-cache-hit-rate-low/">why the Gradle hit rate is low</a> or <a href="/maven-build-cache-extension-not-restoring/">why the Maven cache is not restoring</a>. To set it up, see <a href="/maven-remote-build-cache-setup/">Maven remote build cache setup</a> and the Gradle setup in the <a href="/gradle-build-cache-ci-writes-developers-read/">CI-writes page</a>.</p>
+  <p>Keep those the same on laptops and CI. For what to expect after an upgrade, see <a href="/gradle-remote-cache-not-working/#build-cache-cold-after-gradle-or-maven-upgrade">we upgraded Gradle or Maven and builds got slow</a>. If your laptop still rebuilds, see <a href="/gradle-remote-cache-not-working/#gradle-build-cache-hit-rate-low">why the Gradle hit rate is low</a> or <a href="/maven-build-cache-extension-not-restoring/">why the Maven cache is not restoring</a>. To set it up, see <a href="/maven-remote-build-cache-setup/">Maven remote build cache setup</a> and the Gradle setup in the <a href="/gradle-build-cache-ci-writes-developers-read/">CI-writes page</a>.</p>
 
   <h2>How we checked</h2>
   <div class="table-scroll" role="region" aria-label="Which platform stored and which restored" tabindex="0"><table>
@@ -130,7 +130,7 @@
     of the documented remote build cache HTTP protocol. Apache Maven is a trademark of the
     Apache Software Foundation; the Maven Build Cache Extension is Apache's project, not
     ours.</p>
-    <p style="margin-top:.6rem">© 2026 FosterStack · <a href="/build-cache-node-end-of-life/">Build Cache Node end of life</a> · <a href="/migrate-build-cache-node/">Migrate</a> · <a href="/build-cache-node-faq/">FAQ</a> · <a href="/jenkins-ci-build-cache/">CI setup</a> · <a href="/how-we-build/">How we build</a> · <a href="/regulated/">For regulated markets</a> · <a href="https://github.com/fosterstack/cache">github.com/fosterstack/cache</a> · <a href="mailto:hello@fosterstack.com">hello@fosterstack.com</a></p>
+    <p style="margin-top:.6rem">© 2026 FosterStack · <a href="/build-cache-node-end-of-life/">Build Cache Node end of life</a> · <a href="/migrate-build-cache-node/">Migrate</a> · <a href="/build-cache-node-end-of-life/#build-cache-node-faq">FAQ</a> · <a href="/jenkins-ci-build-cache/">CI setup</a> · <a href="/how-we-build/">How we build</a> · <a href="/regulated/">For regulated markets</a> · <a href="https://github.com/fosterstack/cache">github.com/fosterstack/cache</a> · <a href="mailto:hello@fosterstack.com">hello@fosterstack.com</a></p>
   </div>
 </footer>
 </body>

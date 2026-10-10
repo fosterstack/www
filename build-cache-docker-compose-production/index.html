@@ -188,7 +188,7 @@ volumes:
 # gradle.properties
 systemProp.javax.net.ssl.trustStore=/path/to/trust.jks
 systemProp.javax.net.ssl.trustStorePassword=changeit</code></pre>
-  <p>In our runs, with that, the first build ran <code>:compileJava</code> and the second printed <code>&gt; Task :compileJava FROM-CACHE</code>, through the proxy, over HTTPS, with the password. With a certificate from an authority Java already trusts you would not need the truststore lines. The Gradle side of the setup is in <a href="/gradle-build-cache-tutorial/">the tutorial</a>.</p>
+  <p>In our runs, with that, the first build ran <code>:compileJava</code> and the second printed <code>&gt; Task :compileJava FROM-CACHE</code>, through the proxy, over HTTPS, with the password. With a certificate from an authority Java already trusts you would not need the truststore lines. The Gradle side of the setup is in <a href="/first-15-minutes-build-cache/#gradle-build-cache-tutorial">the tutorial</a>.</p>
 
   <h2>How we checked</h2>
   <ul class="trust">
@@ -223,7 +223,7 @@ systemProp.javax.net.ssl.trustStorePassword=changeit</code></pre>
     of the documented remote build cache HTTP protocol. Apache Maven is a trademark of the
     Apache Software Foundation; the Maven Build Cache Extension is Apache's project, not
     ours.</p>
-    <p style="margin-top:.6rem">© 2026 FosterStack · <a href="/build-cache-node-end-of-life/">Build Cache Node end of life</a> · <a href="/migrate-build-cache-node/">Migrate</a> · <a href="/build-cache-node-faq/">FAQ</a> · <a href="/jenkins-ci-build-cache/">CI setup</a> · <a href="/how-we-build/">How we build</a> · <a href="/regulated/">For regulated markets</a> · <a href="https://github.com/fosterstack/cache">github.com/fosterstack/cache</a> · <a href="mailto:hello@fosterstack.com">hello@fosterstack.com</a></p>
+    <p style="margin-top:.6rem">© 2026 FosterStack · <a href="/build-cache-node-end-of-life/">Build Cache Node end of life</a> · <a href="/migrate-build-cache-node/">Migrate</a> · <a href="/build-cache-node-end-of-life/#build-cache-node-faq">FAQ</a> · <a href="/jenkins-ci-build-cache/">CI setup</a> · <a href="/how-we-build/">How we build</a> · <a href="/regulated/">For regulated markets</a> · <a href="https://github.com/fosterstack/cache">github.com/fosterstack/cache</a> · <a href="mailto:hello@fosterstack.com">hello@fosterstack.com</a></p>
   </div>
 </footer>
 </body>

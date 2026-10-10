@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Gradle remote build cache not working: no FROM-CACHE</title>
-<meta name="description" content="Gradle build runs but nothing comes from the remote cache? Six checks: caching on, local cache hiding errors, password, URL, server counters, push settings.">
-<meta property="og:title" content="Gradle remote build cache not working: no FROM-CACHE">
-<meta property="og:description" content="Gradle build runs but nothing comes from the remote cache? Six checks: caching on, local cache hiding errors, password, URL, server counters, push settings.">
+<title>Gradle build cache not working or hit rate low: causes</title>
+<meta name="description" content="Gradle remote build cache not working, hit rate low, or slow after an upgrade? Checks and three causes in order, with real output from FosterStack Cache 0.2.1.">
+<meta property="og:title" content="Gradle build cache not working or hit rate low: causes">
+<meta property="og:description" content="Gradle remote build cache not working, hit rate low, or slow after an upgrade? Checks and three causes in order, with real output from FosterStack Cache 0.2.1.">
 <meta property="og:url" content="https://fosterstack.com/gradle-remote-cache-not-working/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="FosterStack">
@@ -77,6 +77,8 @@
   a { color: var(--accent); }
   code { overflow-wrap: anywhere; }
   pre code { overflow-wrap: normal; }
+  main h3 { font-size: 1.05rem; margin: 2rem 0 .6rem; }
+  .table-scroll { max-width: 100%; overflow-x: auto; }
   :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 </style>
 </head>
@@ -86,8 +88,10 @@
   <div class="tag">Infrastructure worth keeping — and kept patched.</div>
 </header>
 <main>
-  <h1>Gradle remote build cache not working: no FROM-CACHE</h1>
-  <p class="lede">Your build runs, nothing fails, and nothing comes from the remote cache. Gradle treats a broken remote cache as non-fatal, so the build carries on without it and the only sign may be one line in the log. Work down this list.</p>
+  <h1>Gradle build cache not working or hit rate low: causes</h1>
+  <p class="lede">Your build runs and nothing fails, but tasks that should come from the remote cache run again. FosterStack Cache is a remote build cache server, and this page lists what to check, in order, with real output from it.</p>
+  <p>Gradle treats a broken remote cache as non-fatal, so the build carries on without it and the only sign may be one line in the log. Work down this list.</p>
+  <p>A different problem? <a href="#gradle-build-cache-hit-rate-low">Most tasks still run</a>, or <a href="#build-cache-cold-after-gradle-or-maven-upgrade">builds got slow after a Gradle or Maven upgrade</a>.</p>
 
   <h2>1. Is the build cache switched on?</h2>
   <p>The <code>buildCache</code> block in <code>settings.gradle(.kts)</code> says where the cache is. It does not turn caching on. Without this line the block does nothing:</p>
@@ -108,7 +112,7 @@ org.gradle.caching=true</code></pre>
     <li>Keep a <code>credentials</code> block in the config. A server with no password ignores it, so one config works everywhere.</li>
     <li>Check that the variable is set in the shell or CI job that runs Gradle. In our test with Gradle 9.8.0 on macOS, a password exported after the background daemon was already running was used by the very next build (same daemon, no restart), and a wrong one gave the 401 straight away. If a password still seems ignored, run <code>./gradlew --stop</code> to rule the daemon out, or put it in <code>~/.gradle/gradle.properties</code> (never in the repo).</li>
   </ul>
-  <p>To test the server's password directly, a 401 means the credentials are wrong and a 404 means they are right and the key just is not there yet:</p>
+  <p>To test the server's password directly, a 401 means the credentials are wrong and a 404 means they are right and the key is just not there:</p>
   <pre tabindex="0"><code>curl -s -o /dev/null -w '%{http_code}\n' -u gradle:wrong-password \
   https://cache.example.com/some-key</code></pre>
 
@@ -118,7 +122,7 @@ org.gradle.caching=true</code></pre>
 
   <h2>5. Is the server seeing requests?</h2>
   <pre tabindex="0"><code>curl -s https://cache.example.com/metrics | grep -E 'fscache_cache_(hits|misses)_total'</code></pre>
-  <p>Run a build and run this again. If neither counter moves, the requests are not arriving. If misses move and hits do not, the cache is working and has not been filled yet, or something in the task inputs changes on every build.</p>
+  <p>Run a build and run this again. If neither counter moves, the requests are not arriving. If misses move and hits do not, the cache is working and has not been filled, or something in the task inputs changes on every build.</p>
 
   <h2>6. Is this client allowed to upload?</h2>
   <p>If you set <code>isPush</code> to false, or only to true on CI, a laptop only reads. Nothing fills the cache until a machine that may upload has run the build.</p>
@@ -126,9 +130,100 @@ org.gradle.caching=true</code></pre>
   <h2>Not the same thing: the configuration cache</h2>
   <p>Gradle may suggest enabling its "configuration cache". That is a different, local feature. It has nothing to do with a remote build cache.</p>
 
+  <h2 id="gradle-build-cache-hit-rate-low">Gradle build cache hit rate low: most tasks still run</h2>
+  <p>The cache is set up and working, but most tasks still run. A task only comes from the cache if its inputs produce the same key as when it was stored. Run the build with <code>--info</code>. For every cacheable task Gradle prints its key:</p>
+  <pre tabindex="0"><code>Build cache key for task &#x27;:greetStable&#x27; is 932183de90ed643c9e448f23bd169d87</code></pre>
+  <p>If the same task has a different key on two machines or two runs, something in its inputs differs. Compare the keys first, then look for what changed. If the key is the same and the task still ran, look at the server (last paragraph of this section).</p>
+  <p>The three most common reasons the keys differ. Our advice, not a test result:</p>
+  <ul class="trust">
+    <li><strong>A path that is only true on one machine.</strong> Keep absolute paths out of cacheable task inputs, or mark file inputs with a path sensitivity such as relative.</li>
+    <li><strong>A value that changes on every build.</strong> A timestamp, a random value, a build number or a hostname in an input means that task can never hit. Take the changing value out of the inputs, or stop caching that task.</li>
+    <li><strong>A different Java.</strong> Two Java versions on your CI agents and laptops means two separate sets of entries and a lower hit rate. Use the same Java version everywhere builds share a cache.</li>
+  </ul>
+  <p>The status page counts hits and misses, but those are individual lookups, not tasks. In our run, a four-task project stored six entries on its first build, so the counters do not map one-to-one to tasks. Use the server's hit rate to watch the trend, and use <code>FROM-CACHE</code> in the build output to see which tasks missed. A hit rate that never climbs while the eviction counter keeps rising points at a cache that is too small instead. See <a href="/build-cache-eviction-size-limit/">how eviction works</a> and <a href="/is-the-build-cache-server-healthy-what-to-alert-on/#monitor-build-cache-prometheus-grafana">monitoring</a>. For a setup walk-through, see <a href="/first-15-minutes-build-cache/">the first 15 minutes</a>.</p>
+
+  <h2 id="build-cache-cold-after-gradle-or-maven-upgrade">We upgraded Gradle or Maven and builds got slow</h2>
+  <p>After you upgrade Gradle or Maven, the first builds on the new version can rebuild instead of restoring from the cache. FosterStack Cache stores the results of each version, and in our runs going back to the old version restored its entries.</p>
+  <ul class="trust">
+    <li><strong>Upgrade CI and every laptop that shares the cache together.</strong> Our advice, not a test result: the first builds should then fill the cache for everyone.</li>
+    <li><strong>Expect the first builds on the new version to rebuild,</strong> unless you pin your Maven plugins (next point). They store their results for the builds after them.</li>
+    <li><strong>In Maven, pin your plugin versions in your <code>pom.xml</code>.</strong> With all eight of our test plugins pinned (list below), Maven 3.10.0 and 3.9.9 shared entries in our test.</li>
+  </ul>
+  <p>For Gradle, we saw this: in our three pairs of versions, each version restored only its own entries.</p>
+  <p>Put these inside <code>&lt;build&gt;&lt;plugins&gt;</code>. These are the eight plugins our test build used, at the versions we tested. If your build uses other plugins, pin those too. Everyone who shares the cache should use the same versions.</p>
+<pre tabindex="0"><code>&lt;plugin&gt;&lt;artifactId&gt;maven-resources-plugin&lt;/artifactId&gt;&lt;version&gt;3.5.0&lt;/version&gt;&lt;/plugin&gt;
+&lt;plugin&gt;&lt;artifactId&gt;maven-compiler-plugin&lt;/artifactId&gt;&lt;version&gt;3.16.0&lt;/version&gt;&lt;/plugin&gt;
+&lt;plugin&gt;&lt;artifactId&gt;maven-jar-plugin&lt;/artifactId&gt;&lt;version&gt;3.5.1&lt;/version&gt;&lt;/plugin&gt;
+&lt;plugin&gt;&lt;artifactId&gt;maven-clean-plugin&lt;/artifactId&gt;&lt;version&gt;3.5.0&lt;/version&gt;&lt;/plugin&gt;
+&lt;plugin&gt;&lt;artifactId&gt;maven-install-plugin&lt;/artifactId&gt;&lt;version&gt;3.2.0&lt;/version&gt;&lt;/plugin&gt;
+&lt;plugin&gt;&lt;artifactId&gt;maven-deploy-plugin&lt;/artifactId&gt;&lt;version&gt;3.2.0&lt;/version&gt;&lt;/plugin&gt;
+&lt;plugin&gt;&lt;artifactId&gt;maven-site-plugin&lt;/artifactId&gt;&lt;version&gt;3.22.0&lt;/version&gt;&lt;/plugin&gt;
+&lt;plugin&gt;&lt;artifactId&gt;maven-surefire-plugin&lt;/artifactId&gt;&lt;version&gt;3.5.2&lt;/version&gt;&lt;/plugin&gt;</code></pre>
+  <p><strong>Why it happens.</strong></p>
+  <ul class="trust">
+    <li><strong>Gradle:</strong> the cache key includes the code of Gradle's own compile task, so a different Gradle version gives a different key. In our comparison of 9.7.1 and 9.8.0 the values from the project were identical, and the lines that differed described Gradle's own task and compiler objects.</li>
+    <li><strong>Maven:</strong> Maven fills in a default version for each plugin you did not pin, and some of those defaults differ between Maven versions. They end up in the cache key. In our runs the differing defaults included clean, install, deploy and site.</li>
+  </ul>
+  <p>If the cache is still cold after you match versions, see <a href="#gradle-build-cache-hit-rate-low">why the Gradle hit rate is low</a> or <a href="/maven-build-cache-extension-not-restoring/">why the Maven cache is not restoring</a>. The Maven setup is on <a href="/maven-remote-build-cache-setup/">Maven remote build cache setup</a>.</p>
+
+  <h2>How we checked</h2>
+  <h3>Low hit rate: three causes</h3>
+  <p>Each cause was reproduced with a 0.2.1 server and Gradle 9.8.0, with the local cache switched off so every hit is a hit on the server. The test project is Java sources plus three small cacheable tasks in <code>build.gradle.kts</code>. They differ only in the value they take as input:</p>
+  <pre tabindex="0"><code>@CacheableTask
+abstract class Greet : DefaultTask() {
+    @get:Input abstract val label: Property&lt;String&gt;
+    @get:OutputFile abstract val out: RegularFileProperty
+    @TaskAction fun run() { out.get().asFile.writeText(&quot;hello &quot; + label.get()) }
+}
+
+tasks.register&lt;Greet&gt;(&quot;greetStable&quot;) {          // same input everywhere
+    label.set(&quot;demo&quot;)
+    out.set(layout.buildDirectory.file(&quot;greet-stable.txt&quot;))
+}
+tasks.register&lt;Greet&gt;(&quot;greetAbsPath&quot;) {         // input holds an absolute path
+    label.set(projectDir.absolutePath)
+    out.set(layout.buildDirectory.file(&quot;greet-abs.txt&quot;))
+}
+tasks.register&lt;Greet&gt;(&quot;greetTime&quot;) {            // input changes every build
+    label.set(System.currentTimeMillis().toString())
+    out.set(layout.buildDirectory.file(&quot;greet-time.txt&quot;))
+}</code></pre>
+  <p>We built it once to fill the cache, then tried three things.</p>
+  <p><strong>A path that is only true on one machine.</strong> We copied the project to a different directory and built the same tasks from a clean checkout:</p>
+  <pre tabindex="0"><code>&gt; Task :compileJava FROM-CACHE
+&gt; Task :greetStable FROM-CACHE
+&gt; Task :greetAbsPath
+&gt; Task :greetTime</code></pre>
+  <p>Moving the checkout did not matter for <code>compileJava</code> or for the task with a stable input. The task whose input holds the project's absolute path ran again. The keys show why:</p>
+  <pre tabindex="0"><code>$ gradle greetAbsPath --info        (in the first directory)
+Build cache key for task &#x27;:greetAbsPath&#x27; is 24c324403b9dacb75e78e128fbf76848
+$ gradle greetAbsPath --info        (in the copy)
+Build cache key for task &#x27;:greetAbsPath&#x27; is b7b4f69d180d1dc577a36f2869d0806e</code></pre>
+  <p>Back in the first directory, <code>greetAbsPath</code> hit again, because that directory's entry was there. So a path-in-the-input problem looks fine on one machine and wrong on every other, such as CI against laptops.</p>
+  <p><strong>A value that changes on every build.</strong> <code>greetTime</code> puts the current time in its input. In every build above it ran, in every directory, including right after an identical build.</p>
+  <p><strong>A different Java.</strong> The cache had been filled by Gradle running on JDK 27. We ran the same project, in the same directory, with Gradle on JDK 21:</p>
+  <pre tabindex="0"><code>&gt; Task :compileJava
+&gt; Task :greetStable</code></pre>
+  <p>Both ran again. A second run on JDK 21 hit, and going back to JDK 27 hit its own entries.</p>
+  <p class="muted-note">Not tested here: Gradle versions other than 9.8.0 for these three causes, Java toolchains, and Gradle's path-sensitivity annotations mentioned above.</p>
+
+  <h3>Upgrade: second build on the other version</h3>
+  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
+    <thead><tr><th>Setup</th><th>Second build, on the other version</th></tr></thead>
+    <tbody>
+      <tr><td>Gradle 9.8.0, then 9.7.1</td><td>rebuilt</td></tr>
+      <tr><td>Gradle 9.7.1, then 9.8.0</td><td>rebuilt</td></tr>
+      <tr><td>Gradle 9.5.1, then 9.8.0</td><td>rebuilt</td></tr>
+      <tr><td>Maven 3.10.0 and 3.9.9, only surefire pinned (both orders)</td><td>rebuilt</td></tr>
+      <tr><td>Maven, also resources, compiler and jar pinned (both orders)</td><td>rebuilt</td></tr>
+      <tr><td>Maven, all eight pinned (both orders)</td><td>restored</td></tr>
+    </tbody>
+  </table></div>
+  <p class="muted-note">In all nine series, going back to the first version restored its own entry. One build per step. Each Maven row is two series, one per order. A new empty cache server per series, a fresh project copy for every build. Gradle: a four-module project, the <code>:core:compileJava</code> task, Temurin 21.0.12.1. Maven: one module with two tests, <code>mvn verify</code>, Build Cache Extension 1.2.3, OpenJDK 27. FosterStack Cache 0.2.1 on a Mac (arm64). Not tested: other versions, a build that uses other Maven plugins, Gradle test or jar tasks, the Gradle wrapper, a multi-module Maven build, Linux.</p>
+
   <div class="cta-row">
     <a class="btn" href="/migrate-build-cache-node/">Gradle and Maven setup</a>
-    <a class="btn btn-secondary" href="/build-cache-node-faq/">Questions and answers</a>
+    <a class="btn btn-secondary" href="/build-cache-node-end-of-life/">Build Cache Node end of life</a>
   </div>
 </main>
 <footer>

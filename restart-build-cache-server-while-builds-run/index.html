@@ -128,7 +128,8 @@
   <p>To copy the data somewhere safe, or to move it to another server, see <a href="/upgrade-build-cache-server/">upgrade, back up and restore</a>.</p>
 
   <h2>How we checked</h2>
-  <p><strong>Restarts during a build.</strong> FosterStack Cache 0.2.1 on a Mac (arm64), no password. Gradle 9.8.0, Java 21, one fresh copy of the project per build, no reused daemon, the local build cache off. To keep builds open long enough to overlap a restart, each of the four modules had a cacheable task that sleeps for 8 seconds. We sent the signal to the server's process ID and started it again on the same data folder. All builds ended with <code>BUILD SUCCESSFUL</code>. Each row is one run; we did not repeat them.</p>
+  <p>We ran the Gradle builds on this page twice, once with Java 21 and once with Java 27, with the same results.</p>
+  <p><strong>Restarts during a build.</strong> FosterStack Cache 0.2.1 on a Mac (arm64), no password. Gradle 9.8.0, one fresh copy of the project per build, no reused daemon, the local build cache off. To keep builds open long enough to overlap a restart, each of the four modules had a cacheable task that sleeps for 8 seconds. We sent the signal to the server's process ID and started it again on the same data folder. All builds ended with <code>BUILD SUCCESSFUL</code>. Each row is one run; we did not repeat them.</p>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <thead><tr><th>Server stopped during the build</th><th>Back after</th><th>What the build printed</th><th>Entries stored</th><th>Next build, from cache</th></tr></thead>
     <tbody>
@@ -161,7 +162,7 @@
   </table></div>
   <p>In both 20 MiB cases, an entry that was stored earlier stayed readable. We did not test whether a later start removes the temporary file left by the 40 MiB case.</p>
 
-  <p><strong>What survives a restart.</strong> A four-module Gradle 9.8.0 project (the one from <a href="/gradle-build-cache-monorepo/">Gradle build cache for a monorepo</a>) against a server set up with <code>FSCACHE_DATA_DIR</code> pointing at a folder, on FosterStack Cache 0.2.1 (macOS, arm64) with Java 27. Every build used a fresh copy of the project and an empty Gradle home, so the only shared thing was the server. Our first run used a project folder that still held build output from an earlier check; we repeated all four steps from a clean copy and got the same results. All four builds ended with <code>BUILD SUCCESSFUL</code>. "From cache" counts the four <code>compileJava</code> tasks that printed <code>FROM-CACHE</code>.</p>
+  <p><strong>What survives a restart.</strong> A four-module Gradle 9.8.0 project (the one from <a href="/gradle-build-cache-monorepo/">Gradle build cache for a monorepo</a>) against a server set up with <code>FSCACHE_DATA_DIR</code> pointing at a folder, on FosterStack Cache 0.2.1 (macOS, arm64). Every build used a fresh copy of the project and an empty Gradle home, so the only shared thing was the server. Our first run used a project folder that still held build output from an earlier check; we repeated all four steps from a clean copy and got the same results. All four builds ended with <code>BUILD SUCCESSFUL</code>. "From cache" counts the four <code>compileJava</code> tasks that printed <code>FROM-CACHE</code>.</p>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <thead><tr><th>Step</th><th>Server state before the build</th><th>Entries in the status page</th><th>From cache</th></tr></thead>
     <tbody>
@@ -185,7 +186,7 @@
     of the documented remote build cache HTTP protocol. Apache Maven is a trademark of the
     Apache Software Foundation; the Maven Build Cache Extension is Apache's project, not
     ours.</p>
-    <p style="margin-top:.6rem">© 2026 FosterStack · <a href="/build-cache-node-end-of-life/">Build Cache Node end of life</a> · <a href="/migrate-build-cache-node/">Migrate</a> · <a href="/build-cache-node-faq/">FAQ</a> · <a href="/jenkins-ci-build-cache/">CI setup</a> · <a href="/how-we-build/">How we build</a> · <a href="/regulated/">For regulated markets</a> · <a href="https://github.com/fosterstack/cache">github.com/fosterstack/cache</a> · <a href="mailto:hello@fosterstack.com">hello@fosterstack.com</a></p>
+    <p style="margin-top:.6rem">© 2026 FosterStack · <a href="/build-cache-node-end-of-life/">Build Cache Node end of life</a> · <a href="/migrate-build-cache-node/">Migrate</a> · <a href="/build-cache-node-end-of-life/#build-cache-node-faq">FAQ</a> · <a href="/jenkins-ci-build-cache/">CI setup</a> · <a href="/how-we-build/">How we build</a> · <a href="/regulated/">For regulated markets</a> · <a href="https://github.com/fosterstack/cache">github.com/fosterstack/cache</a> · <a href="mailto:hello@fosterstack.com">hello@fosterstack.com</a></p>
   </div>
 </footer>
 </body>

@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Why Did This One Task Miss the Build Cache?</title>
-<meta name="description" content="Most tasks come from the cache and one keeps running. Log the cache keys on two builds, diff them, and the line that differs names the input. Tested on Gradle 9.8.0.">
+<meta name="description" content="One task keeps missing the cache, or a small change reruns the whole build? Diff the cache keys to find the input. Tested on Gradle 9.8.0 and Maven 3.9.9.">
 <meta property="og:title" content="Why Did This One Task Miss the Build Cache?">
-<meta property="og:description" content="Most tasks come from the cache and one keeps running. Log the cache keys on two builds, diff them, and the line that differs names the input. Tested on Gradle 9.8.0.">
+<meta property="og:description" content="One task keeps missing the cache, or a small change reruns the whole build? Diff the cache keys to find the input. Tested on Gradle 9.8.0 and Maven 3.9.9.">
 <meta property="og:url" content="https://fosterstack.com/why-did-this-task-miss-the-build-cache/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="FosterStack">
@@ -148,9 +148,40 @@ Stored cache entry for task ':greetStable' with cache key f1bf5e9a...</code></pr
   </table></div>
   <p>None of these tasks printed a <code>Build cache key</code> line.</p>
 
+  <h2 id="build-cache-one-module-changed-what-rebuilds">Why did my whole build rerun after a small change?</h2>
+  <p>Picture three modules in a chain: <code>core</code> at the bottom, <code>service</code> on top of it, and <code>app</code> on top of that. In our runs Gradle reused most results, and Maven rebuilt every module above the one we edited.</p>
+  <ul class="trust">
+    <li><strong>Gradle:</strong> in our runs, an edit inside a method or a comment recompiled only the module you edited. Adding a public method also recompiled the module directly above it.</li>
+    <li><strong>Maven:</strong> in our runs, each of our three changes to the bottom module rebuilt all three modules, even a comment.</li>
+    <li><strong>Both:</strong> a change in the top module recompiled (Gradle) or rebuilt (Maven) only the top module. The two below it came from the cache.</li>
+    <li><strong>A dependency bump:</strong> only the module that uses the library recompiled (Gradle) or rebuilt (Maven). Going back to the old version restored both modules.</li>
+  </ul>
+  <p>Our advice, not a test result:</p>
+  <ul class="trust">
+    <li><strong>In Maven, batch edits to widely shared modules.</strong> Expect an edit there to rebuild everything above it.</li>
+    <li><strong>In Gradle, keep a shared module's public API steady.</strong></li>
+    <li><strong>Bump a dependency in one change.</strong> Let one build fill the cache. Later builds restore it.</li>
+    <li><strong>Keep Gradle, Maven and Java versions the same</strong> on laptops and CI, so entries can be shared.</li>
+  </ul>
+  <p>If a module you did not touch still rebuilds, diff the keys as above, or see <a href="/gradle-remote-cache-not-working/">Gradle remote build cache not working</a> or <a href="/maven-build-cache-extension-not-restoring/">why the Maven cache is not restoring</a>. For Maven multi-module setup, see <a href="/maven-build-cache-extension-multi-module/">Maven Build Cache Extension in a Multi-Module Project</a>.</p>
+  <p>Why Maven rebuilt more: the Maven log shows that while it works out the cache key for <code>service</code>, it also works out the key for <code>core</code>. In the comment run, <code>core</code> had a new key and so did <code>service</code> (<code>efd19a4c19b933af</code> before, <code>3d90eee1e1f99534</code> after), though no file in <code>service</code> changed. That is consistent with a module's key including the keys of the modules it depends on.</p>
+  <p>Gradle's documentation describes the cache key for compiling a module as looking only at the public API of the modules it depends on. Our results are consistent with that. We checked results, not Gradle's internals.</p>
+  <p>For each change, build 1 was the unchanged project and build 2 had the one change. This table shows build 2.</p>
+  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
+    <thead><tr><th>The one change</th><th>Gradle: core / service / app</th><th>Maven: core / service / app</th></tr></thead>
+    <tbody>
+      <tr><td>A number in a method body in <code>core</code></td><td>recompiled / from cache / from cache</td><td>built / built / built</td></tr>
+      <tr><td>One comment in <code>core</code></td><td>recompiled / from cache / from cache</td><td>built / built / built</td></tr>
+      <tr><td>A new public method in <code>core</code></td><td>recompiled / recompiled / from cache</td><td>built / built / built</td></tr>
+      <tr><td>A number in <code>app</code></td><td>from cache / from cache / recompiled</td><td>restored / restored / built</td></tr>
+    </tbody>
+  </table></div>
+  <p>For the dependency bump we used two modules: <code>lib</code> with no dependencies and <code>app</code> using Gson. Five builds ran on one server: Gson 2.10.1, 2.10.1 again, 2.11.0, 2.11.0 again, then back to 2.10.1. After the bump, <code>lib</code> came from the cache and <code>app</code> was recompiled (Gradle) or rebuilt (Maven). The builds after that restored both modules. The result was the same in Gradle and in Maven.</p>
+
   <h2>How we checked</h2>
-  <p>FosterStack Cache 0.2.1 on a Mac (arm64), no password. Gradle 9.8.0, <code>--no-daemon</code>, <code>--console=plain</code>, <code>--max-workers=1</code>, a new Gradle home for every build, the local build cache off. Java 21 for every build except the Java 27 row, which used Homebrew OpenJDK 27 for the Gradle run. The test project had one Java class and five small cacheable tasks. Each row is one run, we did not repeat them, and we report counts and log lines, not times.</p>
-  <p class="muted-note">Not tested: other Gradle versions, Maven, Kotlin or Android builds, a second machine, and inputs that come from dependencies. Related: <a href="/gradle-build-cache-hit-rate-low/">Gradle build cache hit rate low</a> and <a href="/build-cache-one-module-changed-what-rebuilds/">why did my whole build rerun after a small change</a>.</p>
+  <p>Key-diff runs: FosterStack Cache 0.2.1 on a Mac (arm64), no password. Gradle 9.8.0, <code>--no-daemon</code>, <code>--console=plain</code>, <code>--max-workers=1</code>, a new Gradle home for every build in the key-diff runs, the local build cache off. Java 21 for every build except the Java 27 row, which used Homebrew OpenJDK 27 for the Gradle run. The key-diff project had one Java class and five small cacheable tasks. Each row is one run, we did not repeat them, and we report counts and log lines, not times.</p>
+  <p>Chain and Gson runs: FosterStack Cache 0.2.1 on a Mac (arm64), every scenario on a new, empty server with a fresh project copy for every build. Gradle 9.8.0 ran only the compile tasks, with its local cache off. Maven ran in the same runs: Maven 3.9.9 with Build Cache Extension 1.2.3, <code>mvn verify</code>, all eight default plugin versions pinned and Java release 17. Both used Temurin 21.0.12.1. Downloads (the Gradle home for the Gson runs, the Maven repository) were shared across builds and held no cache entries.</p>
+  <p class="muted-note">Not tested: other Gradle versions, other Maven versions, Kotlin or Android builds, a second machine, inputs that come from dependencies, Gradle <code>api</code> dependencies, test and jar tasks in Gradle, annotation processors, a change to a public constant, a change in the middle module, a library used by both modules, bigger projects, Linux, build times, and Maven in the key-diff runs.</p>
   <div class="cta-row">
     <a class="btn" href="/gradle-remote-cache-not-working/">Not working at all?</a>
     <a class="btn btn-secondary" href="/">FosterStack home</a>
@@ -164,7 +195,7 @@ Stored cache entry for task ':greetStable' with cache key f1bf5e9a...</code></pr
     of the documented remote build cache HTTP protocol. Apache Maven is a trademark of the
     Apache Software Foundation; the Maven Build Cache Extension is Apache's project, not
     ours.</p>
-    <p style="margin-top:.6rem">© 2026 FosterStack · <a href="/build-cache-node-end-of-life/">Build Cache Node end of life</a> · <a href="/migrate-build-cache-node/">Migrate</a> · <a href="/build-cache-node-faq/">FAQ</a> · <a href="/jenkins-ci-build-cache/">CI setup</a> · <a href="/how-we-build/">How we build</a> · <a href="/regulated/">For regulated markets</a> · <a href="https://github.com/fosterstack/cache">github.com/fosterstack/cache</a> · <a href="mailto:hello@fosterstack.com">hello@fosterstack.com</a></p>
+    <p style="margin-top:.6rem">© 2026 FosterStack · <a href="/build-cache-node-end-of-life/">Build Cache Node end of life</a> · <a href="/migrate-build-cache-node/">Migrate</a> · <a href="/build-cache-node-end-of-life/#build-cache-node-faq">FAQ</a> · <a href="/jenkins-ci-build-cache/">CI setup</a> · <a href="/how-we-build/">How we build</a> · <a href="/regulated/">For regulated markets</a> · <a href="https://github.com/fosterstack/cache">github.com/fosterstack/cache</a> · <a href="mailto:hello@fosterstack.com">hello@fosterstack.com</a></p>
   </div>
 </footer>
 </body>
