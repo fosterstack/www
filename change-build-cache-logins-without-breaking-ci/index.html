@@ -88,7 +88,7 @@
 </header>
 <main>
   <h1>How do I change the cache logins without breaking CI?</h1>
-  <p class="lede">In our runs, changing the logins on your FosterStack Cache server did not fail any build. The old login is refused at once, so a job that still sends it builds without the cache and prints a warning. To keep those jobs using the cache while you update CI, restart the server with your old read-write login set as its read-only login. Those jobs can then read from the cache but not write to it.</p>
+  <p class="lede">In our runs, changing the logins on your FosterStack Cache server did not fail any build. The old login is refused at once, so a job that still sends it builds without the cache and prints a warning. To keep those jobs using the cache while you update CI, restart the server and list your old read-write login as the read-only one. Those jobs can then read from the cache but not write to it.</p>
 
   <h2>What happens when you change a login</h2>
   <ul class="trust">

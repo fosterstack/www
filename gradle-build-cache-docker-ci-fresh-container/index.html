@@ -88,7 +88,7 @@
 </header>
 <main>
   <h1>Reuse Gradle results in Docker CI, even in fresh containers</h1>
-  <p class="lede">A new container with an empty Gradle home can take its compile result from the cache, so containers that keep nothing still skip work. At FosterStack we prove everything, so here is how we proved it to ourselves: real Linux container runs, a different mount path, and a missing password.</p>
+  <p class="lede">A new container with an empty Gradle home can take its compile result from the cache, so containers that keep nothing still skip work. We checked this in real Linux container runs, with a different mount path and with no password passed to the container.</p>
 
   <h2>The short answer</h2>
   <ul class="trust">
