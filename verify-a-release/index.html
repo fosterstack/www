@@ -1,12 +1,13 @@
 <!doctype html>
 <html lang="en">
 <head>
+<meta name="robots" content="noindex, nofollow">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Verify a FosterStack Cache release yourself</title>
-<meta name="description" content="Check a FosterStack Cache release yourself: checksum, container image signature with cosign, build provenance, SBOM and VEX, with real output from 0.2.2.">
+<meta name="description" content="DRAFT v0.3.0: verify a FosterStack Cache release yourself with cosign, gh and jq. Not published.">
 <meta property="og:title" content="Verify a FosterStack Cache release yourself">
-<meta property="og:description" content="Check a FosterStack Cache release yourself: checksum, container image signature with cosign, build provenance, SBOM and VEX, with real output from 0.2.2.">
+<meta property="og:description" content="DRAFT v0.3.0: verify a FosterStack Cache release yourself with cosign, gh and jq. Not published.">
 <meta property="og:url" content="https://fosterstack.com/verify-a-release/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="FosterStack">
@@ -87,152 +88,41 @@
 </header>
 <main>
   <h1>Verify a FosterStack Cache release yourself</h1>
-  <p class="lede">Check our signature, build provenance, SBOM and vulnerability statements with commands you run yourself, using <code>cosign</code> and the <code>gh</code> tool. You can confirm that our release workflow signed a container image and that GitHub's CI built it. No account is needed, except for the <code>gh attestation</code> steps (5 to 7), which need a GitHub login or token.</p>
-
-  <h2>What you need</h2>
-  <p><code>cosign</code>, the <code>gh</code> tool (for the build-provenance steps), and <code>jq</code>. Get them from their own pages: <a href="https://docs.sigstore.dev/cosign/system_config/installation/">cosign</a>, <a href="https://cli.github.com/">gh</a> and <a href="https://jqlang.org/download/">jq</a>. In our timed run we used cosign 3.1.3, gh 2.102.0 and jq 1.6; we make no claim about other versions. Set the version and your platform once:</p>
-  <pre tabindex="0"><code>$ VER=0.2.2
-PLATFORM=linux_arm64   # or linux_amd64, darwin_arm64, darwin_amd64</code></pre>
-  <p>To check another release, set <code>VER</code> to its number, for example <code>VER=0.2.1</code>. To check the latest release, set <code>VER</code> from GitHub with this command in place of the first line above:</p>
-  <pre tabindex="0"><code>VER=$(curl -fsSL https://api.github.com/repos/fosterstack/cache/releases/latest \
-        | sed -n 's/.*"tag_name": *"v\([^"]*\)".*/\1/p')</code></pre>
-
-  <h2>1. Download the release files</h2>
-  <pre tabindex="0"><code>$ gh release download v${VER} --repo fosterstack/cache \
-  -p checksums.txt -p checksums.txt.bundle \
-  -p &quot;fscache_${VER}_${PLATFORM}.tar.gz&quot; \
-  -p &quot;fscache_${VER}_${PLATFORM}.tar.gz.sbom.json&quot; \
-  -p fosterstack-cache.openvex.json -p release-manifest.json</code></pre>
-  <p>Downloading from the <a href="https://github.com/fosterstack/cache/releases">releases page</a> in a browser works the same.</p>
-
-  <h2>2. Is the checksums file ours?</h2>
-  <p>This checks the signature on <code>checksums.txt</code>. It needs no GitHub account.</p>
-  <pre tabindex="0"><code>$ cosign verify-blob \
-  --bundle checksums.txt.bundle \
-  --certificate-identity-regexp=&#x27;^https://github.com/fosterstack/cache/&#x27; \
-  --certificate-oidc-issuer=&#x27;https://token.actions.githubusercontent.com&#x27; \
-  checksums.txt
-Verified OK</code></pre>
-
-  <h2>3. Does your download match it?</h2>
-  <pre tabindex="0"><code>$ sha256sum -c &lt;(grep &quot;fscache_${VER}_${PLATFORM}.tar.gz&quot; checksums.txt | grep -v sbom)
-fscache_0.2.2_linux_arm64.tar.gz: OK</code></pre>
-  <p>Steps 2 and 3 together are the important pair. The checksum alone only shows the archive matches a file you downloaded beside it. The signature is what ties that file to us.</p>
-
-  <h2 id="verify-container-image-signature-cosign">4. Verify a container image signature with cosign</h2>
-  <p>This answers one question: did our release workflow sign these exact bytes? Pin the workflow and the release tag, not "any workflow in the repository". No account is needed.</p>
-  <pre tabindex="0"><code>$ cosign verify ghcr.io/fosterstack/cache:${VER} \
-  --certificate-identity-regexp=&quot;^https://github.com/fosterstack/cache/.github/workflows/stage-promote.yml@refs/tags/v${VER}$&quot; \
-  --certificate-oidc-issuer=&#x27;https://token.actions.githubusercontent.com&#x27;
-Verification for ghcr.io/fosterstack/cache:0.2.2 --
-The following checks were performed on each of these signatures:
-  - The cosign claims were validated
-  - Existence of the claims in the transparency log was verified offline
-  - The code-signing certificate was verified using trusted certificate authority certificates
-
-[{&quot;critical&quot;:{&quot;identity&quot;:{&quot;docker-reference&quot;:&quot;ghcr.io/fosterstack/cache:0.2.2&quot;},&quot;image&quot;:{&quot;docker-manifest-digest&quot;:&quot;sha256:f2b330cf27b3814405230cc001a771909ae5bbf3b1e223a90ee7a9ee5d0e53dd&quot;},&quot;type&quot;:&quot;https://sigstore.dev/cosign/sign/v1&quot;},&quot;optional&quot;:{}},{&quot;critical&quot;:{&quot;identity&quot;:{&quot;docker-reference&quot;:&quot;ghcr.io/fosterstack/cache:0.2.2&quot;},&quot;image&quot;:{&quot;docker-manifest-digest&quot;:&quot;sha256:f2b330cf27b3814405230cc001a771909ae5bbf3b1e223a90ee7a9ee5d0e53dd&quot;},&quot;type&quot;:&quot;https://fosterstack.com/attestations/release-manifest/v1&quot;},&quot;optional&quot;:{}}]</code></pre>
-  <p>There is no signing key to steal. The certificate is short-lived and was issued when the workflow ran, and the signature is in a public transparency log. The same command against <code>docker.io/fosterstack/cache:${VER}</code> returns the same digest, <code>sha256:f2b330cf27b3814405230cc001a771909ae5bbf3b1e223a90ee7a9ee5d0e53dd</code>.</p>
-
-  <h2>5. Where was the image built?</h2>
-  <p>A signature says who signed. Build provenance says what produced the bytes. This step reads GitHub's attestation store, so it needs a token (<code>GH_TOKEN</code> or <code>gh auth login</code>), even though the repository is public.</p>
-  <pre tabindex="0"><code>$ gh attestation verify oci://ghcr.io/fosterstack/cache:${VER} \
-  --repo fosterstack/cache \
-  --signer-workflow fosterstack/cache/.github/workflows/stage-image.yml \
-  --source-ref &quot;refs/tags/v${VER}&quot; \
-  --format json | jq &#x27;.[0].verificationResult | {statement: .statement.predicateType, image: .statement.subject[0].digest, signer: .signature.certificate.subjectAlternativeName, run: .signature.certificate.runInvocationURI}&#x27;
-{
-  &quot;statement&quot;: &quot;https://slsa.dev/provenance/v1&quot;,
-  &quot;image&quot;: {
-    &quot;sha256&quot;: &quot;f2b330cf27b3814405230cc001a771909ae5bbf3b1e223a90ee7a9ee5d0e53dd&quot;
-  },
-  &quot;signer&quot;: &quot;https://github.com/fosterstack/cache/.github/workflows/stage-image.yml@refs/tags/v0.2.2&quot;,
-  &quot;run&quot;: &quot;https://github.com/fosterstack/cache/actions/runs/37957120550/attempts/2&quot;
-}</code></pre>
-  <p>The command exits with status 0 on success. The image digest is the one from step 4, and the run link is the public build that produced it. The link opens attempt 2 of the release run. That attempt built and authorized the image. Attempt 3 re-ran only the promotion job, after a registry login was rejected in attempt 2. It published and signed the images, so the public signatures come from attempt 3. The image digests did not change.</p>
-
-  <h2>6. Where was your download built?</h2>
-  <pre tabindex="0"><code>$ gh attestation verify &quot;fscache_${VER}_${PLATFORM}.tar.gz&quot; --repo fosterstack/cache \
-  --format json | jq -r &#x27;.[0].verificationResult.statement.subject[].name, .[0].verificationResult.signature.certificate.subjectAlternativeName&#x27;
-fscache-fips_0.2.2_linux_amd64.tar.gz
-fscache-fips_0.2.2_linux_amd64.tar.gz.sbom.json
-fscache-fips_0.2.2_linux_arm64.tar.gz
-fscache-fips_0.2.2_linux_arm64.tar.gz.sbom.json
-fscache_0.2.2_darwin_amd64.tar.gz
-fscache_0.2.2_darwin_amd64.tar.gz.sbom.json
-fscache_0.2.2_darwin_arm64.tar.gz
-fscache_0.2.2_darwin_arm64.tar.gz.sbom.json
-fscache_0.2.2_linux_amd64.tar.gz
-fscache_0.2.2_linux_amd64.tar.gz.sbom.json
-fscache_0.2.2_linux_arm64.tar.gz
-fscache_0.2.2_linux_arm64.tar.gz.sbom.json
-checksums.txt
-https://github.com/fosterstack/cache/.github/workflows/stage-build.yml@refs/tags/v0.2.2</code></pre>
-  <p>One statement covers every archive, its SBOM and <code>checksums.txt</code>. Your archive is in the list.</p>
-
-  <h2>7. Did the whole release chain pass?</h2>
-  <p>Each stage of the release signs its own statement about the exact image. One of them exists only if the final authorization stage checked all the others for this image: the source check, the build, the image assembly, the reproducibility check, each scanner's verdict, and the acceptance tests.</p>
-  <pre tabindex="0"><code>$ gh attestation verify oci://ghcr.io/fosterstack/cache:${VER} \
-  --repo fosterstack/cache \
-  --signer-workflow fosterstack/cache/.github/workflows/stage-authorize.yml \
-  --predicate-type https://fosterstack.com/attestations/release-authorization/v1 \
-  --format json | jq &#x27;.[0].verificationResult | {predicateType: .statement.predicateType, signer: .signature.certificate.subjectAlternativeName}&#x27;
-{
-  &quot;predicateType&quot;: &quot;https://fosterstack.com/attestations/release-authorization/v1&quot;,
-  &quot;signer&quot;: &quot;https://github.com/fosterstack/cache/.github/workflows/stage-authorize.yml@refs/tags/v0.2.2&quot;
-}</code></pre>
-
-  <h2>8. What is inside? The SBOM</h2>
-  <p>Each binary archive has a software bill of materials in SPDX format.</p>
-  <pre tabindex="0"><code>$ jq &#x27;{spdxVersion, name, packages: (.packages | length)}&#x27; &quot;fscache_${VER}_${PLATFORM}.tar.gz.sbom.json&quot;
-{
-  &quot;spdxVersion&quot;: &quot;SPDX-2.3&quot;,
-  &quot;name&quot;: &quot;fscache_0.2.2_linux_arm64.tar.gz&quot;,
-  &quot;packages&quot;: 13
-}</code></pre>
-  <pre tabindex="0"><code>$ jq -r &#x27;.packages[0:4][] | &quot;\(.name) \(.versionInfo)&quot;&#x27; &quot;fscache_${VER}_${PLATFORM}.tar.gz.sbom.json&quot;
-github.com/beorn7/perks v1.0.1
-github.com/cespare/xxhash/v2 v2.3.0
-github.com/fosterstack/cache v0.2.2
-github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822</code></pre>
-
-  <h2>9. Which known vulnerabilities do not apply? The VEX file</h2>
-  <p>The VEX (OpenVEX) file lists vulnerabilities that scanners may report and says why each does not affect this release.</p>
-  <pre tabindex="0"><code>$ jq -r &#x27;.statements[] | &quot;\(.vulnerability.name) \(.status) \(.justification)&quot;&#x27; fosterstack-cache.openvex.json
-CVE-2024-51744 not_affected component_not_present
-CVE-2025-60876 not_affected vulnerable_code_not_in_execute_path
-CVE-2025-46394 not_affected vulnerable_code_not_in_execute_path
-CVE-2024-58251 not_affected vulnerable_code_not_in_execute_path</code></pre>
-  <p>You do not have to take our word for those. Run your own scanner against the image and give it this file.</p>
-
-  <h2>10. The release manifest</h2>
-  <p><code>release-manifest.json</code> lists the evidence for the whole release. It names three image variants (the standard one, <code>debug</code> and <code>fips</code>), each with its digest. The standard one is the digest you verified in steps 4 and 5, at both registries:</p>
-  <pre tabindex="0"><code>$ jq -r &#x27;.images[] | &quot;\(.variant) \(.digest)&quot;&#x27; release-manifest.json
-production sha256:f2b330cf27b3814405230cc001a771909ae5bbf3b1e223a90ee7a9ee5d0e53dd
-debug sha256:87887f55ffa41cc63d4aa6f6d9459fd0dbf919491b83f1d3c8b7fc5444b5a081
-fips sha256:92fae7f20616e553c5fe24e9b92f186c3d3f28ad89cee5c24864911032e6c05e</code></pre>
-  <pre tabindex="0"><code>$ jq -c &#x27;.images[0].refs&#x27; release-manifest.json
-[&quot;ghcr.io/fosterstack/cache@sha256:f2b330cf27b3814405230cc001a771909ae5bbf3b1e223a90ee7a9ee5d0e53dd&quot;,&quot;docker.io/fosterstack/cache@sha256:f2b330cf27b3814405230cc001a771909ae5bbf3b1e223a90ee7a9ee5d0e53dd&quot;]</code></pre>
-  <pre tabindex="0"><code>$ jq &#x27;.verified_statements | length&#x27; release-manifest.json
-43</code></pre>
-  <p>That last number is the statements the authorization stage checked, each with its entry in the public transparency log.</p>
-
-  <h2>What these checks do and do not prove</h2>
-  <ul class="trust">
+  <p>Each stage of a release is signed on its own, and the signatures are verified together at release. These commands check that yourself, using only <code>cosign</code>, <code>gh</code> and <code>jq</code>.</p>
+  <p class="muted-note"><strong>DRAFT for v0.3.0, not published and never merged before v0.3.0 is live.</strong> <code>[TO-VERIFY]</code> marks anything not yet run against a real release.</p>
+  <p>Use the image by digest for <code>&lt;IMAGE_REF&gt;</code>. There are two images; run every step for each. <code>[TO-VERIFY]</code> which two variants.</p>
+  <h2 id="verify-container-image-signature-cosign">1. The signature and who signed it</h2>
+  <pre tabindex="0"><code># [TO-VERIFY] identity and issuer for the final signature
+cosign verify &lt;IMAGE_REF&gt; \
+  --certificate-identity-regexp '&lt;IDENTITY&gt;' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com</code></pre>
+  <h2>2. The digest is the one in the release</h2>
+  <pre tabindex="0"><code># [TO-VERIFY] file name and layout
+gh release download &lt;TAG&gt; --repo fosterstack/cache -p release-manifest.json
+jq -r '.images[] | "\(.variant) \(.digest)"' release-manifest.json</code></pre>
+  <p>Every statement names the image by digest, never by tag. The digest you verified should match this list.</p>
+  <h2>3. How it was built</h2>
+  <pre tabindex="0"><code># [TO-VERIFY] signer workflow
+gh attestation verify oci://&lt;IMAGE_REF&gt; --repo fosterstack/cache \
+  --signer-workflow '&lt;WORKFLOW&gt;' --source-ref refs/tags/&lt;TAG&gt;</code></pre>
+  <p><code>[TO-VERIFY]</code> One sentence on what this record covers. No SLSA level claim here.</p>
+  <h2>4. The parts list (SBOM)</h2>
+  <pre tabindex="0"><code># [TO-VERIFY] predicate type and what the list holds for an image with no base image
+cosign verify-attestation &lt;IMAGE_REF&gt; --type spdxjson \
+  --certificate-identity-regexp '&lt;IDENTITY&gt;' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+  | jq -r '.payload | @base64d | fromjson | .predicate.name'</code></pre>
+  <h2>5. What the image was assembled from</h2>
+  <pre tabindex="0"><code># [TO-VERIFY] what "inputs" means for a customer, and the one command that checks it
+cosign verify-attestation &lt;IMAGE_REF&gt; --type '&lt;INPUTS_TYPE&gt;' ... | jq '&lt;FILTER&gt;'</code></pre>
+  <h2>What this proves</h2>
+  <ul>
     <li>A valid signature proves who signed these exact bytes.</li>
-    <li>Build provenance proves which repository, workflow and run produced them, which is a public CI run and not a developer machine.</li>
-    <li>Neither says the image was scanned or tested. Those are separate signed statements attached to the same image digest, and you can verify them the same way.</li>
-    <li>The SBOM and VEX files are statements we publish. They are as trustworthy as the signature on the release that carries them.</li>
-    <li>None of this proves the software has no bugs or that no vulnerability exists. It proves the release is the one we built, in the way we describe.</li>
+    <li>Provenance proves which workflow and run produced them.</li>
+    <li>It does not prove the software has no bugs.</li>
   </ul>
-  <h2>How we checked</h2>
-  <p>Every command above was run against release 0.2.2, and the output shown is what it printed. We ran the same commands against release 0.2.1 too: they worked the same, and only the values differ. The workflow names in the commands belong to these two releases. They are version-scoped, so for older releases use the <a href="https://github.com/fosterstack/cache/blob/main/docs/verify-images.md">verification guide</a>.</p>
-  <p><strong>How long it takes.</strong> We followed this page word for word in a new container on a GitHub-hosted runner, with only the tools it names installed (cosign, <code>gh</code> and <code>jq</code>, plus <code>curl</code>, <code>ca-certificates</code> and <code>tar</code> from the system). Steps 1 to 7 took 12.6 to 13.1 seconds, and all ten steps 13.9 to 14.5 seconds, in two runs for release 0.2.1 and two for release 0.2.2. Installing the tools took about 5 seconds more. Reading and typing are not in those numbers. Steps 1 to 4 ran with no GitHub login; only steps 5 to 7 were given a token. Every step passed. In the 0.2.1 runs we also compared the values this page used to print for 0.2.1, and the digests, the build-run link, the package count, a VEX line and the statement count all matched. <a href="https://github.com/fosterstack/www/actions/runs/38029170706">The run and its log are public</a>, and the script is <a href="/bin/bench-verify-release.sh">bin/bench-verify-release.sh</a>.</p>
-
-  <p class="muted-note">Related: <a href="/how-we-build/">how releases are built and signed</a> and <a href="/air-gapped-build-cache-install/">installing on an air-gapped network</a>.</p>
-  <div class="cta-row">
-    <a class="btn" href="https://github.com/fosterstack/cache/releases">Releases on GitHub</a>
-    <a class="btn btn-secondary" href="/">FosterStack home</a>
-  </div>
+  <p>Extra evidence, outside these commands: records anyone who has Witness installed can check. <code>[TO-VERIFY]</code> where they are published.</p>
+  <p class="muted-note">Related: <a href="/how-we-build/">how releases are built and signed</a> and <a href="/security/">security policy</a>.</p>
 </main>
 <footer>
   <div>
