@@ -334,8 +334,8 @@ ubuild() { # NAME DIR  -> runs the build and waits; the page says every build en
   ubuild_start "$1" "$2"; ubuild_wait "$1"
   uok "$1" || fail "U build $1: the page says every build ended with BUILD SUCCESSFUL; it did not (exit $(cat "$W/u-$1.rc" 2>/dev/null))"
 }
-uheaders() { grep -cE '^> Task :[a-z]+:slow$' "$W/u-$1.out" 2>/dev/null || true; }
-ufc() { grep -cE '^> Task :[a-z]+:slow FROM-CACHE$' "$W/u-$1.out" 2>/dev/null || true; }
+uheaders() { local n; n="$(grep -cE '^> Task :[a-z]+:slow$' "$W/u-$1.out" 2>/dev/null)"; printf '%s' "${n:-0}"; }
+ufc() { local n; n="$(grep -cE '^> Task :[a-z]+:slow FROM-CACHE$' "$W/u-$1.out" 2>/dev/null)"; printf '%s' "${n:-0}"; }
 uok() { grep -qF "BUILD SUCCESSFUL" "$W/u-$1.out" && [ "$(cat "$W/u-$1.rc")" = 0 ]; }
 tget_code() { curl -s --max-time 30 -o /dev/null -w '%{http_code}' "http://127.0.0.1:$1/$2"; }
 scenario_u() {
@@ -348,9 +348,10 @@ scenario_u() {
     start_server "u-$mode-$down" "$P" "" "" || return
     u_project "$D/b-$mode-$down"
     t0=$(now); ubuild_start "r-$mode-$down" "$D/b-$mode-$down"
-    for i in $(seq 1 800); do [ "$(uheaders "r-$mode-$down")" -ge 2 ] && break; sleep 0.25; done
+    for i in $(seq 1 800); do [ "$(uheaders "r-$mode-$down")" -ge 2 ] && break; [ -f "$W/u-r-$mode-$down.rc" ] && break; sleep 0.25; done
     sleep 2   # Gradle prints a task's header when the task has finished, so two headers = two tasks done and stored; the third task has just started (8 s)
     echo "OBS U row $mode / ${down} s: the server is stopped $(secs "$t0" "$(now)") s after the build started, with $(uheaders "r-$mode-$down") slow tasks finished"
+    [ "$(uheaders "r-$mode-$down")" = 2 ] || fail "U row $mode / ${down} s: the stop was meant to land while the third slow task runs (two finished); $(uheaders "r-$mode-$down") had finished"
     if [ "$mode" = normal ]; then stop_server; else kill -9 "$SERVER_PID" 2>/dev/null; wait "$SERVER_PID" 2>/dev/null; SERVER_PID=""; fi
     sleep "$down"
     ( cd "$W/srv-u-$mode-$down" && exec env FSCACHE_ADDR="127.0.0.1:${P}" FSCACHE_DATA_DIR="$W/srv-u-$mode-$down/data" ./fscache ) >> "$W/srv-u-$mode-$down/server.log" 2>&1 &
@@ -359,8 +360,9 @@ scenario_u() {
     ubuild_wait "r-$mode-$down"
     uok "r-$mode-$down" && echo "OBS U row $mode stop, back after ${down} s: BUILD SUCCESSFUL" || fail "U row $mode / ${down} s: the page says the build still ended with BUILD SUCCESSFUL"
     if [ "$down" = 2 ]; then
-      for t in "Could not store entry" "Could not load entry" "The remote build cache was disabled"; do grep -qF "$t" "$W/u-r-$mode-$down.out" && fail "U row $mode / 2 s: the page says the build printed nothing about the cache; it printed '$t'"; done
-      echo "OBS U row $mode stop, back after 2 s: nothing about the cache was printed, as the page says"
+      local quiet=1
+      for t in "Could not store entry" "Could not load entry" "The remote build cache was disabled"; do grep -qF "$t" "$W/u-r-$mode-$down.out" && { quiet=0; fail "U row $mode / 2 s: the page says the build printed nothing about the cache; it printed '$t'"; }; done
+      [ "$quiet" = 1 ] && echo "OBS U row $mode stop, back after 2 s: nothing about the cache was printed, as the page says"
     else
       want "row $mode stop, back after 14 s: 'Could not store entry' lines" "$(grep -cF 'Could not store entry' "$W/u-r-$mode-$down.out")" 1
       grep -qF "The remote build cache was disabled during the build due to errors" "$W/u-r-$mode-$down.out" && echo "OBS U row $mode stop, back after 14 s: then the remote cache was disabled" || fail "U row $mode / 14 s: the page says the remote cache was disabled after the warning"
@@ -397,6 +399,7 @@ for i in range(n):
     if r.status != 201:
         print("PUT %d got %d" % (i, r.status)); sys.exit(1)
 PYEOF
+    [ $? = 0 ] || fail "U the bulk upload of $entries entries failed"
     echo "OBS U $entries entries in the cache: $(statusz $P x y), $(sfield $P store_bytes) bytes"
     for mode in normal kill; do
       local worst=0 best=999 el
