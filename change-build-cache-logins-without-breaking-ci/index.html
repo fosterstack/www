@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Change the Build Cache Logins Without Breaking CI</title>
+<meta name="description" content="In our runs, changing the cache logins did not fail builds. Old-login jobs ran without the cache. Here is an order that keeps the cache working, from a real run.">
+<meta property="og:title" content="Change the Build Cache Logins Without Breaking CI">
+<meta property="og:description" content="In our runs, changing the cache logins did not fail builds. Old-login jobs ran without the cache. Here is an order that keeps the cache working, from a real run.">
+<meta property="og:url" content="https://fosterstack.com/change-build-cache-logins-without-breaking-ci/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="FosterStack">
+<link rel="canonical" href="https://fosterstack.com/change-build-cache-logins-without-breaking-ci/">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<style>
+  :root {
+    --bg: #ffffff; --fg: #16181d; --muted: #5b6472; --line: #e4e7ec;
+    --accent: #0d7a5f; --accent-fg: #ffffff; --card: #f6f8f9; --warn-bg: #fff7ed; --warn-line: #fdba74;
+    --mark: #0f4d66;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #101318; --fg: #e8eaf0; --muted: #98a2b3; --line: #262c36;
+      --accent: #2fbf95; --accent-fg: #08110e; --card: #171c23; --warn-bg: #241a10; --warn-line: #7c4a12;
+      --mark: #e8eaf0;
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 44rem; margin: 0 auto; padding: 0 1.25rem 4rem; }
+  header.site { max-width: 44rem; margin: 0 auto; padding: 1.25rem; display: flex; align-items: baseline; gap: .6rem; }
+  .logo { font-weight: 700; font-size: 1.05rem; letter-spacing: -.01em; }
+  .logo span { color: var(--accent); }
+  .logo .mark { width: 1.2em; height: 1.2em; vertical-align: -.24em; margin-right: .4em; }
+  .tag { color: var(--muted); font-size: .85rem; }
+  .notice {
+    background: var(--warn-bg); border: 1px solid var(--warn-line); border-radius: 8px;
+    padding: .7rem 1rem; font-size: .92rem; margin: 1.5rem 0 2.5rem;
+  }
+  h1 { font-size: 2rem; line-height: 1.2; letter-spacing: -.02em; margin-bottom: 1rem; }
+  .lede { font-size: 1.12rem; color: var(--muted); margin-bottom: 2rem; }
+  h2 { font-size: 1.25rem; margin: 3rem 0 .9rem; letter-spacing: -.01em; }
+  p + p { margin-top: .8rem; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: .8rem; margin-top: 1rem; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1rem 1.1rem; }
+  .card h3 { font-size: .98rem; margin-bottom: .35rem; }
+  .card p { font-size: .9rem; color: var(--muted); }
+  ul.trust { list-style: none; margin-top: .5rem; }
+  ul.trust li { padding: .45rem 0 .45rem 1.6rem; position: relative; }
+  ul.trust li::before { content: "✓"; position: absolute; left: .2rem; color: var(--accent); font-weight: 700; }
+  code, pre { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .88em; }
+  code { background: var(--card); border: 1px solid var(--line); border-radius: 5px; padding: .1em .35em; }
+  pre code { background: none; border: 0; padding: 0; color: inherit; font-size: 1em; }
+  button {
+    padding: .7rem 1.3rem; font-size: 1rem; font-weight: 600; cursor: pointer;
+    background: var(--accent); color: var(--accent-fg); border: 0; border-radius: 8px;
+  }
+  button:disabled { opacity: .6; cursor: default; }
+  table { width: 100%; border-collapse: collapse; font-size: .92rem; margin-top: 1rem; }
+  th, td { text-align: left; padding: .55rem .6rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  pre { background: #0f172a; color: #e2e8f0; padding: .9rem 1rem; border-radius: 8px;
+        overflow-x: auto; font-size: .9rem; line-height: 1.5; }
+  .cta-row { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1.1rem; }
+  .btn { display: inline-block; padding: .55rem 1rem; border-radius: 8px; font-weight: 600;
+         text-decoration: none; background: var(--accent); color: var(--accent-fg); }
+  .btn-secondary { background: transparent; color: inherit; border: 1px solid var(--muted); }
+  .muted-note { color: var(--muted); font-size: .93rem; margin-top: 1.1rem; }
+  footer { border-top: 1px solid var(--line); margin-top: 4rem; padding: 1.5rem 1.25rem 3rem; }
+  footer div { max-width: 44rem; margin: 0 auto; color: var(--muted); font-size: .82rem; }
+  a { color: var(--accent); }
+  code { overflow-wrap: anywhere; }
+  pre code { overflow-wrap: normal; }
+  .table-scroll { max-width: 100%; overflow-x: auto; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+</style>
+</head>
+<body>
+<header class="site">
+  <div class="logo"><svg class="mark" viewBox="0 0 96 96" aria-hidden="true" focusable="false"><rect x="12" y="14" width="72" height="18" rx="5" fill="var(--mark)"/><rect x="12" y="39" width="48" height="18" rx="5" fill="var(--mark)"/><rect x="12" y="64" width="26" height="18" rx="5" fill="var(--accent)"/></svg>foster<span>stack</span></div>
+  <div class="tag">Infrastructure worth keeping — and kept patched.</div>
+</header>
+<main>
+  <h1>How do I change the cache logins without breaking CI?</h1>
+  <p class="lede">In our runs, changing the logins on your FosterStack Cache server did not fail any build. The old login is refused at once, so a job that still sends it builds without the cache and prints a warning. To keep those jobs using the cache while you update CI, restart the server with your old read-write login set as its read-only login. Those jobs can then read from the cache but not write to it.</p>
+
+  <h2>What happens when you change a login</h2>
+  <ul class="trust">
+    <li><strong>The old login stops working at once.</strong> The server reads its logins when it starts. In our runs the old login was refused (401) right after the restart.</li>
+    <li><strong>In our runs the build still succeeded.</strong> A job with the old login built everything locally, restored nothing, and warned. Gradle also printed that it disabled the remote cache for the rest of that build.</li>
+    <li><strong>The stored results stay.</strong> After the restart, a job with the new login restored all four cached entries.</li>
+  </ul>
+
+  <h2>The order that keeps the cache working</h2>
+  <p>Our advice, not a test result. We ran steps 2 and 4 and the checks in the table at the end. Steps 1 and 3 are advice, and so is the simple way below.</p>
+  <ol>
+    <li><strong>Pick a new username as well as a new password for the read-write login.</strong> The read-only and read-write usernames must differ. In step 2 your old read-write username becomes the read-only username, so the new one has to be different.</li>
+    <li><strong>Restart the server with the new read-write login, and with your old read-write login as the read-only login.</strong> Set <code>FSCACHE_USERNAME</code> and <code>FSCACHE_PASSWORD</code> to the new pair. Set <code>FSCACHE_RO_USERNAME</code> and <code>FSCACHE_RO_PASSWORD</code> to the old read-write pair. A job that still has the old login can now restore results. It cannot store new ones, because the server takes one read-write login and one read-only login.</li>
+    <li><strong>Update the secrets in CI.</strong> Jobs that start after that use the new login and can store results again.</li>
+    <li><strong>Restart the server once more with the read-only login you want from now on.</strong> This ends the old login. A job that still has it runs without the cache.</li>
+  </ol>
+  <p>Developers' old read-only login stops working at step 2. The server takes only one read-only login, and until step 4 it is your old read-write login. Developers have no working login in between. If that matters, use the simple way below.</p>
+  <p>If you can pause CI for a few minutes, the simple way works too. Restart the server with the new logins and update the CI secrets in the same window. Jobs that run in between lose the cache and still pass.</p>
+  <p>Changing only the read-only password is the easy case. The read-write login is not touched, and CI keeps storing results.</p>
+  <p>A restart also means a moment when the server does not answer. See <a href="/build-cache-server-down-what-happens/">what happens to my build when the cache server is down</a> and <a href="/build-cache-survives-restart/">does the build cache survive a restart</a>.</p>
+
+  <h2>Is the order really needed?</h2>
+  <p>Not to keep builds green. Every build in our runs succeeded, in every order. The order only decides how many jobs run without the cache. We counted CI jobs that got a 401 in three orders:</p>
+  <ul class="trust">
+    <li><strong>Server first, CI later (3 jobs run in between):</strong> 3 jobs got a 401.</li>
+    <li><strong>CI first, server later (2 jobs run in between):</strong> 2 jobs got a 401.</li>
+    <li><strong>The four steps above (3 CI jobs ran in between, and all restored 4 of 4):</strong> 1 job got a 401, a job we deliberately left on the old login until the end. The developers' old read-only login, tried directly, also got a 401.</li>
+  </ul>
+
+  <h2>If it goes wrong</h2>
+  <p>The warning to search for in a Gradle log is <code>response status 401: Unauthorized</code>. It means the job sent a login the server does not accept. Check the secret, then check the username as well as the password. A wrong username with the right password was refused too. See <a href="/gradle-build-cache-http-status-codes/">Gradle build cache HTTP status codes</a> and <a href="/gradle-remote-build-cache-authentication/">Gradle remote build cache authentication</a>.</p>
+  <p>The server did not print any password in its log, in <code>/statusz</code> or in <code>/metrics</code>. About logins, <code>/statusz</code> only says whether login is on.</p>
+  <p>For how to give CI the read-write login and developers the read-only one, see <a href="/gradle-build-cache-ci-writes-developers-read/">let CI write and developers read</a> and <a href="/github-actions-remote-build-cache/">use a remote build cache in GitHub Actions</a>.</p>
+
+  <h2>How we checked</h2>
+  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
+    <thead><tr><th>Login sent</th><th>Server state</th><th>What happened</th></tr></thead>
+    <tbody>
+      <tr><td>Read-write, then read-write again</td><td>Old logins</td><td>First build stored, second restored 4 of 4</td></tr>
+      <tr><td>Read-only</td><td>Old logins</td><td>Restored 4 of 4</td></tr>
+      <tr><td>Old read-write, old read-only</td><td>Restarted with new passwords</td><td>Both builds succeeded, restored 0 of 4, logged <code>response status 401: Unauthorized</code></td></tr>
+      <tr><td>New read-write, new read-only</td><td>Restarted with new passwords</td><td>Both restored 4 of 4</td></tr>
+      <tr><td>Old read-write</td><td>Old read-write login set as read-only</td><td>Restored 4 of 4. A direct write got 403</td></tr>
+      <tr><td>New read-write</td><td>Same</td><td>Restored 4 of 4, writes allowed</td></tr>
+      <tr><td>Old read-only (developers), a direct request</td><td>Same</td><td>401, because the read-only slot now holds another login</td></tr>
+      <tr><td>Wrong username with right password, or right username with wrong password</td><td>New logins</td><td>401 on read and write</td></tr>
+      <tr><td>Read-only username with the read-write password, or the reverse</td><td>New logins</td><td>401 on read and write</td></tr>
+      <tr><td>No login</td><td>New logins</td><td>401. The health check at <code>/healthz</code> answered 200</td></tr>
+      <tr><td>Old read-only password after changing only the read-only pair</td><td>Read-write pair unchanged</td><td>401. The read-write build still restored 4 of 4</td></tr>
+    </tbody>
+  </table></div>
+  <p>The server also refused to start with identical read-only and read-write usernames, and with a read-only login but no read-write login. Both exit with an error that says why.</p>
+  <p class="muted-note">What: FosterStack Cache 0.2.1 and Gradle 9.8.0 with Java 21 on a Mac (arm64), one machine. Each build used a fresh copy of a four-module project, a new Gradle home, no daemon and the compile tasks only. The cache address and login reached the build only as environment variables. All logins were made up for the test. 23 builds ran, and every one succeeded.</p>
+  <p class="muted-note">Limits: the table shows Gradle. We did not run Maven for this page. The builds in the bridge steps found everything in the cache, so no job tried to store a result with a read-only login. Earlier, in <a href="/build-cache-server-down-what-happens/">our server-down runs</a>, a refused store (403) was a warning and the build still succeeded. We changed logins only by restarting the server. The v0.2.1 source has no reload signal, and we did not test Maven, a restart while a build was running, or real CI runners. The counts of 401 jobs come from one scripted run of each order, not a statistic.</p>
+</main>
+<footer>
+  <div>
+    <p>FosterStack is not affiliated with, endorsed by, or sponsored by Gradle Inc.
+    "Gradle" and "Develocity" are trademarks of Gradle Inc., used here only to identify
+    compatibility. FosterStack contains no Gradle Inc. code; it is a clean-room implementation
+    of the documented remote build cache HTTP protocol. Apache Maven is a trademark of the
+    Apache Software Foundation; the Maven Build Cache Extension is Apache's project, not
+    ours.</p>
+    <p style="margin-top:.6rem">© 2026 FosterStack · <a href="/build-cache-node-end-of-life/">Build Cache Node end of life</a> · <a href="/migrate-build-cache-node/">Migrate</a> · <a href="/build-cache-node-faq/">FAQ</a> · <a href="/jenkins-ci-build-cache/">CI setup</a> · <a href="/how-we-build/">How we build</a> · <a href="/regulated/">For regulated markets</a> · <a href="https://github.com/fosterstack/cache">github.com/fosterstack/cache</a> · <a href="mailto:hello@fosterstack.com">hello@fosterstack.com</a></p>
+  </div>
+</footer>
+</body>
+</html>
