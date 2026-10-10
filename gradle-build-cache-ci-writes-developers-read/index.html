@@ -91,7 +91,7 @@
   <h1>Let CI write, developers only read the build cache</h1>
   <p class="lede">Anything that can write to your build cache can change what later builds use, so give the right to write to as few machines as possible. This page sets up a cache where CI uploads and developers only download, in Gradle and in Maven, with a read-only login the server enforces.</p>
 
-  <h2>1. Give the server two logins</h2>
+  <h2>Give the server two logins</h2>
   <p>The server takes one read-write login and, optionally, a second read-only login. A client using the read-only one can read cache entries, and any write is refused with a 403.</p>
   <pre tabindex="0"><code>FSCACHE_USERNAME=ci   FSCACHE_PASSWORD=&lt;a long secret&gt; \
 FSCACHE_RO_USERNAME=dev FSCACHE_RO_PASSWORD=&lt;another secret&gt; \
@@ -122,7 +122,7 @@ buildCache {
   <p>In our run we made a code change, so there was something new to upload, and built with <code>CI=true</code> but only the read-only login. The build still succeeded. With <code>-i</code> Gradle logged:</p>
   <pre tabindex="0"><code>Could not store entry d4f2de693b561fd2c5d60b17a9232d6f in remote build cache: Storing entry at &#x27;http://127.0.0.1:18098/d4f2de693b561fd2c5d60b17a9232d6f&#x27; response status 403: Forbidden
 The remote build cache was disabled during the build due to errors.</code></pre>
-  <p>The server stored nothing: it stayed at 1 entry. The same change built by CI with the read-write login was stored (2 entries). So a misconfigured laptop cannot add to the cache, and its build is not broken by that. Note that Gradle switches the remote cache off for the rest of that build once a store fails, so a laptop in this state also stops reading from it for that build.</p>
+  <p>The server stored nothing: it stayed at 1 entry (see the Gradle run table below). The same change built by CI with the read-write login was stored (2 entries). So a misconfigured laptop cannot add to the cache, and its build is not broken by that. Note that Gradle switches the remote cache off for the rest of that build once a store fails, so a laptop in this state also stops reading from it for that build.</p>
 
   <h2 id="maven-build-cache-let-ci-write-developers-read">Maven: let CI write, developers only read</h2>
   <h3>One config file for everyone</h3>
@@ -181,7 +181,7 @@ org.apache.http.client.HttpResponseException: status code: 403, reason phrase: F
   <p>FosterStack Cache 0.2.1 and Gradle 9.8.0. The server counts what it stores. Each line below is a build of the same small project. In our run we turned Gradle's local cache off, with <code>local { isEnabled = false }</code> in the same block, so that a hit could only have come from the server. You do not need that line.</p>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <tr><th>Who builds</th><th>Result</th><th>Server after</th></tr>
-    <tr><td>A developer first, read-only login, <code>CI</code> unset</td><td><code>:compileJava</code> runs. Nothing to read yet, and nothing uploaded.</td><td>0 entries</td></tr>
+    <tr><td>A developer first, read-only login, <code>CI</code> unset</td><td><code>:compileJava</code> runs. Nothing in the cache to read, and nothing uploaded.</td><td>0 entries</td></tr>
     <tr><td>CI, read-write login, <code>CI=true</code></td><td><code>:compileJava</code> runs, and the result is uploaded.</td><td>1 entry</td></tr>
     <tr><td>The developer again, read-only login</td><td><code>&gt; Task :compileJava FROM-CACHE</code>, "1 from cache"</td><td>1 entry, 1 hit</td></tr>
   </table></div>

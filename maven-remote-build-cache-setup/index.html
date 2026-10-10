@@ -88,8 +88,8 @@
   <div class="tag">Infrastructure worth keeping — and kept patched.</div>
 </header>
 <main>
-  <h1>Maven build cache extension: remote server setup</h1>
-  <p class="lede">Share Maven build results across machines using Apache's Build Cache Extension and a self-hosted cache server. About ten minutes.</p>
+  <h1>Maven remote build cache: setup, on/off switches, and Gradle on the same server</h1>
+  <p class="lede">Share Maven build results across machines using Apache's Build Cache Extension and a self-hosted cache server. FosterStack Cache is that server, and one server can also serve Gradle. About ten minutes.</p>
 
   <h2>Who owns what</h2>
   <p>The client is Apache's Maven Build Cache Extension. We maintain the server. If your hit rate looks low, that is usually the extension's own project settings (which files count as inputs, what to skip), not the server. Start with the extension's configuration guide.</p>
@@ -263,7 +263,7 @@ blobs/v1.1/demo/maven-app/3aa3eaca44f8d0fa/bu/buildinfo.xml            (Maven)
 blobs/v1.1/demo/maven-app/e17172d0-.../bu/build-cache-report.xml       (Maven)
 blobs/v1.1/demo/maven-app/14c158a7-.../bu/build-cache-report.xml       (Maven)</code></pre>
   <p>They sit side by side in one store, under one size cap, watched by one set of metrics. See <a href="/build-cache-server-sizing/">server sizing</a> and <a href="/is-the-build-cache-server-healthy-what-to-alert-on/#monitor-build-cache-prometheus-grafana">monitoring</a>.</p>
-  <p class="muted-note">Not tested: anything about speed (the apps in the mixed run are tiny, and the point was that one server handled both tools), and Gradle, Maven or extension versions other than those named above.</p>
+  <p class="muted-note">Not tested: anything about speed (the apps in the mixed run are tiny, and the point was that one server handled both tools), and, in the mixed run, Gradle, Maven or extension versions other than those named above.</p>
 
   <p class="muted-note">Mixed Gradle and Maven shop? Both can use the same server: see <a href="#one-build-cache-server-gradle-and-maven">one server for Gradle and Maven</a>, <a href="/migrate-build-cache-node/">Gradle and Maven setup</a> and the <a href="/first-15-minutes-build-cache/#gradle-build-cache-tutorial">Gradle build cache tutorial</a>. For CI runners, see <a href="/jenkins-ci-build-cache/">Jenkins and CI build cache</a>.</p>
   <div class="cta-row">
