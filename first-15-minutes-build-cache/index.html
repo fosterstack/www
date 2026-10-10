@@ -108,7 +108,7 @@
   </ul>
 
   <h3>2. Download it and check it is ours</h3>
-  <pre tabindex="0"><code>VER=0.2.1
+  <pre tabindex="0"><code>VER=0.2.2
 PLATFORM=darwin_arm64    # or linux_amd64, linux_arm64, darwin_amd64
 gh release download v${VER} --repo fosterstack/cache \
   -p checksums.txt -p checksums.txt.bundle -p &quot;fscache_${VER}_${PLATFORM}.tar.gz&quot;
@@ -127,7 +127,7 @@ FSCACHE_MAX_BYTES=1073741824 ./fscache</code></pre>
   <h3>4. Check it is up</h3>
   <ul class="trust">
     <li><code>curl localhost:8080/healthz</code> should print <code>ok</code>.</li>
-    <li><code>curl -u gradle:&lt;secret&gt; localhost:8080/statusz</code> should show <code>"version": "v0.2.1"</code>.</li>
+    <li><code>curl -u gradle:&lt;secret&gt; localhost:8080/statusz</code> should show <code>"version": "v0.2.2"</code>.</li>
   </ul>
 
   <h3>5. Point Gradle at it</h3>

@@ -132,12 +132,12 @@ curl -s localhost:8080/testkey123                                # hello</code><
   <p>The container image has no shell, so there is no health check inside the Compose file. Probe <code>/healthz</code> from outside: your orchestrator's HTTP check, a monitor, or <code>curl -f http://localhost:8080/healthz</code> from the host.</p>
 
   <h2>Production: nginx and TLS in front</h2>
-  <p>A Compose file for a shared build cache that only answers over HTTPS, with a password, behind nginx. It was run for real on FosterStack Cache 0.2.1 and Gradle 9.8.0.</p>
+  <p>A Compose file for a shared build cache that only answers over HTTPS, with a password, behind nginx. It was run for real on FosterStack Cache 0.2.1 and Gradle 9.8.0. The file pins 0.2.2, a security-patch release whose release notes say it changes no behaviour.</p>
 
   <h2>Production: compose.yaml</h2>
   <pre tabindex="0"><code>services:
   fscache:
-    image: ghcr.io/fosterstack/cache:0.2.1
+    image: ghcr.io/fosterstack/cache:0.2.2
     restart: unless-stopped
     # no &quot;ports:&quot; on purpose: only the proxy is reachable from outside
     volumes:

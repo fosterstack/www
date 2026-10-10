@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Upgrade, back up and move a build cache server</title>
-<meta name="description" content="Upgrade FosterStack Cache from 0.1.0 to 0.2.1 on the same data volume, back up and restore the volume, and move a Maven cache to a new server, all run for real.">
+<meta name="description" content="Upgrade FosterStack Cache from 0.1.0 to 0.2.1 and 0.2.2 on the same data volume, back up and restore the volume, and move a Maven cache. All run for real.">
 <meta property="og:title" content="Upgrade, back up and move a build cache server">
-<meta property="og:description" content="Upgrade FosterStack Cache from 0.1.0 to 0.2.1 on the same data volume, back up and restore the volume, and move a Maven cache to a new server, all run for real.">
+<meta property="og:description" content="Upgrade FosterStack Cache from 0.1.0 to 0.2.1 and 0.2.2 on the same data volume, back up and restore the volume, and move a Maven cache. All run for real.">
 <meta property="og:url" content="https://fosterstack.com/upgrade-build-cache-server/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="FosterStack">
@@ -107,13 +107,14 @@
   </ul>
 
   <h2>The upgrade</h2>
-  <pre tabindex="0"><code>docker pull ghcr.io/fosterstack/cache:0.2.1
+  <pre tabindex="0"><code>docker pull ghcr.io/fosterstack/cache:0.2.2
 docker stop fscache &amp;&amp; docker rm fscache
 docker run -d --name fscache -p 127.0.0.1:8080:8080 \
   -v fscache-data:/home/nonroot \
-  ghcr.io/fosterstack/cache:0.2.1</code></pre>
+  ghcr.io/fosterstack/cache:0.2.2</code></pre>
 
   <h3>What we saw</h3>
+  <p>First, from 0.1.0 to 0.2.1 and back:</p>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <tr><th>Step</th><th>Result</th></tr>
     <tr><td>0.1.0: store three entries on a fresh volume</td><td>201 each; its metrics show 3 entries, 29 bytes</td></tr>
@@ -122,10 +123,19 @@ docker run -d --name fscache -p 127.0.0.1:8080:8080 \
     <tr><td>Stop 0.2.1, start 0.1.0 on the same volume again</td><td>starts normally; all values read back, including the two written by 0.2.1</td></tr>
   </table></div>
 
+  <p>We then did the same from 0.2.1 to 0.2.2, the latest release, and back:</p>
+  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
+    <tr><th>Step</th><th>Result</th></tr>
+    <tr><td>0.2.1: store three entries on a fresh volume</td><td>201 each; the status page shows 3 entries, 29 bytes</td></tr>
+    <tr><td>Stop 0.2.1, start 0.2.2 on the same volume</td><td>starts normally; the status page shows <code>"version": "v0.2.2"</code>, 3 entries, 29 bytes; all three values read back</td></tr>
+    <tr><td>0.2.2: store two more</td><td>201 each; 5 entries, 49 bytes</td></tr>
+    <tr><td>Stop 0.2.2, start 0.2.1 on the same volume again</td><td>starts normally; the status page shows 5 entries, 49 bytes; all five values read back</td></tr>
+  </table></div>
+
   <h2>Two differences between the releases</h2>
   <ul class="trust">
     <li><strong>0.1.0 has no status page.</strong> <code>/statusz</code> returned 404 there. 0.2.1 has it. The metrics page is on both.</li>
-    <li><strong>The entry-count metric reads 0 after a restart, on both releases.</strong> After the rollback, 0.1.0's <code>fscache_store_entries</code> read 0 although every value was readable. The upgrade did not cause that: a volume only 0.1.0 ever wrote showed 3 entries before a plain restart and 0 after it, with the data still readable. 0.2.1's metrics read 0 after a restart until the next upload too (see <a href="/is-the-build-cache-server-healthy-what-to-alert-on/">is my build cache server healthy</a>). On 0.2.1, <code>/statusz</code> still showed the real count, 3 entries and 9 bytes, so read it there.</li>
+    <li><strong>The entry-count metric reads 0 after a restart, on both releases.</strong> After the rollback, 0.1.0's <code>fscache_store_entries</code> read 0 although every value was readable. The upgrade did not cause that: a volume only 0.1.0 ever wrote showed 3 entries before a plain restart and 0 after it, with the data still readable. 0.2.1's metrics read 0 after a restart until the next upload too, and so did 0.2.2's: right after we started it on the 0.2.1 volume, <code>fscache_store_entries</code> read 0 while <code>/statusz</code> showed 3 entries (see <a href="/is-the-build-cache-server-healthy-what-to-alert-on/">is my build cache server healthy</a>). On 0.2.1, <code>/statusz</code> still showed the real count, 3 entries and 9 bytes, so read it there.</li>
   </ul>
 
   <h2 id="back-up-and-restore-build-cache">Back up and restore a self-hosted build cache</h2>
@@ -142,7 +152,7 @@ docker run --rm -v fscache-data:/data:ro -v &quot;$PWD&quot;:/backup ubuntu:24.0
   <p>In our test, with three small entries, the archive held a <code>data/blobs/</code> folder with one folder per entry prefix, and was 578 bytes.</p>
 
   <h3>2. Restore it into a new volume</h3>
-  <p>To check it, we deleted the container and the volume, then restored into a new, empty one:</p>
+  <p>To check it, we deleted the container and the volume, then restored into a new, empty one. We ran this on the 0.2.1 image; use the release that wrote the backup:</p>
   <pre tabindex="0"><code>docker volume create fscache-data-restored
 docker run --rm -v fscache-data-restored:/data -v &quot;$PWD&quot;:/backup:ro ubuntu:24.04 \
   sh -c &#x27;tar xzf /backup/fscache-data.tgz -C /data&#x27;
@@ -204,7 +214,7 @@ FSCACHE_ADDR=127.0.0.1:18152 FSCACHE_DATA_DIR=$PWD/data-new-copied fscache</code
 
   <h2>How we checked</h2>
   <ul class="trust">
-    <li><strong>Upgrade:</strong> we used the only two published releases. We stored entries on 0.1.0, started 0.2.1 on the same data volume, wrote more, and then went back to 0.1.0. Docker, one named volume at <code>/home/nonroot</code>, release 0.1.0 and then 0.2.1 (and back), no password, stopped and started cleanly between versions.</li>
+    <li><strong>Upgrade:</strong> we ran two pairs of releases, 0.1.0 with 0.2.1, and 0.2.1 with 0.2.2. In each pair we stored entries on the older release, started the newer one on the same data volume, wrote more, and then went back to the older one. Docker, one named volume at <code>/home/nonroot</code>, no password, stopped and started cleanly between versions.</li>
     <li><strong>Backup and restore:</strong> run for real on the 0.2.1 image with plain Docker, three small entries.</li>
     <li><strong>Maven move:</strong> a small Maven project, Maven 3.10.0, extension 1.2.3, macOS (arm64). Every build used a fresh copy of the project and an empty local build cache, so the only thing shared was the cache server. All five builds ended with <code>BUILD SUCCESS</code>. Every step was run for real with FosterStack Cache 0.2.1.</li>
     <li><strong>Not tested:</strong> upgrading or backing up while the server is running, any other pair of releases (there is no 0.2.0 release; see <a href="/changelog/">the changelog</a>), restoring into a different version of the server than the one that wrote the data, Kubernetes or Compose rollouts (the same idea applies to the volume behind the claim, but we only ran plain Docker), the FIPS image, or a cache that was close to its size cap.</li>

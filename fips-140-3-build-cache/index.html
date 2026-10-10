@@ -87,28 +87,28 @@
 </header>
 <main>
   <h1>FIPS 140-3 build cache: run the FIPS image and confirm it</h1>
-  <p class="lede">FosterStack Cache has a FIPS build that uses Go's validated FIPS 140-3 cryptographic module. This page shows how to run it and how to see for yourself that it is in FIPS mode. The outputs below are from the real 0.2.1 images.</p>
+  <p class="lede">FosterStack Cache has a FIPS build that uses Go's validated FIPS 140-3 cryptographic module. This page shows how to run it and how to see for yourself that it is in FIPS mode. The outputs below are from the real 0.2.2 images.</p>
 
   <h2>What the FIPS build is</h2>
   <p>It is the same source as the standard build, compiled so that it uses Go's validated FIPS 140-3 module (CMVP certificate #5247). It is available as a container image tag ending in <code>-fips</code>, and as Linux binaries for amd64 and arm64. There is no macOS FIPS build.</p>
 
   <h2>Run it</h2>
   <pre tabindex="0"><code>docker run -d -p 127.0.0.1:8080:8080 -v fscache-data:/home/nonroot \
-  ghcr.io/fosterstack/cache:0.2.1-fips</code></pre>
-  <p>Pin an exact version, as here, rather than a floating tag. To check you pulled the real image, use the steps in <a href="/verify-a-release/">Verify a release yourself</a>. The FIPS image's digest in the release manifest for 0.2.1 is <code>sha256:e125fe3f6ed2c18c478453300ba2b787a42999edf66a39403877efb39865ab1b</code>, and that is what the pull returned.</p>
+  ghcr.io/fosterstack/cache:0.2.2-fips</code></pre>
+  <p>Pin an exact version, as here, rather than a floating tag. To check you pulled the real image, use the steps in <a href="/verify-a-release/">Verify a release yourself</a>. The FIPS image's digest in the release manifest for 0.2.2 is <code>sha256:92fae7f20616e553c5fe24e9b92f186c3d3f28ad89cee5c24864911032e6c05e</code>, and that is what the pull returned.</p>
 
   <h2>Confirm it is in FIPS mode</h2>
   <p>The build says so when it starts, so the property can be seen and not just trusted:</p>
   <pre tabindex="0"><code>$ docker logs &lt;container&gt;
-{&quot;time&quot;:&quot;2026-10-09T01:00:54.861529344Z&quot;,&quot;level&quot;:&quot;INFO&quot;,&quot;msg&quot;:&quot;fscache: starting&quot;,&quot;version&quot;:&quot;v0.2.1&quot;,&quot;addr&quot;:&quot;:8080&quot;,&quot;data_dir&quot;:&quot;./data&quot;,&quot;max_bytes&quot;:0,&quot;auth&quot;:&quot;disabled&quot;,&quot;fips140&quot;:&quot;active (Go validated module v1.0.0, CMVP cert #5247)&quot;}</code></pre>
+{&quot;time&quot;:&quot;2026-10-10T06:01:33.060189845Z&quot;,&quot;level&quot;:&quot;INFO&quot;,&quot;msg&quot;:&quot;fscache: starting&quot;,&quot;version&quot;:&quot;v0.2.2&quot;,&quot;addr&quot;:&quot;:8080&quot;,&quot;data_dir&quot;:&quot;./data&quot;,&quot;max_bytes&quot;:0,&quot;auth&quot;:&quot;disabled&quot;,&quot;fips140&quot;:&quot;active (Go validated module v1.0.0, CMVP cert #5247)&quot;}</code></pre>
   <p>The status page reports the same:</p>
   <pre tabindex="0"><code>$ curl -s localhost:8080/statusz | grep -E &#x27;version|fips140&#x27;
-  &quot;version&quot;: &quot;v0.2.1&quot;,
+  &quot;version&quot;: &quot;v0.2.2&quot;,
   &quot;fips140&quot;: true,
   &quot;fips140_note&quot;: &quot;active (Go validated module v1.0.0, CMVP cert #5247)&quot;,</code></pre>
   <p>The standard image, for comparison, reports it as off:</p>
   <pre tabindex="0"><code>$ curl -s localhost:8080/statusz | grep -E &#x27;version|fips140&#x27;
-  &quot;version&quot;: &quot;v0.2.1&quot;,
+  &quot;version&quot;: &quot;v0.2.2&quot;,
   &quot;fips140&quot;: false,
   &quot;fips140_note&quot;: &quot;off&quot;,</code></pre>
 

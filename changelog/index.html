@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>FosterStack Cache changelog: v0.1.0 to v0.2.1</title>
-<meta name="description" content="Release notes for FosterStack Cache v0.1.0 and v0.2.1, quoted from GitHub as published, and a note that no release was published for v0.2.0.">
-<meta property="og:title" content="FosterStack Cache changelog: v0.1.0 to v0.2.1">
-<meta property="og:description" content="Release notes for FosterStack Cache v0.1.0 and v0.2.1, quoted from GitHub as published, and a note that no release was published for v0.2.0.">
+<title>FosterStack Cache changelog: v0.1.0 to v0.2.2</title>
+<meta name="description" content="Release notes for FosterStack Cache v0.1.0, v0.2.1 and v0.2.2, quoted from GitHub as published, and a note that no release was published for v0.2.0.">
+<meta property="og:title" content="FosterStack Cache changelog: v0.1.0 to v0.2.2">
+<meta property="og:description" content="Release notes for FosterStack Cache v0.1.0, v0.2.1 and v0.2.2, quoted from GitHub as published, and a note that no release was published for v0.2.0.">
 <meta property="og:url" content="https://fosterstack.com/changelog/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="FosterStack">
@@ -87,8 +87,18 @@
   <div class="tag">Infrastructure worth keeping — and kept patched.</div>
 </header>
 <main>
-  <h1>FosterStack Cache changelog: v0.1.0 to v0.2.1</h1>
+  <h1>FosterStack Cache changelog: v0.1.0 to v0.2.2</h1>
   <p class="lede">The release notes from GitHub, quoted as published. Newest first. For anything else, the <a href="https://github.com/fosterstack/cache/releases">releases page</a> is the source.</p>
+
+  <h2>v0.2.2</h2>
+  <p class="muted-note">Release name: fscache v0.2.2. Published 2026-10-09.</p>
+  <blockquote>
+    <p><strong>v0.2.2: security patch</strong></p>
+    <p>This release is rebuilt with <strong>Go 1.27.2</strong>. It fixes <strong>GO-2026-6617</strong> (CVE-2026-97032) in Go's standard library: an HTTP/2 server could crash when a malicious client repeatedly sent requests while changing the HPACK header table size, because the server's HPACK encoder was modified from two goroutines without synchronization. Go 1.27.2 also contains the other fixes Go published on October 8, 2026.</p>
+    <p>There is no change to how Cache behaves. Upgrade by pulling <code>:0.2.2</code> (or <code>:latest</code>); the image digests are in <code>release-manifest.json</code>.</p>
+    <p>See release-manifest.json for the full evidence bundle: image digests (GHCR canonical, Docker Hub mirror — identical digests), archive checksums, requirements baseline, per-AC acceptance results, and the Rekor log index of every verified statement in the release chain.</p>
+  </blockquote>
+  <p><a href="https://github.com/fosterstack/cache/releases/tag/v0.2.2">v0.2.2 on GitHub</a></p>
 
   <h2>v0.2.1</h2>
   <p class="muted-note">Release name: fscache v0.2.1. Published 2026-09-21.</p>
@@ -96,7 +106,7 @@
   <p><a href="https://github.com/fosterstack/cache/releases/tag/v0.2.1">v0.2.1 on GitHub</a></p>
 
   <h2>v0.2.0</h2>
-  <p>No release was published for v0.2.0: the tag exists, but its release run failed. Use v0.2.1.</p>
+  <p>No release was published for v0.2.0: the tag exists, but its release run failed. Use v0.2.2, the latest release.</p>
 
   <h2>v0.1.0</h2>
   <p class="muted-note">Published 2026-08-22.</p>
@@ -105,7 +115,7 @@
     <p><strong>Note on this release's evidence (added Sep 2026).</strong> v0.1.0 was built and published by the pre-remediation release pipeline: a snapshot build was scanned, and a separate build of the same commit was published, so these published images were not scanned before publication. They have been rescanned since at every severity with the published VEX applied — see the <a href="https://github.com/fosterstack/cache/actions/workflows/rescan-v010.yml">rescan runs</a> for verdicts against the exact published digests. The signatures and provenance on this release are accurate about what they say — which CI run produced which digest — and say nothing about scanning. The next release is the first to carry the full evidence chain: one build, scanned and tested by digest, promoted without a rebuild.</p>
   </blockquote>
   <p><a href="https://github.com/fosterstack/cache/releases/tag/v0.1.0">v0.1.0 on GitHub</a></p>
-  <p><strong>What changed since:</strong> the v0.2.1 release notes point to its <code>release-manifest.json</code> evidence bundle. The release process, as <a href="https://github.com/fosterstack/cache/blob/main/RELEASING.md">RELEASING.md</a> describes it, is "One build, one set of digests, promoted without a rebuild", with every scanner run "against the exact candidate digests".</p>
+  <p><strong>What changed since:</strong> the v0.2.1 and v0.2.2 release notes point to their <code>release-manifest.json</code> evidence bundle. The release process, as <a href="https://github.com/fosterstack/cache/blob/main/RELEASING.md">RELEASING.md</a> describes it, is "One build, one set of digests, promoted without a rebuild", with every scanner run "against the exact candidate digests".</p>
 
   <p class="muted-note">Related: <a href="/how-we-build/">how releases are built and signed</a> and <a href="/security/">security policy</a>.</p>
   <div class="cta-row">
