@@ -17,6 +17,7 @@ on:
           - server-down
           - android
           - github-actions
+          - verify-release
         default: miss-cost
 
 permissions:
@@ -75,6 +76,26 @@ jobs:
 
       - name: timed runs (no cache, cache on and empty, server refused, address that never answers)
         run: BENCH_N=7 BENCH_LIMIT=120 bash bin/bench-server-down.sh
+
+  # How long does the /verify-a-release/ page take a reader on a clean machine? Manual dispatch only, chosen with the "which"
+  # input (compared in this `if` only, never put into a shell command). Each repetition starts a fresh container from a
+  # digest-pinned debian image, installs only what the page names (cosign and gh are checked against pinned sha256 values)
+  # and runs the page's commands word for word, timing every step. The one new thing: the automatic, read-only GITHUB_TOKEN
+  # (not a repository secret, not persisted) is passed to the script, which exports it only for steps 5 to 7, because the
+  # page says those steps need a token. Everything else follows the other jobs: contents: read, no write access.
+  bench-verify-release:
+    if: github.event_name == 'workflow_dispatch' && inputs.which == 'verify-release'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: verify a release as the page says, timed, in fresh containers
+        env:
+          TOKEN_FOR_STEPS_5_TO_7: ${{ github.token }}
+        run: bash bin/bench-verify-release.sh
 
   # Which tasks does the Gradle remote build cache restore in an Android build? Same rules as the other jobs: manual
   # dispatch only, chosen with the "which" input (compared in this `if` only, never put into a shell command), no
