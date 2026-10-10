@@ -174,6 +174,16 @@ GET the too-large key afterwards                               404
     <li><strong>Plain HTTP.</strong> Gradle refuses plain <code>http://</code> unless you opt in with <code>isAllowInsecureProtocol</code>. In our test the address <code>127.0.0.1</code> was let through without it, but the name <code>localhost</code> was refused.</li>
   </ul>
 
+  <p>We ran the page again on a GitHub-hosted Linux machine with FosterStack Cache 0.2.2 and Gradle 9.8.0. Everything matched:</p>
+  <ul class="trust">
+    <li>All fourteen results in the list above came out the same.</li>
+    <li>Each of the three ways to supply the password gave <code>:compileJava FROM-CACHE</code>. A wrong password, and none at all, printed the 401 line at the default log level and the build succeeded.</li>
+    <li>An entry over the whole cache size cap got a 413 with the header <code>X-FSCache-Reject: entry-exceeds-cache-cap</code>. The server sent it as <code>X-Fscache-Reject</code>, which is the same header (header names are not case-sensitive). An entry over the per-entry limit got a 413 with no such header.</li>
+    <li>At the default limit, 40 uploads started at once gave 8 answers of 429 and 32 that were accepted. The server held no entries afterwards.</li>
+    <li>A <code>DELETE</code> with the read-only login also got a 403.</li>
+  </ul>
+  <p class="muted-note"><a href="https://github.com/fosterstack/www/actions/runs/38052086898">The run and its log are public</a>. Not tested there: the 1 GiB default for <code>FSCACHE_MAX_BODY_BYTES</code>, which needs an entry bigger than that.</p>
+
   <p class="muted-note">Related: <a href="/gradle-remote-cache-not-working/">Gradle remote build cache not working</a>, <a href="/build-cache-server-sizing/">server sizing</a> and <a href="/is-the-build-cache-server-healthy-what-to-alert-on/#monitor-build-cache-prometheus-grafana">monitoring</a>.</p>
   <div class="cta-row">
     <a class="btn" href="/first-15-minutes-build-cache/#gradle-build-cache-tutorial">Gradle build cache tutorial</a>
