@@ -116,8 +116,7 @@ curl localhost:8080/healthz   # -&gt; ok</code></pre>
   </p>
   <p class="muted-note"><strong>Where it stands:</strong> v0.2 — early. The cache core and
   HTTP surface are tested, and the Gradle path is acceptance-tested against a real
-  multi-module build in CI; the release pipeline works and its evidence chain is being
-  rebuilt — the repository's SECURITY.md states exactly what is and is not proven today.
+  multi-module build in CI; the release pipeline works; its evidence is not complete, and the repository's SECURITY.md says exactly what is and is not proven today.
   Bugs and questions go to
   <a href="https://github.com/fosterstack/cache/issues">GitHub issues</a>, which is also
   where the roadmap gets argued with.</p>
@@ -298,9 +297,7 @@ curl localhost:8080/healthz   # -&gt; ok</code></pre>
   server, while the Maven client side is Apache's own Build Cache Extension. A dependency cache —
   the same server restoring <code>node_modules</code>, <code>~/.m2</code>, and
   <code>~/.gradle/caches</code> by lockfile key, so ephemeral CI agents stop
-  re-downloading the world — is next on the list, npm first. What is
-  not on the list yet is a Helm chart and the paid tiers above — Team, Business, and
-  Compliance are described so you know where this is going, not sold as available; Free
+  re-downloading the world — is next on the list, npm first. The Helm chart and the paid tiers above are not built; they are described so you can see the direction. Free
   is real and complete today. If you need something sooner,
   <a href="https://github.com/fosterstack/cache/issues">open an issue</a> — that is what
   moves the roadmap.</p>

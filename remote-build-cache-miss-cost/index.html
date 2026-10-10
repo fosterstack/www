@@ -94,7 +94,7 @@
   <ul class="trust">
     <li><strong>A miss costs little.</strong> With an empty cache the build took about one second longer than with no cache at all, about 6%. The miss build was slower in 6 of 7 rounds.</li>
     <li><strong>A hit saves time.</strong> With the cache filled, the same build took about four seconds less, about 24% less.</li>
-    <li><strong>We expect the saving to grow with the work you skip (not tested).</strong> Our test project compiles quickly, and every build in the test also paid Gradle's start-up, so the percentages are smaller than they would be for the compile step alone.</li>
+    <li><strong>We did not test it, but more skipped work should save more.</strong> Our test project compiles quickly and every build also paid Gradle's start-up, so the percentages are smaller than the compile step alone would show.</li>
   </ul>
 
   <h2>What to do</h2>

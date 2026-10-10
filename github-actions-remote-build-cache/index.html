@@ -88,7 +88,7 @@
 </header>
 <main>
   <h1>Use a remote build cache in GitHub Actions</h1>
-  <p class="lede">Point your GitHub Actions builds at your own FosterStack Cache server so they reuse each other's work, with no password in the repository. Store the cache address and logins as secrets, read them from environment variables in your build settings, and let only builds on main store results.</p>
+  <p class="lede">Point your GitHub Actions builds at your own FosterStack Cache server so they reuse each other's work, with no password in the repository. Store the cache address and logins as secrets. Read them from environment variables in your Gradle or Maven settings. Let only builds on main store results.</p>
 
   <h2>First: can the runner reach your server?</h2>
   <p>A GitHub-hosted runner is a machine on GitHub's network, not on yours. It can only use a cache server at an address it can reach: a public HTTPS address, or a self-hosted runner on the same network as the server. We did not test any particular hosting. If the server is on the internet, put HTTPS in front of it. See <a href="/build-cache-docker-compose-production/">production build cache: Docker Compose, nginx and TLS</a>.</p>
