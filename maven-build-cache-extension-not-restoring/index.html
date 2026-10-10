@@ -178,13 +178,17 @@ Unable to parse cache xml element: Unrecognised tag: &#x27;remote&#x27; ...</cod
   <h3>Second run: Linux, 0.2.2</h3>
   <p>The runs above were on a Mac with 0.2.1. We ran this page again on a GitHub-hosted Linux machine with FosterStack Cache 0.2.2, Maven 3.10.0 (and 3.9.9 for one build), extension 1.2.3, Java 21, and Java 27 (Temurin) for the Java runs.</p>
   <ul class="trust">
-    <li>A healthy first build logged the lines shown above, with the miss as an <code>[ERROR]</code> line, and the server then held 3 entries. After we deleted <code>target</code> and the local cache folder, the second build logged <code>Found cached build, restoring demo:demo from cache by checksum</code>, and the server counted 2 hits. Maven 3.9.9 logged the miss as <code>[INFO] Cache item not found</code>.</li>
-    <li>Symptom 1: Maven stopped with both log lines shown, nothing was compiled or saved, and the server saw no request.</li>
+    <li>In a healthy first build the miss showed as an <code>[ERROR]</code> line and the server then held 3 entries. After we deleted <code>target</code> and the local cache folder, the second build logged <code>Found cached build, restoring demo:demo from cache by checksum</code>, and the server counted 2 hits.</li>
+    <li>Maven 3.9.9 logged the miss as <code>[INFO] Cache item not found</code>.</li>
+    <li>Symptom 1: Maven stopped with both log lines shown. Nothing was compiled or saved, and the server's hit, miss and entry counts stayed at 0.</li>
     <li>Symptom 2: the build succeeded with no <code>Saved to remote cache</code> line, the second build said <code>Remote cache is incomplete or missing</code>, and the server held 0 entries.</li>
-    <li>Symptom 3: both mistakes (a different server id, and the right id with a wrong password) gave <code>HTTP Status: 401</code> with the exception line shown above, <code>BUILD SUCCESS</code>, no <code>Saved to remote cache</code> line and an empty server. Maven also printed a warning that it used the credentials of the server for an address with no matching repository entry.</li>
-    <li>Java runs: in all three series, only the first build was built and the other four were restored, including the builds on the other Java. The five jars of a series had one checksum, and the manifest of each one named the Java of the first build (21 in series A and B, 27 in series C). Without the release setting, the log said target 1.8 on both Javas, and the compiled class in the two jars was byte for byte the same.</li>
+    <li>Symptom 3: both mistakes (a different server id, and the right id with a wrong password) gave <code>HTTP Status: 401</code> with the exception line shown above. The build still ended with <code>BUILD SUCCESS</code>, printed no <code>Saved to remote cache</code> line and left the server empty.</li>
+    <li>With the wrong password, Maven also printed a warning that it used the server's credentials for an address with no repository or mirror of that id declared.</li>
+    <li>Java runs, restores: in each of the three series only the first build compiled. The other four were restored, including the builds on the other Java.</li>
+    <li>Java runs, jars: the five jars of a series had one checksum. Each manifest named the Java of the first build (21 in series A and B, 27 in series C).</li>
+    <li>Java runs, class file: without the release setting, the log said <code>target 1.8</code> on both Javas, and the compiled class in the two jars was byte for byte the same.</li>
   </ul>
-  <p class="muted-note">The symptom runs here used a server without a password, except symptom 3; the Mac runs used one with a password. <a href="https://github.com/fosterstack/www/actions/runs/38070836344">The run and its log are public</a>.</p>
+  <p class="muted-note">Every run here used a server without a password, except symptom 3. The Mac symptom runs used one with a password. <a href="https://github.com/fosterstack/www/actions/runs/38070836344">The run and its log are public</a>.</p>
   <div class="cta-row">
     <a class="btn" href="/maven-remote-build-cache-setup/">Maven remote cache setup</a>
     <a class="btn btn-secondary" href="/">FosterStack home</a>
