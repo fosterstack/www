@@ -93,7 +93,7 @@
   <h2>The short answer</h2>
   <ul class="trust">
     <li><strong>Two servers on one data folder.</strong> The second one exited with code 1 after about 5 seconds, in each of three tries. The first kept serving.</li>
-    <li><strong>Two servers on separate folders.</strong> Each stores its own copy. In eight builds, one server restored 25 of 32 compile tasks. Two servers, with builds taking turns, restored 18 of 32, fewer than the single server's 25.</li>
+    <li><strong>Two servers on separate folders.</strong> Each stores its own copy. In eight builds, one server restored 25 of 32 compile tasks from the cache. Two servers, with builds taking turns, restored 18 of 32, fewer than the single server's 25.</li>
     <li><strong>A spare from a copy.</strong> A server started on a copy of a stopped server's folder had all 14 entries. Builds restored them.</li>
     <li><strong>Gradle used one remote cache in our run.</strong> With two remote blocks in the settings, only the second one was used.</li>
   </ul>
