@@ -87,7 +87,7 @@
 </header>
 <main>
   <h1>Gradle build cache authentication: 401 and status codes</h1>
-  <p class="lede">Gradle does not fail the build when the cache refuses it, so a wrong password or a refused upload shows up only as a status code. FosterStack Cache takes an optional password, and this page shows how to set it, how to give Gradle the right one, and what each status code means.</p>
+  <p class="lede">Gradle does not fail the build when the cache refuses it, so a wrong password or a refused upload often shows up only as a status code. FosterStack Cache takes an optional password, and this page shows how to set it, how to give Gradle the right one, and what each status code means.</p>
 
   <h2>Our advice, not a test result</h2>
   <ul class="trust">
@@ -153,7 +153,7 @@ buildCache {
   <p><code>./gradlew --stop</code> is a quick way to rule the Gradle daemon out. In our test a changed password was picked up without a restart.</p>
 
   <h2>How we checked</h2>
-  <p>A 0.2.1 server and Gradle 9.8.0 on macOS, started with a read-write login, a read-only login, and the body limit set to 1024 bytes. Your numbers for the limit will differ, since the default is 1 GiB. The table and this list come from these runs:</p>
+  <p>A 0.2.1 server and Gradle 9.8.0 on macOS, started with a read-write login, a read-only login, and the body limit set to 1024 bytes. Your numbers for the limit will differ, since the default is 1 GiB. This list comes from these runs:</p>
   <pre tabindex="0"><code>GET /healthz (no credentials)                                  200
 GET /metrics (no credentials)                                  200
 GET key, no credentials                                        401

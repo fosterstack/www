@@ -112,7 +112,7 @@
   <ul style="padding-left:1.25rem">
     <li><strong>Turn on Basic Auth anywhere untrusted parties could reach the port.</strong></li>
     <li><strong>Give the write login to as few machines as you can.</strong> Usually that means CI only, plus the developers you already trust to change your code.</li>
-    <li><strong>Give everyone else the read-only login.</strong> That includes laptops. The setup is on <a href="/gradle-build-cache-ci-writes-developers-read/">let CI write, developers only read</a>, and the CI wiring is on <a href="/jenkins-ci-build-cache/">Jenkins and CI build cache</a>.</li>
+    <li><strong>Give everyone else the optional read-only login.</strong> That includes laptops. The setup is on <a href="/gradle-build-cache-ci-writes-developers-read/">let CI write, developers only read</a>, and the CI wiring is on <a href="/jenkins-ci-build-cache/">Jenkins and CI build cache</a>.</li>
     <li><strong>Keep builds of untrusted code on the read-only login.</strong> An example is a pull request from a fork.</li>
     <li><strong>Do not count on <code>isPush = false</code>.</strong> It only controls whether your own build uploads. The login is what the server enforces.</li>
     <li><strong>Use HTTPS, on a network you control.</strong> Gradle sends the login with its requests.</li>
