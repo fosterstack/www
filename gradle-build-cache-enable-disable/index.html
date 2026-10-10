@@ -181,6 +181,7 @@ Configuration cache entry stored.</code></pre>
   <p>That fourth step is the clearest way to see they are separate: in our runs, one was invalidated and the other was not.</p>
 
   <p class="muted-note">The on/off runs: Gradle 9.8.0 with FosterStack Cache 0.2.1, macOS (arm64), Java 27.</p>
+  <p class="muted-note">We ran the page again on a GitHub-hosted Linux machine with FosterStack Cache 0.2.2, Gradle 9.8.0 and Java 21. The seven on/off runs (a four-module project), the read-only run and the four configuration-cache steps (a one-module project) all gave the results and lines shown above (timings aside). The server's status page counted one hit in step 3. <a href="https://github.com/fosterstack/www/actions/runs/38052086898">The run and its log are public</a>.</p>
 </main>
 
 <footer>
