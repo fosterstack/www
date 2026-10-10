@@ -111,6 +111,11 @@ fresh; git -C "$site" init -q; gitc add -A; gitc commit -q -m "before the rename
 git -C "$site" mv "$first" renamed-page-xyz; gitc commit -q -m "rename a page"
 expect_fail "--base treats a renamed page as removed" "was removed but has no 301" --base HEAD^1
 
+# a removed page whose name is not plain ASCII is still found (git quotes such names unless told not to)
+fresh; git -C "$site" init -q; mkdir "$site/café-xyz"; cp "$site/$first/index.html" "$site/café-xyz/index.html"
+gitc add -A; gitc commit -q -m "with an accented page"; rm -rf "$site/café-xyz"; gitc add -A; gitc commit -q -m "accented page removed"
+expect_fail "--base finds a removed page with a non-ASCII name" "was removed but has no 301" --base HEAD^1
+
 # every way of writing a link is read: single quotes, upper case, no quotes
 fresh; edit "$site/$first/index.html" "</main>" "<p><A HREF='/no-such-single/'>x</A> <a href=/no-such-bare/>y</a></p></main>"
 expect_fail "single-quoted and upper-case links are checked" "no-such-single"

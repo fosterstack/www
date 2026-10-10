@@ -13,6 +13,8 @@ Usage: check-site-rot.py [--root DIR] [--base REF] [--removed FILE...]
   --base REF asks git which pages were removed since REF (the workflow passes HEAD^1) and requires each to
   have its two redirect lines; it fails if REF cannot be found, so a shallow checkout cannot hide a removal.
   --removed takes page paths directly (for example "old-page/index.html"), for tests.
+  Limit: --base looks at one commit back, so if several commits are pushed to main in one go, only the last
+  commit's removals are seen (pull requests are always covered: their HEAD^1 is the base branch).
 """
 import argparse
 import html
@@ -74,12 +76,13 @@ def main():
             return 1
         # --no-renames: a renamed page must show up as removed (git would call it "R"), or a rename
         # without redirects would pass
-        diff = subprocess.run(["git", "-C", root, "diff", "--no-renames", "--diff-filter=D", "--name-only",
+        # -z: names come back NUL-separated and unquoted (git would otherwise C-quote a name like café)
+        diff = subprocess.run(["git", "-C", root, "diff", "-z", "--no-renames", "--diff-filter=D", "--name-only",
                                args.base, "HEAD", "--", "*/index.html"], capture_output=True, text=True)
         if diff.returncode != 0:
             print("FAIL base: git diff against %s failed, so removed pages cannot be checked" % shown)
             return 1
-        removed_from_git = diff.stdout.splitlines()
+        removed_from_git = [x for x in diff.stdout.split("\0") if x]
 
     def bad(msg):
         # one printable line per problem: text from a pull request must never start a line with "::"
