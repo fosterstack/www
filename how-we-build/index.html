@@ -91,7 +91,7 @@
 </header>
 <main>
   <h1>How FosterStack Cache is built and signed</h1>
-  <p class="lede">You are about to run our software inside your build pipeline. How do you know the files you run are the ones we built? Every release is signed and checked at every step, and you can verify it yourself. This page says how.</p>
+  <p class="lede">You are about to run our software inside your build pipeline. How do you know the files you run are the ones we built? Every release is signed and checked at every step, and you can verify it yourself. <code>[TO-VERIFY: pipeline: signed and checked at every stage of the v0.3 chain]</code> This page says how.</p>
   <p class="muted-note"><strong>DRAFT for v0.3, private preview, not published.</strong> <code>[TO-VERIFY: source]</code> marks a fact that must be checked against the v0.3 release; the source (cache, pipeline or payments) is named in the marker.</p>
 
   <h2>We do it to our own pipeline first</h2>
@@ -116,14 +116,14 @@
   <ul class="trust">
     <li>Container images on GitHub's registry, signed without a stored key (Sigstore), with build provenance. <code>[TO-VERIFY: pipeline/cache: v0.3 image signing and provenance]</code></li>
     <li>Plain binaries and a <code>checksums.txt</code> with its own signature file. <code>[TO-VERIFY: cache fix A #276: which files the signed checksums list covers]</code></li>
-    <li>A software bill of materials (SBOM) for each binary archive.</li>
-    <li>A VEX file saying which known vulnerabilities do and do not affect the release.</li>
+    <li>A software bill of materials (SBOM) for each binary archive. <code>[TO-VERIFY: cache: v0.3 release assets]</code></li>
+    <li>A VEX file saying which known vulnerabilities do and do not affect the release. <code>[TO-VERIFY: cache: v0.3 release assets]</code></li>
     <li>A <code>release-manifest.json</code> listing every file and its digest. <code>[TO-VERIFY: cache: manifest layout at v0.3]</code></li>
   </ul>
   <p>All of it is public. You do not need an account or a purchase to check any of it. The commands are on <a href="/verify-a-release/">verify a release yourself</a>.</p>
 
   <h2>Kept patched</h2>
-  <p>The current release's images are scanned again every day, so a vulnerability disclosed against something we already shipped raises an issue without anyone having to remember to look. <code>[TO-VERIFY: cache/ops: the daily rescan, and automatic patch releases not yet cut]</code></p>
+  <p>The current release's images are scanned again every day, so a vulnerability disclosed against something we already shipped raises an issue without anyone having to remember to look. We keep it patched, including software its own maintainers have abandoned. <code>[TO-VERIFY: cache/ops: the daily rescan; "kept patched" only after the first automatic patch release has been cut; what is covered when upstream has abandoned a component]</code></p>
 
   <h2>What we do not claim</h2>
   <ul class="trust">

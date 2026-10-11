@@ -88,7 +88,7 @@
 </header>
 <main>
   <h1>Verify a FosterStack Cache release yourself</h1>
-  <p>You should not have to take our word for what you run. Each stage of a release is signed on its own, and the signatures are verified together at release. These commands check that yourself, using only <code>cosign</code>, <code>gh</code> and <code>jq</code>.</p>
+  <p>You should not have to take our word for what you run. Each stage of a release is signed on its own, and the signatures are verified together at release. <code>[TO-VERIFY: pipeline]</code> These commands check that yourself, using only <code>cosign</code>, <code>gh</code> and <code>jq</code>.</p>
   <p class="muted-note"><strong>DRAFT for v0.3.0, not published and never merged before v0.3.0 is live.</strong> <code>[TO-VERIFY]</code> marks anything not yet run against a real release.</p>
   <p>Use the image by digest for <code>&lt;IMAGE_REF&gt;</code>. There are two images; run every step for each. <code>[TO-VERIFY]</code> which two variants.</p>
   <h2 id="verify-container-image-signature-cosign">1. The signature and who signed it</h2>
@@ -100,7 +100,7 @@ cosign verify &lt;IMAGE_REF&gt; \
   <pre tabindex="0"><code># [TO-VERIFY] file name and layout
 gh release download &lt;TAG&gt; --repo fosterstack/cache -p release-manifest.json
 jq -r '.images[] | "\(.variant) \(.digest)"' release-manifest.json</code></pre>
-  <p>Every statement names the image by digest, never by tag. The digest you verified should match this list.</p>
+  <p>Every statement names the image by digest, never by tag. <code>[TO-VERIFY: pipeline]</code> The digest you verified should match this list.</p>
   <h2>3. How it was built</h2>
   <pre tabindex="0"><code># [TO-VERIFY] signer workflow
 gh attestation verify oci://&lt;IMAGE_REF&gt; --repo fosterstack/cache \
