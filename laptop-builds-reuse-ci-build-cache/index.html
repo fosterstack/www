@@ -112,9 +112,9 @@
   </ul>
   <p>Keep those the same on laptops and CI. For what to expect after an upgrade, see <a href="/gradle-remote-cache-not-working/#build-cache-cold-after-gradle-or-maven-upgrade">we upgraded Gradle or Maven and builds got slow</a>. If your laptop still rebuilds, see <a href="/gradle-remote-cache-not-working/#gradle-build-cache-hit-rate-low">why the Gradle hit rate is low</a> or <a href="/maven-build-cache-extension-not-restoring/">why the Maven cache is not restoring</a>. To set it up, see <a href="/maven-remote-build-cache-setup/">Maven remote build cache setup</a> and the Gradle setup in the <a href="/gradle-build-cache-ci-writes-developers-read/">CI-writes page</a>.</p>
 
-  <h2>A cache every laptop trusts is a cache you can check</h2>
-  <p>CI and every laptop trust the same server, so you should be able to see what it is. Every release is signed and checked at every step, and you can <a href="/verify-a-release/">verify it yourself</a>. <code>[TO-VERIFY: pipeline: signed and checked at every stage of the v0.3 chain]</code> We keep it patched, and we secure our own release pipeline the same way before we ask you to run it: <a href="/how-we-build/">how we build</a>. <code>[TO-VERIFY: cache/ops: "kept patched" only after the first automatic patch release has been cut]</code></p>
-  <p>The server runs on Linux; a Mac laptop is a client. <code>[TO-VERIFY: cache: v0.3 ships Linux archives and images only; the Mac-and-Linux result above was measured on 0.2.x]</code></p>
+  <h2>Can we trust the cache server?</h2>
+  <p>From v0.3.0, each stage of a release is signed on its own and the signatures are verified together at release, and you can <a href="/verify-a-release/">verify it yourself</a>. <code>[TO-VERIFY: pipeline: the v0.3 chain]</code> Our target for fixing vulnerable dependencies is 48 hours from disclosure; <a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md">the scope is in SECURITY.md</a>. <code>[TO-VERIFY: cache/ops: "kept patched" only after the first automatic patch release has been cut]</code></p>
+  <p>The checks on this page ran on 0.2.x, and in some of them the cache server ran on a Mac. v0.3.0 ships for Linux only; a Mac laptop is a client either way. <code>[TO-VERIFY: cache: v0.3 ships Linux archives and images only]</code></p>
 
   <h2>How we checked</h2>
   <div class="table-scroll" role="region" aria-label="Which platform stored and which restored" tabindex="0"><table>
