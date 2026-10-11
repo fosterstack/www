@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="en">
 <head>
+<meta name="robots" content="noindex, nofollow">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>FosterStack for teams entering regulated markets</title>
@@ -89,6 +90,8 @@
   <p class="lede">
     FosterStack Cache gives the build-cache part of your pipeline public, checkable evidence: a FIPS 140-3 build, an SBOM, SLSA provenance, signatures and VEX statements. It does not make you compliant.
   </p>
+  <p class="muted-note"><strong>DRAFT for v0.3, private preview, not published.</strong> <code>[TO-VERIFY: source]</code> marks a fact that must be checked against the v0.3 release; the source (cache, pipeline or payments) is named in the marker.</p>
+
   <p>
     It usually starts with one customer. A contract lands on the table with
     federal or compliance requirements attached — FIPS-validated cryptography,
@@ -119,11 +122,11 @@
 
   <h2>More than kept patched.</h2>
   <ul class="trust">
-    <li>Signed releases you can verify in minutes.</li>
+    <li>Signed releases you can verify in minutes. We secure our own pipeline the same way, first: <a href="/how-we-build/">how we build</a>. <code>[TO-VERIFY: pipeline: the v0.3 chain and the verify guide]</code></li>
     <li>Build record, parts list (SBOM) and vulnerability statements published with every release.</li>
     <li>Scanned before every release. The current release is rescanned every day.</li>
-    <li>Images assembled twice on separate machines; the results must match.</li>
-    <li>Minimal image, no telemetry. FIPS variant available.</li>
+    <li>Every release is rebuilt independently; the results must match. <code>[TO-VERIFY: pipeline: the Rebuild stage]</code></li>
+    <li>Minimal image with no base image, no telemetry. FIPS variant available, built from the same source as the standard image. <code>[TO-VERIFY: cache: image assembled from signed packages; the FIPS and standard images come from two builds of one source]</code></li>
     <li>Vulnerable dependencies fixed fast — our target is 48 hours from disclosure (<a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md">the scope is in SECURITY.md</a>).</li>
   </ul>
   <p><a href="/how-we-build/">How we build</a> · <a href="/security/">Security policy</a> · <a href="/verify-a-release/">Verify a release</a></p>
