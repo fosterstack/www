@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="en">
 <head>
+<meta name="robots" content="noindex, nofollow">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Your Laptop Builds Reuse What CI Already Built</title>
@@ -89,6 +90,8 @@
 <main>
   <h1>Your laptop builds reuse what CI already built</h1>
   <p class="lede">CI builds your code, and then your laptop builds the same code again from scratch. FosterStack Cache is a build cache server you run yourself: CI stores its results there, and your laptop takes them instead of redoing the work.</p>
+  <p class="muted-note"><strong>DRAFT for v0.3, private preview, not published and never merged before v0.3.0 is live.</strong> <code>[TO-VERIFY: source]</code> marks a fact that must be checked against the v0.3 release; the source (cache, pipeline or payments) is named in the marker.</p>
+
 
   <h2>How it works</h2>
   <ol>
@@ -108,6 +111,10 @@
     <li><strong>Maven:</strong> a different Maven version, when plugin versions are left unpinned. Pin every plugin version your build uses, including clean, install, deploy and site, or keep the Maven version the same.</li>
   </ul>
   <p>Keep those the same on laptops and CI. For what to expect after an upgrade, see <a href="/gradle-remote-cache-not-working/#build-cache-cold-after-gradle-or-maven-upgrade">we upgraded Gradle or Maven and builds got slow</a>. If your laptop still rebuilds, see <a href="/gradle-remote-cache-not-working/#gradle-build-cache-hit-rate-low">why the Gradle hit rate is low</a> or <a href="/maven-build-cache-extension-not-restoring/">why the Maven cache is not restoring</a>. To set it up, see <a href="/maven-remote-build-cache-setup/">Maven remote build cache setup</a> and the Gradle setup in the <a href="/gradle-build-cache-ci-writes-developers-read/">CI-writes page</a>.</p>
+
+  <h2>Can we trust the cache server?</h2>
+  <p>From v0.3.0, releases are signed at every stage and verified together at release, and you can <a href="/verify-a-release/">verify it yourself</a>. <code>[TO-VERIFY: pipeline: the v0.3 chain]</code> Our target for fixing vulnerable dependencies is 48 hours from disclosure; <a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md">the scope is in SECURITY.md</a>. <code>[TO-VERIFY: cache/ops: "kept patched" only after the first automatic patch release has been cut]</code></p>
+  <p>The checks on this page ran on 0.2.x, and in some of them the cache server ran on a Mac. v0.3.0 ships for Linux only; a Mac laptop is a client either way. <code>[TO-VERIFY: cache: v0.3 ships Linux archives and images only]</code></p>
 
   <h2>How we checked</h2>
   <div class="table-scroll" role="region" aria-label="Which platform stored and which restored" tabindex="0"><table>

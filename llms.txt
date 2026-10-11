@@ -57,6 +57,7 @@ verifiable against the CI run that produced them.
 - [Maven build cache extension not restoring: the causes](https://fosterstack.com/maven-build-cache-extension-not-restoring/): Maven build cache extension builds again instead of restoring from the remote? Causes with real log lines: config placement, saveToRemote, 401 and the local cache.
 - [How big a build cache server? CPU, RAM, disk and load](https://fosterstack.com/build-cache-server-sizing/): CPU, RAM, disk and the size cap.
 - [Air-gapped install](https://fosterstack.com/air-gapped-build-cache-install/): download, verify, transfer, run.
+- [What changes in v0.3.0 (draft)](https://fosterstack.com/whats-new-fosterstack-cache-v0-3-0/): what to check before you upgrade. TO-VERIFY.
 - [How FosterStack Cache is built and signed](https://fosterstack.com/how-we-build/): the release steps and what you can verify.
 - [Production build cache: Docker Compose, nginx and TLS](https://fosterstack.com/build-cache-docker-compose-production/): A Compose file for a self-hosted build cache behind nginx with TLS and a password, run for real on 0.2.1 and Gradle 9.8.0, with what was and was not tested.
 - [Build cache behind a corporate proxy: Gradle and Maven](https://fosterstack.com/gradle-build-cache-corporate-proxy/): How Gradle's remote build cache behaves behind a proxy: the settings, the loopback trap, a proxy that refuses, and how to tell it from a cache error. Real run.

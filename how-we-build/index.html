@@ -1,12 +1,13 @@
 <!doctype html>
 <html lang="en">
 <head>
+<meta name="robots" content="noindex, nofollow">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>How FosterStack Cache is built and signed</title>
-<meta name="description" content="How each release is built in CI, checked, scanned, signed and published, what files you get to verify it, and what we do not claim.">
+<meta name="description" content="DRAFT v0.3.0, not published: how a FosterStack Cache release is built, signed and checked, and how to verify it yourself.">
 <meta property="og:title" content="How FosterStack Cache is built and signed">
-<meta property="og:description" content="How each release is built in CI, checked, scanned, signed and published, what files you get to verify it, and what we do not claim.">
+<meta property="og:description" content="DRAFT v0.3.0, not published: how a FosterStack Cache release is built, signed and checked, and how to verify it yourself.">
 <meta property="og:url" content="https://fosterstack.com/how-we-build/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="FosterStack">
@@ -90,45 +91,48 @@
 </header>
 <main>
   <h1>How FosterStack Cache is built and signed</h1>
-  <p class="lede">Every release is built by an automated pipeline, checked, signed, and published with files you can verify yourself. This page says what that means today.</p>
+  <p class="lede">You are about to run our software inside your build pipeline. How do you know the files you run are the ones we built? Every release is signed and checked at every step, and you can verify it yourself. <code>[TO-VERIFY: pipeline: signed and checked at every stage of the v0.3 chain]</code> This page says how.</p>
+  <p class="muted-note"><strong>DRAFT for v0.3, private preview, not published and never merged before v0.3.0 is live.</strong> <code>[TO-VERIFY: source]</code> marks a fact that must be checked against the v0.3 release; the source (cache, pipeline or payments) is named in the marker.</p>
+
+  <h2>We do it to our own pipeline first</h2>
+  <p>We started with a build cache, and we secure our own release pipeline the same way before we ask you to run it. <code>[TO-VERIFY: pipeline: the v0.3 chain, secured before the product ships]</code></p>
 
   <h2>Releases are built only in CI</h2>
-  <p>No release file is ever made on a person's laptop, ours included. A release starts when a signed tag is pushed, and there is no manual release path. That is what makes the signatures mean something: nobody can forge a release that GitHub's own build machines never built.</p>
+  <p>No release file is ever made on a person's laptop, ours included. A release starts when a signed tag is pushed, and there is no manual release path. That is what lets the signatures mean something: a release that our CI workflow did not build does not carry its signature. <code>[TO-VERIFY: pipeline: the signing identity is pinned to the release workflow and tag; no manual release path in v0.3]</code></p>
 
-  <h2>The steps a release goes through</h2>
+  <h2>The stages a release goes through</h2>
+  <p>Signed at every stage, verified together at release. Each stage signs a statement about what it did, each stage checks the one before it, and the Release stage verifies them all together. A signature shows who signed these exact files; it does not show the software has no bugs. <code>[TO-VERIFY: pipeline: each v0.3 stage signs its own statement; the Release stage verifies all together]</code></p>
   <ol class="steps">
-    <li><strong>Source check.</strong> The tag and the commit must be signed by an allowed signer, sit on the main branch, and have every required check green.</li>
-    <li><strong>Build.</strong> The binaries are built, with checksums and a software bill of materials for each archive.</li>
-    <li><strong>Container images.</strong> Each image is assembled once, from the unmodified distroless base plus one binary.</li>
-    <li><strong>Reproducibility check.</strong> The image is assembled a second time on a separate machine. The results must be identical, or the release fails.</li>
-    <li><strong>Scans and tests.</strong> Every scanner on our list runs against the exact images. A finding blocks the release unless a published VEX statement explains why it does not apply. The Gradle and Maven acceptance tests run against the same images.</li>
-    <li><strong>Authorization.</strong> One step checks that every earlier step produced signed proof for these exact files. Anything missing stops the release.</li>
-    <li><strong>Publish.</strong> The published images are the same digests that were scanned and tested, promoted without a rebuild, and checked again the way a customer would check them.</li>
+    <li><strong>Build.</strong> The stage first checks that the tag is signed, then builds the binaries and both images, for amd64 and arm64, once. It signs what it built. <code>[TO-VERIFY: pipeline: Build stage (tag check, binaries and both images)]</code></li>
+    <li><strong>Sign.</strong> A separate stage, with its own identity, receives only the build's digests, records the build and signs it. <code>[TO-VERIFY: pipeline: the Sign stage and its own identity; exists on the integration branch only]</code></li>
+    <li><strong>Rebuild.</strong> The same commit is built again on a fresh machine and every digest is compared with the first build. Any difference stops the release. It signs its result. <code>[TO-VERIFY: pipeline: the Rebuild stage; a fresh machine, the same commit, every digest compared]</code></li>
+    <li><strong>Check.</strong> The scanners we list (the list is in the repository), the Gradle and Maven tests and the no-phone-home test run against the exact images, and the stage signs its verdict for those digests. A finding blocks the release unless a published VEX statement explains why it does not apply. <code>[TO-VERIFY: pipeline: Check stage; scanner list, tests, FIPS and no-phone-home checks]</code></li>
+    <li><strong>Release.</strong> The only stage that can publish. It verifies every earlier signature together, then publishes the same digests that were built and judged, with no rebuild. <code>[TO-VERIFY: pipeline: the Release stage verifies every earlier signature; publishes by digest]</code></li>
   </ol>
-  <p class="muted-note">The full description, as the pipeline actually runs, is in <a href="https://github.com/fosterstack/cache/blob/main/RELEASING.md">RELEASING.md</a>.</p>
+  <p class="muted-note">The full description, as the pipeline actually runs, is in <a href="https://github.com/fosterstack/cache/blob/main/RELEASING.md">RELEASING.md</a>. <code>[TO-VERIFY: pipeline: RELEASING.md matches the v0.3 chain]</code></p>
 
   <h2>What you get with each release</h2>
   <ul class="trust">
-    <li>Container images on GitHub's registry, signed without a stored key (Sigstore), with build provenance.</li>
-    <li>Plain binaries and a <code>checksums.txt</code> with its own signature file.</li>
-    <li>A software bill of materials (SBOM) for each binary archive.</li>
-    <li>A VEX file saying which known vulnerabilities do and do not affect the release.</li>
-    <li>A <code>release-manifest.json</code> listing every file and its digest.</li>
+    <li>Container images on GitHub's registry, signed without a stored key (Sigstore), with build provenance. <code>[TO-VERIFY: pipeline/cache: v0.3 image signing and provenance]</code></li>
+    <li>Plain binaries and a <code>checksums.txt</code> with its own signature file. <code>[TO-VERIFY: cache fix A #276: which files the signed checksums list covers]</code></li>
+    <li>A software bill of materials (SBOM) for each binary archive. <code>[TO-VERIFY: cache: v0.3 release assets]</code></li>
+    <li>A VEX file saying which known vulnerabilities do and do not affect the release. <code>[TO-VERIFY: cache: v0.3 release assets]</code></li>
+    <li>A <code>release-manifest.json</code> listing every file and its digest. <code>[TO-VERIFY: cache: manifest layout at v0.3]</code></li>
   </ul>
-  <p>All of it is public. You do not need an account or a purchase to check any of it. The commands are under "Verifying a release" in <a href="https://github.com/fosterstack/cache/blob/main/RELEASING.md">RELEASING.md</a>.</p>
+  <p>All of it is public. You do not need an account or a purchase to check any of it. The commands are on <a href="/verify-a-release/">verify a release yourself</a>.</p>
 
   <h2>Kept patched</h2>
-  <p>The current release's images are scanned again every day, so a vulnerability disclosed against something we already shipped raises an issue without anyone having to remember to look.</p>
+  <p>The current release's images are scanned again every day, so a vulnerability disclosed against something we already shipped raises an issue without anyone having to remember to look. We keep it patched. Our target for vulnerable dependencies is 48 hours from disclosure (<a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md">the scope is in SECURITY.md</a>); more on the <a href="/security/">security page</a>. <code>[TO-VERIFY: cache/ops: the daily rescan; "kept patched" only after the first automatic patch release has been cut; the home page carries the brief's "new or abandoned upstream": that needs a written scope in SECURITY.md before launch]</code></p>
 
   <h2>What we do not claim</h2>
   <ul class="trust">
-    <li>Vulnerable dependencies fixed fast — our target is 48 hours from disclosure (<a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md">the scope is in SECURITY.md</a>).</li>
+        <li>A signature shows who signed these exact files. It does not show the software has no bugs, and it is not a certification by anyone.</li>
     <li>The paid tiers are not built. Everything here is the free MIT core.</li>
   </ul>
 
   <div class="cta-row">
-    <a class="btn" href="https://github.com/fosterstack/cache">FosterStack Cache on GitHub</a>
-    <a class="btn btn-secondary" href="/">FosterStack home</a>
+    <a class="btn" href="/verify-a-release/">Verify a release yourself</a>
+    <a class="btn btn-secondary" href="/how-our-pipeline-maps-to-nist-and-slsa/">How each stage maps to NIST and SLSA</a>
   </div>
 </main>
 <footer>

@@ -4,14 +4,14 @@
 <meta name="robots" content="noindex, nofollow">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Verify a FosterStack Cache release yourself</title>
-<meta name="description" content="DRAFT v0.3.0: verify a FosterStack Cache release yourself with cosign, gh and jq. Not published.">
-<meta property="og:title" content="Verify a FosterStack Cache release yourself">
-<meta property="og:description" content="DRAFT v0.3.0: verify a FosterStack Cache release yourself with cosign, gh and jq. Not published.">
-<meta property="og:url" content="https://fosterstack.com/verify-a-release/">
+<title>What's new in FosterStack Cache v0.3.0 (draft)</title>
+<meta name="description" content="What changes for you in FosterStack Cache v0.3.0: what to check before you upgrade. Draft, not published.">
+<meta property="og:title" content="What's new in FosterStack Cache v0.3.0 (draft)">
+<meta property="og:description" content="What changes for you in FosterStack Cache v0.3.0: what to check before you upgrade. Draft, not published.">
+<meta property="og:url" content="https://fosterstack.com/whats-new-fosterstack-cache-v0-3-0/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="FosterStack">
-<link rel="canonical" href="https://fosterstack.com/verify-a-release/">
+<link rel="canonical" href="https://fosterstack.com/whats-new-fosterstack-cache-v0-3-0/">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -87,42 +87,24 @@
   <div class="tag">Infrastructure worth keeping — and kept patched.</div>
 </header>
 <main>
-  <h1>Verify a FosterStack Cache release yourself</h1>
-  <p>You should not have to take our word for what you run. Signed at every stage, verified together at release. <code>[TO-VERIFY: pipeline]</code> These commands check the final signature, how the image was built, its parts list and what it was assembled from, using only <code>cosign</code>, <code>gh</code> and <code>jq</code>.</p>
-  <p class="muted-note"><strong>DRAFT for v0.3.0, not published and never merged before v0.3.0 is live.</strong> <code>[TO-VERIFY: pipeline]</code> marks anything not yet run against a real release.</p>
-  <p>Use the image by digest for <code>&lt;IMAGE_REF&gt;</code>. There are two images, production and fips; run every step for each. <code>[TO-VERIFY: cache: the two variants and their references]</code></p>
-  <h2 id="verify-container-image-signature-cosign">1. The signature and who signed it</h2>
-  <pre tabindex="0"><code># [TO-VERIFY: pipeline] identity and issuer for the final signature
-cosign verify &lt;IMAGE_REF&gt; \
-  --certificate-identity-regexp '&lt;IDENTITY&gt;' \
-  --certificate-oidc-issuer https://token.actions.githubusercontent.com</code></pre>
-  <h2>2. The digest is the one in the release</h2>
-  <pre tabindex="0"><code># [TO-VERIFY: pipeline] file name and layout
-gh release download &lt;TAG&gt; --repo fosterstack/cache -p release-manifest.json
-jq -r '.images[] | "\(.variant) \(.digest)"' release-manifest.json</code></pre>
-  <p>Every statement names the image by digest, never by tag. <code>[TO-VERIFY: pipeline]</code> The digest you verified should match this list.</p>
-  <h2>3. How it was built</h2>
-  <pre tabindex="0"><code># [TO-VERIFY: pipeline] signer workflow
-gh attestation verify oci://&lt;IMAGE_REF&gt; --repo fosterstack/cache \
-  --signer-workflow '&lt;WORKFLOW&gt;' --source-ref refs/tags/&lt;TAG&gt;</code></pre>
-  <p><code>[TO-VERIFY: pipeline]</code> One sentence on what this record covers. No SLSA level claim here.</p>
-  <h2>4. The parts list (SBOM)</h2>
-  <pre tabindex="0"><code># [TO-VERIFY: pipeline] predicate type and what the list holds for an image with no base image
-cosign verify-attestation &lt;IMAGE_REF&gt; --type spdxjson \
-  --certificate-identity-regexp '&lt;IDENTITY&gt;' \
-  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-  | jq -r '.payload | @base64d | fromjson | .predicate.name'</code></pre>
-  <h2>5. What the image was assembled from</h2>
-  <pre tabindex="0"><code># [TO-VERIFY: pipeline] what "inputs" means for a customer, and the one command that checks it
-cosign verify-attestation &lt;IMAGE_REF&gt; --type '&lt;INPUTS_TYPE&gt;' ... | jq '&lt;FILTER&gt;'</code></pre>
-  <h2>What this proves</h2>
-  <ul>
-    <li>A valid signature proves who signed these exact files.</li>
-    <li>Provenance proves which workflow and run produced them.</li>
-    <li>It does not prove the software has no bugs.</li>
+  <h1>What changes for you in FosterStack Cache v0.3.0</h1>
+  <p>You run FosterStack Cache for Gradle or Maven builds and you want to know what an upgrade to v0.3.0 changes. Three things may matter on your side: check them before you upgrade. <code>[TO-VERIFY: cache: that nothing else needs a change]</code></p>
+  <p class="muted-note"><strong>DRAFT for v0.3, private preview, not published and never merged before v0.3.0 is live.</strong> <code>[TO-VERIFY: source]</code> marks a fact that must be checked against the v0.3 release; the source (cache, pipeline or payments) is named in the marker.</p>
+  <h2>Check these before you upgrade</h2>
+  <ul class="trust">
+    <li><strong>Linux only.</strong> v0.3.0 ships Linux archives (amd64 and arm64) and no macOS archive. On a Mac, run the Linux container image under Docker Desktop. <code>[TO-VERIFY: cache: the owner's Oct 9 answer; the Mac container path and the v0.3 image's data folder are not decided yet]</code></li>
+    <li><strong>No <code>-debug</code> image.</strong> v0.3.0 ships the <code>production</code> and <code>fips</code> images only. They hold only the <code>fscache</code> binary, with no shell, so look inside a running container from outside it with <code>kubectl debug</code> or <code>docker debug</code>; the README has a section on it. <code>[TO-VERIFY: cache: the owner's Oct 9 answer (drop debug; put kubectl debug and docker debug in the README); true once the v0.3 images are built]</code></li>
+    <li><strong>Inside the data folder.</strong> The data folder path is the same, but temporary files of writes in flight now live in a <code>+tmp</code> folder inside it. <code>[TO-VERIFY: cache: the on-disk layout change on main since 0.2.2; confirm it is in v0.3.0 and its upgrade note]</code></li>
   </ul>
-  <p>Extra evidence, outside these commands: records anyone who has Witness installed can check. <code>[TO-VERIFY: pipeline]</code> where they are published.</p>
-  <p class="muted-note">Related: <a href="/how-we-build/">how releases are built and signed</a> and <a href="/security/">security policy</a>.</p>
+  <h2>What stays the same</h2>
+  <p>The Gradle and Maven protocols and the <code>FSCACHE_*</code> settings stay as they are. <code>[TO-VERIFY: cache: unchanged at v0.3; no test run]</code> A request with more than 500 header values has been rejected with <code>431</code> (Request Header Fields Too Large) since 0.2.2, because of Go 1.27; Gradle and Maven send far fewer. <code>[TO-VERIFY: cache: Go 1.27 behaviour, in 0.2.2 already; the client-side message is not verified]</code></p>
+  <h2>Kept patched</h2>
+  <p><code>[TO-VERIFY: cache/ops: "kept patched" only after the first automatic patch release has been cut; the home page carries the brief's "new or abandoned upstream": that needs a written scope in SECURITY.md before launch]</code> We keep FosterStack Cache patched. The server does not update itself, so watch the repository's releases on GitHub. Our target for vulnerable dependencies is 48 hours from disclosure; <a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md">the scope is in SECURITY.md</a>.</p>
+  <h2>How the release is built</h2>
+  <p><code>[TO-VERIFY: pipeline: the v0.3 chain]</code> Signed at every stage, verified together at release. The image is built from signed packages, with no base image. We secure our own release pipeline first. You can check all of it yourself: see <a href="/verify-a-release/">verify a release yourself</a> and <a href="/how-we-build/">how we build</a>.</p>
+  <h2>Upgrading</h2>
+  <p><code>[TO-VERIFY: cache: the 0.2.2 to 0.3.0 upgrade steps]</code> Whether the back-up and upgrade steps on <a href="/upgrade-build-cache-server/">the upgrade page</a> change for this release. Support terms for v0.3.0: <code>[TO-VERIFY: cache/owner: what the long-term-support line promises]</code>.</p>
+  <p class="muted-note">Related: <a href="/changelog/">changelog</a> and <a href="/security/">security policy</a>.</p>
 </main>
 <footer>
   <div>
