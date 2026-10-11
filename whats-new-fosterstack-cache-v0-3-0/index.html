@@ -97,7 +97,7 @@
     <li><strong>Oversized requests.</strong> If a proxy or a custom client adds a very large number of headers, a request with more than 500 header values is rejected with <code>431</code> (Request Header Fields Too Large) before it reaches the cache. Gradle and Maven send far fewer; look for <code>431</code> in a build log if a request fails. <code>[TO-VERIFY: cache: next-release notes (Go 1.27 behaviour); whether it ships in v0.3.0]</code></li>
   </ul>
   <h2>What stays the same</h2>
-  <p><code>[TO-VERIFY: cache: unchanged at v0.3]</code> The Gradle and Maven protocols, the <code>FSCACHE_*</code> settings and the data folder. No change is intended; confirm each against the release notes before this page says so.</p>
+  <p>The Gradle and Maven protocols, the <code>FSCACHE_*</code> settings and the data folder stay as they are. <code>[TO-VERIFY: cache: unchanged at v0.3]</code></p>
   <h2>Kept patched</h2>
   <p><code>[TO-VERIFY: cache/ops: "kept patched" only after the first automatic patch release has been cut; the brief also says "new or abandoned upstream": that needs a written scope first]</code> We keep FosterStack Cache patched. The server does not update itself, so watch the repository's releases on GitHub. Our target for vulnerable dependencies is 48 hours from disclosure; <a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md">the scope is in SECURITY.md</a>.</p>
   <h2>How the release is built</h2>
