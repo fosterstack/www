@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="en">
 <head>
+<meta name="robots" content="noindex, nofollow">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Maven remote build cache setup, on/off, and with Gradle</title>
@@ -90,6 +91,7 @@
 <main>
   <h1>Maven remote build cache: setup, on/off switches, and Gradle on the same server</h1>
   <p class="lede">Share Maven build results across machines using Apache's Build Cache Extension and a self-hosted cache server. FosterStack Cache is that server, and one server can also serve Gradle. About ten minutes, mostly editing the files and choosing your values. The two builds in step 4 took 9 to 12 seconds together on a GitHub-hosted machine.</p>
+  <p class="muted-note"><strong>DRAFT for v0.3, private preview, not published and never merged before v0.3.0 is live.</strong> <code>[TO-VERIFY: source]</code> marks a fact that must be checked against the v0.3 release; the source (cache, pipeline or payments) is named in the marker.</p>
 
   <h2>Who owns what</h2>
   <p>The client is Apache's Maven Build Cache Extension. We maintain the server. If your hit rate looks low, that is usually the extension's own project settings (which files count as inputs, what to skip), not the server. Start with the extension's configuration guide.</p>
@@ -124,7 +126,7 @@
     &lt;/remote&gt;
   &lt;/configuration&gt;
 &lt;/cache&gt;</code></pre>
-  <p>Keep the comment: a cache setting that points at an unfamiliar host looks like data theft to a reviewer without it. Keep the trailing slash on the URL. Use HTTPS for a real server.</p>
+  <p>Keep the comment: a cache setting that points at an unfamiliar host looks like data theft to a reviewer without it. Keep the trailing slash on the URL. Use HTTPS for a real server: behind a proxy, or with the server's own <code>FSCACHE_TLS_CERT</code> and <code>FSCACHE_TLS_KEY</code>. <code>[TO-VERIFY: cache: native TLS (REQ-TLS-001, #296) is on cache main, in no release yet; source docs/docker-deploy.md and README.md]</code></p>
 
   <h2>3. Add the password, if the server has one</h2>
   <p>In <code>~/.m2/settings.xml</code>, or your CI system's equivalent. The <code>id</code> must match the <code>id</code> in step 2:</p>
