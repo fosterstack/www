@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="en">
 <head>
+<meta name="robots" content="noindex, nofollow">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>FIPS 140-3 build cache: run the FIPS image and confirm it</title>
@@ -87,10 +88,11 @@
 </header>
 <main>
   <h1>FIPS 140-3 build cache: run the FIPS image and confirm it</h1>
-  <p class="lede">FosterStack Cache has a FIPS build that uses Go's validated FIPS 140-3 cryptographic module. This page shows how to run it and how to see for yourself that it is in FIPS mode. The outputs below are from the real 0.2.2 images.</p>
+  <p class="lede">Your contract asks for FIPS-validated cryptography, and you have to show what your build cache actually runs. FosterStack Cache has a FIPS build that uses Go's validated FIPS 140-3 cryptographic module. This page shows how to run it and how to see for yourself that it is in FIPS mode. The outputs below are from the real 0.2.2 images. <code>[TO-VERIFY: cache: re-run on the v0.3 FIPS image; the module version and status output]</code></p>
+  <p class="muted-note"><strong>DRAFT for v0.3, private preview, not published and never merged before v0.3.0 is live.</strong> <code>[TO-VERIFY: source]</code> marks a fact that must be checked against the v0.3 release; the source (cache, pipeline or payments) is named in the marker.</p>
 
   <h2>What the FIPS build is</h2>
-  <p>It is the same source as the standard build, compiled so that it uses Go's validated FIPS 140-3 module (CMVP certificate #5247). It is available as a container image tag ending in <code>-fips</code>, and as Linux binaries for amd64 and arm64. There is no macOS FIPS build.</p>
+  <p>It is the same source as the standard build, compiled so that it uses Go's validated FIPS 140-3 module (CMVP certificate #5247). <code>[TO-VERIFY: cache: at v0.3 the FIPS and standard images come from two builds of one source]</code> It is available as a container image tag ending in <code>-fips</code>, and as Linux binaries for amd64 and arm64. There is no macOS FIPS build. <code>[TO-VERIFY: cache: v0.3 ships Linux archives only (amd64 and arm64), and the images are production and fips]</code></p>
 
   <h2>Run it</h2>
   <pre tabindex="0"><code>docker run -d -p 127.0.0.1:8080:8080 -v fscache-data:/home/nonroot \
@@ -115,8 +117,8 @@
   <h2>What this tells you, and what it does not</h2>
   <ul class="trust">
     <li>It shows the running program is using Go's validated module. The validation is of that cryptographic module.</li>
-    <li>Our own tests run the whole suite against the FIPS build with the module set to refuse any algorithm it does not approve. That proves the code paths the tests reach. Before publishing, the release runs the released FIPS binary (Linux, amd64) and requires its status page to show the <code>active (Go validated module ...)</code> line. It also starts the FIPS image and stores and fetches a test entry through it. No test yet reads the status page of the running FIPS image, so checking it yourself, as shown above, is still worth doing.</li>
-    <li>FosterStack Cache is not "FedRAMP compliant" or "CMMC compliant". Those attach to your service and your organisation, never to a component you deploy. The FIPS build is validated crypto for your compliance program, not a substitute for it.</li>
+    <li>Our own tests run the whole suite against the FIPS build with the module set to refuse any algorithm it does not approve. That proves the code paths the tests reach. Before publishing, the release runs the released FIPS binary (Linux, amd64) and requires its status page to show the <code>active (Go validated module ...)</code> line. It also starts the FIPS image and stores and fetches a test entry through it. No test yet reads the status page of the running FIPS image, so checking it yourself, as shown above, is still worth doing. <code>[TO-VERIFY: cache: whether a v0.3 test now reads it]</code></li>
+    <li>FosterStack Cache is not "FedRAMP compliant" or "CMMC compliant". Those attach to your service and your organization, never to a component you deploy. The FIPS build is validated crypto for your compliance program, not a substitute for it.</li>
   </ul>
 
   <p class="muted-note">Related: <a href="/regulated/">for teams entering regulated markets</a> and <a href="/security/">security policy</a>. Details: <a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md">SECURITY.md</a>.</p>
