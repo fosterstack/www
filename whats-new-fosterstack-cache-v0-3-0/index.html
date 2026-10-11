@@ -93,7 +93,7 @@
   <h2>Check these before you upgrade</h2>
   <ul class="trust">
     <li><strong>Linux only.</strong> v0.3.0 ships Linux archives (amd64 and arm64) and no macOS archive. On a Mac, run the Linux container image under Docker Desktop. <code>[TO-VERIFY: cache: the owner's Oct 9 answer; the Mac container path and the v0.3 image's data folder are not decided yet]</code></li>
-    <li><strong>The <code>-debug</code> image.</strong> The images are <code>production</code> and <code>fips</code>; whether a <code>-debug</code> image ships at v0.3.0 is still open. The production and fips images hold only the <code>fscache</code> binary, with no shell, so look inside a running container from outside it with <code>kubectl debug</code> or <code>docker debug</code>. <code>[TO-VERIFY: owner: whether a -debug image ships is an open question; cache: the README section on debugging a running container]</code></li>
+    <li><strong>No <code>-debug</code> image.</strong> v0.3.0 ships the <code>production</code> and <code>fips</code> images only. They hold only the <code>fscache</code> binary, with no shell, so look inside a running container from outside it with <code>kubectl debug</code> or <code>docker debug</code>; the README has a section on it. <code>[TO-VERIFY: cache: the owner's Oct 9 answer (drop debug; put kubectl debug and docker debug in the README); true once the v0.3 images are built]</code></li>
     <li><strong>Inside the data folder.</strong> The data folder path is the same, but temporary files of writes in flight now live in a <code>+tmp</code> folder inside it. <code>[TO-VERIFY: cache: the on-disk layout change on main since 0.2.2; confirm it is in v0.3.0 and its upgrade note]</code></li>
   </ul>
   <h2>What stays the same</h2>
