@@ -88,7 +88,7 @@
 </header>
 <main>
   <h1>Verify a FosterStack Cache release yourself</h1>
-  <p>You should not have to take our word for what you run. Each stage of a release is signed on its own, and the signatures are verified together at release. <code>[TO-VERIFY: pipeline]</code> These commands check that yourself, using only <code>cosign</code>, <code>gh</code> and <code>jq</code>.</p>
+  <p>You should not have to take our word for what you run. Each stage of a release is signed on its own, and the signatures are verified together at release. <code>[TO-VERIFY: pipeline]</code> These commands check the final signature, how the image was built, its parts list and what it was assembled from, using only <code>cosign</code>, <code>gh</code> and <code>jq</code>.</p>
   <p class="muted-note"><strong>DRAFT for v0.3.0, not published and never merged before v0.3.0 is live.</strong> <code>[TO-VERIFY]</code> marks anything not yet run against a real release.</p>
   <p>Use the image by digest for <code>&lt;IMAGE_REF&gt;</code>. There are two images; run every step for each. <code>[TO-VERIFY]</code> which two variants.</p>
   <h2 id="verify-container-image-signature-cosign">1. The signature and who signed it</h2>
@@ -117,7 +117,7 @@ cosign verify-attestation &lt;IMAGE_REF&gt; --type spdxjson \
 cosign verify-attestation &lt;IMAGE_REF&gt; --type '&lt;INPUTS_TYPE&gt;' ... | jq '&lt;FILTER&gt;'</code></pre>
   <h2>What this proves</h2>
   <ul>
-    <li>A valid signature proves who signed these exact bytes.</li>
+    <li>A valid signature proves who signed these exact files.</li>
     <li>Provenance proves which workflow and run produced them.</li>
     <li>It does not prove the software has no bugs.</li>
   </ul>

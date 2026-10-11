@@ -5,9 +5,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>How FosterStack Cache is built and signed</title>
-<meta name="description" content="How a FosterStack Cache release is built and signed: every release is signed and checked at every step, and you can verify it yourself. Draft for v0.3.">
+<meta name="description" content="DRAFT v0.3.0, not published: how a FosterStack Cache release is built, signed and checked, and how to verify it yourself.">
 <meta property="og:title" content="How FosterStack Cache is built and signed">
-<meta property="og:description" content="How a FosterStack Cache release is built and signed: every release is signed and checked at every step, and you can verify it yourself. Draft for v0.3.">
+<meta property="og:description" content="DRAFT v0.3.0, not published: how a FosterStack Cache release is built, signed and checked, and how to verify it yourself.">
 <meta property="og:url" content="https://fosterstack.com/how-we-build/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="FosterStack">
@@ -92,23 +92,23 @@
 <main>
   <h1>How FosterStack Cache is built and signed</h1>
   <p class="lede">You are about to run our software inside your build pipeline. How do you know the files you run are the ones we built? Every release is signed and checked at every step, and you can verify it yourself. <code>[TO-VERIFY: pipeline: signed and checked at every stage of the v0.3 chain]</code> This page says how.</p>
-  <p class="muted-note"><strong>DRAFT for v0.3, private preview, not published.</strong> <code>[TO-VERIFY: source]</code> marks a fact that must be checked against the v0.3 release; the source (cache, pipeline or payments) is named in the marker.</p>
+  <p class="muted-note"><strong>DRAFT for v0.3, private preview, not published and never merged before v0.3.0 is live.</strong> <code>[TO-VERIFY: source]</code> marks a fact that must be checked against the v0.3 release; the source (cache, pipeline or payments) is named in the marker.</p>
 
   <h2>We do it to our own pipeline first</h2>
-  <p>FosterStack's business is helping organisations secure their build and release pipeline. We started with a build cache your team can know is secure, and we secure our own release pipeline the same way before we ask you to trust it. <code>[TO-VERIFY: pipeline: the v0.3 chain, secured before the product ships]</code></p>
+  <p>We started with a build cache, and we secure our own release pipeline the same way before we ask you to run it. <code>[TO-VERIFY: pipeline: the v0.3 chain, secured before the product ships]</code></p>
 
   <h2>Releases are built only in CI</h2>
-  <p>No release file is ever made on a person's laptop, ours included. A release starts when a signed tag is pushed, and there is no manual release path. That is what makes the signatures mean something: nobody can forge a release that GitHub's own build machines never built. <code>[TO-VERIFY: pipeline: no manual release path in v0.3]</code></p>
+  <p>No release file is ever made on a person's laptop, ours included. A release starts when a signed tag is pushed, and there is no manual release path. That is what lets the signatures mean something: a release that our CI workflow did not build does not carry its signature. <code>[TO-VERIFY: pipeline: the signing identity is pinned to the release workflow and tag; no manual release path in v0.3]</code></p>
 
   <h2>The steps a release goes through</h2>
-  <p>Signed at every stage, verified together at release. Each stage signs its own statement about the exact files, and no stage takes the one before it on trust. <code>[TO-VERIFY: pipeline: each v0.3 stage signs its own statement; the Release stage verifies all together]</code></p>
+  <p>Signed at every stage, verified together at release. Each stage signs its own statement about the exact files, and the Release stage verifies them all together. A signature shows who signed these exact files; it does not show the software has no bugs. <code>[TO-VERIFY: pipeline: each v0.3 stage signs its own statement; the Release stage verifies all together]</code></p>
   <ol class="steps">
     <li><strong>Source check.</strong> The tag and the commit must be signed by an allowed signer, sit on the main branch, and have every required check green. <code>[TO-VERIFY: pipeline: v0.3 source admission unchanged from v0.2.2]</code></li>
     <li><strong>Build.</strong> The binaries and the image's packages are built once. The image is assembled from those signed packages, with no base image. <code>[TO-VERIFY: cache: melange packages, apko image, no base image]</code></li>
-    <li><strong>Sign.</strong> A separate stage, with its own identity, records the build and signs it. <code>[TO-VERIFY: pipeline: the Sign boundary stage and its own identity]</code></li>
-    <li><strong>Rebuild.</strong> The release is built again, independently. The results must be identical, or the release fails. <code>[TO-VERIFY: pipeline: the Rebuild stage]</code></li>
-    <li><strong>Check.</strong> Every scanner on our list runs against the exact images. A finding blocks the release unless a published VEX statement explains why it does not apply. The Gradle and Maven acceptance tests run against the same images. <code>[TO-VERIFY: pipeline: scanner list and acceptance suites at v0.3]</code></li>
-    <li><strong>Release.</strong> One step verifies every earlier signature together. Anything missing stops the release. Then the same digests are published, promoted without a rebuild, and checked again the way a customer would check them. <code>[TO-VERIFY: pipeline: the Release stage]</code></li>
+    <li><strong>Sign.</strong> A separate stage, with its own identity, records the build and signs it. <code>[TO-VERIFY: pipeline: the Sign boundary stage; a distinct certificate subject for each stage, visible in the cosign output]</code></li>
+    <li><strong>Rebuild.</strong> The image is assembled again, independently, on a separate machine. The digests must be identical, or the release fails. <code>[TO-VERIFY: pipeline: the Rebuild stage runs on a separate runner and identity, sharing no cache or inputs with Build]</code></li>
+    <li><strong>Check.</strong> The scanners we list (the list is in the repository) run against the exact images, and each signs its verdict for those digests. A finding blocks the release unless a published VEX statement explains why it does not apply. The Gradle and Maven acceptance tests run against the same images. <code>[TO-VERIFY: pipeline: scanner list and acceptance suites at v0.3]</code></li>
+    <li><strong>Release.</strong> One step verifies every earlier signature together. Anything missing stops the release. Then the same digests are published, promoted without a rebuild, and checked again the way a customer would check them. <code>[TO-VERIFY: pipeline: the Release job runs the same commands as the verify page]</code></li>
   </ol>
   <p class="muted-note">The full description, as the pipeline actually runs, is in <a href="https://github.com/fosterstack/cache/blob/main/RELEASING.md">RELEASING.md</a>. <code>[TO-VERIFY: pipeline: RELEASING.md matches the v0.3 chain]</code></p>
 
@@ -128,7 +128,7 @@
   <h2>What we do not claim</h2>
   <ul class="trust">
     <li>Vulnerable dependencies fixed fast: our target is 48 hours from disclosure (<a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md">the scope is in SECURITY.md</a>).</li>
-    <li>A signature shows who signed these exact files. It does not show the software has no bugs.</li>
+    <li>A signature shows who signed these exact files. It does not show the software has no bugs, and it is not a certification by anyone.</li>
     <li>The paid tiers are not built. Everything here is the free MIT core.</li>
   </ul>
 
