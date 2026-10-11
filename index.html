@@ -1,12 +1,13 @@
 <!doctype html>
 <html lang="en">
 <head>
+<meta name="robots" content="noindex, nofollow">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>FosterStack — self-hosted build cache for Gradle and Maven</title>
-<meta name="description" content="Infrastructure worth keeping — and kept patched. Self-hosted, MIT-licensed build cache for Gradle and Maven; a replacement for the Develocity Build Cache Node.">
+<meta name="description" content="Infrastructure worth keeping — and kept patched. A self-hosted, MIT-licensed build cache for Gradle and Maven. Every release is signed and checked at every step, and you can verify it yourself.">
 <meta property="og:title" content="FosterStack — self-hosted build cache for Gradle and Maven">
-<meta property="og:description" content="Infrastructure worth keeping — and kept patched. Self-hosted, MIT-licensed build cache for Gradle and Maven; a replacement for the Develocity Build Cache Node.">
+<meta property="og:description" content="Infrastructure worth keeping — and kept patched. A self-hosted, MIT-licensed build cache for Gradle and Maven. Every release is signed and checked at every step, and you can verify it yourself.">
 <meta property="og:url" content="https://fosterstack.com/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="FosterStack">
@@ -87,22 +88,23 @@
   <div class="tag">Infrastructure worth keeping — and kept patched.</div>
 </header>
 <main>
-  <div class="notice">
-    Gradle Inc. has deprecated the free Develocity Build Cache Node: it "will no longer be
-    distributed, supported or available after December&nbsp;31,&nbsp;2026." The migration path they
-    offer requires a commercial Develocity subscription.
-    <a href="/build-cache-node-end-of-life/">What that means and your options</a>.
-  </div>
+  <p class="muted-note"><strong>DRAFT for v0.3, private preview, not published.</strong> <code>[TO-VERIFY: source]</code> marks a fact that must be checked against the v0.3 release; the source (cache, pipeline or payments) is named in the marker.</p>
 
-  <h1>Fast builds from cache are worth keeping.</h1>
+  <h1>Your CI keeps rebuilding what it already built. And the cache that fixes it is one more thing in your pipeline you have to trust.</h1>
   <p class="lede">
-    FosterStack is a self-hosted remote build cache server — a Develocity Build Cache Node
-    replacement that speaks the same Gradle remote build cache HTTP protocol, so migrating is
-    mostly a URL change. The same server implements the Apache Maven Build Cache Extension's
-    remote HTTP mode, so a mixed Gradle and Maven
-    shop runs one deploy instead of two. Open source core, one-command deploy, and the thing
-    that matters: it stays patched, on a promise.
+    FosterStack Cache is a self-hosted build cache for Gradle and Maven. Your builds reuse each
+    other's results, and you can check that the cache you run is the one we built.
+    Open source core, one-command deploy. The same server speaks the Gradle remote build cache
+    protocol and the Apache Maven Build Cache Extension's remote HTTP mode, so a mixed Gradle and
+    Maven shop runs one deploy instead of two. <code>[TO-VERIFY: cache: v0.3 behaviour unchanged]</code>
   </p>
+
+  <h2>Three promises</h2>
+  <div class="cards">
+    <div class="card"><h3>Software you can keep running safely</h3><p>Kept patched, whether it is new or abandoned upstream. <code>[TO-VERIFY: cache/ops: "kept patched" only after the first automatic patch release has been cut; what is covered for software abandoned upstream]</code></p></div>
+    <div class="card"><h3>Provably</h3><p>Every release is signed and checked at every step, and you can <a href="/verify-a-release/">verify it yourself</a>. <code>[TO-VERIFY: pipeline: signing and checking at every stage of the v0.3 chain]</code></p></div>
+    <div class="card"><h3>Because we do it to our own pipeline first</h3><p>We built the build cache first and secured our own release pipeline the same way, before asking you to trust it. <code>[TO-VERIFY: pipeline: the pipeline described is the v0.3 one]</code></p></div>
+  </div>
 
   <h2 id="try">Try it now</h2>
   <p>There is no signup, no waitlist, and no license key for the free tier. Pull the
@@ -111,7 +113,7 @@
 curl localhost:8080/healthz   # -&gt; ok</code></pre>
   <p class="cta-row">
     <a class="btn" href="https://github.com/fosterstack/cache#quickstart-docker">Quickstart</a>
-    <a class="btn btn-secondary" href="https://github.com/fosterstack/cache/blob/main/docs/migrate-from-bcn.md">Migrate off Build Cache Node</a>
+    <a class="btn btn-secondary" href="https://github.com/fosterstack/cache/blob/main/docs/migrate-from-bcn.md">Migrate an existing cache</a>
     <a class="btn btn-secondary" href="https://github.com/fosterstack/cache">Read the source</a>
   </p>
   <p class="muted-note">Bugs and questions go to <a href="https://github.com/fosterstack/cache/issues">GitHub issues</a>, which is also where the roadmap is settled.</p>
@@ -131,17 +133,17 @@ curl localhost:8080/healthz   # -&gt; ok</code></pre>
     <div class="card"><h3>Authentication</h3><p>HTTP Basic Auth over TLS, wired the way Gradle and Maven already expect credentials. Constant-time comparison, no credential ever logged.</p></div>
     <div class="card"><h3>Metrics &amp; status</h3><p>Prometheus metrics, a read-only status page with hit rates and size-vs-cap, and a Grafana dashboard in the repo — so you know the cache is earning its keep.</p></div>
     <div class="card"><h3>Maintenance target</h3><p>Vulnerable dependencies fixed fast — our target is 48 hours from disclosure (<a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md">the scope is in SECURITY.md</a>).</p></div>
-    <div class="card"><h3>Designed against NIST guidance</h3><p>Our release pipeline is designed against NIST SP 800-204C and 800-204D: each stage's result is recorded in a signed statement, and nothing is promoted to the public registries until a signed release authorization has verified every earlier statement. Guidance we designed against, not a certification we hold. <a href="/how-our-pipeline-maps-to-nist-and-slsa/">See how each stage maps</a>.</p></div>
-    <div class="card"><h3>30-minute migration</h3><p>A step-by-step guide for existing Build Cache Node deployments. Same protocol, same CI config shape — migrating is mostly a URL change.</p></div>
+    <div class="card"><h3>Designed against NIST guidance</h3><p>No step trusts the one before it. When you check our images' digital signatures you can rest assured we checked it at every step. That signature means it's fosterstack code, a fosterstack build, a fosterstack image and everything in between. <a href="/how-our-pipeline-maps-to-nist-and-slsa/">See how each stage maps</a>. <code>[TO-VERIFY: pipeline: signatures at every stage of the v0.3 chain, so the sentence is true]</code></p></div>
+    <div class="card"><h3>30-minute migration</h3><p>A step-by-step guide for moving an existing remote build cache. Same protocol, same CI config shape — migrating is mostly a URL change.</p></div>
   </div>
 
   <h2>More than kept patched.</h2>
   <ul class="trust">
-    <li>Signed releases you can verify in minutes.</li>
+    <li>Signed releases you can verify in minutes. <code>[TO-VERIFY: pipeline/cache: the v0.3 verify guide, ten commands or fewer]</code></li>
     <li>Build record, parts list (SBOM) and vulnerability statements published with every release.</li>
     <li>Scanned before every release. The current release is rescanned every day.</li>
-    <li>Images assembled twice on separate machines; the results must match.</li>
-    <li>Minimal image, no telemetry. FIPS variant available.</li>
+    <li>Every release is rebuilt independently; the results must match. <code>[TO-VERIFY: pipeline: the Rebuild stage]</code></li>
+    <li>Minimal image with no base image, no telemetry. FIPS variant available. <code>[TO-VERIFY: cache: image assembled from signed packages; production and fips images only]</code></li>
     <li>Vulnerable dependencies fixed fast — our target is 48 hours from disclosure (<a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md">the scope is in SECURITY.md</a>).</li>
   </ul>
   <p><a href="/how-we-build/">How we build</a> · <a href="/security/">Security policy</a> · <a href="/verify-a-release/">Verify a release</a></p>
