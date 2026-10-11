@@ -88,20 +88,22 @@
 </header>
 <main>
   <h1>What changes for you in FosterStack Cache v0.3.0</h1>
-  <p>If you run FosterStack Cache for Gradle or Maven builds, these are the things to check before you upgrade from 0.2.2.</p>
-  <p class="muted-note"><strong>DRAFT for v0.3.0, not published and never merged before v0.3.0 is live.</strong> <code>[TO-VERIFY]</code> marks anything not yet checked against the release itself.</p>
+  <p>You run FosterStack Cache for Gradle or Maven builds and you want to know what an upgrade to v0.3.0 changes. Three things may need a change on your side: check them before you upgrade. <code>[TO-VERIFY: cache: that nothing else needs a change]</code></p>
+  <p class="muted-note"><strong>DRAFT for v0.3, private preview, not published and never merged before v0.3.0 is live.</strong> <code>[TO-VERIFY: source]</code> marks a fact that must be checked against the v0.3 release; the source (cache, pipeline or payments) is named in the marker.</p>
   <h2>Check these before you upgrade</h2>
   <ul class="trust">
-    <li><strong>Linux only.</strong> <code>[TO-VERIFY]</code> v0.3.0 ships Linux archives (amd64 and arm64) and no macOS archive. If you run the server on a Mac, run the container image or a Linux machine instead.</li>
-    <li><strong>No <code>-debug</code> image.</strong> <code>[TO-VERIFY]</code> The images are <code>production</code> and <code>fips</code>. To look inside a running container, use <code>kubectl debug</code> or <code>docker debug</code>.</li>
-    <li><strong>Oversized requests.</strong> <code>[TO-VERIFY]</code> A request with more than 500 header values is rejected with <code>431</code> before it reaches the cache. Gradle and Maven send far fewer.</li>
+    <li><strong>Linux only.</strong> <code>[TO-VERIFY: cache: the owner's Oct 9 answer and the v0.3 build matrix (amd64 and arm64); the platform requirement text is not ratified]</code> v0.3.0 ships Linux archives (amd64 and arm64) and no macOS archive. If you run the server on a Mac, run the container image or a Linux machine instead.</li>
+    <li><strong>No <code>-debug</code> image.</strong> <code>[TO-VERIFY: cache: the owner's Oct 9 answer; README section on debugging a running container]</code> The images are <code>production</code> and <code>fips</code>. To look inside a running container, use <code>kubectl debug</code> or <code>docker debug</code>.</li>
+    <li><strong>Oversized requests.</strong> If a proxy or a custom client adds a very large number of headers, a request with more than 500 header values is rejected with <code>431</code> (Request Header Fields Too Large) before it reaches the cache. Gradle and Maven send far fewer; look for <code>431</code> in a build log if a request fails. <code>[TO-VERIFY: cache: next-release notes (Go 1.27 behaviour); whether it ships in v0.3.0]</code></li>
   </ul>
   <h2>What stays the same</h2>
-  <p><code>[TO-VERIFY]</code> The Gradle and Maven protocols, the <code>FSCACHE_*</code> settings and the data folder. No change is intended; confirm each against the release notes before this page says so.</p>
+  <p>The Gradle and Maven protocols, the <code>FSCACHE_*</code> settings and the data folder stay as they are. <code>[TO-VERIFY: cache: unchanged at v0.3]</code></p>
+  <h2>Kept patched</h2>
+  <p><code>[TO-VERIFY: cache/ops: "kept patched" only after the first automatic patch release has been cut; the brief also says "new or abandoned upstream": that needs a written scope first]</code> We keep FosterStack Cache patched. The server does not update itself, so watch the repository's releases on GitHub. Our target for vulnerable dependencies is 48 hours from disclosure; <a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md">the scope is in SECURITY.md</a>.</p>
   <h2>How the release is built</h2>
-  <p><code>[TO-VERIFY]</code> Each stage of the release is signed on its own, and the signatures are verified together at release. The image is built from signed packages, with no base image. You can check all of it yourself: see <a href="/verify-a-release/">verify a release yourself</a>.</p>
+  <p><code>[TO-VERIFY: pipeline: the v0.3 chain]</code> Each stage of the release is signed on its own, and the signatures are verified together at release. The image is built from signed packages, with no base image. We secure our own release pipeline first. You can check all of it yourself: see <a href="/verify-a-release/">verify a release yourself</a> and <a href="/how-we-build/">how we build</a>.</p>
   <h2>Upgrading</h2>
-  <p><code>[TO-VERIFY]</code> Whether the back-up and upgrade steps on <a href="/upgrade-build-cache-server/">the upgrade page</a> change for this release. Support terms for v0.3.0: <code>[TO-VERIFY]</code>.</p>
+  <p><code>[TO-VERIFY: cache: the 0.2.2 to 0.3.0 upgrade steps]</code> Whether the back-up and upgrade steps on <a href="/upgrade-build-cache-server/">the upgrade page</a> change for this release. Support terms for v0.3.0: <code>[TO-VERIFY: cache/owner: what the long-term-support line promises]</code>.</p>
   <p class="muted-note">Related: <a href="/changelog/">changelog</a> and <a href="/security/">security policy</a>.</p>
 </main>
 <footer>
