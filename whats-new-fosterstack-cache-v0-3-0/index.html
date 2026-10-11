@@ -4,14 +4,14 @@
 <meta name="robots" content="noindex, nofollow">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Verify a FosterStack Cache release yourself</title>
-<meta name="description" content="DRAFT v0.3.0: verify a FosterStack Cache release yourself with cosign, gh and jq. Not published.">
-<meta property="og:title" content="Verify a FosterStack Cache release yourself">
-<meta property="og:description" content="DRAFT v0.3.0: verify a FosterStack Cache release yourself with cosign, gh and jq. Not published.">
-<meta property="og:url" content="https://fosterstack.com/verify-a-release/">
+<title>What's new in FosterStack Cache v0.3.0 (draft)</title>
+<meta name="description" content="What changes for you in FosterStack Cache v0.3.0: what to check before you upgrade. Draft, not published.">
+<meta property="og:title" content="What's new in FosterStack Cache v0.3.0 (draft)">
+<meta property="og:description" content="What changes for you in FosterStack Cache v0.3.0: what to check before you upgrade. Draft, not published.">
+<meta property="og:url" content="https://fosterstack.com/whats-new-fosterstack-cache-v0-3-0/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="FosterStack">
-<link rel="canonical" href="https://fosterstack.com/verify-a-release/">
+<link rel="canonical" href="https://fosterstack.com/whats-new-fosterstack-cache-v0-3-0/">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -87,42 +87,22 @@
   <div class="tag">Infrastructure worth keeping — and kept patched.</div>
 </header>
 <main>
-  <h1>Verify a FosterStack Cache release yourself</h1>
-  <p>Each stage of a release is signed on its own, and the signatures are verified together at release. These commands check that yourself, using only <code>cosign</code>, <code>gh</code> and <code>jq</code>.</p>
-  <p class="muted-note"><strong>DRAFT for v0.3.0, not published and never merged before v0.3.0 is live.</strong> <code>[TO-VERIFY]</code> marks anything not yet run against a real release.</p>
-  <p>Use the image by digest for <code>&lt;IMAGE_REF&gt;</code>. There are two images; run every step for each. <code>[TO-VERIFY]</code> which two variants.</p>
-  <h2 id="verify-container-image-signature-cosign">1. The signature and who signed it</h2>
-  <pre tabindex="0"><code># [TO-VERIFY] identity and issuer for the final signature
-cosign verify &lt;IMAGE_REF&gt; \
-  --certificate-identity-regexp '&lt;IDENTITY&gt;' \
-  --certificate-oidc-issuer https://token.actions.githubusercontent.com</code></pre>
-  <h2>2. The digest is the one in the release</h2>
-  <pre tabindex="0"><code># [TO-VERIFY] file name and layout
-gh release download &lt;TAG&gt; --repo fosterstack/cache -p release-manifest.json
-jq -r '.images[] | "\(.variant) \(.digest)"' release-manifest.json</code></pre>
-  <p>Every statement names the image by digest, never by tag. The digest you verified should match this list.</p>
-  <h2>3. How it was built</h2>
-  <pre tabindex="0"><code># [TO-VERIFY] signer workflow
-gh attestation verify oci://&lt;IMAGE_REF&gt; --repo fosterstack/cache \
-  --signer-workflow '&lt;WORKFLOW&gt;' --source-ref refs/tags/&lt;TAG&gt;</code></pre>
-  <p><code>[TO-VERIFY]</code> One sentence on what this record covers. No SLSA level claim here.</p>
-  <h2>4. The parts list (SBOM)</h2>
-  <pre tabindex="0"><code># [TO-VERIFY] predicate type and what the list holds for an image with no base image
-cosign verify-attestation &lt;IMAGE_REF&gt; --type spdxjson \
-  --certificate-identity-regexp '&lt;IDENTITY&gt;' \
-  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-  | jq -r '.payload | @base64d | fromjson | .predicate.name'</code></pre>
-  <h2>5. What the image was assembled from</h2>
-  <pre tabindex="0"><code># [TO-VERIFY] what "inputs" means for a customer, and the one command that checks it
-cosign verify-attestation &lt;IMAGE_REF&gt; --type '&lt;INPUTS_TYPE&gt;' ... | jq '&lt;FILTER&gt;'</code></pre>
-  <h2>What this proves</h2>
-  <ul>
-    <li>A valid signature proves who signed these exact bytes.</li>
-    <li>Provenance proves which workflow and run produced them.</li>
-    <li>It does not prove the software has no bugs.</li>
+  <h1>What changes for you in FosterStack Cache v0.3.0</h1>
+  <p>If you run FosterStack Cache for Gradle or Maven builds, these are the things to check before you upgrade from 0.2.2.</p>
+  <p class="muted-note"><strong>DRAFT for v0.3.0, not published and never merged before v0.3.0 is live.</strong> <code>[TO-VERIFY]</code> marks anything not yet checked against the release itself.</p>
+  <h2>Check these before you upgrade</h2>
+  <ul class="trust">
+    <li><strong>Linux only.</strong> <code>[TO-VERIFY]</code> v0.3.0 ships Linux archives (amd64 and arm64) and no macOS archive. If you run the server on a Mac, run the container image or a Linux machine instead.</li>
+    <li><strong>No <code>-debug</code> image.</strong> <code>[TO-VERIFY]</code> The images are <code>production</code> and <code>fips</code>. To look inside a running container, use <code>kubectl debug</code> or <code>docker debug</code>.</li>
+    <li><strong>Oversized requests.</strong> <code>[TO-VERIFY]</code> A request with more than 500 header values is rejected with <code>431</code> before it reaches the cache. Gradle and Maven send far fewer.</li>
   </ul>
-  <p>Extra evidence, outside these commands: records anyone who has Witness installed can check. <code>[TO-VERIFY]</code> where they are published.</p>
-  <p class="muted-note">Related: <a href="/how-we-build/">how releases are built and signed</a> and <a href="/security/">security policy</a>.</p>
+  <h2>What stays the same</h2>
+  <p><code>[TO-VERIFY]</code> The Gradle and Maven protocols, the <code>FSCACHE_*</code> settings and the data folder. No change is intended; confirm each against the release notes before this page says so.</p>
+  <h2>How the release is built</h2>
+  <p><code>[TO-VERIFY]</code> Each stage of the release is signed on its own, and the signatures are verified together at release. The image is built from signed packages, with no base image. You can check all of it yourself: see <a href="/verify-a-release/">verify a release yourself</a>.</p>
+  <h2>Upgrading</h2>
+  <p><code>[TO-VERIFY]</code> Whether the back-up and upgrade steps on <a href="/upgrade-build-cache-server/">the upgrade page</a> change for this release. Support terms for v0.3.0: <code>[TO-VERIFY]</code>.</p>
+  <p class="muted-note">Related: <a href="/changelog/">changelog</a> and <a href="/security/">security policy</a>.</p>
 </main>
 <footer>
   <div>
