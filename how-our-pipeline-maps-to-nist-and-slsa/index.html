@@ -93,12 +93,11 @@
   <p class="muted-note"><strong>DRAFT for v0.3.0, not published and never merged before v0.3.0 is live.</strong> <code>[TO-VERIFY: pipeline]</code> marks anything not yet run against a real release.</p>
   <p>This is guidance we followed when designing the pipeline. It is not a certification.</p>
   <h2>Stage by stage</h2>
-  <p>The six stages are described step by step on <a href="/how-we-build/">how we build</a>. "Signs" means the stage records what it did and signs it with a short-lived key, under its own workflow identity, logged in a public transparency log. <code>[TO-VERIFY: pipeline]</code> against the workflow files at the v0.3.0 tag.</p>
+  <p>The stages are described step by step on <a href="/how-we-build/">how we build</a>. "Signs" means the stage records what it did and signs it with a short-lived key, under its own workflow identity, logged in a public transparency log. <code>[TO-VERIFY: pipeline]</code> against the workflow files at the v0.3.0 tag.</p>
   <table>
     <thead><tr><th>Stage</th><th>What it does</th><th>NIST practice</th><th>How much</th></tr></thead>
     <tbody>
-      <tr><td>Source check</td><td><code>[TO-VERIFY: pipeline]</code> whether unchanged from v0.2.2: signed tag, signed commit on <code>main</code>, required checks passed.</td><td><code>[TO-VERIFY: pipeline]</code> 800-204D 5.1.4 and 5.1.2</td><td><code>[TO-VERIFY: pipeline]</code></td></tr>
-      <tr><td>Build</td><td><code>[TO-VERIFY: pipeline]</code> Builds the binaries and the signed packages once. The image is assembled from those packages, with no base image.</td><td><code>[TO-VERIFY: pipeline]</code> 800-204D 5.1.1</td><td><code>[TO-VERIFY: pipeline]</code></td></tr>
+      <tr><td>Build</td><td><code>[TO-VERIFY: pipeline]</code> Checks that the tag is signed, then builds the binaries and both images once. The image is assembled from those packages, with no base image.</td><td><code>[TO-VERIFY: pipeline]</code> 800-204D 5.1.1</td><td><code>[TO-VERIFY: pipeline]</code></td></tr>
       <tr><td>Sign</td><td><code>[TO-VERIFY: pipeline]</code> A separate stage records the build and signs it under its own identity, from the build's digest list only.</td><td><code>[TO-VERIFY: pipeline]</code> the part of 5.1.1 that asks for signing outside the build steps</td><td><code>[TO-VERIFY: pipeline]</code></td></tr>
       <tr><td>Rebuild</td><td><code>[TO-VERIFY: pipeline]</code> Assembles the image again, independently, on a separate machine. The digests must match or the release fails.</td><td><code>[TO-VERIFY: pipeline]</code> none found in either document</td><td><code>[TO-VERIFY: pipeline]</code></td></tr>
       <tr><td>Check</td><td><code>[TO-VERIFY: pipeline]</code> Scans and acceptance tests run against the exact candidate images, and the stage signs a verdict for those digests.</td><td><code>[TO-VERIFY: pipeline]</code> 800-204C 4.8 and 800-204D 5.2</td><td><code>[TO-VERIFY: pipeline]</code></td></tr>
