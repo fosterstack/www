@@ -1,12 +1,13 @@
 <!doctype html>
 <html lang="en">
 <head>
+<meta name="robots" content="noindex, nofollow">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>How FosterStack Cache is built and signed</title>
-<meta name="description" content="How each release is built in CI, checked, scanned, signed and published, what files you get to verify it, and what we do not claim.">
+<meta name="description" content="How a FosterStack Cache release is built and signed: every release is signed and checked at every step, and you can verify it yourself. Draft for v0.3.">
 <meta property="og:title" content="How FosterStack Cache is built and signed">
-<meta property="og:description" content="How each release is built in CI, checked, scanned, signed and published, what files you get to verify it, and what we do not claim.">
+<meta property="og:description" content="How a FosterStack Cache release is built and signed: every release is signed and checked at every step, and you can verify it yourself. Draft for v0.3.">
 <meta property="og:url" content="https://fosterstack.com/how-we-build/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="FosterStack">
@@ -90,45 +91,50 @@
 </header>
 <main>
   <h1>How FosterStack Cache is built and signed</h1>
-  <p class="lede">Every release is built by an automated pipeline, checked, signed, and published with files you can verify yourself. This page says what that means today.</p>
+  <p class="lede">You are about to run our software inside your build pipeline. How do you know the files you run are the ones we built? Every release is signed and checked at every step, and you can verify it yourself. This page says how.</p>
+  <p class="muted-note"><strong>DRAFT for v0.3, private preview, not published.</strong> <code>[TO-VERIFY: source]</code> marks a fact that must be checked against the v0.3 release; the source (cache, pipeline or payments) is named in the marker.</p>
+
+  <h2>We do it to our own pipeline first</h2>
+  <p>FosterStack's business is helping organisations secure their build and release pipeline. We started with a build cache your team can know is secure, and we secure our own release pipeline the same way before we ask you to trust it. <code>[TO-VERIFY: pipeline: the v0.3 chain, secured before the product ships]</code></p>
 
   <h2>Releases are built only in CI</h2>
-  <p>No release file is ever made on a person's laptop, ours included. A release starts when a signed tag is pushed, and there is no manual release path. That is what makes the signatures mean something: nobody can forge a release that GitHub's own build machines never built.</p>
+  <p>No release file is ever made on a person's laptop, ours included. A release starts when a signed tag is pushed, and there is no manual release path. That is what makes the signatures mean something: nobody can forge a release that GitHub's own build machines never built. <code>[TO-VERIFY: pipeline: no manual release path in v0.3]</code></p>
 
   <h2>The steps a release goes through</h2>
+  <p>Signed at every stage, verified together at release. Each stage signs its own statement about the exact files, and no stage takes the one before it on trust. <code>[TO-VERIFY: pipeline: each v0.3 stage signs its own statement; the Release stage verifies all together]</code></p>
   <ol class="steps">
-    <li><strong>Source check.</strong> The tag and the commit must be signed by an allowed signer, sit on the main branch, and have every required check green.</li>
-    <li><strong>Build.</strong> The binaries are built, with checksums and a software bill of materials for each archive.</li>
-    <li><strong>Container images.</strong> Each image is assembled once, from the unmodified distroless base plus one binary.</li>
-    <li><strong>Reproducibility check.</strong> The image is assembled a second time on a separate machine. The results must be identical, or the release fails.</li>
-    <li><strong>Scans and tests.</strong> Every scanner on our list runs against the exact images. A finding blocks the release unless a published VEX statement explains why it does not apply. The Gradle and Maven acceptance tests run against the same images.</li>
-    <li><strong>Authorization.</strong> One step checks that every earlier step produced signed proof for these exact files. Anything missing stops the release.</li>
-    <li><strong>Publish.</strong> The published images are the same digests that were scanned and tested, promoted without a rebuild, and checked again the way a customer would check them.</li>
+    <li><strong>Source check.</strong> The tag and the commit must be signed by an allowed signer, sit on the main branch, and have every required check green. <code>[TO-VERIFY: pipeline: v0.3 source admission unchanged from v0.2.2]</code></li>
+    <li><strong>Build.</strong> The binaries and the image's packages are built once. The image is assembled from those signed packages, with no base image. <code>[TO-VERIFY: cache: melange packages, apko image, no base image]</code></li>
+    <li><strong>Sign.</strong> A separate stage, with its own identity, records the build and signs it. <code>[TO-VERIFY: pipeline: the Sign boundary stage and its own identity]</code></li>
+    <li><strong>Rebuild.</strong> The release is built again, independently. The results must be identical, or the release fails. <code>[TO-VERIFY: pipeline: the Rebuild stage]</code></li>
+    <li><strong>Check.</strong> Every scanner on our list runs against the exact images. A finding blocks the release unless a published VEX statement explains why it does not apply. The Gradle and Maven acceptance tests run against the same images. <code>[TO-VERIFY: pipeline: scanner list and acceptance suites at v0.3]</code></li>
+    <li><strong>Release.</strong> One step verifies every earlier signature together. Anything missing stops the release. Then the same digests are published, promoted without a rebuild, and checked again the way a customer would check them. <code>[TO-VERIFY: pipeline: the Release stage]</code></li>
   </ol>
-  <p class="muted-note">The full description, as the pipeline actually runs, is in <a href="https://github.com/fosterstack/cache/blob/main/RELEASING.md">RELEASING.md</a>.</p>
+  <p class="muted-note">The full description, as the pipeline actually runs, is in <a href="https://github.com/fosterstack/cache/blob/main/RELEASING.md">RELEASING.md</a>. <code>[TO-VERIFY: pipeline: RELEASING.md matches the v0.3 chain]</code></p>
 
   <h2>What you get with each release</h2>
   <ul class="trust">
-    <li>Container images on GitHub's registry, signed without a stored key (Sigstore), with build provenance.</li>
-    <li>Plain binaries and a <code>checksums.txt</code> with its own signature file.</li>
+    <li>Container images on GitHub's registry, signed without a stored key (Sigstore), with build provenance. <code>[TO-VERIFY: pipeline/cache: v0.3 image signing and provenance]</code></li>
+    <li>Plain binaries and a <code>checksums.txt</code> with its own signature file. <code>[TO-VERIFY: cache fix A #276: which files the signed checksums list covers]</code></li>
     <li>A software bill of materials (SBOM) for each binary archive.</li>
     <li>A VEX file saying which known vulnerabilities do and do not affect the release.</li>
-    <li>A <code>release-manifest.json</code> listing every file and its digest.</li>
+    <li>A <code>release-manifest.json</code> listing every file and its digest. <code>[TO-VERIFY: cache: manifest layout at v0.3]</code></li>
   </ul>
-  <p>All of it is public. You do not need an account or a purchase to check any of it. The commands are under "Verifying a release" in <a href="https://github.com/fosterstack/cache/blob/main/RELEASING.md">RELEASING.md</a>.</p>
+  <p>All of it is public. You do not need an account or a purchase to check any of it. The commands are on <a href="/verify-a-release/">verify a release yourself</a>.</p>
 
   <h2>Kept patched</h2>
-  <p>The current release's images are scanned again every day, so a vulnerability disclosed against something we already shipped raises an issue without anyone having to remember to look.</p>
+  <p>The current release's images are scanned again every day, so a vulnerability disclosed against something we already shipped raises an issue without anyone having to remember to look. <code>[TO-VERIFY: cache/ops: the daily rescan, and automatic patch releases not yet cut]</code></p>
 
   <h2>What we do not claim</h2>
   <ul class="trust">
-    <li>Vulnerable dependencies fixed fast — our target is 48 hours from disclosure (<a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md">the scope is in SECURITY.md</a>).</li>
+    <li>Vulnerable dependencies fixed fast: our target is 48 hours from disclosure (<a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md">the scope is in SECURITY.md</a>).</li>
+    <li>A signature shows who signed these exact files. It does not show the software has no bugs.</li>
     <li>The paid tiers are not built. Everything here is the free MIT core.</li>
   </ul>
 
   <div class="cta-row">
-    <a class="btn" href="https://github.com/fosterstack/cache">FosterStack Cache on GitHub</a>
-    <a class="btn btn-secondary" href="/">FosterStack home</a>
+    <a class="btn" href="/verify-a-release/">Verify a release yourself</a>
+    <a class="btn btn-secondary" href="/how-our-pipeline-maps-to-nist-and-slsa/">How each stage maps to NIST and SLSA</a>
   </div>
 </main>
 <footer>
