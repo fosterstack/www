@@ -120,12 +120,12 @@
     program</em>: one row of that questionnaire, answered with something written, signed and checkable instead of a shrug.
   </p>
 
-  <h2>More than kept patched.</h2>
+  <h2>What stands behind it</h2>
   <ul class="trust">
     <li>Signed releases you can verify in minutes. How we sign and check our own releases: <a href="/how-we-build/">how we build</a>. <code>[TO-VERIFY: pipeline: the v0.3 chain and the verify guide]</code></li>
     <li>Build record, parts list (SBOM) and vulnerability statements published with every release.</li>
     <li>Scanned before every release. The current release is rescanned every day.</li>
-    <li>Every release is rebuilt independently; the results must match. <code>[TO-VERIFY: pipeline: the Rebuild stage]</code></li>
+    <li>The image of every release is assembled a second time, independently; the digests must match. <code>[TO-VERIFY: pipeline: the Rebuild stage]</code></li>
     <li>Minimal image with no base image, no telemetry. FIPS variant available, built from the same source as the standard image. <code>[TO-VERIFY: cache: image assembled from signed packages; the FIPS and standard images come from two builds of one source]</code></li>
     <li>Vulnerable dependencies fixed fast — our target is 48 hours from disclosure (<a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md">the scope is in SECURITY.md</a>).</li>
   </ul>
@@ -150,7 +150,7 @@
     That's the test we invite.
   </p>
   <p>
-    Step-by-step, with the output of each command from a real release:
+    Step by step:
     <a href="/verify-a-release/">Verify a release yourself</a>. To run the
     <code>-fips</code> image and confirm FIPS mode from its own startup log:
     <a href="/fips-140-3-build-cache/">FIPS 140-3 build cache</a>.

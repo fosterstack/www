@@ -101,10 +101,10 @@
   <p>Send the report, not a patch. Please do not post details publicly before a fix ships.</p>
 
   <h2>Kept patched</h2>
-  <p>We keep FosterStack Cache patched. <code>[TO-VERIFY: cache/ops: "kept patched" holds only after the first automatic patch release has been cut; the brief also says "new or abandoned upstream": that needs a written scope in SECURITY.md before any page can say it]</code> Vulnerable dependencies fixed fast — our target is 48 hours from disclosure (<a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md">the scope is in SECURITY.md</a>). Security patches are never withheld from the free tier: the same fix ships to everyone on the same day.</p>
+  <p>We keep FosterStack Cache patched. <code>[TO-VERIFY: cache/ops: "kept patched" holds only after the first automatic patch release has been cut; the home page carries the brief's "new or abandoned upstream": that needs a written scope in SECURITY.md before launch]</code> Vulnerable dependencies fixed fast — our target is 48 hours from disclosure (<a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md">the scope is in SECURITY.md</a>). Security patches are never withheld from the free tier: the same fix ships to everyone on the same day.</p>
 
   <h2 id="long-term-support-build-cache">Which version gets fixes</h2>
-  <p>"LTS" means a version that keeps getting fixes, so you can stay on it. <code>[TO-VERIFY: cache/owner: v0.3.0 is the only long-term-support line, and what that promises is not written yet]</code> Today the supported version is the latest minor release: there is no list of older versions that get fixes.</p>
+  <p>"LTS" means a version that keeps getting fixes, so you can stay on it. <code>[TO-VERIFY: cache/owner: v0.3.0 is the only long-term-support line, and what that promises is not written yet]</code> Today the supported version is the latest minor release: there is no list of older versions that get fixes. <code>[TO-VERIFY: cache/owner: rewritten once the v0.3.0 support terms exist]</code></p>
   <ul class="trust">
     <li>To get a fix, move to a supported release. <code>[TO-VERIFY: cache: which releases are supported once v0.3.0 is out]</code></li>
     <li>Pin the image to an exact version or digest, not <code>latest</code>, so a deploy never changes without you choosing it.</li>

@@ -92,7 +92,7 @@
   <p class="muted-note"><strong>DRAFT for v0.3, private preview, not published and never merged before v0.3.0 is live.</strong> <code>[TO-VERIFY: source]</code> marks a fact that must be checked against the v0.3 release; the source (cache, pipeline or payments) is named in the marker.</p>
 
   <h2>What the FIPS build is</h2>
-  <p>It is the same source as the standard build, compiled so that it uses Go's validated FIPS 140-3 module (CMVP certificate #5247). <code>[TO-VERIFY: cache: at v0.3 the FIPS and standard images come from two builds of one source]</code> It is available as a container image tag ending in <code>-fips</code>, and as Linux binaries for amd64 and arm64. There is no macOS FIPS build. <code>[TO-VERIFY: cache: v0.3 ships Linux archives only (amd64 and arm64), and the images are production and fips]</code></p>
+  <p>It is the same source as the production build, compiled so that it uses Go's validated FIPS 140-3 module (CMVP certificate #5247). <code>[TO-VERIFY: cache: at v0.3 the FIPS and standard images come from two builds of one source]</code> It is available as a container image tag ending in <code>-fips</code>, and as Linux binaries for amd64 and arm64. There is no macOS FIPS build. <code>[TO-VERIFY: cache: v0.3 ships Linux archives only (amd64 and arm64), and the images are production and fips]</code></p>
 
   <h2>Run it</h2>
   <pre tabindex="0"><code>docker run -d -p 127.0.0.1:8080:8080 -v fscache-data:/home/nonroot \
@@ -108,7 +108,7 @@
   &quot;version&quot;: &quot;v0.2.2&quot;,
   &quot;fips140&quot;: true,
   &quot;fips140_note&quot;: &quot;active (Go validated module v1.0.0, CMVP cert #5247)&quot;,</code></pre>
-  <p>The standard image, for comparison, reports it as off:</p>
+  <p>The production image, for comparison, reports it as off:</p>
   <pre tabindex="0"><code>$ curl -s localhost:8080/statusz | grep -E &#x27;version|fips140&#x27;
   &quot;version&quot;: &quot;v0.2.2&quot;,
   &quot;fips140&quot;: false,

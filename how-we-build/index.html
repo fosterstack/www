@@ -101,13 +101,13 @@
   <p>No release file is ever made on a person's laptop, ours included. A release starts when a signed tag is pushed, and there is no manual release path. That is what lets the signatures mean something: a release that our CI workflow did not build does not carry its signature. <code>[TO-VERIFY: pipeline: the signing identity is pinned to the release workflow and tag; no manual release path in v0.3]</code></p>
 
   <h2>The steps a release goes through</h2>
-  <p>Signed at every stage, verified together at release. Each stage signs its own statement about the exact files, and the Release stage verifies them all together. A signature shows who signed these exact files; it does not show the software has no bugs. <code>[TO-VERIFY: pipeline: each v0.3 stage signs its own statement; the Release stage verifies all together]</code></p>
+  <p>Signed at every stage, verified together at release. Each stage signs a statement about what it did, and the Release stage verifies them all together. A signature shows who signed these exact files; it does not show the software has no bugs. <code>[TO-VERIFY: pipeline: each v0.3 stage signs its own statement; the Release stage verifies all together]</code></p>
   <ol class="steps">
-    <li><strong>Source check.</strong> The tag and the commit must be signed by an allowed signer, sit on the main branch, and have every required check green. <code>[TO-VERIFY: pipeline: v0.3 source admission unchanged from v0.2.2]</code></li>
-    <li><strong>Build.</strong> The binaries and the image's packages are built once. The image is assembled from those signed packages, with no base image. <code>[TO-VERIFY: cache: melange packages, apko image, no base image]</code></li>
+    <li><strong>Source check.</strong> The tag and the commit must be signed by an allowed signer, sit on the main branch, and have every required check green. It signs its result. <code>[TO-VERIFY: pipeline: v0.3 source admission unchanged from v0.2.2]</code></li>
+    <li><strong>Build.</strong> The binaries and the image's packages are built once. The image is assembled from those signed packages, with no base image. It signs what it built. <code>[TO-VERIFY: cache: melange packages, apko image, no base image]</code></li>
     <li><strong>Sign.</strong> A separate stage, with its own identity, records the build and signs it. <code>[TO-VERIFY: pipeline: the Sign boundary stage; a distinct certificate subject for each stage, visible in the cosign output]</code></li>
-    <li><strong>Rebuild.</strong> The image is assembled again, independently, on a separate machine. The digests must be identical, or the release fails. <code>[TO-VERIFY: pipeline: the Rebuild stage runs on a separate runner and identity, sharing no cache or inputs with Build]</code></li>
-    <li><strong>Check.</strong> The scanners we list (the list is in the repository) run against the exact images, and each signs its verdict for those digests. A finding blocks the release unless a published VEX statement explains why it does not apply. The Gradle and Maven acceptance tests run against the same images. <code>[TO-VERIFY: pipeline: scanner list and acceptance suites at v0.3]</code></li>
+    <li><strong>Rebuild.</strong> The image is assembled again, independently, on a separate machine. The digests must be identical, or the release fails. It signs its result. <code>[TO-VERIFY: pipeline: the Rebuild stage runs on a separate runner and identity, sharing no cache or inputs with Build]</code></li>
+    <li><strong>Check.</strong> The scanners we list (the list is in the repository) run against the exact images, and signs its verdict for those digests. A finding blocks the release unless a published VEX statement explains why it does not apply. The Gradle and Maven acceptance tests run against the same images. <code>[TO-VERIFY: pipeline: scanner list and acceptance suites at v0.3]</code></li>
     <li><strong>Release.</strong> One step verifies every earlier signature together. Anything missing stops the release. Then the same digests are published, promoted without a rebuild, and checked again the way a customer would check them. <code>[TO-VERIFY: pipeline: the Release job runs the same commands as the verify page]</code></li>
   </ol>
   <p class="muted-note">The full description, as the pipeline actually runs, is in <a href="https://github.com/fosterstack/cache/blob/main/RELEASING.md">RELEASING.md</a>. <code>[TO-VERIFY: pipeline: RELEASING.md matches the v0.3 chain]</code></p>
@@ -123,12 +123,11 @@
   <p>All of it is public. You do not need an account or a purchase to check any of it. The commands are on <a href="/verify-a-release/">verify a release yourself</a>.</p>
 
   <h2>Kept patched</h2>
-  <p>The current release's images are scanned again every day, so a vulnerability disclosed against something we already shipped raises an issue without anyone having to remember to look. We keep it patched. <code>[TO-VERIFY: cache/ops: the daily rescan; "kept patched" only after the first automatic patch release has been cut; the brief also says "new or abandoned upstream": that needs a written scope before a page can say it]</code></p>
+  <p>The current release's images are scanned again every day, so a vulnerability disclosed against something we already shipped raises an issue without anyone having to remember to look. We keep it patched. Our target for vulnerable dependencies is 48 hours from disclosure (<a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md">the scope is in SECURITY.md</a>); more on the <a href="/security/">security page</a>. <code>[TO-VERIFY: cache/ops: the daily rescan; "kept patched" only after the first automatic patch release has been cut; the home page carries the brief's "new or abandoned upstream": that needs a written scope in SECURITY.md before launch]</code></p>
 
   <h2>What we do not claim</h2>
   <ul class="trust">
-    <li>Vulnerable dependencies fixed fast: our target is 48 hours from disclosure (<a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md">the scope is in SECURITY.md</a>).</li>
-    <li>A signature shows who signed these exact files. It does not show the software has no bugs, and it is not a certification by anyone.</li>
+        <li>A signature shows who signed these exact files. It does not show the software has no bugs, and it is not a certification by anyone.</li>
     <li>The paid tiers are not built. Everything here is the free MIT core.</li>
   </ul>
 

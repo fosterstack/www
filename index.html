@@ -134,16 +134,16 @@ curl localhost:8080/healthz   # -&gt; ok</code></pre>
     <div class="card"><h3>Authentication</h3><p>HTTP Basic Auth over TLS, wired the way Gradle and Maven already expect credentials. Constant-time comparison, no credential ever logged.</p></div>
     <div class="card"><h3>Metrics &amp; status</h3><p>Prometheus metrics, a read-only status page with hit rates and size-vs-cap, and a Grafana dashboard in the repo — so you know the cache is earning its keep.</p></div>
     <div class="card"><h3>Maintenance target</h3><p>Vulnerable dependencies fixed fast — our target is 48 hours from disclosure (<a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md">the scope is in SECURITY.md</a>).</p></div>
-    <div class="card"><h3>Designed against NIST guidance</h3><p>No step trusts the one before it. When you check our images' digital signatures you can rest assured we checked it at every step. That signature means it's fosterstack code, a fosterstack build, a fosterstack image and everything in between. <a href="/how-our-pipeline-maps-to-nist-and-slsa/">See how each stage maps</a>. <code>[TO-VERIFY: pipeline: signatures at every stage of the v0.3 chain, so the sentence is true]</code></p><p>A signature shows where an image came from and that nothing changed it since; it does not show the code is free of bugs or vulnerabilities. This is guidance we designed against, not a certification we hold.</p></div>
+    <div class="card"><h3>Designed against NIST guidance</h3><p>No step trusts the one before it. When you check our images' digital signatures you can rest assured we checked it at every step before we released it. That signature means it's fosterstack code, a fosterstack build, a fosterstack image and everything in between. <a href="/how-our-pipeline-maps-to-nist-and-slsa/">See how each stage maps</a>. <code>[TO-VERIFY: pipeline: signatures at every stage of the v0.3 chain, so the sentence is true]</code></p><p>A signature shows who signed these exact files and that nothing changed them since; it does not show the code is free of bugs or vulnerabilities. This is guidance we designed against, not a certification we hold.</p></div>
     <div class="card"><h3>30-minute migration</h3><p>A step-by-step guide for moving an existing Gradle remote build cache server. Same protocol, same CI config shape — migrating is mostly a URL change.</p></div>
   </div>
 
-  <h2>More than kept patched.</h2>
+  <h2>What stands behind it</h2>
   <ul class="trust">
     <li>Signed releases you can verify in minutes. <code>[TO-VERIFY: pipeline/cache: the v0.3 verify guide, ten commands or fewer]</code></li>
     <li>Build record, parts list (SBOM) and vulnerability statements published with every release.</li>
     <li>Scanned before every release. The current release is rescanned every day.</li>
-    <li>Every release is rebuilt independently; the results must match. <code>[TO-VERIFY: pipeline: the Rebuild stage]</code></li>
+    <li>The image of every release is assembled a second time, independently; the digests must match. <code>[TO-VERIFY: pipeline: the Rebuild stage]</code></li>
     <li>Minimal image with no base image, no telemetry. FIPS variant available. <code>[TO-VERIFY: cache: image assembled from signed packages; production and fips images only]</code></li>
   </ul>
   <p><a href="/how-we-build/">How we build</a> · <a href="/security/">Security policy</a> · <a href="/verify-a-release/">Verify a release</a></p>
