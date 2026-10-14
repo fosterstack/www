@@ -90,22 +90,22 @@
   <div class="tag">Infrastructure worth keeping — and kept patched.</div>
 </header>
 <main>
-  <h1>Everything we do for security</h1>
+  <h1>Everything FosterStack does for security</h1>
   <p class="muted-note"><strong>DRAFT for v0.3, private preview, not published and never merged before v0.3.0 is live.</strong></p>
-  <p class="lede">This is the list of security practices that run on the FosterStack Cache repository today, one line each. Every line links to the place that goes deep: a page that explains it, or the file that does it. <a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md">SECURITY.md</a> is the short policy (what we promise); this page is what we do.</p>
+  <p class="lede">This is the list of security practices that run on the FosterStack Cache repository today, one line each. Every line links to the place that goes deep: a page that explains it, or the file that does it. <a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md">SECURITY.md</a> is the short policy (what we promise, including the patch target and how to report a vulnerability); this page is what we do.</p>
   <h2>Source</h2>
-  <ul class="trust">
-    <li><strong>Signed commits.</strong> The <code>main</code> branch accepts only signed commits, and its protection rules are a repository ruleset that the required checks are part of (<a href="https://github.com/fosterstack/cache/blob/main/.github/policy/required-checks.json">required checks</a>).</li>
+  <ul>
+    <li><strong>Signed commits.</strong> The <code>main</code> branch accepts only signed commits, under a repository ruleset that also requires the checks on every pull request (<a href="https://github.com/fosterstack/cache/rules">the repository's rules</a>, <a href="https://github.com/fosterstack/cache/blob/main/.github/policy/required-checks.json">required checks</a>).</li>
     <li><strong>Signed release tags, checked first.</strong> The release chain starts by verifying the tag against a list of allowed signers kept on <code>main</code>, before any repository code runs (<a href="https://github.com/fosterstack/cache/blob/main/.github/workflows/stage-admission.yml">admission stage</a>, <a href="https://github.com/fosterstack/cache/blob/main/.github/policy/allowed_signers">allowed signers</a>).</li>
-    <li><strong>Release tags are protected.</strong> Creating a release tag is restricted by a repository rule, and a published release tag cannot be moved, updated or deleted (<a href="https://github.com/fosterstack/cache/blob/main/RELEASING.md">RELEASING.md</a>).</li>
+    <li><strong>Release tags are protected.</strong> Creating a release tag is restricted by a repository rule, and a published release tag cannot be moved, updated or deleted (<a href="https://github.com/fosterstack/cache/rules">the repository's rules</a>).</li>
     <li><strong>The merge gate runs from <code>main</code>.</strong> The check that judges a pull request is the copy on <code>main</code>, not the copy in the pull request, so a change cannot edit the rule that judges it (<a href="https://github.com/fosterstack/cache/blob/main/.github/workflows/agent-review-gate.yml">review gate</a>).</li>
-    <li><strong>Pull requests from forks never see secrets.</strong> CI never uses <code>pull_request_target</code>, so a fork's code never runs with repository secrets (<a href="https://github.com/fosterstack/cache/blob/main/.github/workflows/ci.yml">CI</a>).</li>
+    <li><strong>CI runs a fork's code without secrets.</strong> The CI workflow runs on <code>pull_request</code>, never <code>pull_request_target</code>, so a fork's code runs with GitHub's no-secrets treatment (<a href="https://github.com/fosterstack/cache/blob/main/.github/workflows/ci.yml">CI</a>).</li>
     <li><strong>A reserved branch for the automated auditor.</strong> Only the auditor's delivery identity may push to its branch prefix, and any other pusher fails the check (<a href="https://github.com/fosterstack/cache/blob/main/.github/workflows/reserved-branch-guard.yml">guard</a>).</li>
   </ul>
   <h2>Dependencies</h2>
-  <ul class="trust">
+  <ul>
     <li><strong>Every action in every workflow is pinned to a full commit digest.</strong> A tag or a branch reference fails the check on every pull request, and the check also reads the tag each digest claims to be (<a href="https://github.com/fosterstack/cache/blob/main/.github/agent/bin/check-action-pins.py">pin checker</a>).</li>
-    <li><strong>Container images are named by digest.</strong> An image a workflow runs, pulls or passes to an action must be a digest, never a tag.</li>
+    <li><strong>Container images are named by digest.</strong> An image a workflow runs, pulls or passes to an action must be a digest, never a tag, and the same checker fails the pull request otherwise (<a href="https://github.com/fosterstack/cache/blob/main/.github/agent/bin/check-action-pins.py">pin checker</a>).</li>
     <li><strong>A new version waits seven days.</strong> A pull request that moves a pinned version is held until that version has been public for seven days, by a server-side time (<a href="https://github.com/fosterstack/cache/blob/main/.github/workflows/supply-chain.yml">supply-chain workflow</a>).</li>
     <li><strong>Everything we pin is checked daily.</strong> The inventory of pinned actions and packages is checked once a day against published advisories and malicious-package reports (<a href="https://github.com/fosterstack/cache/blob/main/.github/workflows/supply-chain.yml">supply-chain workflow</a>).</li>
     <li><strong>Automated dependency review on every pull request.</strong> Newly added dependencies and their advisories are listed and checked before merge (<a href="https://github.com/fosterstack/cache/blob/main/.github/workflows/ci.yml">CI</a>).</li>
@@ -115,44 +115,42 @@
     <li><strong>Posture is measured in public.</strong> OpenSSF Scorecard runs weekly and its badge is on the README (<a href="https://github.com/fosterstack/cache/blob/main/.github/workflows/scorecard.yml">Scorecard</a>).</li>
   </ul>
   <h2>Build</h2>
-  <ul class="trust">
+  <ul>
     <li><strong>One build, promoted by digest.</strong> The release is built once; the same bytes are scanned, tested and promoted, and the promoted digest is asserted equal to the scanned digest after every copy (<a href="https://github.com/fosterstack/cache/blob/main/.github/workflows/release.yml">release chain</a>).</li>
     <li><strong>Every stage signs what it did.</strong> Admission, build, image assembly, reproducibility, each scan and acceptance each sign a statement naming the exact digests, and the next stage verifies it on entry (<a href="https://github.com/fosterstack/cache/blob/main/RELEASING.md">RELEASING.md</a>).</li>
     <li><strong>Pinned toolchain.</strong> The build uses the Go version from <code>go.mod</code> with downloads of a newer toolchain disabled, and module manifests are verified, never rewritten (<a href="https://github.com/fosterstack/cache/blob/main/.github/workflows/stage-build.yml">build stage</a>).</li>
-    <li><strong>Distroless image, assembled by copy.</strong> Each image variant is a base image digest plus the binary bytes: no shell, no package manager, no build step inside the image (<a href="https://github.com/fosterstack/cache/blob/main/.github/workflows/stage-image.yml">image stage</a>).</li>
+    <li><strong>Distroless image, assembled by copy.</strong> Each image variant is a base image digest plus the binary bytes, with no build step inside the image; the production and FIPS images have no shell and no package manager (<a href="https://github.com/fosterstack/cache/blob/main/.github/workflows/stage-image.yml">image stage</a>).</li>
     <li><strong>Assembled twice and compared.</strong> The image assembly is repeated on a fresh runner and the digests must be equal (<a href="https://github.com/fosterstack/cache/blob/main/.github/workflows/stage-reproducibility.yml">reproducibility stage</a>).</li>
     <li><strong>A FIPS variant.</strong> A <code>-fips</code> build uses Go's FIPS 140-3 validated cryptographic module, announces itself at startup, and the whole test suite runs in <code>fips140=only</code> mode on every commit (<a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md#approved-only-cryptography">SECURITY.md</a>).</li>
-    <li><strong>Approved-only cryptography is enforced by lint too.</strong> Only in-boundary crypto imports are allowed, and third-party cryptographic code is denied outright (<a href="https://github.com/fosterstack/cache/blob/main/.golangci.yml"><code>.golangci.yml</code></a>).</li>
+    <li><strong>Approved-only cryptography is checked by lint too.</strong> A lint rule denies the third-party cryptographic packages we name, such as <code>golang.org/x/crypto</code>, so code reaches for the validated module instead (<a href="https://github.com/fosterstack/cache/blob/main/.golangci.yml"><code>.golangci.yml</code></a>).</li>
   </ul>
   <h2>Scanning</h2>
-  <ul class="trust">
+  <ul>
     <li><strong>Scanners with different databases block every release.</strong> The set is one list in the repository, each scanner blocks at every severity including unknown, and nothing hard-codes a name or a count (<a href="https://github.com/fosterstack/cache/blob/main/.github/policy/scanners.json">scanner list</a>, <a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md#nothing-ships-with-a-known-cve">SECURITY.md</a>).</li>
     <li><strong>Scanned on every pull request.</strong> The pull request gate builds the same image the release would ship and scans it (<a href="https://github.com/fosterstack/cache/blob/main/.github/workflows/scan.yml">scan workflow</a>).</li>
     <li><strong>Four scanners, every day.</strong> The daily rescan builds main's candidate and scans it with four independent scanners, then tallies how many saw each finding (<a href="https://github.com/fosterstack/cache/blob/main/.github/workflows/main-candidate-rescan.yml">daily rescan</a>).</li>
     <li><strong>Published images are rescanned daily.</strong> A CVE disclosed against bytes we already shipped raises a tracked issue (<a href="https://github.com/fosterstack/cache/blob/main/docs/scanning.md">scanning.md</a>).</li>
-    <li><strong>An automated audit reads every finding.</strong> Each day an automated auditor reads every scanner finding against the code, the published VEX and the CISA Known Exploited Vulnerabilities catalog, and writes up what each one needs (<a href="https://github.com/fosterstack/cache/blob/main/.github/workflows/auditor.yml">daily auditor</a>).</li>
+    <li><strong>An automated audit reads every finding.</strong> Each day an automated auditor reads every scanner finding against the code and the published VEX, and writes up what each one needs (<a href="https://github.com/fosterstack/cache/blob/main/.github/workflows/auditor.yml">daily auditor</a>).</li>
     <li><strong>Exceptions are published statements.</strong> The only way to except a finding is an OpenVEX statement with a justification, kept in the repository and published with each release (<a href="https://github.com/fosterstack/cache/tree/main/.vex/"><code>.vex/</code></a>, <a href="https://github.com/fosterstack/cache/blob/main/docs/scanning.md">scanning.md</a>).</li>
     <li><strong>Scanner verdicts are signed.</strong> Each scanner's verdict is a signed statement bound to the digests it scanned (<a href="https://github.com/fosterstack/cache/blob/main/docs/verify-images.md">verify-images.md</a>).</li>
   </ul>
   <h2>Release</h2>
-  <ul class="trust">
+  <ul>
     <li><strong>Signed images.</strong> Every image is signed keylessly by the promotion workflow, in both registries (<a href="https://github.com/fosterstack/cache/blob/main/docs/verify-images.md">verify-images.md</a>).</li>
     <li><strong>Signed provenance.</strong> Archives, SBOMs and the checksums file carry build provenance naming the CI run that made them (<a href="https://github.com/fosterstack/cache/blob/main/docs/verify-images.md">verify-images.md</a>).</li>
     <li><strong>An SBOM for every archive</strong>, published with the release (<a href="https://github.com/fosterstack/cache/blob/main/RELEASING.md">RELEASING.md</a>).</li>
-    <li><strong>The VEX document ships with every release</strong> as <code>fosterstack-cache.openvex.json</code>.</li>
+    <li><strong>The VEX document ships with every release</strong> as <code>fosterstack-cache.openvex.json</code> (<a href="https://github.com/fosterstack/cache/blob/main/RELEASING.md#vex-statements">RELEASING.md</a>).</li>
     <li><strong>One authorization before anything goes public.</strong> A single stage verifies the whole graph, fails closed on anything missing, and signs the approval that promotion requires (<a href="https://github.com/fosterstack/cache/blob/main/.github/workflows/stage-authorize.yml">authorization stage</a>).</li>
     <li><strong>The release is checked as a customer would.</strong> After promotion the public digests are verified and pulled anonymously, and only then is the release published (<a href="https://github.com/fosterstack/cache/blob/main/.github/workflows/stage-promote.yml">promotion stage</a>).</li>
     <li><strong>Acceptance runs against the exact artifacts.</strong> The archives and images that ship run the customer scenarios first: Gradle, Maven, Kubernetes and the artifact checks (<a href="https://github.com/fosterstack/cache/blob/main/.github/workflows/acceptance.yml">acceptance</a>, <a href="https://github.com/fosterstack/cache/blob/main/.github/workflows/stage-acceptance-artifacts.yml">artifact acceptance</a>).</li>
   </ul>
   <h2>Runtime</h2>
-  <ul class="trust">
+  <ul>
     <li><strong>No telemetry and no outbound connections.</strong> The server sends nothing anywhere, and a release test traces the candidate from its first instruction with egress denied to prove it (<a href="https://github.com/fosterstack/cache/blob/main/.github/workflows/stage-acceptance-egress.yml">egress acceptance</a>, <a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md#data-handling">SECURITY.md</a>).</li>
-    <li><strong>No request access log.</strong> The only per-request logging is on failure, and it never carries a body, a credential or a client address.</li>
+    <li><strong>No request access log.</strong> The only per-request logging is on failure, and it never carries a body, a credential or a client address (<a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md#data-handling">SECURITY.md</a>).</li>
   </ul>
   <h2>Watch</h2>
-  <ul class="trust">
-    <li><strong>A 48-hour patch target.</strong> A fix ships to every user on the same day; the target is commercially reasonable efforts within 48 hours of a fix or an assessment (<a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md#patch-commitment">SECURITY.md</a>).</li>
-    <li><strong>Private reporting.</strong> Vulnerabilities are reported through GitHub's private vulnerability reporting (<a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md#reporting-a-vulnerability">SECURITY.md</a>).</li>
+  <ul>
     <li><strong>A daily watch of what we depend on.</strong> Newly published advisories and malicious-package reports about anything we pin are read every day (<a href="https://github.com/fosterstack/cache/blob/main/.github/workflows/supply-chain.yml">supply-chain workflow</a>).</li>
   </ul>
   <p class="muted-note">Related: <a href="/how-we-build/">how releases are built and signed</a>, <a href="/verify-a-release/">verify a release yourself</a> and <a href="/security/">the security policy</a>.</p>

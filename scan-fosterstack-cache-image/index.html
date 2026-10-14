@@ -106,18 +106,18 @@ Detected OS   family="debian" version="13.6"
 ├──────────────────────────────────┼──────────┼─────────────────┤
 │ usr/local/bin/fscache             │ gobinary │        0        │
 └──────────────────────────────────┴──────────┴─────────────────┘</code></pre>
-  <p>Google's distroless base ships an intact <code>/etc/os-release</code> deliberately (that's exactly what scanners key OS detection on), and we never strip it — see the scanner-facts source for this page, <code>sprint4_scanner_input.md</code>. The <code>gobinary</code> row is our own compiled binary, scanned by both tools' Go-module vulnerability catalogers directly.</p>
+  <p>Google's distroless base ships an intact <code>/etc/os-release</code> deliberately (that's exactly what scanners key OS detection on), and we never strip it. The <code>gobinary</code> row is our own compiled binary, scanned by both tools' Go-module vulnerability catalogers directly.</p>
   <h2>Package-DB asymmetry — expect this, it isn't a bug</h2>
   <p>A scratch/distroless image has no package database. That has an asymmetric effect on checks:</p>
   <ul>
     <li><strong>"Is forbidden package X present?"</strong> checks — pass vacuously. There's no package manager, so nothing is "installed" in the sense those checks look for.</li>
     <li><strong>"Is required package X present?"</strong> checks — fail or error, for the same reason.</li>
   </ul>
-  <p>If you run a benchmark or policy pack written for a full-OS image (Debian, Ubuntu, etc.) against ours, expect confusing partial results — not a finding, just a mismatch between the benchmark's assumptions and a minimal image. <code>sprint4_scanner_input.md</code>'s source material for this page also notes there is often no genuine OS/platform gating in scanner content by default: a scanner may happily score a scratch image against a full distro benchmark and produce results that don't mean what they look like they mean. Don't over-read a scratch image's score against a Debian-shaped policy without checking what each rule verifies.</p>
+  <p>If you run a benchmark or policy pack written for a full-OS image (Debian, Ubuntu, etc.) against ours, expect confusing partial results — not a finding, just a mismatch between the benchmark's assumptions and a minimal image. Scanner content often has no OS or platform gating by default, so a scanner may score a scratch image against a full distro benchmark and produce results that don't mean what they look like they mean. Don't over-read a scratch image's score against a Debian-shaped policy without checking what each rule verifies.</p>
   <h2>Exit codes: don't gate on the raw process exit code</h2>
-  <p>Trivy and Grype's exit codes conflate "ran and found something above your threshold" with "could not run at all" in ways that are easy to miss. <strong>Read per-rule verdicts from the results document (JSON/SARIF), never gate a pipeline purely on the raw exit code</strong> — a broken scan and a clean scan can both look like "exit 0" or both look like "exit 1" depending on flags, and conflating them ships a green gate that checks nothing. This failure mode has been observed in the field.</p>
-  <h2>The -debug variant is different on purpose</h2>
-  <p>The <code>:debug</code> tag adds a busybox shell for interactive troubleshooting — it is not the image you deploy. Scanning it will show more than the production image (busybox itself carries a small package surface), and our own release pipeline documents any known, unfixable findings there as explicit VEX suppressions in <a href="https://github.com/fosterstack/cache/blob/main/.grype.yaml"><code>.grype.yaml</code></a> rather than hiding them — see that file for the current reasoning on each entry. Production and <code>-fips</code> images never include busybox.</p>
+  <p>Trivy and Grype's exit codes conflate "ran and found something above your threshold" with "could not run at all" in ways that are easy to miss. <strong>Read per-rule verdicts from the results document (JSON/SARIF), never gate a pipeline purely on the raw exit code</strong> — a broken scan and a clean scan can both look like "exit 0" or both look like "exit 1" depending on flags, and conflating them ships a green gate that checks nothing.</p>
+  <h2>The -debug variant</h2>
+  <p>The <code>:debug</code> tag adds a busybox shell for interactive troubleshooting; it is not the image you deploy. Scanning it shows more than the production image, because busybox itself carries a small package surface, and any known finding there that has no fix is published as a VEX statement rather than hidden. The production and <code>-fips</code> images never include busybox.</p>
   <h2>Using our VEX files in your scanner</h2>
   <p>Each release carries our exceptions as published statements, generated from one source (<a href="https://github.com/fosterstack/cache/tree/main/.vex/"><code>.vex/</code></a>). Download them from the release page (<code>gh release download v${VER} --repo fosterstack/cache -p 'fosterstack-cache*'</code>) and check them against the signed release manifest as described in <a href="https://github.com/fosterstack/cache/blob/main/docs/verify-images.md">Verify our images</a>. Then apply the form your scanner reads:</p>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
@@ -125,12 +125,12 @@ Detected OS   family="debian" version="13.6"
     <tbody>
       <tr><td>Grype</td><td><code>fosterstack-cache.openvex.json</code></td><td><code>grype IMAGE --vex fosterstack-cache.openvex.json</code></td></tr>
       <tr><td>Trivy</td><td><code>fosterstack-cache.openvex.json</code></td><td><code>trivy image --vex fosterstack-cache.openvex.json IMAGE</code></td></tr>
-      <tr><td>Docker Scout</td><td><code>fosterstack-cache.openvex.json</code></td><td><code>docker scout cves --vex-location fosterstack-cache.openvex.json IMAGE</code></td></tr>
+      <tr><td>Docker Scout</td><td><code>fosterstack-cache.openvex.json</code></td><td><code>docker scout cves --vex-location fosterstack-cache.openvex.json --vex-author '^FosterStack LLC$' IMAGE</code> (see <a href="https://github.com/fosterstack/cache/blob/main/docs/#docker-scout">Docker Scout</a>)</td></tr>
       <tr><td>Amazon Inspector</td><td><code>fosterstack-cache-&lt;version&gt;.inspector-filters.json</code></td><td>one suppression rule per statement: <code>aws inspector2 create-filter</code>, one rule per call</td></tr>
       <tr><td>Google Artifact Analysis</td><td><code>fosterstack-cache-&lt;version&gt;.csaf.json</code></td><td><code>gcloud artifacts vulnerabilities load-vex</code>, see <a href="https://github.com/fosterstack/cache/blob/main/.vex/README.md"><code>.vex/README.md</code></a> for naming your image path</td></tr>
     </tbody>
   </table></div>
-  <p>The three files hold the same statements in three formats. The Inspector file carries one rule per <code>not_affected</code> or <code>fixed</code> statement, and Google applies whole-image statements only; <a href="https://github.com/fosterstack/cache/blob/main/.vex/README.md"><code>.vex/README.md</code></a> has the detail.</p>
+  <p>The three files are generated from the same statements. The OpenVEX and CSAF files carry every statement; the Inspector file carries one rule per <code>not_affected</code> or <code>fixed</code> statement and none for <code>affected</code> or <code>under_investigation</code>. Google applies whole-image statements only. <a href="https://github.com/fosterstack/cache/blob/main/.vex/README.md"><code>.vex/README.md</code></a> has the detail.</p>
   <h2>Suppression rules</h2>
   <p>A suppression rule in your scanner is only as trustworthy as the claim behind it, so ours work in one direction: <strong>every suppression traces to a published statement</strong>.</p>
   <ul>
@@ -140,24 +140,26 @@ Detected OS   family="debian" version="13.6"
     <li><strong>Your own rules.</strong> Put the statement ID in the rule's reason or comment, so a reviewer on your side can trace it back to our file the same way.</li>
   </ul>
   <h2>Docker Scout</h2>
-  <p>Docker Scout reads OpenVEX directly. Point it at the file with <code>--vex-location</code>:</p>
+  <p>Docker Scout reads OpenVEX directly. It applies only the statements whose author matches <code>--vex-author</code> (by default Docker's own), so name ours, the author recorded in the published file:</p>
   <pre tabindex="0"><code>docker scout cves --vex-location fosterstack-cache.openvex.json \
+  --vex-author '^FosterStack LLC$' \
   ghcr.io/fosterstack/cache:${VER}</code></pre>
-  <p>Run it once with and once without <code>--vex-location</code>: the difference is exactly the set of published statements, the same audit as in the Grype and Trivy runs below.</p>
+  <p>Run it once with and once without <code>--vex-location</code> and <code>--vex-author</code>: the difference is the set of findings that applicable <code>not_affected</code> and <code>fixed</code> statements suppress, the same audit as in <a href="https://github.com/fosterstack/cache/blob/main/docs/#reproducing-our-own-gate">Reproducing our own gate</a>.</p>
   <h2>Reproducing our own gate</h2>
-  <p>Our release pipeline's scan step is public — <a href="https://github.com/fosterstack/cache/blob/main/.github/workflows/release.yml"><code>.github/workflows/release.yml</code></a> — so the exact invocation we gate releases on is not a secret:</p>
-  <p>The gate's policy is every severity, with the published VEX applied — so a faithful reproduction uses the same. The VEX document ships with each release as <code>fosterstack-cache.openvex.json</code> and lives in-repo at <a href="https://github.com/fosterstack/cache/tree/main/.vex/"><code>.vex/</code></a>:</p>
-  <pre tabindex="0"><code># Same severity policy and VEX as the release gate:
-trivy image --scanners vuln \
+  <p>The release pipeline's scan stage is public: <a href="https://github.com/fosterstack/cache/blob/main/.github/workflows/stage-verify.yml"><code>.github/workflows/stage-verify.yml</code></a> runs one job per scanner in <a href="https://github.com/fosterstack/cache/blob/main/.github/policy/scanners.json">the scanner list</a> (today Grype and OSV-Scanner) against the exact candidate digests: every variant and architecture, and for Grype every release archive too. The Grype and OSV-Scanner commands below are partial examples that use the gate's scanners and its severity policy on one public tag; they show what a scan of that tag reports and do not cover everything the gate covers.</p>
+  <p>Grype runs in the gate at every severity with the published VEX applied. The VEX document ships with each release as <code>fosterstack-cache.openvex.json</code> and lives in-repo at <a href="https://github.com/fosterstack/cache/tree/main/.vex/"><code>.vex/</code></a>:</p>
+  <pre tabindex="0"><code>grype ghcr.io/fosterstack/cache:X.Y.Z \
+  --fail-on negligible --vex fosterstack-cache.openvex.json</code></pre>
+  <p>OSV-Scanner runs in the gate on the images and on the Go module manifests:</p>
+  <pre tabindex="0"><code>osv-scanner scan image ghcr.io/fosterstack/cache:X.Y.Z</code></pre>
+  <p>Trivy is not a gate command. If you run it, the example below uses the same severity set and the same file, which makes its result comparable but not gate-equivalent:</p>
+  <pre tabindex="0"><code>trivy image --scanners vuln \
   --severity CRITICAL,HIGH,MEDIUM,LOW,UNKNOWN \
   --vex fosterstack-cache.openvex.json \
-  ghcr.io/fosterstack/cache:X.Y.Z
-
-grype ghcr.io/fosterstack/cache:X.Y.Z \
-  --fail-on negligible --vex fosterstack-cache.openvex.json</code></pre>
-  <p>Run without <code>--vex</code> to see raw findings including the ones we have publicly dispositioned — the difference between the two runs is exactly the set of published VEX statements, which is how you audit them.</p>
-  <h2>Marketing claim, with the receipt</h2>
-  <p>"Every scanner in the repo's list runs on every release, verdicts in the public CI run" is not a claim we're asking you to take on faith — the scan IS the CI run, public, in this repo's Actions tab. See <a href="https://github.com/fosterstack/cache/blob/main/docs/verify-images.md">Verify our images</a> for how to confirm the exact image you pulled came from that same run.</p>
+  ghcr.io/fosterstack/cache:X.Y.Z</code></pre>
+  <p>To see the findings without our statements applied, run Grype or Trivy without <code>--vex</code>, or Docker Scout without <code>--vex-location</code> and <code>--vex-author</code>. The difference between the two runs is the set of findings that applicable <code>not_affected</code> and <code>fixed</code> statements suppress, which is how you audit them.</p>
+  <h2>Confirming the scan is the release run</h2>
+  <p>Every scanner in the repo's list runs on every release, and the verdicts are in the public CI run: the scan is the CI run, in this repository's Actions tab. See <a href="https://github.com/fosterstack/cache/blob/main/docs/verify-images.md">Verify our images</a> for how to confirm the exact image you pulled came from that same run.</p>
   <p class="muted-note">Related: <a href="/everything-we-do-for-security/">everything we do for security</a>, <a href="/verify-a-release/">verify a release yourself</a>.</p>
 </main>
 <footer>
