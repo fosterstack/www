@@ -60,6 +60,8 @@ verifiable against the CI run that produced them.
 - [What changes in v0.3.0 (draft)](https://fosterstack.com/whats-new-fosterstack-cache-v0-3-0/): what to check before you upgrade.
 - [Everything FosterStack does for security](https://fosterstack.com/everything-we-do-for-security/): every security practice that runs, one line each, with where to check it.
 - [Scanning FosterStack in your compliance pipeline](https://fosterstack.com/scan-fosterstack-cache-image/): what to expect when you scan the image and how to apply our VEX statements.
+- [Guides](https://fosterstack.com/guides/): every guide, grouped by topic.
+- [Roadmap honesty](https://fosterstack.com/roadmap/): what runs today and what is next.
 - [How FosterStack Cache is built and signed](https://fosterstack.com/how-we-build/): the release steps and what you can verify.
 - [Production build cache: Docker Compose, nginx and TLS](https://fosterstack.com/build-cache-docker-compose-production/): A Compose file for a self-hosted build cache behind nginx with TLS and a password, run for real on 0.2.1 and Gradle 9.8.0, with what was and was not tested.
 - [Build cache behind a corporate proxy: Gradle and Maven](https://fosterstack.com/gradle-build-cache-corporate-proxy/): How Gradle's remote build cache behaves behind a proxy: the settings, the loopback trap, a proxy that refuses, and how to tell it from a cache error. Real run.

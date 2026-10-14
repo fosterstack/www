@@ -87,6 +87,10 @@
   <div class="tag">Infrastructure worth keeping — and kept patched.</div>
 </header>
 <main>
+  <p class="lede">
+    We build tools that help you secure your build pipeline. It made sense to start with the build cache. We built FosterStack Cache by meticulously following the security guidance that matters: CISA Secure by Design, NIST SP 800-204C and 800-204D, and SLSA. Where the guidance stops, we kept going: hermetic, reproducible builds, a distroless image, and more. <a href="/everything-we-do-for-security/">Read the full list</a>.
+  </p>
+
   <div class="notice">
     Gradle Inc. has deprecated the free Develocity Build Cache Node: it "will no longer be
     distributed, supported or available after December&nbsp;31,&nbsp;2026." The migration path they
@@ -94,9 +98,6 @@
     <a href="/build-cache-node-end-of-life/">What that means and your options</a>.
   </div>
 
-  <p class="lede">
-    We build tools that help you secure your build pipeline. It made sense to start with the build cache. We built FosterStack Cache by meticulously following the security guidance that matters: CISA Secure by Design, NIST SP 800-204C and 800-204D, and SLSA. Where the guidance stops, we kept going: hermetic, reproducible builds, a distroless image, and more. <a href="/everything-we-do-for-security/">Read the full list</a>.
-  </p>
 
   <h1>Fast builds from cache are worth keeping.</h1>
   <p class="lede">
@@ -120,13 +121,6 @@ curl localhost:8080/healthz   # -&gt; ok</code></pre>
   </p>
   <p class="muted-note">Bugs and questions go to <a href="https://github.com/fosterstack/cache/issues">GitHub issues</a>, which is also where the roadmap is settled.</p>
 
-  <h2>Stay in touch</h2>
-  <p>We do not collect email addresses. To follow the project,
-  <a href="https://github.com/fosterstack/cache">star the repository</a> or use
-  <strong>Watch → Custom → Releases</strong> on GitHub — that notifies you on a new
-  release and nothing else, and it is a subscription you control and can revoke without
-  asking us.</p>
-
   <h2>What you get that a bare HTTP endpoint doesn't give you</h2>
   <p>Yes — Gradle's remote cache protocol is just GET and PUT, and you could point it at any
   object store. What you'd be rebuilding yourself is everything around that:</p>
@@ -134,55 +128,16 @@ curl localhost:8080/healthz   # -&gt; ok</code></pre>
     <div class="card"><h3>Cache management</h3><p>Size-capped LRU eviction that keeps a busy CI cache healthy without hand-tending — set the cap, and the oldest-unused entries make room.</p></div>
     <div class="card"><h3>Authentication</h3><p>HTTP Basic Auth over TLS, wired the way Gradle and Maven already expect credentials. Constant-time comparison, no credential ever logged.</p></div>
     <div class="card"><h3>Metrics &amp; status</h3><p>Prometheus metrics, a read-only status page with hit rates and size-vs-cap, and a Grafana dashboard in the repo — so you know the cache is earning its keep.</p></div>
-    <div class="card"><h3>Maintenance target</h3><p>Vulnerable dependencies fixed fast — our target is 48 hours from disclosure (<a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md">the scope is in SECURITY.md</a>).</p></div>
-    <div class="card"><h3>Meticulous pipeline security</h3><p>Every step of our release produces signed provenance. When a FosterStack signature verifies, you know it's FosterStack code, a FosterStack build and a FosterStack image, and everything in between. <a href="/how-our-pipeline-maps-to-nist-and-slsa/">See how each stage maps</a>.</p></div>
     <div class="card"><h3>30-minute migration</h3><p>A step-by-step guide for existing Build Cache Node deployments. Same protocol, same CI config shape — migrating is mostly a URL change.</p></div>
   </div>
 
-  <h2>More than kept patched.</h2>
-  <ul class="trust">
-    <li>Signed releases you can verify in minutes.</li>
-    <li>Build record, parts list (SBOM) and vulnerability statements published with every release.</li>
-    <li>Scanned before every release. The current release is rescanned every day.</li>
-    <li>Images assembled twice on separate machines; the results must match.</li>
-    <li>Minimal image, no telemetry. FIPS variant available.</li>
-    <li>Vulnerable dependencies fixed fast — our target is 48 hours from disclosure (<a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md">the scope is in SECURITY.md</a>).</li>
-  </ul>
-  <p><a href="/how-we-build/">How we build</a> · <a href="/security/">Security policy</a> · <a href="/verify-a-release/">Verify a release</a></p>
-
-  <h2>Built to be verified, not trusted</h2>
-  <p>We're a new vendor asking to sit in your build pipeline, so the burden of proof is on us.
-  The answer is to make everything checkable:</p>
-  <ul class="trust">
-    <li>MIT-licensed core. Read the code before you run it.</li>
-    <li>One public container image. Free and paid users pull the identical bytes — scan exactly what you deploy.</li>
-    <li>When the paid tiers ship, a license key will unlock them in the same public image — no private registry, no gated downloads. (They are not built; the pricing below is direction, not a shelf.)</li>
-    <li>Security patches are never withheld from the free tier. Not delayed, not embargoed — never.</li>
-    <li>Signed commits, signed releases, public release notes. The repository's SECURITY.md states exactly what the release evidence does and does not prove today.</li>
-  </ul>
-
-  <h2>What we do not collect</h2>
-  <ul class="trust">
-    <li><strong>No telemetry, and no required FosterStack connection.</strong> The server
-    reports nothing to us — no usage data, no license check, no update ping — and today's
-    free core makes no outbound connections at all: it works identically on a machine with
-    no route to the internet. When the paid features ship, the only outbound traffic will
-    be what you configure (your identity provider for SSO, your peer replicas for HA) —
-    endpoints you choose, never FosterStack.</li>
-    <li><strong>This website collects no email addresses.</strong> There is no signup
-    form, no waitlist, and no newsletter. It sets no cookies, runs no analytics, and
-    loads nothing from a third party.</li>
-    <li><strong>The only personal data FosterStack LLC holds</strong> is the irreducible
-    minimum required to bill a paying customer — handled by Stripe — and whatever you
-    voluntarily put in an email to support.</li>
-  </ul>
-  <p class="muted-note">Deliberately not claiming "we never collect any personal data":
-  billing a customer requires an email address, and a privacy claim that is convenient
-  but false is worse than none.</p>
+  <h2>Meticulous pipeline security</h2>
+  <p>Every step of our release produces signed provenance. When a FosterStack signature verifies, you know it's FosterStack code, a FosterStack build and a FosterStack image, and everything in between. No telemetry. Nothing outbound. It runs the same air-gapped.</p>
+  <p><a href="/how-we-build/">How we build</a> · <a href="/security/">Security policy</a> · <a href="/everything-we-do-for-security/">Everything we do for security</a></p>
 
   <h2 id="pricing">Pricing</h2>
   <p>Per product. Free is the full product.</p>
-  <p>Paid tiers are described here, not sold: checkout is not open, and SSO, multi-user access control, usage analytics and HA/replication are not built.</p>
+  <p>Paid tiers are coming; checkout isn't open yet.</p>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <tr><th>Free</th><th>Team</th><th>Business</th><th>Compliance</th></tr>
     <tr>
@@ -199,80 +154,26 @@ curl localhost:8080/healthz   # -&gt; ok</code></pre>
     </tr>
   </table></div>
   <p><strong>No sales call. No per-seat tax. No enterprise pricing mystery.</strong></p>
-  <p style="color:var(--muted); font-size:.95rem">
-    The Compliance tier, plainly: the security evidence underneath — SBOMs, SLSA
-    provenance, signatures, VEX statements, and the FIPS 140-3 validated module
-    (CMVP certificate #5247) — is public and free, verifiable by anyone. What the tier
-    describes is the authored analysis — a FIPS applicability statement mapping the
-    validated module boundary onto this product — plus per-release attestation letters
-    signed by FosterStack LLC, and time on your security questionnaires. FosterStack
-    Cache is not "FedRAMP compliant" or "CMMC compliant"; those attach to your service
-    and your organization, never to a component you deploy. It is validated crypto and
-    publishable evidence <em>for</em> your compliance program.
-  </p>
 
   <h2>Guides</h2>
+  <h3>Start here</h3>
   <ul class="trust">
-    <li><a href="/build-cache-node-end-of-life/">Build Cache Node end of life: what happens and your options</a></li>
-    <li><a href="/migrate-build-cache-node/">Migrate from Build Cache Node: setup, checklist, checks</a></li>
-    <li><a href="/jenkins-ci-build-cache/">Jenkins and CI build cache</a></li>
-    <li><a href="/gradle-remote-cache-not-working/">Gradle build cache not working or hit rate low: causes</a></li>
-    <li><a href="/maven-remote-build-cache-setup/">Maven remote build cache setup, on/off, and with Gradle</a></li>
-    <li><a href="/gradle-build-cache-kubernetes/">Gradle build cache on Kubernetes</a></li>
-    <li><a href="/security/">Security policy: how to report a vulnerability</a></li>
-    <li><a href="/build-cache-server-sizing/">How big a build cache server? CPU, RAM, disk and load</a></li>
-    <li><a href="/air-gapped-build-cache-install/">Install on an air-gapped network</a></li>
-    <li><a href="/whats-new-fosterstack-cache-v0-3-0/">What changes in v0.3.0 (draft)</a></li>
-    <li><a href="/everything-we-do-for-security/">Everything FosterStack does for security</a></li>
-    <li><a href="/scan-fosterstack-cache-image/">Scanning FosterStack in your compliance pipeline</a></li>
-    <li><a href="/how-we-build/">How FosterStack Cache is built and signed</a></li>
-    <li><a href="/verify-a-release/">Verify a release yourself: signature, provenance, SBOM, VEX</a></li>
-    <li><a href="/fips-140-3-build-cache/">FIPS 140-3 build cache: run the FIPS image and confirm it</a></li>
-    <li><a href="/reset-gradle-build-cache/">How to clear or reset a self-hosted build cache</a></li>
-    <li><a href="/changelog/">Changelog</a></li>
-    <li><a href="/build-cache-eviction-size-limit/">Build cache size limit, eviction and a full disk</a></li>
     <li><a href="/first-15-minutes-build-cache/">Your first 15 minutes with a self-hosted build cache</a></li>
-    <li><a href="/laptop-builds-reuse-ci-build-cache/">Your Laptop Builds Reuse What CI Already Built</a></li>
-    <li><a href="/remote-build-cache-miss-cost/">Does a Remote Cache Slow Your Build When It Misses?</a></li>
-    <li><a href="/build-cache-hit-rate-how-to-measure/">How Do I Know My Build Cache Hit Rate?</a></li>
-    <li><a href="/can-someone-poison-our-build-cache/">Can Someone Poison Our Shared Build Cache?</a></li>
-    <li><a href="/build-cache-server-down-what-happens/">What Happens to My Build When the Cache Server Is Down?</a></li>
-    <li><a href="/kotlin-android-gradle-build-cache/">Does the Build Cache Work With Kotlin and Android Builds?</a></li>
-    <li><a href="/feature-branches-share-build-cache-with-main/">Can Feature Branches Share the Build Cache With Main?</a></li>
-    <li><a href="/github-actions-remote-build-cache/">Use a Remote Build Cache in GitHub Actions</a></li>
-    <li><a href="/is-the-build-cache-server-healthy-what-to-alert-on/">Is My Build Cache Server Healthy? What to Alert On</a></li>
-    <li><a href="/restart-build-cache-server-while-builds-run/">Can I Restart the Cache Server While Builds Run?</a></li>
-    <li><a href="/change-build-cache-logins-without-breaking-ci/">Change the Build Cache Logins Without Breaking CI</a></li>
-    <li><a href="/several-projects-share-one-build-cache-server/">Can Several Projects Share One Build Cache Server?</a></li>
-    <li><a href="/failed-or-cancelled-build-bad-results-in-cache/">Can a Failed or Cancelled Build Poison the Cache?</a></li>
-    <li><a href="/does-build-cache-entry-contain-source-code-or-secrets/">Does a Build Cache Entry Contain My Source Code or Secrets?</a></li>
-    <li><a href="/why-did-this-task-miss-the-build-cache/">Why Did This One Task Miss the Build Cache?</a></li>
-    <li><a href="/build-cache-server-wont-start-errors/">Build Cache Server Won't Start: Errors and Fixes</a></li>
-    <li><a href="/gradle-build-cache-ci-writes-developers-read/">Let CI write, developers only read: Gradle and Maven cache</a></li>
-    <li><a href="/gradle-remote-build-cache-authentication/">Gradle remote build cache authentication and 401 errors</a></li>
-    <li><a href="/maven-build-cache-extension-not-restoring/">Maven build cache extension not restoring: the causes</a></li>
-    <li><a href="/build-cache-docker-compose-production/">Production build cache: Docker Compose, nginx and TLS</a></li>
-    <li><a href="/gradle-build-cache-corporate-proxy/">Build cache behind a corporate proxy: Gradle and Maven</a></li>
-    <li><a href="/gradle-build-cache-enable-disable/">Enable or Disable the Gradle Build Cache: Flag or Property</a></li>
-    <li><a href="/gradle-build-cache-monorepo/">Gradle build cache: monorepo, buildSrc and included builds</a></li>
-    <li><a href="/how-our-pipeline-maps-to-nist-and-slsa/">NIST SP 800-204C, 800-204D and SLSA: Our Release Pipeline</a></li>
-    <li><a href="/maven-build-cache-extension-multi-module/">Maven Build Cache Extension in a Multi-Module Project</a></li>
-    <li><a href="/upgrade-build-cache-server/">Upgrade, back up and move a build cache server</a></li>
-    <li><a href="/gradle-test-task-from-cache/">Skip tests that passed: Gradle and Maven build cache</a></li>
-    <li><a href="/what-gradle-stores-in-build-cache/">What does the build cache store? Gradle and Maven</a></li>
-    <li><a href="/gradle-remote-build-cache-private-ca-https/">Use your Gradle build cache over HTTPS with a private CA</a></li>
-    <li><a href="/gradle-build-cache-docker-ci-fresh-container/">Reuse Gradle results in Docker CI, even in fresh containers</a></li>
+    <li><a href="/migrate-build-cache-node/">Migrate from Build Cache Node</a></li>
+    <li><a href="/build-cache-node-end-of-life/">Build Cache Node end of life</a></li>
   </ul>
-
-  <h2>Roadmap honesty</h2>
-  <p>Gradle and Maven both run against the same server today; we maintain the cache
-  server, while the Maven client side is Apache's own Build Cache Extension. A dependency cache —
-  the same server restoring <code>node_modules</code>, <code>~/.m2</code>, and
-  <code>~/.gradle/caches</code> by lockfile key, so ephemeral CI agents stop
-  re-downloading the world — is next on the list, npm first. The Helm chart and the paid tiers above are not built; they are described so you can see the direction. Free
-  is real and complete today. If you need something sooner,
-  <a href="https://github.com/fosterstack/cache/issues">open an issue</a> — that is what
-  moves the roadmap.</p>
+  <h3>Run it</h3>
+  <ul class="trust">
+    <li><a href="/build-cache-docker-compose-production/">Production build cache: Docker Compose, nginx and TLS</a></li>
+    <li><a href="/gradle-build-cache-kubernetes/">Gradle build cache on Kubernetes</a></li>
+    <li><a href="/air-gapped-build-cache-install/">Install on an air-gapped network</a></li>
+  </ul>
+  <h3>Trust it</h3>
+  <ul class="trust">
+    <li><a href="/verify-a-release/">Verify a release yourself</a></li>
+    <li><a href="/everything-we-do-for-security/">Everything FosterStack does for security</a></li>
+  </ul>
+  <p><a href="/guides/">All guides →</a></p>
 </main>
 <footer>
   <div>
@@ -282,7 +183,7 @@ curl localhost:8080/healthz   # -&gt; ok</code></pre>
     of the documented remote build cache HTTP protocol. Apache Maven is a trademark of the
     Apache Software Foundation; the Maven Build Cache Extension is Apache's project, not
     ours.</p>
-    <p style="margin-top:.6rem">© 2026 FosterStack · <a href="/build-cache-node-end-of-life/">Build Cache Node end of life</a> · <a href="/migrate-build-cache-node/">Migrate</a> · <a href="/build-cache-node-end-of-life/#build-cache-node-faq">FAQ</a> · <a href="/jenkins-ci-build-cache/">CI setup</a> · <a href="/how-we-build/">How we build</a> · <a href="/regulated/">For regulated markets</a> · <a href="https://github.com/fosterstack/cache">github.com/fosterstack/cache</a> · <a href="mailto:hello@fosterstack.com">hello@fosterstack.com</a></p>
+    <p style="margin-top:.6rem">© 2026 FosterStack · <a href="/build-cache-node-end-of-life/">Build Cache Node end of life</a> · <a href="/migrate-build-cache-node/">Migrate</a> · <a href="/build-cache-node-end-of-life/#build-cache-node-faq">FAQ</a> · <a href="/jenkins-ci-build-cache/">CI setup</a> · <a href="/how-we-build/">How we build</a> · <a href="/regulated/">For regulated markets</a> · <a href="/roadmap/">Roadmap</a> · <a href="https://github.com/fosterstack/cache">github.com/fosterstack/cache</a> · <a href="mailto:hello@fosterstack.com">hello@fosterstack.com</a></p>
   </div>
 </footer>
 </body>
