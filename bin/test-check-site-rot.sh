@@ -83,8 +83,32 @@ import sys
 p, slug = sys.argv[1:3]
 s = open(p).read().replace('href="/%s/"' % slug, 'href="/"')
 open(p, "w").write(s)
+# a site with a /guides/ page lists every guide there: take the page off that list too
+import os
+g = os.path.join(os.path.dirname(p), "guides", "index.html")
+if os.path.isfile(g):
+    gs = open(g).read()
+    open(g, "w").write(gs.replace('href="/%s/"' % slug, 'href="/"'))
 EOF
 expect_fail "a page the home page no longer links" "home: does not link"
+
+if [ -f "$here/guides/index.html" ]; then
+  # a page linked only from /guides/ passes; the home page must still link /guides/
+  fresh; python3 - "$site/index.html" "$first" <<'EOF'
+import sys
+p, slug = sys.argv[1:3]
+s = open(p).read()
+open(p, "w").write(s.replace('href="/%s/"' % slug, 'href="/"'))
+EOF
+  expect_pass "a page linked only from /guides/ counts as linked from home"
+  fresh; python3 - "$site/index.html" <<'EOF'
+import sys
+p = sys.argv[1]
+s = open(p).read()
+open(p, "w").write(s.replace('href="/guides/"', 'href="/"'))
+EOF
+  expect_fail "a home page that does not link /guides/" "home: does not link /guides/"
+fi
 
 fresh; edit "$site/$first/index.html" "REGEX:<title>.*?</title>" "<title>This title is deliberately far too long to be a good page title for a search result</title>"
 expect_fail "a title over 60 characters" "characters (max 60)"

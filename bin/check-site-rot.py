@@ -227,7 +227,14 @@ def main():
     homelinks = {m for m in re.findall(r'href="/([a-z0-9-]+)/"', texts[""])}
     for p in sorted(homelinks - page_set):
         bad("home: links /%s/ which is not a page" % p)
-    for p in sorted(page_set - homelinks):
+    # The home page links a few guides and /guides/, which lists every guide: a page linked from /guides/ counts as linked from home.
+    reachable = set(homelinks)
+    if "guides" in page_set:
+        if "guides" in homelinks:
+            reachable |= {m for m in re.findall(r'href="/([a-z0-9-]+)/"', texts.get("guides", ""))}
+        else:
+            bad("home: does not link /guides/ (the page that lists every guide)")
+    for p in sorted(page_set - reachable):
         bad("home: does not link /%s/ (the Guides list or another section should)" % p)
 
     for line in problems:
