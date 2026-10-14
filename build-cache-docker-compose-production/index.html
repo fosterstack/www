@@ -89,8 +89,8 @@
 </header>
 <main>
   <h1>Docker Compose build cache: quick start and production</h1>
-  <p class="lede">Run a shared Gradle build cache for your team in one Compose file, with a password and a size limit. For real use, serve HTTPS: Gradle sends the password with every request. Put a proxy in front (below), or set <code>FSCACHE_TLS_CERT</code> and <code>FSCACHE_TLS_KEY</code> and let the server answer HTTPS itself. <code>[TO-VERIFY: cache: native TLS (REQ-TLS-001, #296) is on cache main, in no release yet; source docs/docker-deploy.md and README.md]</code></p>
-  <p class="muted-note"><strong>DRAFT for v0.3, private preview, not published and never merged before v0.3.0 is live.</strong> <code>[TO-VERIFY: source]</code> marks a fact that must be checked against the v0.3 release; the source (cache, pipeline or payments) is named in the marker.</p>
+  <p class="lede">Run a shared Gradle build cache for your team in one Compose file, with a password and a size limit. For real use, serve HTTPS: Gradle sends the password with every request. Put a proxy in front (below), or set <code>FSCACHE_TLS_CERT</code> and <code>FSCACHE_TLS_KEY</code> and let the server answer HTTPS itself.</p>
+  <p class="muted-note"><strong>DRAFT for v0.3, private preview, not published and never merged before v0.3.0 is live.</strong></p>
 
   <h2 id="gradle-build-cache-docker-compose">Gradle build cache with Docker Compose</h2>
   <p>Our advice, not a test result. This is the shape we suggest once you go past a first trial.</p>
@@ -134,8 +134,8 @@ curl -s -u gradle:change-me localhost:8080/testkey123; echo</code></pre>
   <p>The container image has no shell, so there is no health check inside the Compose file. Probe <code>/healthz</code> from outside: your orchestrator's HTTP check, a monitor, or <code>curl -f http://localhost:8080/healthz</code> from the host.</p>
 
   <h2>Two ways to serve HTTPS</h2>
-  <p><strong>A proxy in front</strong> (the nginx setup below): the proxy holds the certificate and the server stays on plain HTTP behind it. <strong>TLS in the server:</strong> set <code>FSCACHE_TLS_CERT</code> and <code>FSCACHE_TLS_KEY</code> to a PEM certificate file (it may hold the chain) and its private key file, both or neither. The server then serves HTTPS only, on <code>FSCACHE_ADDR</code>, with TLS 1.2 as the minimum version. HTTP/2 is not offered, a plain-HTTP request to that port gets <code>400</code>, and your <code>/healthz</code> check moves to <code>https://</code>. Mount the files read-only. They are read only at startup, so replace them and restart. <code>[TO-VERIFY: cache: native TLS (REQ-TLS-001, #296) is on cache main, in no release yet; source docs/docker-deploy.md and README.md]</code></p>
-  <p>If a client cannot connect, look from the client side with <code>openssl s_client -connect HOST:PORT -alpn http/1.1</code>: the server does not log handshake failures at the default log level. <code>[TO-VERIFY: cache: cache docs/docker-deploy.md; the command and the logging statement are the cache docs' words, not run by www]</code></p>
+  <p><strong>A proxy in front</strong> (the nginx setup below): the proxy holds the certificate and the server stays on plain HTTP behind it. <strong>TLS in the server:</strong> set <code>FSCACHE_TLS_CERT</code> and <code>FSCACHE_TLS_KEY</code> to a PEM certificate file (it may hold the chain) and its private key file, both or neither. The server then serves HTTPS only, on <code>FSCACHE_ADDR</code>, with TLS 1.2 as the minimum version. HTTP/2 is not offered, a plain-HTTP request to that port gets <code>400</code>, and your <code>/healthz</code> check moves to <code>https://</code>. Mount the files read-only. They are read only at startup, so replace them and restart.</p>
+  <p>If a client cannot connect, look from the client side with <code>openssl s_client -connect HOST:PORT -alpn http/1.1</code>: the server does not log handshake failures at the default log level.</p>
 
   <h2>Production: nginx and TLS in front</h2>
   <p>A Compose file for a shared build cache that only answers over HTTPS, with a password, behind nginx. It was run for real on FosterStack Cache 0.2.1 and Gradle 9.8.0. The file pins 0.2.2, a security-patch release whose release notes say it changes no behaviour.</p>

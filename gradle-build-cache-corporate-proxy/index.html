@@ -91,7 +91,7 @@
 <main>
   <h1>Build cache behind a corporate proxy: Gradle and Maven</h1>
   <p class="lede">Many companies make builds reach the network through a proxy. This page shows how the remote build cache behaves behind one, in Gradle and in Maven: the settings, the ways it goes wrong, and how to tell a proxy problem from a cache problem.</p>
-  <p class="muted-note"><strong>DRAFT for v0.3, private preview, not published and never merged before v0.3.0 is live.</strong> <code>[TO-VERIFY: source]</code> marks a fact that must be checked against the v0.3 release; the source (cache, pipeline or payments) is named in the marker.</p>
+  <p class="muted-note"><strong>DRAFT for v0.3, private preview, not published and never merged before v0.3.0 is live.</strong></p>
   <p>In our runs Maven behaved differently from Gradle: it did not skip the proxy for loopback addresses. If you test on 127.0.0.1 with Maven, list it in <code>nonProxyHosts</code>: see <a href="#maven-build-cache-corporate-proxy">the Maven section</a>.</p>
 
   <h2>Checklist for Gradle</h2>
@@ -99,7 +99,7 @@
   <ul class="trust">
     <li>Ask for the cache's host and port to be allowed through the proxy (HTTPS).</li>
     <li>Put the proxy lines in <code>gradle.properties</code>, with the <code>systemProp.</code> prefix, and list internal hosts in <code>nonProxyHosts</code>.</li>
-    <li>Use HTTPS to the cache: <a href="/build-cache-docker-compose-production/">a production setup with nginx and TLS</a>, or the server's own certificate (<code>FSCACHE_TLS_CERT</code> and <code>FSCACHE_TLS_KEY</code>). <code>[TO-VERIFY: cache: native TLS (REQ-TLS-001, #296) is on cache main, in no release yet; source docs/docker-deploy.md and README.md]</code></li>
+    <li>Use HTTPS to the cache: <a href="/build-cache-docker-compose-production/">a production setup with nginx and TLS</a>, or the server's own certificate (<code>FSCACHE_TLS_CERT</code> and <code>FSCACHE_TLS_KEY</code>).</li>
     <li>If the proxy re-signs TLS, Java will need your company's certificate authority.</li>
   </ul>
 

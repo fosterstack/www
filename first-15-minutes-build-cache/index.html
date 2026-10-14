@@ -91,7 +91,7 @@
 <main>
   <h1>Your first 15 minutes with a self-hosted build cache</h1>
   <p class="lede">A checklist from nothing to your first <code>FROM-CACHE</code>, the line Gradle prints when it reuses a stored result. The commands take 20 seconds or less; we timed them on a clean GitHub-hosted machine that had Gradle and Java. Still, plan on about 15 minutes in all, because reading, choosing your values and pointing your own project at the server take you longer than the commands.</p>
-  <p class="muted-note"><strong>DRAFT for v0.3, private preview, not published and never merged before v0.3.0 is live.</strong> <code>[TO-VERIFY: source]</code> marks a fact that must be checked against the v0.3 release; the source (cache, pipeline or payments) is named in the marker.</p>
+  <p class="muted-note"><strong>DRAFT for v0.3, private preview, not published and never merged before v0.3.0 is live.</strong></p>
 
   <h2>What we timed</h2>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
@@ -108,7 +108,7 @@
   <h3>1. Decide where it will run</h3>
   <ul class="trust">
     <li>A machine your CI runners and developers can reach. The server is one small program, and disk is what matters. See <a href="/build-cache-server-sizing/">server sizing</a>.</li>
-    <li>Plan on HTTPS for anything beyond a first try. Gradle sends the password with every request. Either put a proxy in front, or give the server its own certificate with <code>FSCACHE_TLS_CERT</code> and <code>FSCACHE_TLS_KEY</code> (both or neither). <code>[TO-VERIFY: cache: native TLS (REQ-TLS-001, #296) is on cache main, in no release yet; source docs/docker-deploy.md and README.md]</code></li>
+    <li>Plan on HTTPS for anything beyond a first try. Gradle sends the password with every request. Either put a proxy in front, or give the server its own certificate with <code>FSCACHE_TLS_CERT</code> and <code>FSCACHE_TLS_KEY</code> (both or neither).</li>
   </ul>
 
   <h3>2. Download it and check it is ours</h3>

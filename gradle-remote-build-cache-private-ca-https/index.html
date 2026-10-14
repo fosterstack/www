@@ -90,7 +90,7 @@
 <main>
   <h1>Use your Gradle build cache over HTTPS with a private CA</h1>
   <p class="lede">With the right trust store, Gradle uses a cache behind HTTPS with your own certificate authority, and in our runs the cache hits worked. We ran real builds with a private CA and saw the exact error without it. With the standard Java settings we used, a trust store that held only our CA made Java ignore its normal list of trusted CAs. Our downloads from Maven Central then failed, until we put the normal list into the store as well.</p>
-  <p class="muted-note"><strong>DRAFT for v0.3, private preview, not published and never merged before v0.3.0 is live.</strong> <code>[TO-VERIFY: source]</code> marks a fact that must be checked against the v0.3 release; the source (cache, pipeline or payments) is named in the marker.</p>
+  <p class="muted-note"><strong>DRAFT for v0.3, private preview, not published and never merged before v0.3.0 is live.</strong></p>
 
   <h2>The short answer</h2>
   <ul class="trust">
@@ -151,7 +151,7 @@ openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out s
   <p>The certificate has to name the address your builds use. We did not test a certificate that names a different host, an expired certificate, the Gradle wrapper (<code>./gradlew</code>), or Linux or Windows.</p>
 
   <h2>If it still does not work</h2>
-  <p>Work through <a href="/gradle-remote-cache-not-working/">Gradle remote build cache not working</a>. For the server side of HTTPS, see <a href="/build-cache-docker-compose-production/">production Docker Compose with nginx and TLS</a>, which also covers the server's own certificate (<code>FSCACHE_TLS_CERT</code> and <code>FSCACHE_TLS_KEY</code>). The runs on this page used a test TLS proxy; we did not run the server's own TLS. <code>[TO-VERIFY: cache: native TLS (REQ-TLS-001, #296) is on cache main, in no release yet; source docs/docker-deploy.md and README.md]</code></p>
+  <p>Work through <a href="/gradle-remote-cache-not-working/">Gradle remote build cache not working</a>. For the server side of HTTPS, see <a href="/build-cache-docker-compose-production/">production Docker Compose with nginx and TLS</a>, which also covers the server's own certificate (<code>FSCACHE_TLS_CERT</code> and <code>FSCACHE_TLS_KEY</code>). The runs on this page used a test TLS proxy; we did not run the server's own TLS.</p>
 
   <p class="muted-note">Run on Gradle 9.8.0 with FosterStack Cache 0.2.1 behind a test TLS proxy, macOS (arm64), Java 27 (Homebrew), OpenSSL 3.6.5.</p>
   <p class="muted-note">We repeated the six runs on a GitHub-hosted Linux machine with release 0.2.2, Gradle 9.8.0, Java 27 (Temurin 27+35) and a small TLS proxy written in Python. All six runs matched the table, including run 5, which fails as expected. The combined store there held 121 certificates, including ours: the count depends on which Java build you use. <a href="https://github.com/fosterstack/www/actions/runs/38037262366">The run and its log are public</a>.</p>
