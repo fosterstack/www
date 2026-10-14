@@ -92,23 +92,57 @@ if os.path.isfile(g):
 EOF
 expect_fail "a page the home page no longer links" "home: does not link"
 
-if [ -f "$here/guides/index.html" ]; then
-  # a page linked only from /guides/ passes; the home page must still link /guides/
-  fresh; python3 - "$site/index.html" "$first" <<'EOF'
+# /guides/ lists the guides. Built in the throwaway copy, so these cases run on every site, with or without a real /guides/.
+# The home page links /guides/ and not $first; /guides/ links $first.
+with_guides() {
+  fresh
+  python3 - "$site" "$first" "$second" <<'EOF'
+import os, re, sys
+site, first, second = sys.argv[1:4]
+real = os.path.join(site, "guides")
+if os.path.isdir(real):
+    import shutil
+    shutil.rmtree(real)
+src = open(os.path.join(site, second, "index.html")).read()
+src = re.sub(r"<title>.*?</title>", "<title>Guides</title>", src, count=1, flags=re.S)
+src = src.replace("/%s/" % second, "/guides/")
+src = src.replace("</main>", '<p><a href="/%s/">listed guide</a></p></main>' % first, 1)
+os.makedirs(real)
+open(os.path.join(real, "index.html"), "w").write(src)
+home = os.path.join(site, "index.html")
+h = open(home).read().replace('href="/%s/"' % first, 'href="/"')
+if 'href="/guides/"' not in h:
+    h = h.replace("</main>", '<p><a href="/guides/">All guides</a></p></main>', 1)
+open(home, "w").write(h)
+sm = os.path.join(site, "sitemap.xml")
+m = open(sm).read()
+if "/guides/</loc>" not in m:
+    open(sm, "w").write(m.replace("</urlset>", "<url><loc>https://fosterstack.com/guides/</loc></url></urlset>", 1))
+ll = os.path.join(site, "llms.txt")
+l = open(ll).read()
+if "fosterstack.com/guides/)" not in l:
+    open(ll, "w").write(l.rstrip("\n") + "\n- [Guides](https://fosterstack.com/guides/): all guides\n")
+EOF
+}
+
+with_guides; expect_pass "a page linked only from /guides/ counts as linked from home"
+
+with_guides; python3 - "$site/guides/index.html" "$first" <<'EOF'
 import sys
 p, slug = sys.argv[1:3]
 s = open(p).read()
 open(p, "w").write(s.replace('href="/%s/"' % slug, 'href="/"'))
 EOF
-  expect_pass "a page linked only from /guides/ counts as linked from home"
-  fresh; python3 - "$site/index.html" <<'EOF'
+expect_fail "a page on neither the home page nor /guides/" "home: does not link /$first/"
+
+with_guides; python3 - "$site/index.html" <<'EOF'
 import sys
 p = sys.argv[1]
 s = open(p).read()
 open(p, "w").write(s.replace('href="/guides/"', 'href="/"'))
 EOF
-  expect_fail "a home page that does not link /guides/" "home: does not link /guides/"
-fi
+expect_fail "a home page that does not link /guides/" "home: does not link /guides/"
+expect_fail "a /guides/ page the home page does not link lists nothing for home" "home: does not link /$first/"
 
 fresh; edit "$site/$first/index.html" "REGEX:<title>.*?</title>" "<title>This title is deliberately far too long to be a good page title for a search result</title>"
 expect_fail "a title over 60 characters" "characters (max 60)"

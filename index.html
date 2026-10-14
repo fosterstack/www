@@ -129,11 +129,9 @@ curl localhost:8080/healthz   # -&gt; ok</code></pre>
     <div class="card"><h3>Authentication</h3><p>HTTP Basic Auth over TLS, wired the way Gradle and Maven already expect credentials. Constant-time comparison, no credential ever logged.</p></div>
     <div class="card"><h3>Metrics &amp; status</h3><p>Prometheus metrics, a read-only status page with hit rates and size-vs-cap, and a Grafana dashboard in the repo — so you know the cache is earning its keep.</p></div>
     <div class="card"><h3>30-minute migration</h3><p>A step-by-step guide for existing Build Cache Node deployments. Same protocol, same CI config shape — migrating is mostly a URL change.</p></div>
+    <div class="card"><h3>Verify every release</h3><p>Every step of our release produces signed provenance. When a FosterStack signature verifies, you know it's FosterStack code, a FosterStack build and a FosterStack image, and everything in between. <a href="/how-our-pipeline-maps-to-nist-and-slsa/">See how each stage maps</a>.</p></div>
+    <div class="card"><h3>Air-gapped ready</h3><p>No telemetry. Nothing outbound. It runs the same air-gapped.</p></div>
   </div>
-
-  <h2>Meticulous pipeline security</h2>
-  <p>Every step of our release produces signed provenance. When a FosterStack signature verifies, you know it's FosterStack code, a FosterStack build and a FosterStack image, and everything in between. No telemetry. Nothing outbound. It runs the same air-gapped.</p>
-  <p><a href="/how-we-build/">How we build</a> · <a href="/security/">Security policy</a> · <a href="/everything-we-do-for-security/">Everything we do for security</a></p>
 
   <h2 id="pricing">Pricing</h2>
   <p>Per product. Free is the full product.</p>
