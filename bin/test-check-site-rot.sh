@@ -100,14 +100,16 @@ with_guides() {
 import os, re, sys
 site, first, second = sys.argv[1:4]
 real = os.path.join(site, "guides")
-if os.path.isdir(real):
-    import shutil
-    shutil.rmtree(real)
-src = open(os.path.join(site, second, "index.html")).read()
-src = re.sub(r"<title>.*?</title>", "<title>Guides</title>", src, count=1, flags=re.S)
-src = src.replace("/%s/" % second, "/guides/")
-src = src.replace("</main>", '<p><a href="/%s/">listed guide</a></p></main>' % first, 1)
-os.makedirs(real)
+if os.path.isfile(os.path.join(real, "index.html")):
+    # a real /guides/ page: keep it, and make sure it lists $first
+    src = open(os.path.join(real, "index.html")).read()
+else:
+    src = open(os.path.join(site, second, "index.html")).read()
+    src = re.sub(r"<title>.*?</title>", "<title>Guides</title>", src, count=1, flags=re.S)
+    src = src.replace("/%s/" % second, "/guides/")
+    os.makedirs(real, exist_ok=True)
+if 'href="/%s/"' % first not in src:
+    src = src.replace("</main>", '<p><a href="/%s/">listed guide</a></p></main>' % first, 1)
 open(os.path.join(real, "index.html"), "w").write(src)
 home = os.path.join(site, "index.html")
 h = open(home).read().replace('href="/%s/"' % first, 'href="/"')
