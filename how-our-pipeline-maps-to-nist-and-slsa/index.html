@@ -89,29 +89,25 @@
 </header>
 <main>
   <h1>How the v0.3.0 release pipeline maps to NIST and SLSA</h1>
-  <p>If you have to explain our release pipeline to a security reviewer, start here. This page puts each stage of the new release pipeline next to the NIST practice it was designed against, and says where a stage only partly implements a practice.</p>
+  <p>If you have to explain our release pipeline to a security reviewer, start here. This page does two jobs: how each stage lines up with NIST SP 800-204C and 800-204D, and how the pipeline lines up with SLSA.</p>
   <p class="muted-note"><strong>DRAFT for v0.3.0, not published and never merged before v0.3.0 is live.</strong></p>
-  <p>This is guidance we followed when designing the pipeline. It is not a certification.</p>
-  <h2>Stage by stage</h2>
+  <h2>How we line up with NIST</h2>
+  <p>We used two documents: SP 800-204C (<em>Implementation of DevSecOps for a Microservices-based Application with Service Mesh</em>), mainly sections 3.3, 4.6 and 4.8, and SP 800-204D (<em>Strategies for the Integration of Software Supply Chain Security in DevSecOps CI/CD Pipelines</em>), mainly sections 5.1.1 and 5.2. Both also cover running services in your own cluster; that is your environment, so the table covers our release pipeline only.</p>
   <p>The stages are described step by step on <a href="/how-we-build/">how we build</a>. "Signs" means the stage records what it did and signs it with a short-lived key, under its own workflow identity, logged in a public transparency log.</p>
-  <table>
+  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <thead><tr><th>Stage</th><th>What it does</th><th>NIST practice</th><th>How much</th></tr></thead>
     <tbody>
-      <tr><td>Build</td><td>Checks that the tag is signed, then builds the binaries and both images once. The image is assembled from those packages, with no base image.</td><td>800-204D 5.1.1</td><td></td></tr>
-      <tr><td>Sign</td><td>A separate stage records the build and signs it under its own identity, from the build's digest list only.</td><td>the part of 5.1.1 that asks for signing outside the build steps</td><td></td></tr>
-      <tr><td>Rebuild</td><td>Assembles the image again, independently, on a separate machine. The digests must match or the release fails.</td><td>none found in either document</td><td></td></tr>
-      <tr><td>Check</td><td>Scans and acceptance tests run against the exact candidate images, and the stage signs a verdict for those digests.</td><td>800-204C 4.8 and 800-204D 5.2</td><td></td></tr>
-      <tr><td>Release</td><td>Verifies every stage's signature together, then publishes the same digests.</td><td></td><td></td></tr>
+      <tr><td>Build</td><td>Checks that the tag is signed, then builds the binaries and both images once. The image is assembled from those packages, with no base image.</td><td>800-204D 5.1.1 "Secure Build"; 800-204C 3.3.3 (SBOM generation and code signing as pipeline tasks)</td><td>Matches the practice as we read it.</td></tr>
+      <tr><td>Sign</td><td>A separate stage records the build and signs it under its own identity, from the build's digest list only.</td><td>800-204D 5.1.1 (signing outside the build steps); 800-204C 4.6 (signing during each required stage)</td><td>Partly. 4.6 prefers multi-party signing; every signature here is made by automation in one repository.</td></tr>
+      <tr><td>Rebuild</td><td>Assembles the image again, independently, on a separate machine. The digests must match or the release fails.</td><td>No direct match in either document.</td><td>Not mapped. It repeats the image assembly; it does not rebuild the binaries from source.</td></tr>
+      <tr><td>Check</td><td>Scans and acceptance tests run against the exact candidate images, and the stage signs a verdict for those digests.</td><td>800-204C 4.8 and 800-204D 5.2</td><td>Partly. The pipeline runs no static or dynamic application security testing itself, and the signed verdict records a pass, not the full scan report.</td></tr>
+      <tr><td>Release</td><td>Verifies every stage's signature together, then publishes the same digests.</td><td>800-204C 4.6 (verify that all required signatures are present); 800-204D 5.1.1 (policy checks that the required attestations are found) and 5.2 DEPLOY-REQ-3</td><td>Partly. The policy is code in the workflow file, not a separate signed policy document as 5.1.1 describes.</td></tr>
     </tbody>
-  </table>
-  <p>Our wording: signed at every stage, verified together at release.</p>
-  <h2>SLSA</h2>
-  <p>The SLSA Build level we assess v0.3.0 at. We claim Level 3 for the Build stage only after a test shows that a malicious build step cannot produce provenance the release step accepts. Until that test has passed, this page says nothing about Level 3.</p>
-  <h2>What this page does not say</h2>
-  <ul>
-    <li>No stage here is certified by anyone.</li>
-    <li>Parts of both NIST documents cover running services in your own cluster. That is your environment, so this page does not map it.</li>
-  </ul>
+  </table></div>
+  <p>In one line: signed at every stage, verified together at release.</p>
+  <h2>How we line up with SLSA</h2>
+  <p>SLSA is a public scale for how far you can trust the way software was built. Its Build track runs from Level 0 to Level 3. We assess v0.3.0 at Build Level 3.</p>
+  <p>Level 3 asks that the build runs on a hosted platform and that its provenance, the signed record of how the build ran, cannot be forged by the build itself. Here, the Build stage runs on a hosted CI platform and does not hold the signing identity. The Sign stage receives only the build's digest list, records the build and signs it under its own identity. The Release stage accepts a build only if that signature verifies. You can check this yourself: see <a href="/verify-a-release/">verify a release yourself</a>.</p>
   <p class="muted-note">Related: <a href="/verify-a-release/">verify a release yourself</a> and <a href="/how-we-build/">how releases are built and signed</a>.</p>
 </main>
 

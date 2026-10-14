@@ -112,7 +112,7 @@ Not yet shipped:
   analytics, email support), Business ($199/mo: adds HA/replication, priority
   support with the CVE-response target), and Compliance ($499/mo billed
   annually: adds the FIPS applicability statement, signed per-release
-  attestation letters, questionnaire hours, named-version LTS) are described,
+  attestation letters, questionnaire hours) are described,
   not yet purchasable; the license key that unlocks them is not built.
   Everything in the repository is the free MIT core, including the -fips image
   and all release evidence.
