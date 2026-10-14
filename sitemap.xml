@@ -12,6 +12,10 @@
     <lastmod>2026-10-08</lastmod>
   </url>
   <url>
+    <loc>https://fosterstack.com/whats-new-fosterstack-cache-v0-3-0/</loc>
+    <lastmod>2026-10-10</lastmod>
+  </url>
+  <url>
     <loc>https://fosterstack.com/build-cache-docker-compose-production/</loc>
     <lastmod>2026-10-08</lastmod>
   </url>
@@ -34,6 +38,18 @@
   <url>
     <loc>https://fosterstack.com/fips-140-3-build-cache/</loc>
     <lastmod>2026-10-08</lastmod>
+  </url>
+  <url>
+    <loc>https://fosterstack.com/what-to-verify-in-a-replacement-build-cache/</loc>
+    <lastmod>2026-10-14</lastmod>
+  </url>
+  <url>
+    <loc>https://fosterstack.com/is-a-remote-build-cache-worth-it/</loc>
+    <lastmod>2026-10-14</lastmod>
+  </url>
+  <url>
+    <loc>https://fosterstack.com/faq/</loc>
+    <lastmod>2026-10-14</lastmod>
   </url>
   <url>
     <loc>https://fosterstack.com/first-15-minutes-build-cache/</loc>
@@ -62,6 +78,22 @@
   <url>
     <loc>https://fosterstack.com/how-our-pipeline-maps-to-nist-and-slsa/</loc>
     <lastmod>2026-10-08</lastmod>
+  </url>
+  <url>
+    <loc>https://fosterstack.com/everything-we-do-for-security/</loc>
+    <lastmod>2026-10-13</lastmod>
+  </url>
+  <url>
+    <loc>https://fosterstack.com/scan-fosterstack-cache-image/</loc>
+    <lastmod>2026-10-13</lastmod>
+  </url>
+  <url>
+    <loc>https://fosterstack.com/guides/</loc>
+    <lastmod>2026-10-14</lastmod>
+  </url>
+  <url>
+    <loc>https://fosterstack.com/roadmap/</loc>
+    <lastmod>2026-10-14</lastmod>
   </url>
   <url>
     <loc>https://fosterstack.com/how-we-build/</loc>

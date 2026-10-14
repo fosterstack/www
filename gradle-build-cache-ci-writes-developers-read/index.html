@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="en">
 <head>
+<meta name="robots" content="noindex, nofollow">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Let CI write, developers only read: Gradle and Maven cache</title>
@@ -90,6 +91,7 @@
 <main>
   <h1>Let CI write, developers only read the build cache</h1>
   <p class="lede">Anything that can write to your build cache can change what later builds use, so give the right to write to as few machines as possible. This page sets up a cache where CI uploads and developers only download, in Gradle and in Maven, with a read-only login the server enforces.</p>
+  <p class="muted-note"><strong>DRAFT for v0.3, private preview, not published and never merged before v0.3.0 is live.</strong></p>
 
   <h2>Give the server two logins</h2>
   <p>The server takes one read-write login and, optionally, a second read-only login. A client using the read-only one can read cache entries, and any write is refused with a 403.</p>
@@ -174,7 +176,7 @@ org.apache.http.client.HttpResponseException: status code: 403, reason phrase: F
 
   <h2>What this does not give you</h2>
   <p>There is no per-person identity. Everyone who holds the read-write login is the same writer to the server, so keep it to CI. See <a href="/can-someone-poison-our-build-cache/#remote-build-cache-security">who can write to a remote build cache</a> and <a href="/gradle-remote-build-cache-authentication/#gradle-build-cache-http-status-codes">the HTTP status codes</a>. To see why laptops then reuse CI's work, see <a href="/laptop-builds-reuse-ci-build-cache/">your laptop builds reuse what CI already built</a>.</p>
-  <p>Our advice, not a test result: use HTTPS, keep the CI password in your CI secret store and never in the repository.</p>
+  <p>Our advice, not a test result: use HTTPS (behind a proxy, or with the server's own certificate: <code>FSCACHE_TLS_CERT</code> and <code>FSCACHE_TLS_KEY</code>), keep the CI password in your CI secret store and never in the repository.</p>
 
   <h2>How we checked</h2>
   <h3>Gradle run</h3>

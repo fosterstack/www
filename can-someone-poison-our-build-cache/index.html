@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="en">
 <head>
+<meta name="robots" content="noindex, nofollow">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Can Someone Poison Our Shared Build Cache?</title>
@@ -89,6 +90,7 @@
 <main>
   <h1>Can someone poison our shared build cache?</h1>
   <p class="lede">Anyone who holds the write login can change what every other build restores. FosterStack Cache does not stop that holder. It lets you give everyone else a read-only login, and in our runs the server refused their writes.</p>
+  <p class="muted-note"><strong>DRAFT for v0.3, private preview, not published and never merged before v0.3.0 is live.</strong></p>
 
   <h2>The short answer</h2>
   <p>The server has two logins. The write login lets a client store and replace entries. The read-only login lets a client only read them.</p>
@@ -115,7 +117,7 @@
     <li><strong>Give everyone else the optional read-only login.</strong> That includes laptops. The setup is on <a href="/gradle-build-cache-ci-writes-developers-read/">let CI write, developers only read</a>, and the CI wiring is on <a href="/jenkins-ci-build-cache/">Jenkins and CI build cache</a>.</li>
     <li><strong>Keep builds of untrusted code on the read-only login.</strong> An example is a pull request from a fork.</li>
     <li><strong>Do not count on <code>isPush = false</code>.</strong> It only controls whether your own build uploads. The login is what the server enforces.</li>
-    <li><strong>Use HTTPS, on a network you control.</strong> Gradle sends the login with its requests.</li>
+    <li><strong>Use HTTPS, on a network you control.</strong> Gradle sends the login with its requests. A proxy in front or the server's own certificate both work.</li>
     <li><strong>If you doubt an entry, clear the cache.</strong> See <a href="/reset-gradle-build-cache/">how to clear or reset a build cache</a>.</li>
   </ul>
   <p>FosterStack Cache has one write login and one read-only login. There is no per-person identity: a write login is shared by whoever holds it, so the login alone does not say which writer did what. We did not test whether the server records who wrote an entry.</p>
