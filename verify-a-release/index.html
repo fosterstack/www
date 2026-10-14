@@ -5,9 +5,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Verify a FosterStack Cache release yourself</title>
-<meta name="description" content="DRAFT v0.3.0: verify a FosterStack Cache release yourself with cosign, gh and jq. Not published.">
+<meta name="description" content="Verify a FosterStack Cache v0.3.0 release yourself with cosign, gh and jq: image signatures, signed file lists, digests, provenance and the parts list.">
 <meta property="og:title" content="Verify a FosterStack Cache release yourself">
-<meta property="og:description" content="DRAFT v0.3.0: verify a FosterStack Cache release yourself with cosign, gh and jq. Not published.">
+<meta property="og:description" content="Verify a FosterStack Cache v0.3.0 release yourself with cosign, gh and jq: image signatures, signed file lists, digests, provenance and the parts list.">
 <meta property="og:url" content="https://fosterstack.com/verify-a-release/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="FosterStack">
@@ -88,41 +88,66 @@
 </header>
 <main>
   <h1>Verify a FosterStack Cache release yourself</h1>
-  <p>You should not have to take our word for what you run. Signed at every stage, verified together at release. These commands check the final signature, how the image was built, its parts list and what it was assembled from, using only <code>cosign</code>, <code>gh</code> and <code>jq</code>.</p>
-  <p class="muted-note"><strong>DRAFT for v0.3.0, not published and never merged before v0.3.0 is live.</strong></p>
-  <p>Use the image by digest for <code>&lt;IMAGE_REF&gt;</code>. There are two images, production and fips; run every step for each.</p>
+  <p>You should not have to take our word for what you run. Signed at every stage, verified together at release. These steps check the image signatures, the signed file lists, the digest, how the release was built and its parts list, using only <code>cosign</code>, <code>gh</code>, <code>jq</code> and <code>sha256sum</code>. They are for v0.3.0 and later. For v0.2.x, see the <a href="https://github.com/fosterstack/cache/blob/main/docs/verify-images.md">image verification guide</a>.</p>
+  <p>You need no account to pull the images or to run <code>cosign</code>. Downloading release files with <code>gh</code> needs <code>gh auth login</code>; you can also download them from the release page in a browser.</p>
+  <h2>Set the version</h2>
+  <pre tabindex="0"><code>VER=$(curl -fsSL https://api.github.com/repos/fosterstack/cache/releases/latest \
+        | sed -n 's/.*"tag_name": *"v\([^"]*\)".*/\1/p')
+echo "$VER"
+IDENT="https://github.com/fosterstack/cache/.github/workflows"
+ISSUER=https://token.actions.githubusercontent.com</code></pre>
+  <p>There are two images, production and <code>-fips</code>. Run step 1 for each.</p>
   <h2 id="verify-container-image-signature-cosign">1. The signature and who signed it</h2>
-  <pre tabindex="0"><code># identity and issuer for the final signature
-cosign verify &lt;IMAGE_REF&gt; \
-  --certificate-identity-regexp '&lt;IDENTITY&gt;' \
-  --certificate-oidc-issuer https://token.actions.githubusercontent.com</code></pre>
-  <h2>2. The digest is the one in the release</h2>
-  <pre tabindex="0"><code># file name and layout
-gh release download &lt;TAG&gt; --repo fosterstack/cache -p release-manifest.json
-jq -r '.images[] | "\(.variant) \(.digest)"' release-manifest.json</code></pre>
-  <p>Every statement names the image by digest, never by tag. The digest you verified should match this list.</p>
-  <h2>3. How it was built</h2>
-  <pre tabindex="0"><code># signer workflow
-gh attestation verify oci://&lt;IMAGE_REF&gt; --repo fosterstack/cache \
-  --signer-workflow '&lt;WORKFLOW&gt;' --source-ref refs/tags/&lt;TAG&gt;</code></pre>
-  <p>One sentence on what this record covers. No SLSA level claim here.</p>
-  <h2>4. The parts list (SBOM)</h2>
-  <pre tabindex="0"><code># predicate type and what the list holds for an image with no base image
-cosign verify-attestation &lt;IMAGE_REF&gt; --type spdxjson \
-  --certificate-identity-regexp '&lt;IDENTITY&gt;' \
-  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-  | jq -r '.payload | @base64d | fromjson | .predicate.name'</code></pre>
-  <h2>5. What the image was assembled from</h2>
-  <pre tabindex="0"><code># what "inputs" means for a customer, and the one command that checks it
-cosign verify-attestation &lt;IMAGE_REF&gt; --type '&lt;INPUTS_TYPE&gt;' ... | jq '&lt;FILTER&gt;'</code></pre>
+  <pre tabindex="0"><code>cosign verify ghcr.io/fosterstack/cache:${VER} \
+  --certificate-identity "${IDENT}/stage-promote.yml@refs/tags/v${VER}" \
+  --certificate-oidc-issuer "$ISSUER"
+cosign verify ghcr.io/fosterstack/cache:${VER}-fips \
+  --certificate-identity "${IDENT}/stage-promote.yml@refs/tags/v${VER}" \
+  --certificate-oidc-issuer "$ISSUER"</code></pre>
+  <p>This shows that the release stage of our public pipeline, at this release tag, signed these exact images. The signing certificate lasts minutes and is recorded in Rekor, the public transparency log. There is no signing key to steal.</p>
+  <h2>2. The file lists are ours, and your files match them</h2>
+  <pre tabindex="0"><code>gh release download v${VER} --repo fosterstack/cache \
+  -p checksums.txt -p checksums.txt.bundle \
+  -p release-files.sha256 -p release-files.sha256.bundle \
+  -p release-manifest.json -p "fscache_${VER}_linux_amd64.tar.gz"
+for f in checksums.txt release-files.sha256; do
+  cosign verify-blob "$f" --bundle "$f.bundle" \
+    --certificate-identity "${IDENT}/stage-promote.yml@refs/tags/v${VER}" \
+    --certificate-oidc-issuer "$ISSUER"
+done
+sha256sum -c &lt;(grep "fscache_${VER}_linux_amd64.tar.gz" checksums.txt)
+sha256sum -c &lt;(grep release-manifest.json release-files.sha256)</code></pre>
+  <p>Do the signature check first. Without it, a list only proves that your files match a file anyone could have written. The archives are covered by the signed <code>checksums.txt</code>, and the manifest by the signed <code>release-files.sha256</code>.</p>
+  <h2>3. The digest is the one in the release</h2>
+  <pre tabindex="0"><code>jq -r '.images[] | "\(.variant) \(.digest)"' release-manifest.json</code></pre>
+  <p>Every statement names an image by digest, never by tag. The digest you pulled should be in this list.</p>
+  <h2>4. How it was built</h2>
+  <pre tabindex="0"><code>gh release download v${VER} --repo fosterstack/cache \
+  -p provenance.json -p provenance.bundle.json
+cosign verify-blob-attestation --bundle provenance.bundle.json \
+  --type https://slsa.dev/provenance/v1 --check-claims=false \
+  --certificate-identity "${IDENT}/stage-sign.yml@refs/tags/v${VER}" \
+  --certificate-oidc-issuer "$ISSUER"
+jq -r '.dsseEnvelope.payload | @base64d | fromjson | .subject[] | .name + " sha256:" + .digest.sha256' provenance.bundle.json</code></pre>
+  <p>The SLSA provenance is signed by a separate job with its own identity, <code>stage-sign.yml</code>. It receives only the list of digests the build made and runs no code from the build. The second command lists each item it names, with its digest.</p>
+  <h2>5. The parts list and what it was assembled from</h2>
+  <pre tabindex="0"><code>gh release download v${VER} --repo fosterstack/cache \
+  -p production.sbom.json -p production.sbom.json.bundle \
+  -p production.full.lock.json -p production.full.lock.json.bundle
+for f in production.sbom.json production.full.lock.json; do
+  cosign verify-blob "$f" --bundle "$f.bundle" \
+    --certificate-identity "${IDENT}/stage-promote.yml@refs/tags/v${VER}" \
+    --certificate-oidc-issuer "$ISSUER"
+done</code></pre>
+  <p>The SBOM lists what is in the image. The lock file lists every package the image was assembled from, by checksum. Repeat with <code>fips.sbom.json</code> and <code>fips.full.lock.json</code> for the <code>-fips</code> image.</p>
   <h2>What this proves</h2>
   <ul>
-    <li>A valid signature proves who signed these exact files.</li>
-    <li>Provenance proves which workflow and run produced them.</li>
-    <li>It does not prove the software has no bugs.</li>
+    <li>A valid signature proves who signed these exact files, and that the signing was recorded publicly.</li>
+    <li>Provenance proves which workflow, at which tag, produced the digests it names.</li>
+    <li>It does not prove the software has no bugs. Scan results and our statements about findings are separate: see <a href="/security/">the security policy</a>.</li>
   </ul>
-  <p>Extra evidence, outside these commands: records anyone who has Witness installed can check.</p>
-  <p class="muted-note">Related: <a href="/how-we-build/">how releases are built and signed</a> and <a href="/security/">security policy</a>.</p>
+  <p>Each stage of the release also writes a record that anyone with the Witness tool can check. Those records are extra evidence outside the steps above, and are attached to the release.</p>
+  <p class="muted-note">Related: <a href="/how-we-build/">how releases are built and signed</a>, <a href="/how-our-pipeline-maps-to-nist-and-slsa/">how the pipeline maps to NIST and SLSA</a> and <a href="/scan-fosterstack-cache-image/">scan the image yourself</a>.</p>
   <p class="muted-note">Moving off the free Build Cache Node? See <a href="/build-cache-node-end-of-life/">what the end of life means</a> and the <a href="/migrate-build-cache-node/">migration guide</a>.</p>
 </main>
 <footer>

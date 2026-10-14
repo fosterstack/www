@@ -132,6 +132,17 @@ docker run -d --name fscache -p 127.0.0.1:8080:8080 \
     <tr><td>Stop 0.2.2, start 0.2.1 on the same volume again</td><td>starts normally; the status page shows 5 entries, 49 bytes; all five values read back</td></tr>
   </table></div>
 
+  <h2 id="upgrade-to-v0-3-0">Upgrading from 0.2.x to v0.3.0</h2>
+  <p>The upgrade steps above are the same: pull the new tag, stop the old container, start the new one on the same volume. Check these first, because they are the things that differ.</p>
+  <ul class="trust">
+    <li><strong>Linux only for binaries.</strong> v0.3.0 ships Linux archives (amd64 and arm64) and no macOS archive. On a Mac, run the Linux container image under Docker Desktop.</li>
+    <li><strong>Two images, no <code>-debug</code>.</strong> The production and <code>-fips</code> images hold only the <code>fscache</code> binary, with no shell. If you used the <code>:debug</code> tag, look inside a running container from outside it with <code>kubectl debug</code> or <code>docker debug</code>.</li>
+    <li><strong>The data folder is the same.</strong> The path has not moved. Temporary files of writes in flight now live in a <code>+tmp</code> folder inside it, so a backup of the volume still covers everything.</li>
+    <li><strong>Your settings keep their meaning.</strong> Every <code>FSCACHE_*</code> setting works as before. The server now logs a warning for an <code>FSCACHE_*</code> variable it does not know, so read the log once after the upgrade for a misspelt name.</li>
+    <li><strong>Verification commands differ.</strong> If your pipeline verifies images, the signing workflow names changed with the new release chain. Use <a href="/verify-a-release/">verify a release yourself</a> for v0.3.0 and later.</li>
+  </ul>
+  <p>Back up the volume first if refilling the cache is expensive for you, as in the back-up section below.</p>
+
   <h2>Two differences between the releases</h2>
   <ul class="trust">
     <li><strong>0.1.0 has no status page.</strong> <code>/statusz</code> returned 404 there. 0.2.1 has it. The metrics page is on both.</li>

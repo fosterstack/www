@@ -92,10 +92,10 @@
   <h2>What to bring across</h2>
   <p>On a machine with internet access, download these from the release page:</p>
   <ul class="trust">
-    <li>The archive for your platform, for example <code>fscache_X.Y.Z_linux_amd64.tar.gz</code>.</li>
+    <li>The archive for your platform, for example <code>fscache_X.Y.Z_linux_amd64.tar.gz</code>, or <code>fscache-fips_X.Y.Z_linux_amd64.tar.gz</code> for the FIPS build. From v0.3.0 the archives are for Linux only (amd64 and arm64). There is no macOS archive; on a Mac, use the Linux image under Docker Desktop.</li>
     <li><code>checksums.txt</code> and <code>checksums.txt.bundle</code>, which is the signature over the checksums.</li>
     <li><code>cosign</code>, the signature checker. It is one static binary and will not be on a fresh isolated machine.</li>
-    <li>If you run containers: the image as a tar file, for example <code>crane pull ghcr.io/fosterstack/cache:X.Y.Z fscache-X.Y.Z.tar</code>. Verify the image with <code>cosign verify</code> before you export it, while you still have registry access (the <a href="https://github.com/fosterstack/cache/blob/main/docs/verify-images.md">image verification guide</a> has the command). Images are published for both <code>linux/amd64</code> and <code>linux/arm64</code>. Across a gap you pick one by hand, so pull on a machine of the destination type, or add <code>--platform</code>.</li>
+    <li>If you run containers: the image as a tar file, for example <code>crane pull ghcr.io/fosterstack/cache:X.Y.Z fscache-X.Y.Z.tar</code>, and <code>:X.Y.Z-fips</code> for the FIPS image. There are two images, production and <code>-fips</code>; v0.3.0 has no <code>-debug</code> image. Verify the image with <code>cosign verify</code> before you export it, while you still have registry access (<a href="/verify-a-release/">verify a release yourself</a> has the command). Images are published for both <code>linux/amd64</code> and <code>linux/arm64</code>. Across a gap you pick one by hand, so pull on a machine of the destination type, or add <code>--platform</code>.</li>
   </ul>
 
   <h2>Verify before you cross the gap</h2>
@@ -103,13 +103,12 @@
   <pre tabindex="0"><code># 1. Prove the checksums file is ours
 cosign verify-blob \
   --bundle checksums.txt.bundle \
-  --certificate-identity-regexp='^https://github.com/fosterstack/cache/' \
+  --certificate-identity='https://github.com/fosterstack/cache/.github/workflows/stage-promote.yml@refs/tags/vX.Y.Z' \
   --certificate-oidc-issuer='https://token.actions.githubusercontent.com' \
   checksums.txt
 
 # 2. Prove your archive matches it
-sha256sum -c &lt;(grep "fscache_X.Y.Z_linux_amd64.tar.gz" checksums.txt | grep -v sbom)</code></pre>
-  <p><code>grep -v sbom</code> drops the SBOM line, because that file is not carried across. Without it, <code>sha256sum</code> reports the file as missing and fails.</p>
+sha256sum -c &lt;(grep "fscache_X.Y.Z_linux_amd64.tar.gz" checksums.txt)</code></pre>
   <p>Both steps matter. The checksum alone only shows the archive matches a file you carried beside it. The signature is what ties that file to us.</p>
 
   <h2>Install on the isolated side</h2>

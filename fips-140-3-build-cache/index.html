@@ -92,7 +92,7 @@
   <p class="muted-note"><strong>DRAFT for v0.3, private preview, not published and never merged before v0.3.0 is live.</strong></p>
 
   <h2>What the FIPS build is</h2>
-  <p>It is the same source as the production build, compiled so that it uses Go's validated FIPS 140-3 module (CMVP certificate #5247). It is available as a container image tag ending in <code>-fips</code>, and as Linux binaries for amd64 and arm64. There is no macOS FIPS build.</p>
+  <p>It is the same source as the production build, compiled so that it uses Go's validated FIPS 140-3 module (CMVP certificate #5247). It is available as a container image tag ending in <code>-fips</code>, and as Linux binaries for amd64 and arm64, named <code>fscache-fips_X.Y.Z_linux_amd64.tar.gz</code> and <code>fscache-fips_X.Y.Z_linux_arm64.tar.gz</code>. The FIPS image has no shell. There is no macOS FIPS build.</p>
 
   <h2>Run it</h2>
   <pre tabindex="0"><code>docker run -d -p 127.0.0.1:8080:8080 -v fscache-data:/home/nonroot \
@@ -117,7 +117,7 @@
   <h2>What this tells you, and what it does not</h2>
   <ul class="trust">
     <li>It shows the running program is using Go's validated module. The validation is of that cryptographic module.</li>
-    <li>Our own tests run the whole suite against the FIPS build with the module set to refuse any algorithm it does not approve. That proves the code paths the tests reach. Before publishing, the release runs the released FIPS binary (Linux, amd64) and requires its status page to show the <code>active (Go validated module ...)</code> line. It also starts the FIPS image and stores and fetches a test entry through it. No test yet reads the status page of the running FIPS image, so checking it yourself, as shown above, is still worth doing.</li>
+    <li>Our own tests run the whole suite against the FIPS build with the module set to refuse any algorithm it does not approve. That proves the code paths the tests reach. Before a release is published, its pipeline starts both candidate images and reads each status page: the <code>-fips</code> image must report FIPS mode active with module v1.0.0, and the production image must report it off. A release that fails this check is not published. The certificate number is our documented mapping for module v1.0.0, not something a binary reports about itself. Checking it yourself, as shown above, is still worth doing.</li>
     <li>FosterStack Cache is not "FedRAMP compliant" or "CMMC compliant". Those attach to your service and your organization, never to a component you deploy. The FIPS build is validated crypto for your compliance program, not a substitute for it.</li>
   </ul>
 
