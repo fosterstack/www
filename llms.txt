@@ -110,8 +110,8 @@ Not yet shipped:
 - The paid tiers. Team ($49/mo: multi-user access control, SSO, per-project
   analytics, email support), Business ($199/mo: adds HA/replication, priority
   support with the CVE-response target), and Compliance ($499/mo billed
-  annually: adds the FIPS applicability statement, a signed monthly
-  attestation letter covering every release, questionnaire hours, named-version LTS) are described,
+  annually: adds the FIPS applicability statement, a monthly
+  attestation letter covering every release, questionnaire hours) are described,
   not yet purchasable; the license key that unlocks them is not built.
   Everything in the repository is the free MIT core, including the -fips image
   and all release evidence.
