@@ -49,6 +49,7 @@ verifiable against the CI run that produced them.
 - [FIPS 140-3 build cache](https://fosterstack.com/fips-140-3-build-cache/): run the FIPS image and confirm FIPS mode.
 - [Reset a build cache](https://fosterstack.com/reset-gradle-build-cache/): how to empty it.
 - [Changelog](https://fosterstack.com/changelog/): release notes for v0.1.0, v0.2.1 and v0.2.2.
+- [Pricing](https://fosterstack.com/pricing/): what each tier includes; the paid tiers are described, not yet purchasable.
 - [For regulated markets](https://fosterstack.com/regulated/): the FIPS build and the public release evidence.
 - [Build cache size limit, eviction and a full disk](https://fosterstack.com/build-cache-eviction-size-limit/): What a self-hosted build cache does when it reaches its size cap: least-recently-used eviction, real numbers from a 0.2.1 server, and what an oversized entry gets.
 - [Your first 15 minutes with a self-hosted build cache](https://fosterstack.com/first-15-minutes-build-cache/): A checklist from nothing to your first FROM-CACHE with a self-hosted Gradle build cache, with the commands timed on a GitHub-hosted machine, release 0.2.2.
