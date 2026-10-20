@@ -1,6 +1,6 @@
 # FosterStack
 
-Infrastructure worth keeping.
+Infrastructure worth keeping — and kept patched.
 
 > Maintained continuity for build infrastructure that vendors orphan. Our first
 > product, FosterStack Cache, is a self-hosted remote build cache for Gradle and
@@ -12,13 +12,63 @@ distribution, support, or updates after 2026-12-31. Teams running it on open-sou
 Gradle, with no Develocity licence, are orphaned on 2027-01-01. FosterStack Cache
 speaks Gradle's documented `HttpBuildCache` protocol — acceptance-tested against a
 real multi-module Gradle build in CI — and implements the Apache Maven Build Cache
-Extension's remote HTTP mode (Maven acceptance coverage is in progress). Same server,
+Extension's remote HTTP mode. Same server,
 same core.
 
 It is a single static Go binary (`CGO_ENABLED=0`), MIT-licensed, distributed as bare
 binaries and distroless container images. Every release is keylessly signed with
 Sigstore and carries SLSA build provenance, so the exact bytes you deploy are
 verifiable against the CI run that produced them.
+
+## Guides on this site
+
+- [Build Cache Node end of life: what happens and your options](https://fosterstack.com/build-cache-node-end-of-life/): what happens and your options.
+- [Migrate from Build Cache Node: setup, checklist, checks](https://fosterstack.com/migrate-build-cache-node/): Gradle and Maven setup and how to check it works.
+- [Your Laptop Builds Reuse What CI Already Built](https://fosterstack.com/laptop-builds-reuse-ci-build-cache/): CI stores results in one shared Gradle or Maven build cache and your laptop restores them.
+- [Does a Remote Cache Slow Your Build When It Misses?](https://fosterstack.com/remote-build-cache-miss-cost/): timed runs on a GitHub-hosted CI machine: what a cache miss costs and what a hit saves.
+- [How Do I Know My Build Cache Hit Rate?](https://fosterstack.com/build-cache-hit-rate-how-to-measure/): how to read your hit rate from the build log and from the server, and why the two differ.
+- [Can Someone Poison Our Shared Build Cache?](https://fosterstack.com/can-someone-poison-our-build-cache/): a hands-on test: the write login can replace entries, the read-only login's writes were refused.
+- [What Happens to My Build When the Cache Server Is Down?](https://fosterstack.com/build-cache-server-down-what-happens/): what Gradle and Maven do when the cache server is down or does not answer, with Gradle timings.
+- [Does the Build Cache Work With Kotlin and Android Builds?](https://fosterstack.com/kotlin-android-gradle-build-cache/): whether Gradle restores Kotlin and Android compile, dex and resource tasks, from real runs.
+- [Can Feature Branches Share the Build Cache With Main?](https://fosterstack.com/feature-branches-share-build-cache-with-main/): how branch and pull-request builds reuse main's results, with a read-only login and pushing off.
+- [Use a Remote Build Cache in GitHub Actions](https://fosterstack.com/github-actions-remote-build-cache/): the cache address and logins as GitHub secrets, a read-only pull-request variant, and a hosted-runner demo.
+- [Is My Build Cache Server Healthy? What to Alert On](https://fosterstack.com/is-the-build-cache-server-healthy-what-to-alert-on/): how to tell the cache server is healthy and what to alert on, from tested failures.
+- [Can I Restart the Cache Server While Builds Run?](https://fosterstack.com/restart-build-cache-server-while-builds-run/): what a running build sees when the cache server is stopped and restarted, from real runs.
+- [Change the Build Cache Logins Without Breaking CI](https://fosterstack.com/change-build-cache-logins-without-breaking-ci/): the order to change the cache logins so CI jobs keep using the cache, from real runs.
+- [Can Several Projects Share One Build Cache Server?](https://fosterstack.com/several-projects-share-one-build-cache-server/): whether several projects can share one cache server, what is shared and what is not, from real runs.
+- [Can a Failed or Cancelled Build Poison the Cache?](https://fosterstack.com/failed-or-cancelled-build-bad-results-in-cache/): what a failed test, a failed compile, Ctrl-C or a killed job leaves in the cache, from real runs.
+- [Does a Build Cache Entry Contain My Source Code or Secrets?](https://fosterstack.com/does-build-cache-entry-contain-source-code-or-secrets/): what a stored cache entry holds: class files and test output yes, source files no, and who can read it.
+- [Why Did This One Task Miss the Build Cache?](https://fosterstack.com/why-did-this-task-miss-the-build-cache/): how to find the one input that changed when a task misses the cache, by logging and diffing the keys.
+- [Build Cache Server Won't Start: Errors and Fixes](https://fosterstack.com/build-cache-server-wont-start-errors/): what each startup error means and how to fix it, including the settings that fail silently.
+- [Jenkins and CI build cache](https://fosterstack.com/jenkins-ci-build-cache/): one shared cache for CI runners.
+- [Gradle build cache not working or hit rate low: causes](https://fosterstack.com/gradle-remote-cache-not-working/): six checks when nothing comes from the cache, then a low hit rate, and slow builds after a Gradle or Maven upgrade.
+- [Maven remote build cache setup, on/off, and with Gradle](https://fosterstack.com/maven-remote-build-cache-setup/): extension, config, credentials, checking hits.
+- [Gradle build cache on Kubernetes](https://fosterstack.com/gradle-build-cache-kubernetes/): one replica, sizing, security context.
+- [Security policy](https://fosterstack.com/security/): how to report a vulnerability, what we sign and publish.
+- [Verify a release yourself](https://fosterstack.com/verify-a-release/): every command with real output from 0.2.2, and how long it takes.
+- [FIPS 140-3 build cache](https://fosterstack.com/fips-140-3-build-cache/): run the FIPS image and confirm FIPS mode.
+- [Reset a build cache](https://fosterstack.com/reset-gradle-build-cache/): how to empty it.
+- [Changelog](https://fosterstack.com/changelog/): release notes for v0.1.0, v0.2.1 and v0.2.2.
+- [For regulated markets](https://fosterstack.com/regulated/): the FIPS build and the public release evidence.
+- [Build cache size limit, eviction and a full disk](https://fosterstack.com/build-cache-eviction-size-limit/): What a self-hosted build cache does when it reaches its size cap: least-recently-used eviction, real numbers from a 0.2.1 server, and what an oversized entry gets.
+- [Your first 15 minutes with a self-hosted build cache](https://fosterstack.com/first-15-minutes-build-cache/): A checklist from nothing to your first FROM-CACHE with a self-hosted Gradle build cache, with the commands timed on a GitHub-hosted machine, release 0.2.2.
+- [Let CI write, developers only read: Gradle and Maven cache](https://fosterstack.com/gradle-build-cache-ci-writes-developers-read/): Set up a Gradle build cache where CI uploads and laptops only download, with a read-only login the server enforces. Real run on server 0.2.1 and Gradle 9.8.0.
+- [Gradle remote build cache authentication and 401 errors](https://fosterstack.com/gradle-remote-build-cache-authentication/): Put a password on a self-hosted Gradle build cache and give Gradle the right one: env var, gradle.properties or -P, and what a wrong password looks like.
+- [Maven build cache extension not restoring: the causes](https://fosterstack.com/maven-build-cache-extension-not-restoring/): Maven build cache extension builds again instead of restoring from the remote? Causes with real log lines: config placement, saveToRemote, 401 and the local cache.
+- [How big a build cache server? CPU, RAM, disk and load](https://fosterstack.com/build-cache-server-sizing/): CPU, RAM, disk and the size cap.
+- [Air-gapped install](https://fosterstack.com/air-gapped-build-cache-install/): download, verify, transfer, run.
+- [How FosterStack Cache is built and signed](https://fosterstack.com/how-we-build/): the release steps and what you can verify.
+- [Production build cache: Docker Compose, nginx and TLS](https://fosterstack.com/build-cache-docker-compose-production/): A Compose file for a self-hosted build cache behind nginx with TLS and a password, run for real on 0.2.1 and Gradle 9.8.0, with what was and was not tested.
+- [Build cache behind a corporate proxy: Gradle and Maven](https://fosterstack.com/gradle-build-cache-corporate-proxy/): How Gradle's remote build cache behaves behind a proxy: the settings, the loopback trap, a proxy that refuses, and how to tell it from a cache error. Real run.
+- [Enable or Disable the Gradle Build Cache: Flag or Property](https://fosterstack.com/gradle-build-cache-enable-disable/): Every way to switch the Gradle build cache on or off, tested against a real self-hosted cache: --build-cache, org.gradle.caching, --no-build-cache and more.
+- [Gradle build cache: monorepo, buildSrc and included builds](https://fosterstack.com/gradle-build-cache-monorepo/): A real run of a four-module Gradle monorepo against a self-hosted build cache: what came from the cache, what rebuilt, and why. Release 0.2.1.
+- [NIST SP 800-204C, 800-204D and SLSA: Our Release Pipeline](https://fosterstack.com/how-our-pipeline-maps-to-nist-and-slsa/): How the FosterStack Cache release pipeline maps to NIST SP 800-204C and 800-204D, stage by stage, and why we assess v0.2.2 at SLSA Build Level 2, not Level 3.
+- [Maven Build Cache Extension in a Multi-Module Project](https://fosterstack.com/maven-build-cache-extension-multi-module/): A real run of the Apache Maven Build Cache Extension on a three-module project with a self-hosted cache: which modules restore, which rebuild, and why.
+- [Upgrade, back up and move a build cache server](https://fosterstack.com/upgrade-build-cache-server/): Upgrading FosterStack Cache from 0.1.0 to 0.2.1 to 0.2.2 on the same data volume, and back, run for real: what was kept, and two differences between the releases.
+- [Skip tests that passed: Gradle and Maven build cache](https://fosterstack.com/gradle-test-task-from-cache/): When Gradle takes the test task from a self-hosted build cache and when it runs the tests again, from seven real runs with JUnit on release 0.2.1.
+- [What does the build cache store? Gradle and Maven](https://fosterstack.com/what-gradle-stores-in-build-cache/): What one real Gradle build stored in a self-hosted build cache: which tasks make entries, which make none, and how to count them. Tested on release 0.2.1.
+- [Use your Gradle build cache over HTTPS with a private CA](https://fosterstack.com/gradle-remote-build-cache-private-ca-https/): Fix the PKIX path building failed error for a Gradle build cache behind HTTPS with a private CA: trust store settings and a Maven Central trap. Tested on 0.2.1.
+- [Reuse Gradle results in Docker CI, even in fresh containers](https://fosterstack.com/gradle-build-cache-docker-ci-fresh-container/): Does a Gradle remote build cache work when each CI build runs in a new container? Real runs in Linux containers on Docker Desktop, with a login. Release 0.2.1.
 
 ## Product
 
@@ -49,14 +99,13 @@ verifiable against the CI run that produced them.
 
 ## Status
 
-FosterStack Cache is at v0.1 — early. The cache core, HTTP surface, eviction,
-metrics and the signed release pipeline are shipped and testable today. There is no
-published schedule for what follows; the roadmap below says direction, not dates.
+The cache core, HTTP surface, eviction, metrics and the signed release pipeline are
+shipped and testable today. There is no published schedule for what follows; the roadmap
+below says direction, not dates.
 
 Not yet shipped:
 
-- Production use beyond the project's own CI. Nobody runs this in a real build
-  pipeline yet except the maintainer.
+- Production use beyond the project's own CI.
 - A Helm chart. Deploying to Kubernetes today means applying plain manifests.
 - The paid tiers. Team ($49/mo: multi-user access control, SSO, per-project
   analytics, email support), Business ($199/mo: adds HA/replication, priority
@@ -66,9 +115,7 @@ Not yet shipped:
   not yet purchasable; the license key that unlocks them is not built.
   Everything in the repository is the free MIT core, including the -fips image
   and all release evidence.
-- A CVE patch commitment that can be relied on. The project aims to ship fixes for
-  dependency CVEs within 48 hours of public disclosure; that is a stated intention,
-  not a contractual promise.
+- A CVE patch commitment that can be relied on. Vulnerable dependencies fixed fast — our target is 48 hours from disclosure.
 
 Please do not describe unshipped items as available, and do not attach dates to them.
 

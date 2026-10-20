@@ -7,6 +7,43 @@ on:
   push:
     branches: [main]
   pull_request:
+  schedule:
+    - cron: '17 5 * * *'   # daily: the proof-watch job decides whether today proves every bench job (new release tag, or Monday)
+  workflow_dispatch:
+    inputs:
+      bench_ver:
+        description: "Optional: a release version X.Y.Z for the scripts that take one (empty = each script default). Only read as an environment variable; every script checks it."
+        type: string
+        required: false
+        default: ''
+      which:
+        description: Which manual run to start (only used on manual dispatch)
+        type: choice
+        options:
+          - miss-cost
+          - server-down
+          - android
+          - github-actions
+          - verify-release
+          - setup-pages
+          - howto-pages
+          - mac-linux
+          - howto-pages-2
+          - howto-pages-3
+          - k8s-page
+          - ga-page
+          - howto-pages-4
+          - howto-pages-5
+          - howto-pages-6
+          - howto-pages-7
+          - howto-pages-8
+          - howto-pages-9
+          - howto-pages-10
+          - howto-pages-11
+          - howto-pages-12
+          - proof-watch
+          - proof-selftest
+        default: miss-cost
 
 permissions:
   contents: read
@@ -16,6 +53,783 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # two commits, so the parent is there: on a pull request HEAD^1 is the base, on a push it is the previous main
+          fetch-depth: 2
 
       - name: check every tracked file against the allowlist
         run: git ls-files | ./bin/check-file-allowlist.sh
+
+      - name: self-test the allowlist (dot-prefixed paths are served, so they are held to a short list)
+        run: bash bin/test-check-file-allowlist.sh
+
+      # Keeps the site from rotting: broken links and #anchors, a removed page without its two 301 lines,
+      # sitemap / llms.txt / home-page mismatches, a title over 60 characters. Reads files only.
+      - name: check the site for rot
+        run: python3 bin/check-site-rot.py --base HEAD^1
+
+      - name: self-test the site-rot check
+        run: bash bin/test-check-site-rot.sh
+
+  # proof-watch: on the daily schedule it decides whether today's run proves every bench job below (a new release tag of
+  # fosterstack/cache, or Monday for the weekly run). It reads only the releases of fosterstack/cache and only tags matching
+  # ^v[0-9]+\.[0-9]+\.[0-9]+$ (any other tag is reported, never run); see bin/proof-watch.sh. On a manual run with
+  # which=proof-watch it only prints that decision. Read-only token, no secret.
+  proof-watch:
+    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.which == 'proof-watch')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      run: ${{ steps.watch.outputs.run }}
+      tag: ${{ steps.watch.outputs.tag }}
+      ver: ${{ steps.watch.outputs.ver }}
+      reason: ${{ steps.watch.outputs.reason }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - id: watch
+        name: decide whether today proves every bench job
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash bin/proof-watch.sh
+
+  # Timed runs for the "what does a cache miss cost" page. Manual dispatch only; never runs on push or
+  # pull request. No secrets, no write permission, no third-party action beyond the pinned checkout above.
+  # The script downloads the FosterStack Cache release and Gradle, and checks both against pinned sha256 values.
+  bench-miss-cost:
+    needs: proof-watch
+    if: ${{ !cancelled() && ((github.event_name == 'workflow_dispatch' && inputs.which == 'miss-cost') || (github.event_name == 'schedule' && needs.proof-watch.outputs.run == 'true')) }}
+    runs-on: ubuntu-latest
+    env:
+      BENCH_VER: ${{ needs.proof-watch.outputs.ver || inputs.bench_ver }}   # empty on a plain manual run: the script's own default release
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: timed runs (cache off, cache on and empty, cache on and filled)
+        run: BENCH_N=7 bash bin/bench-miss-cost.sh
+
+  # Timed runs for the "what happens when the cache server is down" page. Same rules as above: manual dispatch only,
+  # chosen with the "which" input (compared in this `if` only, never put into a shell command). The script checks its
+  # downloads against pinned sha256 values. The blackhole address is a non-routable private address; nothing is sent
+  # anywhere that answers. A build that hangs is cut off by the script's own per-build limit and the job timeout.
+  bench-server-down:
+    needs: proof-watch
+    if: ${{ !cancelled() && ((github.event_name == 'workflow_dispatch' && inputs.which == 'server-down') || (github.event_name == 'schedule' && needs.proof-watch.outputs.run == 'true')) }}
+    runs-on: ubuntu-latest
+    env:
+      BENCH_VER: ${{ needs.proof-watch.outputs.ver || inputs.bench_ver }}   # empty on a plain manual run: the script's own default release
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: timed runs (no cache, cache on and empty, server refused, address that never answers)
+        run: BENCH_N=7 BENCH_LIMIT=120 bash bin/bench-server-down.sh
+
+  # How long does the /verify-a-release/ page take a reader on a clean machine? Manual dispatch only, chosen with the "which"
+  # input (compared in this `if` only, never put into a shell command). Each repetition starts a fresh container from a
+  # digest-pinned debian image, installs only what the page names (cosign and gh are checked against pinned sha256 values)
+  # and runs the page's commands word for word, timing every step. The one new thing: the automatic, read-only GITHUB_TOKEN
+  # (not a repository secret, not persisted) is passed to the script, which exports it only for steps 5 to 7, because the
+  # page says those steps need a token. Everything else follows the other jobs: contents: read, no write access.
+  bench-verify-release:
+    needs: proof-watch
+    if: ${{ !cancelled() && ((github.event_name == 'workflow_dispatch' && inputs.which == 'verify-release') || (github.event_name == 'schedule' && needs.proof-watch.outputs.run == 'true')) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: verify a release as the page says, timed, in fresh containers
+        env:
+          TOKEN_FOR_STEPS_5_TO_7: ${{ github.token }}
+        run: bash bin/bench-verify-release.sh
+
+  # How long do the commands on /first-15-minutes-build-cache/ and /maven-remote-build-cache-setup/ take, and does each page say what
+  # really happens? Manual dispatch only, chosen with the "which" input (compared in this `if` only, never put into a shell command).
+  # It runs on the fresh runner VM itself, with no token and no secret (the release files download without a login), contents: read.
+  # Gradle, Maven and cosign are downloaded and checked against pinned checksums; the Maven build-cache extension and the Maven plugins
+  # come from Maven Central at run time (not checksum-pinned, said in the script's own output). The script times commands, not people.
+  bench-setup-pages:
+    needs: proof-watch
+    if: ${{ !cancelled() && ((github.event_name == 'workflow_dispatch' && inputs.which == 'setup-pages') || (github.event_name == 'schedule' && needs.proof-watch.outputs.run == 'true')) }}
+    env:
+      BENCH_VER: ${{ needs.proof-watch.outputs.ver || inputs.bench_ver }}   # empty on a plain manual run: the script's own default release
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: follow the two setup pages' commands as written, timed, twice
+        run: bash bin/bench-setup-pages.sh
+
+  # End-to-end runs of three how-to pages (laptop-builds-reuse-ci, CI-writes-developers-read, Docker Compose production): the
+  # commands as written, the server's own counters checked, every output line the page promises asserted. Same rules as the other
+  # jobs: manual dispatch only, chosen with the "which" input (compared in this `if` only), no token and no secret, read-only
+  # token not persisted. Gradle, Maven 3.10.0 and 3.9.9, JDK 27 and cosign are downloaded and checked against pinned checksums;
+  # the Maven extension and plugins come from Maven Central (not pinned), the page's nginx tag is resolved once to a digest that
+  # is logged and used. Docker and Compose are the runner's own: the cache image is verified with cosign before it is run, and
+  # the page's published ports are used as written (the quick-start stack listens on this runner for a few minutes behind a
+  # made-up password).
+  bench-howto-pages:
+    needs: proof-watch
+    if: ${{ !cancelled() && ((github.event_name == 'workflow_dispatch' && inputs.which == 'howto-pages') || (github.event_name == 'schedule' && needs.proof-watch.outputs.run == 'true')) }}
+    env:
+      BENCH_VER: ${{ needs.proof-watch.outputs.ver || inputs.bench_ver }}   # empty on a plain manual run: the script's own default release
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: follow the three pages' commands as written and check what they promise
+        run: bash bin/bench-howto-pages.sh
+
+  # End-to-end runs of more how-to pages (private CA over HTTPS, migrate from the old node, and the Docker page's check block). Same
+  # rules as bench-howto-pages: manual dispatch only, chosen with the "which" input (compared in this `if` only), no token and no
+  # secret, read-only token not persisted. Gradle, Maven 3.10.0, JDK 27 and cosign are downloaded and checked against pinned
+  # checksums; the Maven extension, plugins and JUnit come from Maven Central (not pinned, said in the output). The cache image is
+  # verified with cosign by digest before docker runs it; the Docker page's quick-start Compose file publishes 8080 on this runner
+  # for a few seconds behind a made-up password.
+  bench-howto-pages-2:
+    needs: proof-watch
+    if: ${{ !cancelled() && ((github.event_name == 'workflow_dispatch' && inputs.which == 'howto-pages-2') || (github.event_name == 'schedule' && needs.proof-watch.outputs.run == 'true')) }}
+    env:
+      BENCH_VER: ${{ needs.proof-watch.outputs.ver || inputs.bench_ver }}   # empty on a plain manual run: the script's own default release
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: follow the pages' commands as written and check what they promise
+        run: bash bin/bench-howto-pages-2.sh
+
+  # End-to-end runs of two more how-to pages (gradle-remote-cache-not-working: the local-cache trap, 401, http://localhost, the Greet
+  # tasks, the Gradle and Maven version table; upgrade-build-cache-server: upgrade and rollback on a Docker volume, back up and
+  # restore, the Maven move). Same rules as bench-howto-pages: manual dispatch only, chosen with the "which" input (compared in this
+  # `if` only), no token and no secret, read-only token not persisted. Gradle (three versions), Maven (two), JDK 27 and cosign are
+  # downloaded and checked against pinned checksums; the Maven extension, plugins and JUnit come from Maven Central (not pinned, said
+  # in the output). The three cache images are pinned by digest and verified with cosign before docker runs them; the page's backup
+  # helper image ubuntu:24.04 is resolved once and its digest logged. Containers publish 127.0.0.1:8080 only.
+  bench-howto-pages-3:
+    needs: proof-watch
+    if: ${{ !cancelled() && ((github.event_name == 'workflow_dispatch' && inputs.which == 'howto-pages-3') || (github.event_name == 'schedule' && needs.proof-watch.outputs.run == 'true')) }}
+    env:
+      BENCH_VER: ${{ needs.proof-watch.outputs.ver || inputs.bench_ver }}   # empty on a plain manual run: the script's own default release
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: follow the pages' commands as written and check what they promise
+        run: bash bin/bench-howto-pages-3.sh
+
+  # The Kubernetes page: the cache repo's four manifests (docs/kubernetes.md at the v0.2.2 tag, file checked by sha256) applied as
+  # written in a kind cluster (Kubernetes in Docker) in a namespace that enforces the Pod Security restricted profile; ready, the
+  # /healthz probe, the guide's port-forward smoke test, a Gradle build from outside with a server hit, the volume surviving a pod
+  # delete, a second replica, and the warning about FSCACHE_DATA_DIR. Same rules as the other jobs: manual dispatch only, chosen
+  # with the "which" input (compared in this `if` only), no token and no secret, read-only token not persisted. kind, kubectl,
+  # cosign and Gradle are checked against pinned sha256 values; the kind node image and the cache image are pinned by digest, the
+  # cache image is verified with cosign and loaded into the cluster, so the cluster pulls nothing at run time. Docker and Java 21
+  # are the runner's own.
+  bench-k8s-page:
+    needs: proof-watch
+    if: ${{ !cancelled() && ((github.event_name == 'workflow_dispatch' && inputs.which == 'k8s-page') || (github.event_name == 'schedule' && needs.proof-watch.outputs.run == 'true')) }}
+    runs-on: ubuntu-latest
+    env:
+      BENCH_VER: ${{ needs.proof-watch.outputs.ver || inputs.bench_ver }}   # empty on a plain manual run: the script's own default release
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: apply the guide's manifests in a kind cluster and check what the page says
+        run: bash bin/bench-k8s-page.sh
+
+  # The "Use a remote build cache in GitHub Actions" page, run as a real GitHub Actions job on a hosted runner: the page's workflow
+  # steps (checkout, then the Build step for Gradle and for Maven) word for word, with a cache server started by a step on this runner.
+  # Manual dispatch only, chosen with the "which" input (compared in this `if` only). No token and no secret: the five logins are made-up
+  # values in this job's env, and the page's `secrets.X` is `env.TEST_X` here and its `github.event_name == 'push'` is `env.TEST_EVENT ==
+  # 'push'` (a manual dispatch is neither a push nor a pull request; bin/bench-ga-page.sh says so in its output). The release is verified
+  # (cosign and sha256) before the server starts; Gradle and cosign are checked against pinned sha256 values; the Maven extension and
+  # plugins come from Maven Central (not pinned, said in the output). The helper script takes only fixed words from this file.
+  bench-ga-page:
+    needs: proof-watch
+    if: ${{ !cancelled() && ((github.event_name == 'workflow_dispatch' && inputs.which == 'ga-page') || (github.event_name == 'schedule' && needs.proof-watch.outputs.run == 'true')) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      BENCH_VER: ${{ needs.proof-watch.outputs.ver || inputs.bench_ver }}   # empty on a plain manual run: the script's own default release
+      TEST_CACHE_URL: http://127.0.0.1:18495/
+      TEST_RW_USER: ci
+      TEST_RW_PASSWORD: ga-page-rw-secret-not-real
+      TEST_RO_USER: dev
+      TEST_RO_PASSWORD: ga-page-ro-secret-not-real
+      TEST_EVENT: push
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: setup (verify the release, start the cache server, generate the two projects)
+        run: bash bin/bench-ga-page.sh setup
+
+      # ---- Gradle, build on main (push): the read-write login, push on
+      - name: empty Gradle home
+        run: bash bin/bench-ga-page.sh fresh gradle
+      - name: pretend event, push on main
+        run: bash bin/bench-ga-page.sh event main
+      - name: Build
+        env:
+          CACHE_URL: ${{ env.TEST_CACHE_URL }}
+          CACHE_USER: ${{ env.TEST_EVENT == 'push' && env.TEST_RW_USER || env.TEST_RO_USER }}
+          CACHE_PASSWORD: ${{ env.TEST_EVENT == 'push' && env.TEST_RW_PASSWORD || env.TEST_RO_PASSWORD }}
+          CACHE_PUSH: ${{ env.TEST_EVENT == 'push' && 'true' || 'false' }}
+        run: ./gradlew build
+      - name: check gradle-main1
+        run: bash bin/bench-ga-page.sh expect gradle-main1
+      # ---- Gradle, build on main again from a fresh checkout
+      - name: empty Gradle home
+        run: bash bin/bench-ga-page.sh fresh gradle
+      - name: pretend event, push on main
+        run: bash bin/bench-ga-page.sh event main
+      - name: Build
+        env:
+          CACHE_URL: ${{ env.TEST_CACHE_URL }}
+          CACHE_USER: ${{ env.TEST_EVENT == 'push' && env.TEST_RW_USER || env.TEST_RO_USER }}
+          CACHE_PASSWORD: ${{ env.TEST_EVENT == 'push' && env.TEST_RW_PASSWORD || env.TEST_RO_PASSWORD }}
+          CACHE_PUSH: ${{ env.TEST_EVENT == 'push' && 'true' || 'false' }}
+        run: ./gradlew build
+      - name: check gradle-main2
+        run: bash bin/bench-ga-page.sh expect gradle-main2
+      # ---- Gradle, pull request: the read-only login, push off, the app changed
+      - name: empty Gradle home
+        run: bash bin/bench-ga-page.sh fresh gradle
+      - name: change the app source
+        run: bash bin/bench-ga-page.sh mutate gradle
+      - name: pretend event, pull request
+        run: bash bin/bench-ga-page.sh event pr
+      - name: Build
+        env:
+          CACHE_URL: ${{ env.TEST_CACHE_URL }}
+          CACHE_USER: ${{ env.TEST_EVENT == 'push' && env.TEST_RW_USER || env.TEST_RO_USER }}
+          CACHE_PASSWORD: ${{ env.TEST_EVENT == 'push' && env.TEST_RW_PASSWORD || env.TEST_RO_PASSWORD }}
+          CACHE_PUSH: ${{ env.TEST_EVENT == 'push' && 'true' || 'false' }}
+        run: ./gradlew build
+      - name: check gradle-pr
+        run: bash bin/bench-ga-page.sh expect gradle-pr
+      # ---- Gradle, fork pull request: every variable empty
+      - name: empty Gradle home
+        run: bash bin/bench-ga-page.sh fresh gradle
+      - name: pretend event, fork pull request (empty secrets)
+        run: bash bin/bench-ga-page.sh event fork
+      - name: Build
+        env:
+          CACHE_URL: ${{ env.TEST_CACHE_URL }}
+          CACHE_USER: ${{ env.TEST_EVENT == 'push' && env.TEST_RW_USER || env.TEST_RO_USER }}
+          CACHE_PASSWORD: ${{ env.TEST_EVENT == 'push' && env.TEST_RW_PASSWORD || env.TEST_RO_PASSWORD }}
+          CACHE_PUSH: ${{ env.TEST_EVENT == 'push' && 'true' || 'false' }}
+        run: ./gradlew build
+      - name: check gradle-fork
+        run: bash bin/bench-ga-page.sh expect gradle-fork
+      # ---- Gradle, by hand: the cases the page lists that the workflow cannot produce (push on with the read-only login; a wrong or empty password)
+      - name: read-only login with push on
+        run: bash bin/bench-ga-page.sh extra gradle-403
+      - name: wrong password
+        run: bash bin/bench-ga-page.sh extra gradle-401
+      - name: address set, login empty
+        run: bash bin/bench-ga-page.sh extra gradle-empty-login
+      # ---- Maven, build on main (push): read-write login, saving on
+      - name: empty local Maven build cache
+        run: bash bin/bench-ga-page.sh fresh maven
+      - name: pretend event, push on main
+        run: bash bin/bench-ga-page.sh event main
+      - name: Build
+        working-directory: mproj
+        env:
+          CACHE_URL: ${{ env.TEST_CACHE_URL }}
+          CACHE_USER: ${{ env.TEST_EVENT == 'push' && env.TEST_RW_USER || env.TEST_RO_USER }}
+          CACHE_PASSWORD: ${{ env.TEST_EVENT == 'push' && env.TEST_RW_PASSWORD || env.TEST_RO_PASSWORD }}
+          CACHE_PUSH: ${{ env.TEST_EVENT == 'push' && 'true' || 'false' }}
+        run: |
+          if [ -n "$CACHE_URL" ]; then
+            mvn -B -s .mvn/ci-settings.xml \
+              -Dmaven.build.cache.remote.enabled=true \
+              -Dmaven.build.cache.remote.url="$CACHE_URL" \
+              -Dmaven.build.cache.remote.save.enabled="${CACHE_PUSH:-false}" \
+              verify
+          else
+            mvn -B verify
+          fi
+      - name: check mvn-main1
+        run: bash bin/bench-ga-page.sh expect mvn-main1
+      # ---- Maven, build on main again from a fresh project
+      - name: empty local Maven build cache
+        run: bash bin/bench-ga-page.sh fresh maven
+      - name: pretend event, push on main
+        run: bash bin/bench-ga-page.sh event main
+      - name: Build
+        working-directory: mproj
+        env:
+          CACHE_URL: ${{ env.TEST_CACHE_URL }}
+          CACHE_USER: ${{ env.TEST_EVENT == 'push' && env.TEST_RW_USER || env.TEST_RO_USER }}
+          CACHE_PASSWORD: ${{ env.TEST_EVENT == 'push' && env.TEST_RW_PASSWORD || env.TEST_RO_PASSWORD }}
+          CACHE_PUSH: ${{ env.TEST_EVENT == 'push' && 'true' || 'false' }}
+        run: |
+          if [ -n "$CACHE_URL" ]; then
+            mvn -B -s .mvn/ci-settings.xml \
+              -Dmaven.build.cache.remote.enabled=true \
+              -Dmaven.build.cache.remote.url="$CACHE_URL" \
+              -Dmaven.build.cache.remote.save.enabled="${CACHE_PUSH:-false}" \
+              verify
+          else
+            mvn -B verify
+          fi
+      - name: check mvn-main2
+        run: bash bin/bench-ga-page.sh expect mvn-main2
+      # ---- Maven, pull request: read-only login, saving off, one file changed
+      - name: empty local Maven build cache
+        run: bash bin/bench-ga-page.sh fresh maven
+      - name: change the source
+        run: bash bin/bench-ga-page.sh mutate maven
+      - name: pretend event, pull request
+        run: bash bin/bench-ga-page.sh event pr
+      - name: Build
+        working-directory: mproj
+        env:
+          CACHE_URL: ${{ env.TEST_CACHE_URL }}
+          CACHE_USER: ${{ env.TEST_EVENT == 'push' && env.TEST_RW_USER || env.TEST_RO_USER }}
+          CACHE_PASSWORD: ${{ env.TEST_EVENT == 'push' && env.TEST_RW_PASSWORD || env.TEST_RO_PASSWORD }}
+          CACHE_PUSH: ${{ env.TEST_EVENT == 'push' && 'true' || 'false' }}
+        run: |
+          if [ -n "$CACHE_URL" ]; then
+            mvn -B -s .mvn/ci-settings.xml \
+              -Dmaven.build.cache.remote.enabled=true \
+              -Dmaven.build.cache.remote.url="$CACHE_URL" \
+              -Dmaven.build.cache.remote.save.enabled="${CACHE_PUSH:-false}" \
+              verify
+          else
+            mvn -B verify
+          fi
+      - name: check mvn-pr
+        run: bash bin/bench-ga-page.sh expect mvn-pr
+      # ---- Maven, fork pull request: every variable empty (no cache flags)
+      - name: empty local Maven build cache
+        run: bash bin/bench-ga-page.sh fresh maven
+      - name: pretend event, fork pull request (empty secrets)
+        run: bash bin/bench-ga-page.sh event fork
+      - name: Build
+        working-directory: mproj
+        env:
+          CACHE_URL: ${{ env.TEST_CACHE_URL }}
+          CACHE_USER: ${{ env.TEST_EVENT == 'push' && env.TEST_RW_USER || env.TEST_RO_USER }}
+          CACHE_PASSWORD: ${{ env.TEST_EVENT == 'push' && env.TEST_RW_PASSWORD || env.TEST_RO_PASSWORD }}
+          CACHE_PUSH: ${{ env.TEST_EVENT == 'push' && 'true' || 'false' }}
+        run: |
+          if [ -n "$CACHE_URL" ]; then
+            mvn -B -s .mvn/ci-settings.xml \
+              -Dmaven.build.cache.remote.enabled=true \
+              -Dmaven.build.cache.remote.url="$CACHE_URL" \
+              -Dmaven.build.cache.remote.save.enabled="${CACHE_PUSH:-false}" \
+              verify
+          else
+            mvn -B verify
+          fi
+      - name: check mvn-fork
+        run: bash bin/bench-ga-page.sh expect mvn-fork
+      # ---- Maven, by hand: flags with an empty address (what the guard prevents) and a wrong password
+      - name: flags with an empty address
+        run: bash bin/bench-ga-page.sh extra mvn-empty-url
+      - name: wrong password
+        run: bash bin/bench-ga-page.sh extra mvn-wrong-password
+      - name: read-only login with saving on
+        run: bash bin/bench-ga-page.sh extra mvn-403
+      - name: missing login
+        run: bash bin/bench-ga-page.sh extra mvn-missing-login
+
+      - name: result
+        if: always()
+        run: bash bin/bench-ga-page.sh finish
+
+  # End-to-end runs of three more how-to pages (enable/disable the build cache, authentication and status codes, reset the cache).
+  # Same rules as the other howto jobs: manual dispatch only, chosen with the "which" input (compared in this `if` only), no token and
+  # no secret, read-only token not persisted. Gradle and cosign are checked against pinned sha256 values; the release binary is
+  # verified (cosign and sha256) before it runs; the cache image is pinned by digest and verified with cosign by digest before docker
+  # runs it. The Docker Compose file of the reset page publishes 8080 on all interfaces of this runner, behind the password change-me
+  # that the page itself prints, until the script takes it down (the runner has no inbound traffic and is thrown away after the job).
+  bench-howto-pages-4:
+    needs: proof-watch
+    if: ${{ !cancelled() && ((github.event_name == 'workflow_dispatch' && inputs.which == 'howto-pages-4') || (github.event_name == 'schedule' && needs.proof-watch.outputs.run == 'true')) }}
+    env:
+      BENCH_VER: ${{ needs.proof-watch.outputs.ver || inputs.bench_ver }}   # empty on a plain manual run: the script's own default release
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: follow the pages' commands as written and check what they promise
+        run: bash bin/bench-howto-pages-4.sh
+
+  # End-to-end runs of three more pages (change the logins without breaking CI, the server won't start, the hit rate). Same rules as the
+  # other howto jobs: manual dispatch only, chosen with the "which" input (compared in this `if` only), no token and no secret, read-only
+  # token not persisted. Gradle, Maven 3.9.9 and cosign are checked against pinned checksums; the release binary is verified (cosign and
+  # sha256) before it runs; the cache image is pinned by digest and verified with cosign by digest before docker runs it. Every server
+  # listens on 127.0.0.1 only.
+  bench-howto-pages-5:
+    needs: proof-watch
+    if: ${{ !cancelled() && ((github.event_name == 'workflow_dispatch' && inputs.which == 'howto-pages-5') || (github.event_name == 'schedule' && needs.proof-watch.outputs.run == 'true')) }}
+    env:
+      BENCH_VER: ${{ needs.proof-watch.outputs.ver || inputs.bench_ver }}   # empty on a plain manual run: the script's own default release
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: follow the pages' commands as written and check what they promise
+        run: bash bin/bench-howto-pages-5.sh
+
+  # End-to-end runs of two more pages (the monorepo page's two tables, the Docker CI page's fresh containers). Same rules as the other howto
+  # jobs: manual dispatch only, chosen with the "which" input (compared in this `if` only), no token and no secret, read-only token not
+  # persisted. Gradle and cosign are checked against pinned checksums; the release binary is verified (cosign and sha256) before it runs.
+  # The gradle container image is resolved to a digest at run time and that digest is used. The cache server of the Docker page listens on
+  # all interfaces of this runner, behind a made-up password, so that a container can reach it (the runner has no inbound traffic and is
+  # thrown away after the job).
+  bench-howto-pages-6:
+    needs: proof-watch
+    if: ${{ !cancelled() && ((github.event_name == 'workflow_dispatch' && inputs.which == 'howto-pages-6') || (github.event_name == 'schedule' && needs.proof-watch.outputs.run == 'true')) }}
+    env:
+      BENCH_VER: ${{ needs.proof-watch.outputs.ver || inputs.bench_ver }}   # empty on a plain manual run: the script's own default release
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: follow the pages' commands as written and check what they promise
+        run: bash bin/bench-howto-pages-6.sh
+
+  # End-to-end runs of two more pages (is my server healthy / what to alert on, and the size limit, eviction and a full disk). Same rules
+  # as the other howto jobs: manual dispatch only, chosen with the "which" input (compared in this `if` only), no token and no secret,
+  # read-only token not persisted. Gradle and cosign are checked against pinned checksums; the release binary is verified (cosign and
+  # sha256) before it runs. The full-disk part mounts an 8 MiB tmpfs under the script's work folder with the runner's passwordless sudo
+  # and unmounts it at the end; every server listens on 127.0.0.1 only.
+  bench-howto-pages-7:
+    needs: proof-watch
+    if: ${{ !cancelled() && ((github.event_name == 'workflow_dispatch' && inputs.which == 'howto-pages-7') || (github.event_name == 'schedule' && needs.proof-watch.outputs.run == 'true')) }}
+    env:
+      BENCH_VER: ${{ needs.proof-watch.outputs.ver || inputs.bench_ver }}   # empty on a plain manual run: the script's own default release
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: follow the pages' commands as written and check what they promise
+        run: bash bin/bench-howto-pages-7.sh
+
+  # End-to-end runs of the page about restarting the cache server while builds run. Same rules as the other howto jobs: manual dispatch only,
+  # chosen with the "which" input (compared in this `if` only), no token and no secret, read-only token not persisted. Gradle and cosign are
+  # checked against pinned checksums; the release binary is verified (cosign and sha256) before it runs; every server listens on 127.0.0.1
+  # only. The job is slow on purpose (builds with four 8-second tasks, stops and kills of the server, 20 and 40 MiB uploads at 2 MiB/s).
+  bench-howto-pages-8:
+    needs: proof-watch
+    if: ${{ !cancelled() && ((github.event_name == 'workflow_dispatch' && inputs.which == 'howto-pages-8') || (github.event_name == 'schedule' && needs.proof-watch.outputs.run == 'true')) }}
+    env:
+      BENCH_VER: ${{ needs.proof-watch.outputs.ver || inputs.bench_ver }}   # empty on a plain manual run: the script's own default release
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: follow the page's commands as written and check what it promises
+        run: bash bin/bench-howto-pages-8.sh
+
+  # End-to-end runs of the corporate-proxy page. Same rules as the other howto jobs: manual dispatch only, chosen with the "which" input
+  # (compared in this `if` only), no token and no secret, read-only token not persisted. Gradle and cosign are checked against pinned
+  # checksums; the release binary is verified (cosign and sha256) before it runs. The test proxy (bin/bench-proxy.py, standard library
+  # only, 127.0.0.1 only) is a minimal one written for the page's test, not a production proxy. The two cache servers listen on all
+  # interfaces of this runner (the page needs a non-loopback address), one behind a made-up password; the runner has no inbound traffic
+  # and is thrown away after the job.
+  bench-howto-pages-9:
+    needs: proof-watch
+    if: ${{ !cancelled() && ((github.event_name == 'workflow_dispatch' && inputs.which == 'howto-pages-9') || (github.event_name == 'schedule' && needs.proof-watch.outputs.run == 'true')) }}
+    env:
+      BENCH_VER: ${{ needs.proof-watch.outputs.ver || inputs.bench_ver }}   # empty on a plain manual run: the script's own default release
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: follow the page's commands as written and check what it promises
+        run: bash bin/bench-howto-pages-9.sh
+
+  # End-to-end runs of three Maven pages (the multi-module table, the causes of "not restoring" with the Java 21 / Java 27 series, and the
+  # Maven half of "what does the cache store"). Same rules as the other howto jobs: manual dispatch only, chosen with the "which" input
+  # (compared in this `if` only), no token and no secret, read-only token not persisted. Downloads (Gradle, cosign, Temurin 27, Maven 3.9.9)
+  # are checked against pinned checksums; the release binary is verified (cosign and sha256) before it runs; the Maven extension and the
+  # plugin jars come from Maven Central at run time (said in the output). Every server listens on 127.0.0.1 only.
+  bench-howto-pages-10:
+    needs: proof-watch
+    if: ${{ !cancelled() && ((github.event_name == 'workflow_dispatch' && inputs.which == 'howto-pages-10') || (github.event_name == 'schedule' && needs.proof-watch.outputs.run == 'true')) }}
+    env:
+      BENCH_VER: ${{ needs.proof-watch.outputs.ver || inputs.bench_ver }}   # empty on a plain manual run: the script's own default release
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: follow the pages' commands as written and check what they promise
+        run: bash bin/bench-howto-pages-10.sh
+
+  # End-to-end runs of two Gradle pages: the key-diff commands and rows of "why did this task miss" and the Gradle half of "what does the
+  # build cache store". Same rules as the other howto jobs: manual dispatch only, chosen with the "which" input (compared in this `if` only),
+  # no token and no secret, read-only token not persisted. Downloads are checked against pinned checksums; the release binary is verified
+  # (cosign and sha256) before it runs. Every server listens on 127.0.0.1 only.
+  bench-howto-pages-11:
+    needs: proof-watch
+    if: ${{ !cancelled() && ((github.event_name == 'workflow_dispatch' && inputs.which == 'howto-pages-11') || (github.event_name == 'schedule' && needs.proof-watch.outputs.run == 'true')) }}
+    env:
+      BENCH_VER: ${{ needs.proof-watch.outputs.ver || inputs.bench_ver }}   # empty on a plain manual run: the script's own default release
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: follow the pages' commands as written and check what they promise
+        run: bash bin/bench-howto-pages-11.sh
+
+  # End-to-end runs of three pages: tests from the cache (Gradle and Maven), several projects on one server, and the air-gapped install (the
+  # page's verify commands, the static binary with only a loopback interface, the container load and run). Same rules as the other howto jobs:
+  # manual dispatch only, chosen with the "which" input (compared in this `if` only), no token and no secret, read-only token not persisted.
+  # The release binary is verified (cosign and sha256) before it runs. The one step that needs root is `sudo unshare -n`, which runs the
+  # downloaded server in a network namespace with only a loopback interface. Every server listens on 127.0.0.1 only.
+  bench-howto-pages-12:
+    needs: proof-watch
+    if: ${{ !cancelled() && ((github.event_name == 'workflow_dispatch' && inputs.which == 'howto-pages-12') || (github.event_name == 'schedule' && needs.proof-watch.outputs.run == 'true')) }}
+    env:
+      BENCH_VER: ${{ needs.proof-watch.outputs.ver || inputs.bench_ver }}   # empty on a plain manual run: the script's own default release
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: follow the pages' commands as written and check what they promise
+        run: bash bin/bench-howto-pages-12.sh
+
+  # Does a build result stored from Linux restore on a Mac, and the other way round (the claim of the laptop page)? Manual
+  # dispatch only, chosen with the "which" input (compared in each `if` only). Two chains of two jobs: a Linux job builds against a
+  # fresh cache server and hands the server's data folder (nothing else; made-up projects) to a Mac job through the artifact store,
+  # which starts a server on it and builds with an empty Gradle home and an empty ~/.m2; and the same the other way. The artifact is
+  # kept one day. No token and no secret in any job; the two artifact actions are pinned by commit SHA; the downloads inside the
+  # script are checked against pinned checksums (the Maven extension, plugins and JUnit come from Maven Central, said in the output).
+  bench-maclinux-linux-store:
+    needs: proof-watch
+    if: ${{ !cancelled() && ((github.event_name == 'workflow_dispatch' && inputs.which == 'mac-linux') || (github.event_name == 'schedule' && needs.proof-watch.outputs.run == 'true')) }}
+    env:
+      BENCH_VER: ${{ needs.proof-watch.outputs.ver || inputs.bench_ver }}   # empty on a plain manual run: the script's own default release
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: build on Linux against a fresh cache server, pack the server's data folder
+        run: bash bin/bench-maclinux.sh store
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: cache-data-from-linux
+          path: ${{ runner.temp }}/maclinux/cache-data.tgz
+          retention-days: 1
+          if-no-files-found: error
+
+  bench-maclinux-mac-restore:
+    needs: [bench-maclinux-linux-store, proof-watch]
+    if: ${{ !cancelled() && needs.bench-maclinux-linux-store.result == 'success' && ((github.event_name == 'workflow_dispatch' && inputs.which == 'mac-linux') || (github.event_name == 'schedule' && needs.proof-watch.outputs.run == 'true')) }}
+    env:
+      BENCH_VER: ${{ needs.proof-watch.outputs.ver || inputs.bench_ver }}   # empty on a plain manual run: the script's own default release
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: cache-data-from-linux
+          path: ${{ runner.temp }}/maclinux-in
+
+      - name: start a server on the Linux data folder, build on the Mac with empty local caches
+        run: bash bin/bench-maclinux.sh restore
+
+  bench-maclinux-mac-store:
+    needs: proof-watch
+    if: ${{ !cancelled() && ((github.event_name == 'workflow_dispatch' && inputs.which == 'mac-linux') || (github.event_name == 'schedule' && needs.proof-watch.outputs.run == 'true')) }}
+    env:
+      BENCH_VER: ${{ needs.proof-watch.outputs.ver || inputs.bench_ver }}   # empty on a plain manual run: the script's own default release
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: build on the Mac against a fresh cache server, pack the server's data folder
+        run: bash bin/bench-maclinux.sh store
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: cache-data-from-mac
+          path: ${{ runner.temp }}/maclinux/cache-data.tgz
+          retention-days: 1
+          if-no-files-found: error
+
+  bench-maclinux-linux-restore:
+    needs: [bench-maclinux-mac-store, proof-watch]
+    if: ${{ !cancelled() && needs.bench-maclinux-mac-store.result == 'success' && ((github.event_name == 'workflow_dispatch' && inputs.which == 'mac-linux') || (github.event_name == 'schedule' && needs.proof-watch.outputs.run == 'true')) }}
+    env:
+      BENCH_VER: ${{ needs.proof-watch.outputs.ver || inputs.bench_ver }}   # empty on a plain manual run: the script's own default release
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: cache-data-from-mac
+          path: ${{ runner.temp }}/maclinux-in
+
+      - name: start a server on the Mac data folder, build on Linux with empty local caches
+        run: bash bin/bench-maclinux.sh restore
+
+  # Which tasks does the Gradle remote build cache restore in an Android build? Same rules as the other jobs: manual
+  # dispatch only, chosen with the "which" input (compared in this `if` only, never put into a shell command), no
+  # secrets, read-only token not persisted. The script checks the FosterStack Cache and Gradle downloads against pinned
+  # sha256 values; the Android Gradle plugin and the Kotlin compiler it pulls in come from public repositories at run
+  # time (not checksum-pinned, said in the script's own output). It uses the Android SDK already installed on the
+  # runner, does not accept licences or write to the SDK, and measures no times.
+  bench-android:
+    needs: proof-watch
+    if: ${{ !cancelled() && ((github.event_name == 'workflow_dispatch' && inputs.which == 'android') || (github.event_name == 'schedule' && needs.proof-watch.outputs.run == 'true')) }}
+    runs-on: ubuntu-latest
+    env:
+      BENCH_VER: ${{ needs.proof-watch.outputs.ver || inputs.bench_ver }}   # empty on a plain manual run: the script's own default release
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Android build, cache stores then restores (no times measured)
+        run: BENCH_LIMIT=600 bash bin/bench-android.sh
+
+  # Proof for the "remote build cache in GitHub Actions" page. Manual dispatch only, chosen with the "which" input
+  # (compared in this `if` only). It starts a FosterStack Cache server ON THIS RUNNER with made-up logins and runs four
+  # Gradle builds that read their cache URL and login from environment variables, as a workflow does with secrets.
+  # No secrets are used. The script checks its downloads against pinned sha256 values.
+  demo-github-actions:
+    needs: proof-watch
+    if: ${{ !cancelled() && ((github.event_name == 'workflow_dispatch' && inputs.which == 'github-actions') || (github.event_name == 'schedule' && needs.proof-watch.outputs.run == 'true')) }}
+    runs-on: ubuntu-latest
+    env:
+      BENCH_VER: ${{ needs.proof-watch.outputs.ver || inputs.bench_ver }}   # empty on a plain manual run: the script's own default release
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: four builds with the cache settings read from environment variables
+        run: bash bin/demo-github-actions.sh
+
+  # proof-selftest: manual only (which=proof-selftest). One deliberately failing step, to show that proof-report opens ONE issue
+  # (labelled proof-selftest, not proof-failure) and comments on it instead of opening a second one.
+  proof-selftest:
+    if: github.event_name == 'workflow_dispatch' && inputs.which == 'proof-selftest'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: fail on purpose
+        run: |
+          echo "FAIL self-test: a deliberate failure, to show the report job opens one tracking issue"
+          exit 1
+
+  # proof-report: the LAST job of a scheduled proof run. The only job in this file with `issues: write` (job level, nothing else
+  # gets it). It reads this run's jobs with the run's own token and keeps exactly ONE open issue labelled proof-failure naming the
+  # page(s), the failing step and the release (a second failure adds a comment), or closes it when everything is green again; see
+  # bin/proof-report.sh. After a fully GREEN scheduled run only, it leaves the one-line artifact "proven-release" (tag, run id) that
+  # proof-watch reads the next day (so a red run is tried again the next day when the tag is new). Nothing is committed back and no page is edited by a workflow.
+  proof-report:
+    needs: [proof-watch, bench-miss-cost, bench-server-down, bench-verify-release, bench-setup-pages, bench-howto-pages, bench-howto-pages-2, bench-howto-pages-3, bench-k8s-page, bench-ga-page, bench-howto-pages-4, bench-howto-pages-5, bench-howto-pages-6, bench-howto-pages-7, bench-howto-pages-8, bench-howto-pages-9, bench-howto-pages-10, bench-howto-pages-11, bench-howto-pages-12, bench-maclinux-linux-store, bench-maclinux-mac-restore, bench-maclinux-mac-store, bench-maclinux-linux-restore, bench-android, demo-github-actions, proof-selftest]
+    if: ${{ always() && ((github.event_name == 'schedule' && (needs.proof-watch.result == 'failure' || (needs.proof-watch.result == 'success' && (needs.proof-watch.outputs.run == 'true' || startsWith(needs.proof-watch.outputs.reason, 'the newest release tag') || startsWith(needs.proof-watch.outputs.reason, 'release lookup failed'))))) || (github.event_name == 'workflow_dispatch' && inputs.which == 'proof-selftest')) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency:
+      group: proof-report
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      actions: read
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: open, update or close the one tracking issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          TAG: ${{ needs.proof-watch.outputs.tag }}
+          WATCH_REASON: ${{ needs.proof-watch.outputs.reason }}
+          WATCH_RUN: ${{ needs.proof-watch.outputs.run }}
+          MODE: ${{ github.event_name == 'schedule' && 'schedule' || 'selftest' }}
+          OUT_FILE: proven-release.txt
+        run: bash bin/proof-report.sh
+
+      - if: github.event_name == 'schedule' && hashFiles('proven-release.txt') != ''
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: proven-release
+          path: proven-release.txt
+          retention-days: 90

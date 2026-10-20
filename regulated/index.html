@@ -4,7 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>FosterStack for teams entering regulated markets</title>
-<meta name="description" content="Infrastructure worth keeping. Evidence and validated crypto for your compliance program — a FIPS 140-3 validated build cache whose release evidence is public, free, and verifiable before you spend a dollar.">
+<meta name="description" content="Evidence and validated crypto for your compliance program: a FIPS build using Go&#x27;s validated FIPS 140-3 module, with public release evidence.">
+<meta property="og:title" content="FosterStack for teams entering regulated markets">
+<meta property="og:description" content="Evidence and validated crypto for your compliance program: a FIPS build using Go&#x27;s validated FIPS 140-3 module, with public release evidence.">
+<meta property="og:url" content="https://fosterstack.com/regulated/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="FosterStack">
 <link rel="canonical" href="https://fosterstack.com/regulated/">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/favicon.ico" sizes="any">
@@ -62,29 +67,35 @@
         overflow-x: auto; font-size: .9rem; line-height: 1.5; }
   .cta-row { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1.1rem; }
   .btn { display: inline-block; padding: .55rem 1rem; border-radius: 8px; font-weight: 600;
-         text-decoration: none; background: var(--accent); color: #fff; }
-  .btn-secondary { background: transparent; color: inherit; border: 1px solid #cbd5e1; }
+         text-decoration: none; background: var(--accent); color: var(--accent-fg); }
+  .btn-secondary { background: transparent; color: inherit; border: 1px solid var(--muted); }
   .muted-note { color: var(--muted); font-size: .93rem; margin-top: 1.1rem; }
   footer { border-top: 1px solid var(--line); margin-top: 4rem; padding: 1.5rem 1.25rem 3rem; }
   footer div { max-width: 44rem; margin: 0 auto; color: var(--muted); font-size: .82rem; }
   a { color: var(--accent); }
+  code { overflow-wrap: anywhere; }
+  pre code { overflow-wrap: normal; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 </style>
 </head>
 <body>
 <header class="site">
   <div class="logo"><svg class="mark" viewBox="0 0 96 96" aria-hidden="true" focusable="false"><rect x="12" y="14" width="72" height="18" rx="5" fill="var(--mark)"/><rect x="12" y="39" width="48" height="18" rx="5" fill="var(--mark)"/><rect x="12" y="64" width="26" height="18" rx="5" fill="var(--accent)"/></svg>foster<span>stack</span></div>
-  <div class="tag">Infrastructure worth keeping.</div>
+  <div class="tag">Infrastructure worth keeping — and kept patched.</div>
 </header>
 <main>
   <h1>For teams entering regulated markets</h1>
 
   <p class="lede">
+    FosterStack Cache gives the build-cache part of your pipeline public, checkable evidence: a FIPS 140-3 build, an SBOM, SLSA provenance, signatures and VEX statements. It does not make you compliant.
+  </p>
+  <p>
     It usually starts with one customer. A contract lands on the table with
     federal or compliance requirements attached — FIPS-validated cryptography,
     SBOMs, provenance, a security questionnaire with two hundred rows — and
     suddenly every tool in your build pipeline needs paperwork it has never
-    had. Big vendors sell their way through that pile with compliance teams
-    and six-figure contracts. Small teams mostly just lose the deal.
+    had. Big vendors have compliance teams to get through that pile. Small teams
+    mostly just lose the deal.
   </p>
 
   <p><strong>The cost of compliance shouldn't determine who gets to
@@ -93,7 +104,7 @@
   <h2>What our piece does — and does not do</h2>
   <p>
     FosterStack Cache is one component in your pipeline: a self-hosted remote
-    build cache. For that component, we do the evidence work a compliance
+    build cache. It also serves Maven, through the Apache Maven Build Cache Extension. For that component, we do the evidence work a compliance
     program needs: the <code>-fips</code> build links Go's FIPS 140-3
     validated cryptographic module (CMVP certificate #5247), and every
     release ships with an SBOM, SLSA provenance, keyless signatures, and
@@ -102,13 +113,21 @@
   </p>
   <p>
     What it does not do: make you compliant. FedRAMP and CMMC attach to your
-    service and your organization, never to a component you deploy. What a
-    component can be is <em>evidence and validated crypto for your
-    program</em> — one row of that questionnaire where the answer is written,
-    signed, and checkable instead of a shrug.
+    service and your organization, never to a component you deploy. What a component can offer is <em>evidence and validated crypto for your
+    program</em>: one row of that questionnaire, answered with something written, signed and checkable instead of a shrug.
   </p>
 
-  <h2>The Compliance tier</h2>
+  <h2>More than kept patched.</h2>
+  <ul class="trust">
+    <li>Signed releases you can verify in minutes.</li>
+    <li>Build record, parts list (SBOM) and vulnerability statements published with every release.</li>
+    <li>Scanned before every release. The current release is rescanned every day.</li>
+    <li>Images assembled twice on separate machines; the results must match.</li>
+    <li>Minimal image, no telemetry. FIPS variant available.</li>
+    <li>Vulnerable dependencies fixed fast — our target is 48 hours from disclosure (<a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md">the scope is in SECURITY.md</a>).</li>
+  </ul>
+  <p><a href="/how-we-build/">How we build</a> · <a href="/security/">Security policy</a> · <a href="/verify-a-release/">Verify a release</a></p>
+
   <p>
     The evidence underneath is public and free — SBOMs, SLSA provenance,
     signatures, VEX statements, the FIPS 140-3 validated module and its
@@ -120,18 +139,23 @@
     per year (async).
   </p>
 
-  <h2>Verify everything for free first</h2>
+  <h2>Verify everything yourself first</h2>
   <p>
-    Before spending anything: pull the <code>-fips</code> image (public, no
+    Before you decide anything: pull the <code>-fips</code> image (public, no
     login), run the signature and provenance verification commands in
     <a href="https://github.com/fosterstack/cache/blob/main/RELEASING.md">RELEASING.md</a>,
     read the scan posture in
     <a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md">SECURITY.md</a>
     — including what it says is not yet proven — and check the
     <a href="https://github.com/fosterstack/cache/blob/main/docs/quality/traceability.md">requirements
-    matrix</a> that maps every product promise to its evidence. If the free
-    evidence doesn't hold up under your audit, the paid tier wouldn't either.
+    matrix</a> that maps every product promise to its evidence. If the evidence doesn't hold up under your audit, nothing else would either.
     That's the test we invite.
+  </p>
+  <p>
+    Step-by-step, with the output of each command from a real release:
+    <a href="/verify-a-release/">Verify a release yourself</a>. To run the
+    <code>-fips</code> image and confirm FIPS mode from its own startup log:
+    <a href="/fips-140-3-build-cache/">FIPS 140-3 build cache</a>.
   </p>
 </main>
 <footer>
