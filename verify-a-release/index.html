@@ -10,6 +10,11 @@
 <meta property="og:description" content="Verify a FosterStack Cache v0.3.0 release yourself with cosign, gh and jq: image signatures, signed file lists, digests, provenance and the parts list.">
 <meta property="og:url" content="https://fosterstack.com/verify-a-release/">
 <meta property="og:type" content="website">
+<meta property="og:image" content="https://fosterstack.com/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="FosterStack. Infrastructure worth keeping — and kept patched.">
+<meta name="twitter:card" content="summary_large_image">
 <meta property="og:site_name" content="FosterStack">
 <link rel="canonical" href="https://fosterstack.com/verify-a-release/">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
@@ -128,8 +133,11 @@ cosign verify-blob-attestation --bundle provenance.bundle.json \
   --type https://slsa.dev/provenance/v1 --check-claims=false \
   --certificate-identity "${IDENT}/stage-sign.yml@refs/tags/v${VER}" \
   --certificate-oidc-issuer "$ISSUER"
-jq -r '.dsseEnvelope.payload | @base64d | fromjson | .subject[] | .name + " sha256:" + .digest.sha256' provenance.bundle.json</code></pre>
-  <p>The SLSA provenance is signed by a separate job with its own identity, <code>stage-sign.yml</code>. It receives only the list of digests the build made and runs no code from the build. The second command lists each item it names, with its digest.</p>
+jq -r '.dsseEnvelope.payload | @base64d | fromjson | .subject[] | .name + " sha256:" + .digest.sha256' provenance.bundle.json
+# the digest of the production image you pulled (for example from docker images --digests):
+DIGEST=sha256:...
+jq -e --arg d "${DIGEST#sha256:}" '.dsseEnvelope.payload | @base64d | fromjson | any(.subject[]; .name == "image-production" and .digest.sha256 == $d)' provenance.bundle.json</code></pre>
+  <p>The SLSA provenance is signed by a separate job with its own identity, <code>stage-sign.yml</code>. It receives only the list of digests the build made and runs no code from the build. The first <code>jq</code> lists each item it names, with its digest. The second prints <code>true</code> only if the provenance names the production image you pulled; for the <code>-fips</code> image use the name <code>image-fips</code>.</p>
   <h2>5. The parts list and what it was assembled from</h2>
   <pre tabindex="0"><code>gh release download v${VER} --repo fosterstack/cache \
   -p production.sbom.json -p production.sbom.json.bundle \
