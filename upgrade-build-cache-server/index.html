@@ -244,7 +244,7 @@ FSCACHE_ADDR=127.0.0.1:18152 FSCACHE_DATA_DIR=$PWD/data-new-copied fscache</code
     <li><strong>Not tested:</strong> upgrading or backing up while the server is running, any other pair of releases (there is no 0.2.0 release; see <a href="/changelog/">the changelog</a>), restoring into a different version of the server than the one that wrote the data, Kubernetes or Compose rollouts (the same idea applies to the volume behind the claim, but we only ran plain Docker), the FIPS image, or a cache that was close to its size cap.</li>
   </ul>
 
-  <p class="muted-note">Related: <a href="/how-we-build/">how releases are built and signed</a> and <a href="/verify-a-release/">verify a release yourself</a>, so you can check the new version before you run it.</p>
+  <p class="muted-note">Related: <a href="/how-we-build/">how releases are built and signed</a> and <a href="/verify-a-release/">verify a release yourself</a>, so you can check the new version before you run it. Also: <a href="/whats-new-fosterstack-cache-v0-3-0/">what changes in v0.3.0</a>, <a href="/fips-140-3-build-cache/">the FIPS 140-3 build</a> and <a href="/air-gapped-build-cache-install/">installing without internet access</a>.</p>
   <div class="cta-row">
     <a class="btn" href="/changelog/">Changelog</a>
     <a class="btn btn-secondary" href="/">FosterStack home</a>
