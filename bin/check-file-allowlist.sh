@@ -65,6 +65,8 @@ ALLOW_PATTERNS=(
   '^bin/proof-watch\.sh$'
   '^bin/proof-report\.sh$'
   '^bin/proof-pages\.txt$'
+  '^bin/live-check\.py$'
+  '^bin/test-live-check\.sh$'
   '^\.github/workflows/[A-Za-z0-9_-][A-Za-z0-9._-]*\.ya?ml$'
   '^functions/(api/)?[A-Za-z0-9._-]+\.js$'
   '^[A-Za-z0-9._-]+/index\.html$'   # pre-positioned pages, e.g. bcn-removed/index.html
