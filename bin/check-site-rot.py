@@ -92,33 +92,63 @@ def header_hides(value):
     return False
 
 
-def hidden_by_headers(headers_text):
-    """Path patterns of the _headers blocks that send an X-Robots-Tag with noindex (or none)."""
-    patterns, cur, hit = [], None, False
-    for line in headers_text.splitlines() + ["/end-of-file"]:
+def parse_headers(headers_text):
+    """The _headers file as [(pattern, [(op, name, value)])], in file order: op is "set" for 'Name: value' and "detach" for '! Name'."""
+    blocks, cur = [], None
+    for line in headers_text.splitlines():
         if not line.strip() or line.lstrip().startswith("#"):
             continue
         if not line[0].isspace():
-            if cur is not None and hit:
-                patterns.append(cur)
-            cur, hit = line.strip(), False
-        elif re.match(r"\s*x-robots-tag\s*:", line, re.I):
-            hit = hit or header_hides(line.split(":", 1)[1])
-    return patterns
+            cur = (line.strip(), [])
+            blocks.append(cur)
+        elif cur is not None:
+            t = line.strip()
+            if t.startswith("!"):
+                cur[1].append(("detach", t[1:].strip().lower(), ""))
+            elif ":" in t:
+                name, value = t.split(":", 1)
+                cur[1].append(("set", name.strip().lower(), value.strip()))
+    return blocks
 
 
-def pattern_regex(pat):
-    """A _headers path pattern as a regex over the URL path: * matches anything, :name matches one path segment; an absolute
-    URL on this site is read as its path, one on another host matches nothing here."""
+def _glob(text, host=False):
+    """* matches anything, :name matches one path segment (one label in a host); everything else is literal."""
+    one = r"[^./]+" if host else r"[^/]+"
+    out = ""
+    for tok in re.split(r"(\*|:[A-Za-z][A-Za-z0-9_]*)", text):
+        out += ".*" if tok == "*" else one if re.fullmatch(r":[A-Za-z][A-Za-z0-9_]*", tok) else re.escape(tok)
+    return out
+
+
+SITE_HOSTS = ("fosterstack.com", "www.fosterstack.com")
+
+
+def pattern_matches(pat, url_path):
+    """Does a _headers pattern match this path on the site? A pattern with a host matches if it matches one of the site's hosts."""
     m = re.match(r"https?://([^/]+)(/.*)?$", pat)
     if m:
-        if m.group(1) not in ("fosterstack.com", "www.fosterstack.com"):
-            return None
+        if not any(re.fullmatch(_glob(m.group(1), host=True), h) for h in SITE_HOSTS):
+            return False
         pat = m.group(2) or "/"
-    out = ""
-    for tok in re.split(r"(\*|:[A-Za-z][A-Za-z0-9_]*)", pat):
-        out += ".*" if tok == "*" else "[^/]+" if re.fullmatch(r":[A-Za-z][A-Za-z0-9_]*", tok) else re.escape(tok)
-    return re.compile(out)
+    rx = re.compile(_glob(pat))
+    return bool(rx.fullmatch(url_path) or rx.fullmatch(url_path.rstrip("/") or "/"))
+
+
+def hidden_by_headers(blocks, url_path):
+    """True if the X-Robots-Tag the page ends up with carries noindex or none: the matching blocks are applied in file
+    order, values add up, and '! X-Robots-Tag' removes what came before it."""
+    values = []
+    for pat, rules in blocks:
+        if not pattern_matches(pat, url_path):
+            continue
+        for op, name, value in rules:
+            if name != "x-robots-tag":
+                continue
+            if op == "detach":
+                values = []
+            else:
+                values.append(value)
+    return any(header_hides(v) for v in values)
 
 
 # href="..." / src='...' / href=bare, any case: every way a link can be written
@@ -141,7 +171,7 @@ def main():
     removed_from_git = []
     if args.base:
         # fail closed: a missing parent must never quietly turn into "nothing was removed"
-        shown = re.sub(r"[\x00-\x1f\x7f]", " ", args.base)
+        shown = re.sub(r"[\x00-\x1f\x7f-\x9f]", " ", args.base)
         if not re.fullmatch(r"[A-Za-z0-9_./~^@{}][A-Za-z0-9_./~^@{}-]*", args.base):
             print("FAIL base: %s is not a plain git ref" % shown)
             return 1
@@ -189,11 +219,11 @@ def main():
 
     # 6. hidden pages: found by a meta tag in the page or an X-Robots-Tag rule in _headers
     hp = os.path.join(root, "_headers")
-    header_res = [r for r in (pattern_regex(x) for x in (hidden_by_headers(read(hp)) if os.path.isfile(hp) else [])) if r]
+    header_blocks = parse_headers(read(hp)) if os.path.isfile(hp) else []
     hidden = set()
     for key, t in texts.items():
         url_path = "/" if key == "" else "/404" if key == "404.html" else "/%s/" % key
-        if hidden_by_meta(t) or any(r.fullmatch(url_path) or r.fullmatch(url_path.rstrip("/") or "/") for r in header_res):
+        if hidden_by_meta(t) or hidden_by_headers(header_blocks, url_path):
             hidden.add(key)
 
     # 5. titles

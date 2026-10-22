@@ -258,6 +258,21 @@ open(p, "w", encoding="utf-8").write(re.sub(r"<title>.*?</title>", "<title>" + "
 EOF2
 python3 "$here/bin/check-site-rot.py" --root "$site" >"$tmp/out" 2>&1; python3 -c "import sys; d=open(sys.argv[1],encoding='utf-8').read(); sys.exit(0 if 'title:' in d and not any(0x80<=ord(c)<=0x9f for c in d) else 1)" "$tmp/out" && echo "ok   a C1 control character in a title is not printed" || { echo "FAIL a C1 control character reached the output"; fail=1; }
 
+# a hostname placeholder matches the site's host; a removal ("! X-Robots-Tag") undoes an earlier noindex for that page
+fresh; append "$site/_headers" "https://:host.com/$first/"; append "$site/_headers" "  X-Robots-Tag: noindex"; unlist "$first"
+expect_fail "--live: a hostname placeholder in _headers matches the site" "live: .*$first" --live
+fresh; append "$site/_headers" "https://*.example.org/$first/"; append "$site/_headers" "  X-Robots-Tag: noindex"
+expect_pass "--live: a host pattern that cannot match the site hides nothing" --live
+fresh; append "$site/_headers" "/$first/*"; append "$site/_headers" "  X-Robots-Tag: noindex"; append "$site/_headers" "/$first/"; append "$site/_headers" "  ! X-Robots-Tag"
+expect_pass "--live: a removal undoes an earlier noindex for that page, which stays listed" --live
+fresh; append "$site/_headers" "/$first/*"; append "$site/_headers" "  X-Robots-Tag: noindex"; append "$site/_headers" "/$first/"; append "$site/_headers" "  ! X-Robots-Tag"; unlist "$first"
+expect_fail "the sitemap still has to list a page that the removal un-hides" "sitemap: is missing"
+fresh; append "$site/_headers" "/$first/"; append "$site/_headers" "  ! X-Robots-Tag"; append "$site/_headers" "/$first/"; append "$site/_headers" "  X-Robots-Tag: noindex"
+expect_fail "--live: a noindex that comes after a removal still hides the page" "live: .*$first" --live
+# an invalid --base is reported without control characters of any kind
+python3 "$here/bin/check-site-rot.py" --root "$site" --base "bad"$'\u009b'"ref" >"$tmp/out" 2>&1
+python3 -c "import sys; d=open(sys.argv[1],encoding='utf-8').read(); sys.exit(0 if 'FAIL base' in d and not any(0x80<=ord(c)<=0x9f for c in d) else 1)" "$tmp/out" && echo "ok   a C1 control character in --base is not printed" || { echo "FAIL a C1 control character in --base reached the output"; fail=1; }
+
 # the check switches sentence 2 on for pull requests based on main and for main itself, and not for other bases
 fresh; hide "$first"; unlist "$first"
 if GITHUB_BASE_REF=main python3 "$here/bin/check-site-rot.py" --root "$site" >"$tmp/out" 2>&1; then echo "FAIL a pull request based on main may not hide a page"; fail=1; else grep -q "live: " "$tmp/out" && echo "ok   a pull request based on main may not hide a page" || { echo "FAIL based-on-main message"; fail=1; }; fi
