@@ -123,32 +123,46 @@ def _glob(text, host=False):
 SITE_HOSTS = ("fosterstack.com", "www.fosterstack.com")
 
 
-def pattern_matches(pat, url_path):
-    """Does a _headers pattern match this path on the site? A pattern with a host matches if it matches one of the site's hosts."""
+def pattern_matches(pat, host, path):
+    """Does a _headers pattern match a request for this host and path? Like Cloudflare, a pattern is matched against the
+    exact request: a pattern with a host only matches that host, and /name/ and /name are different paths."""
     m = re.match(r"https?://([^/]+)(/.*)?$", pat)
     if m:
-        if not any(re.fullmatch(_glob(m.group(1), host=True), h) for h in SITE_HOSTS):
+        if not re.fullmatch(_glob(m.group(1), host=True), host):
             return False
         pat = m.group(2) or "/"
-    rx = re.compile(_glob(pat))
-    return bool(rx.fullmatch(url_path) or rx.fullmatch(url_path.rstrip("/") or "/"))
+    return bool(re.fullmatch(_glob(pat), path))
 
 
-def hidden_by_headers(blocks, url_path):
-    """True if the X-Robots-Tag the page ends up with carries noindex or none: the matching blocks are applied in file
-    order, values add up, and '! X-Robots-Tag' removes what came before it."""
-    values = []
-    for pat, rules in blocks:
-        if not pattern_matches(pat, url_path):
-            continue
-        for op, name, value in rules:
-            if name != "x-robots-tag":
+def request_urls(key):
+    """Every request the site answers for one page: both hosts, with and without the trailing slash."""
+    if key == "":
+        paths = ["/"]
+    elif key == "404.html":
+        paths = ["/404", "/404.html"]
+    else:
+        paths = ["/%s/" % key, "/%s" % key]
+    return [(h, p) for h in SITE_HOSTS for p in paths]
+
+
+def hidden_by_headers(blocks, key):
+    """True if, for any request the page answers, the X-Robots-Tag it ends up with carries noindex or none: the matching
+    blocks are applied in file order, values add up, and '! X-Robots-Tag' removes what came before it."""
+    for host, path in request_urls(key):
+        values = []
+        for pat, rules in blocks:
+            if not pattern_matches(pat, host, path):
                 continue
-            if op == "detach":
-                values = []
-            else:
-                values.append(value)
-    return any(header_hides(v) for v in values)
+            for op, name, value in rules:
+                if name != "x-robots-tag":
+                    continue
+                if op == "detach":
+                    values = []
+                else:
+                    values.append(value)
+        if any(header_hides(v) for v in values):
+            return True
+    return False
 
 
 # href="..." / src='...' / href=bare, any case: every way a link can be written
@@ -222,8 +236,7 @@ def main():
     header_blocks = parse_headers(read(hp)) if os.path.isfile(hp) else []
     hidden = set()
     for key, t in texts.items():
-        url_path = "/" if key == "" else "/404" if key == "404.html" else "/%s/" % key
-        if hidden_by_meta(t) or hidden_by_headers(header_blocks, url_path):
+        if hidden_by_meta(t) or hidden_by_headers(header_blocks, key):
             hidden.add(key)
 
     # 5. titles

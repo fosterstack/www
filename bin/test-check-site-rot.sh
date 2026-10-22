@@ -269,6 +269,14 @@ fresh; append "$site/_headers" "/$first/*"; append "$site/_headers" "  X-Robots-
 expect_fail "the sitemap still has to list a page that the removal un-hides" "sitemap: is missing"
 fresh; append "$site/_headers" "/$first/"; append "$site/_headers" "  ! X-Robots-Tag"; append "$site/_headers" "/$first/"; append "$site/_headers" "  X-Robots-Tag: noindex"
 expect_fail "--live: a noindex that comes after a removal still hides the page" "live: .*$first" --live
+# a removal only undoes a noindex on the same request: another host, or the path without the slash, is another request
+fresh; append "$site/_headers" "https://fosterstack.com/$first/"; append "$site/_headers" "  X-Robots-Tag: noindex"; append "$site/_headers" "https://www.fosterstack.com/$first/"; append "$site/_headers" "  ! X-Robots-Tag"
+expect_fail "--live: a removal for the www host does not undo a noindex for the apex host" "live: .*$first" --live
+fresh; append "$site/_headers" "/$first/"; append "$site/_headers" "  X-Robots-Tag: noindex"; append "$site/_headers" "/$first"; append "$site/_headers" "  ! X-Robots-Tag"
+expect_fail "--live: a removal for the path without the slash does not undo a noindex for the path with it" "live: .*$first" --live
+fresh; append "$site/_headers" "/$first/*"; append "$site/_headers" "  X-Robots-Tag: noindex"; append "$site/_headers" "/$first*"; append "$site/_headers" "  ! X-Robots-Tag"
+expect_pass "--live: a removal that matches both the path with and without the slash undoes the noindex for both" --live
+
 # an invalid --base is reported without control characters of any kind
 python3 "$here/bin/check-site-rot.py" --root "$site" --base "bad"$'\u009b'"ref" >"$tmp/out" 2>&1
 python3 -c "import sys; d=open(sys.argv[1],encoding='utf-8').read(); sys.exit(0 if 'FAIL base' in d and not any(0x80<=ord(c)<=0x9f for c in d) else 1)" "$tmp/out" && echo "ok   a C1 control character in --base is not printed" || { echo "FAIL a C1 control character in --base reached the output"; fail=1; }
