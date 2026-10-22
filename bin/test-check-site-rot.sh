@@ -277,6 +277,16 @@ expect_fail "--live: a removal for the path without the slash does not undo a no
 fresh; append "$site/_headers" "/$first/*"; append "$site/_headers" "  X-Robots-Tag: noindex"; append "$site/_headers" "/$first*"; append "$site/_headers" "  ! X-Robots-Tag"
 expect_pass "--live: a removal that matches both the path with and without the slash undoes the noindex for both" --live
 
+# values add up, and a header value is read after its placeholders are filled in
+fresh; append "$site/_headers" "/$first/"; append "$site/_headers" "  X-Robots-Tag: noindex"; append "$site/_headers" "  X-Robots-Tag: index"
+expect_fail "a later index does not undo an earlier noindex on the same page" "hidden: .*$first.*sitemap"
+fresh; append "$site/_headers" "/:directive/"; append "$site/_headers" "  X-Robots-Tag: :directive"; unlist "$first"
+mkdir "$site/none"; sed 's#<title>[^<]*</title>#<title>None page</title>#' "$site/$first/index.html" >"$site/none/index.html"
+expect_fail "--live: a :placeholder filled into the header value (a page called none) hides that page" "live: none" --live
+fresh; append "$site/_headers" "/*"; append "$site/_headers" "  X-Robots-Tag: :splat"
+mkdir "$site/noindex"; sed 's#<title>[^<]*</title>#<title>Noindex page</title>#' "$site/$first/index.html" >"$site/noindex/index.html"
+expect_fail "--live: :splat filled into the header value hides a page whose path is noindex" "live: noindex" --live
+
 # an invalid --base is reported without control characters of any kind
 python3 "$here/bin/check-site-rot.py" --root "$site" --base "bad"$'\u009b'"ref" >"$tmp/out" 2>&1
 python3 -c "import sys; d=open(sys.argv[1],encoding='utf-8').read(); sys.exit(0 if 'FAIL base' in d and not any(0x80<=ord(c)<=0x9f for c in d) else 1)" "$tmp/out" && echo "ok   a C1 control character in --base is not printed" || { echo "FAIL a C1 control character in --base reached the output"; fail=1; }

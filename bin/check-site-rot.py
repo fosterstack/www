@@ -111,12 +111,22 @@ def parse_headers(headers_text):
     return blocks
 
 
-def _glob(text, host=False):
-    """* matches anything, :name matches one path segment (one label in a host); everything else is literal."""
+def _glob(text, host=False, names=None):
+    """* matches anything (it is :splat), :name matches one path segment (one label in a host); everything else is literal.
+    With names (a list) every placeholder becomes a capture group and its name is appended, so values can be expanded."""
     one = r"[^./]+" if host else r"[^/]+"
     out = ""
     for tok in re.split(r"(\*|:[A-Za-z][A-Za-z0-9_]*)", text):
-        out += ".*" if tok == "*" else one if re.fullmatch(r":[A-Za-z][A-Za-z0-9_]*", tok) else re.escape(tok)
+        if tok == "*":
+            out += "(.*)" if names is not None else ".*"
+            if names is not None:
+                names.append("splat")
+        elif re.fullmatch(r":[A-Za-z][A-Za-z0-9_]*", tok):
+            out += "(%s)" % one if names is not None else one
+            if names is not None:
+                names.append(tok[1:])
+        else:
+            out += re.escape(tok)
     return out
 
 
@@ -124,14 +134,29 @@ SITE_HOSTS = ("fosterstack.com", "www.fosterstack.com")
 
 
 def pattern_matches(pat, host, path):
-    """Does a _headers pattern match a request for this host and path? Like Cloudflare, a pattern is matched against the
-    exact request: a pattern with a host only matches that host, and /name/ and /name are different paths."""
+    """Match a _headers pattern against a request for this host and path. Like Cloudflare, the pattern is matched against the
+    exact request: a pattern with a host only matches that host, and /name/ and /name are different paths. Returns None, or
+    the placeholders it captured ({"splat": ..., "name": ...}) so header values can be expanded."""
+    found = {}
     m = re.match(r"https?://([^/]+)(/.*)?$", pat)
     if m:
-        if not re.fullmatch(_glob(m.group(1), host=True), host):
-            return False
+        names = []
+        hm = re.fullmatch(_glob(m.group(1), host=True, names=names), host)
+        if not hm:
+            return None
+        found.update(zip(names, hm.groups()))
         pat = m.group(2) or "/"
-    return bool(re.fullmatch(_glob(pat), path))
+    names = []
+    pm = re.fullmatch(_glob(pat, names=names), path)
+    if not pm:
+        return None
+    found.update(zip(names, pm.groups()))
+    return found
+
+
+def expand(value, found):
+    """Replace :name and :splat in a header value with what the pattern captured (an unknown :word stays as written)."""
+    return re.sub(r":([A-Za-z][A-Za-z0-9_]*)", lambda m: found.get(m.group(1), m.group(0)), value)
 
 
 def request_urls(key):
@@ -151,7 +176,8 @@ def hidden_by_headers(blocks, key):
     for host, path in request_urls(key):
         values = []
         for pat, rules in blocks:
-            if not pattern_matches(pat, host, path):
+            found = pattern_matches(pat, host, path)
+            if found is None:
                 continue
             for op, name, value in rules:
                 if name != "x-robots-tag":
@@ -159,7 +185,7 @@ def hidden_by_headers(blocks, key):
                 if op == "detach":
                     values = []
                 else:
-                    values.append(value)
+                    values.append(expand(value, found))
         if any(header_hides(v) for v in values):
             return True
     return False
