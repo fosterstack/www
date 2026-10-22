@@ -189,6 +189,47 @@ jobs:
   fi</code></pre>
   <p>The guard matters. On Maven 3.9.9, without it, Maven stops when there is no address. On Maven 3.10.0 it carried on and built without the remote cache, but logged <code>[ERROR] Error downloading cache item</code>, so keep the guard there too (see the table below).</p>
 
+  <h3>The whole Maven workflow</h3>
+  <p>The three files above, plus this workflow in <code>.github/workflows/build.yml</code>. It sets up Java 21, then runs the build step you just saw. The runner has Maven installed; <code>-B</code> is Maven's batch mode.</p>
+<pre tabindex="0"><code>name: build
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Build
+        env:
+          CACHE_URL: ${{ secrets.CACHE_URL }}
+          CACHE_USER: ${{ github.event_name == 'push' &amp;&amp; secrets.CACHE_RW_USER || secrets.CACHE_RO_USER }}
+          CACHE_PASSWORD: ${{ github.event_name == 'push' &amp;&amp; secrets.CACHE_RW_PASSWORD || secrets.CACHE_RO_PASSWORD }}
+          CACHE_PUSH: ${{ github.event_name == 'push' &amp;&amp; 'true' || 'false' }}
+        run: |
+          if [ -n "$CACHE_URL" ]; then
+            mvn -B -s .mvn/ci-settings.xml \
+              -Dmaven.build.cache.remote.enabled=true \
+              -Dmaven.build.cache.remote.url="$CACHE_URL" \
+              -Dmaven.build.cache.remote.save.enabled="${CACHE_PUSH:-false}" \
+              verify
+          else
+            mvn -B verify
+          fi</code></pre>
+  <p>Both <code>uses:</code> lines are named by full commit digest, with the version in the comment. The secrets reach the build only through <code>env:</code>. A pull request gets the read-only login and <code>push</code> off, so the same file serves both cases.</p>
   <h2>Pull requests and forks</h2>
   <p>Our advice, not a test result:</p>
   <ul>
@@ -240,6 +281,14 @@ jobs:
   <p class="muted-note">The local runs used FosterStack Cache 0.2.1 and Maven 3.9.9. The hosted-runner jobs used 0.2.2 and, for Maven, 3.10.0. <a href="https://github.com/fosterstack/www/actions/runs/38046366699">The run and its log are public.</a> The server ran on the same machine, so this does not show that a hosted runner can reach your own server.</p>
   <p class="muted-note">Local runs: Gradle 9.8.0 with Java 21.0.12.1. Maven 3.9.9 with Build Cache Extension 1.2.3 and all eight plugin versions pinned. Every build used a fresh copy of the project and an empty local cache. Gradle built a two-module project with the compile tasks only. Maven built a one-module project with two tests. macOS (arm64), one machine.</p>
   <p class="muted-note">Not tested: the workflow file with real secrets (the hosted-runner jobs used made-up logins), a hosted runner reaching a real server, an empty Maven login (only a missing login and a wrong password were run), Maven versions other than 3.9.9 and 3.10.0, and secrets that are missing as opposed to empty in a real fork pull request. The local Maven runs used Maven 3.9.9. On Maven 3.10.0 an ordinary first-time miss is also logged as <code>[ERROR]</code>, so that line alone does not mean a login problem (shown in <a href="/maven-remote-build-cache-setup/">Maven build cache extension: remote server setup</a>).</p>
+  <p><strong>The Maven step again, on the 0.2.2 release (Oct 22).</strong> We ran the build step above word for word on a Mac with Maven 3.10.0, the Build Cache Extension 1.2.3 and Java 21, against the 0.2.2 server (the macOS archive, its signature and checksum verified first), with made-up read-write and read-only logins passed as environment variables. We did not run the workflow file itself, which needs a GitHub runner.</p>
+  <ul class="trust">
+    <li>Main build, read-write login, push on: built, then stored 3 files (the server went from 0 to 3 entries).</li>
+    <li>Main build again, after deleting <code>target</code> and <code>~/.m2/build-cache</code>: <code>Found cached build, restoring demo:mtest from cache</code>; the server counted 2 hits.</li>
+    <li>Pull request, read-only login, push off, one file changed: built; nothing was stored.</li>
+    <li>No <code>CACHE_URL</code> (a fork pull request): plain <code>mvn -B verify</code>, build succeeded, and the server's counters did not move.</li>
+    <li>Read-only login with push on: <code>BUILD SUCCESS</code>, with <code>Unable to save to remote cache</code> for each file; nothing was stored.</li>
+  </ul>
 </main>
 <footer>
   <div>
