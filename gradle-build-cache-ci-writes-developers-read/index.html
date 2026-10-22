@@ -1,7 +1,6 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta name="robots" content="noindex, nofollow">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Let CI write, developers only read: Gradle and Maven cache</title>
@@ -96,7 +95,6 @@
 <main>
   <h1>Let CI write, developers only read the build cache</h1>
   <p class="lede">Anything that can write to your build cache can change what later builds use, so give the right to write to as few machines as possible. This page sets up a cache where CI uploads and developers only download, in Gradle and in Maven, with a read-only login the server enforces.</p>
-  <p class="muted-note"><strong>DRAFT for v0.3, private preview, not published and never merged before v0.3.0 is live.</strong></p>
 
   <h2>Give the server two logins</h2>
   <p>The server takes one read-write login and, optionally, a second read-only login. A client using the read-only one can read cache entries, and any write is refused with a 403.</p>
