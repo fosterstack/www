@@ -164,7 +164,7 @@ def main():
     def bad(msg):
         # one printable line per problem: text from a pull request must never start a line with "::"
         # (GitHub Actions reads such a line as a workflow command) or smuggle in a newline
-        problems.append(re.sub(r"[\x00-\x1f\x7f]", " ", msg))
+        problems.append(re.sub(r"[\x00-\x1f\x7f-\x9f]", " ", msg))
 
     # a symlink could point a page (or its title) at a file outside the site: refuse them
     for name in sorted(os.listdir(root)):

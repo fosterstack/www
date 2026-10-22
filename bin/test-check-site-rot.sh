@@ -250,6 +250,14 @@ expect_pass "--live: a value that only contains the word none hides nothing" --l
 fresh; append "$site/_headers" "https://example.org/$first/"; append "$site/_headers" "  X-Robots-Tag: noindex"
 expect_pass "--live: a _headers rule for another host hides nothing here" --live
 
+# a C1 control character (U+009B is read by some terminals as an escape) never reaches the output
+fresh; python3 - "$site/$first/index.html" <<'EOF2'
+import re, sys
+p = sys.argv[1]; s = open(p, encoding="utf-8").read()
+open(p, "w", encoding="utf-8").write(re.sub(r"<title>.*?</title>", "<title>" + "x" * 70 + "\u009b[31m</title>", s, count=1, flags=re.S))
+EOF2
+python3 "$here/bin/check-site-rot.py" --root "$site" >"$tmp/out" 2>&1; python3 -c "import sys; d=open(sys.argv[1],encoding='utf-8').read(); sys.exit(0 if 'title:' in d and not any(0x80<=ord(c)<=0x9f for c in d) else 1)" "$tmp/out" && echo "ok   a C1 control character in a title is not printed" || { echo "FAIL a C1 control character reached the output"; fail=1; }
+
 # the check switches sentence 2 on for pull requests based on main and for main itself, and not for other bases
 fresh; hide "$first"; unlist "$first"
 if GITHUB_BASE_REF=main python3 "$here/bin/check-site-rot.py" --root "$site" >"$tmp/out" 2>&1; then echo "FAIL a pull request based on main may not hide a page"; fail=1; else grep -q "live: " "$tmp/out" && echo "ok   a pull request based on main may not hide a page" || { echo "FAIL based-on-main message"; fail=1; }; fi
