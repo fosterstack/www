@@ -25,3 +25,4 @@ bench-android	kotlin-android-gradle-build-cache
 demo-github-actions	github-actions-remote-build-cache
 proof-selftest	(self-test: no page)
 proof-watch	(the daily watch itself: it could not read the release or the earlier record)
+live-check	the live site: every page in the live sitemap and every link on it (see the FAIL lines)
