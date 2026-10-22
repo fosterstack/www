@@ -134,7 +134,7 @@ docker run -d -p 127.0.0.1:8080:8080 -v fscache-data:/home/nonroot ghcr.io/foste
     <li>For containers we used <code>docker pull</code> and <code>docker save</code> in place of <code>crane pull</code>. Then <code>docker load -i</code> and the <code>docker run</code> line above gave a server that answered <code>/healthz</code> on <code>127.0.0.1:8080</code>.</li>
   </ul>
   <p class="muted-note">Not tested: <code>crane pull</code>, verifying the image with <code>cosign verify</code>, the systemd service, and later upgrades, and we put no HTTPS proxy in front of the server. <a href="https://github.com/fosterstack/www/actions/runs/38074962799">The run and its log are public</a>.</p>
-  <p class="muted-note">Related: <a href="/how-we-build/">how releases are built and signed</a> and <a href="/build-cache-server-sizing/">server sizing</a>.</p>
+  <p class="muted-note">Related: <a href="/how-we-build/">how releases are built and signed</a> <a href="/build-cache-server-sizing/">server sizing</a>, <a href="/verify-a-release/">verifying a release</a>, <a href="/fips-140-3-build-cache/">the FIPS 140-3 build</a> and <a href="/upgrade-build-cache-server/">upgrading</a>.</p>
   <div class="cta-row">
     <a class="btn" href="/migrate-build-cache-node/">Gradle and Maven setup</a>
     <a class="btn btn-secondary" href="/">FosterStack home</a>
