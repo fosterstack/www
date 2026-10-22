@@ -2,6 +2,8 @@
 # Self-test for bin/check-site-rot.py: the clean site passes, and each kind of rot it promises to catch
 # makes it fail with the matching message. Works on a throwaway copy; touches nothing in the repo.
 set -u
+# the check reads these to know whether it runs for the live site; the tests set them on purpose, never inherit them
+unset GITHUB_BASE_REF GITHUB_REF GITHUB_EVENT_NAME
 cd "$(dirname "$0")/.."
 here=$PWD
 tmp=$(mktemp -d)
@@ -193,5 +195,43 @@ expect_fail "a 302 line is not a 301 twin" "no matching"
 # a symlinked page is refused
 fresh; rm -rf "$site/$second"; ln -s "$site/$first" "$site/$second"
 expect_fail "a symbolic link in the site is refused" "symbolic link"
+
+# --- hidden pages and the sitemap (owner ratified Oct 22 2026, ops/docs/ratify/2026-10-22-www-noindex-and-sitemap.md)
+# Sentence 1: no page that is hidden from search may be listed in the sitemap.
+# Sentence 2: on the live site no page except the 404 page may be hidden from search. It applies with --live, and the
+# check turns it on by itself for a pull request whose base is main (GITHUB_BASE_REF) and for main itself (GITHUB_REF).
+hide() { edit "$site/$1/index.html" "<head>" '<head><meta name="robots" content="noindex, nofollow">'; }
+unlist() { edit "$site/sitemap.xml" "REGEX:<url>\s*<loc>https://fosterstack\.com/$1/</loc>.*?</url>" ""; }
+
+fresh; hide "$first"
+expect_fail "a hidden page listed in the sitemap is refused" "hidden: .*$first.*sitemap"
+fresh; hide "$first"; unlist "$first"
+expect_pass "a hidden page left out of the sitemap passes (not live)"
+fresh; hide "$first"; unlist "$first"
+expect_fail "--live: a hidden page on the live site is refused" "live: .*$first.*hidden" --live
+fresh; expect_pass "--live: a site with no hidden page passes" --live
+fresh; edit "$site/404.html" "<head>" '<head><meta name="robots" content="noindex">'
+expect_pass "--live: the 404 page may be hidden" --live
+
+# every way of hiding a page is read
+for tag in '<meta name="robots" content="NOINDEX">' "<meta content='noindex,follow' name='robots'>" '<meta name="googlebot" content="index, noindex">' '<meta name="robots" content="none">' '<META NAME=robots CONTENT=noindex>'; do
+  fresh; edit "$site/$first/index.html" "<head>" "<head>$tag"
+  expect_fail "hidden by $tag is found" "hidden: .*$first.*sitemap"
+done
+fresh; edit "$site/$first/index.html" "<head>" '<head><meta name="robots" content="index, follow"><meta name="description" content="not noindex here">'
+expect_pass "a robots tag that says index, and the word in another tag, hide nothing" --live
+# X-Robots-Tag in _headers hides the pages its path pattern matches
+fresh; append "$site/_headers" "/$first/"; append "$site/_headers" "  X-Robots-Tag: noindex"
+expect_fail "an X-Robots-Tag noindex rule hides a page (and it is listed)" "hidden: .*$first.*sitemap"
+fresh; append "$site/_headers" "/$first/"; append "$site/_headers" "  X-Robots-Tag: noindex"; unlist "$first"
+expect_fail "--live: an X-Robots-Tag noindex rule is refused" "live: .*$first.*hidden" --live
+fresh; append "$site/_headers" "/*"; append "$site/_headers" "  X-Robots-Tag: noindex"
+expect_fail "--live: a noindex rule for every path is refused" "live: " --live
+
+# the check switches sentence 2 on for pull requests based on main and for main itself, and not for other bases
+fresh; hide "$first"; unlist "$first"
+if GITHUB_BASE_REF=main python3 "$here/bin/check-site-rot.py" --root "$site" >"$tmp/out" 2>&1; then echo "FAIL a pull request based on main may not hide a page"; fail=1; else grep -q "live: " "$tmp/out" && echo "ok   a pull request based on main may not hide a page" || { echo "FAIL based-on-main message"; fail=1; }; fi
+if GITHUB_REF=refs/heads/main python3 "$here/bin/check-site-rot.py" --root "$site" >"$tmp/out" 2>&1; then echo "FAIL main itself may not hide a page"; fail=1; else grep -q "live: " "$tmp/out" && echo "ok   main itself may not hide a page" || { echo "FAIL main message"; fail=1; }; fi
+if GITHUB_BASE_REF=www/v030-revamp GITHUB_REF=refs/pull/7/merge python3 "$here/bin/check-site-rot.py" --root "$site" >"$tmp/out" 2>&1; then echo "ok   a pull request based on another branch may hide an unlisted page"; else echo "FAIL other-base case"; sed 's/^/     /' "$tmp/out"; fail=1; fi
 
 [ "$fail" = 0 ] && echo "all site-rot self-tests passed" || { echo "site-rot self-test FAILED"; exit 1; }

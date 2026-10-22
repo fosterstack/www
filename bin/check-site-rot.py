@@ -8,8 +8,12 @@ Fails (exit 1, one line per problem) on:
      redirect whose target page or #anchor does not exist, or a redirect whose source is a live page
   4. a mismatch between the sitemap, llms.txt and the home page's links to pages
   5. a <title> longer than 60 characters (or a page with none)
+  6. hidden pages (owner ratified Oct 22 2026): a page hidden from search (a robots or googlebot noindex tag, or an
+     X-Robots-Tag noindex rule in _headers) that is listed in the sitemap; and, for the live site only, any hidden
+     page except 404.html. The second applies with --live, and by itself when GitHub says this run is for a pull
+     request whose base is main (GITHUB_BASE_REF) or for main itself (GITHUB_REF), so a draft branch stays testable.
 
-Usage: check-site-rot.py [--root DIR] [--base REF] [--removed FILE...]
+Usage: check-site-rot.py [--root DIR] [--base REF] [--removed FILE...] [--live]
   --base REF asks git which pages were removed since REF (the workflow passes HEAD^1) and requires each to
   have its two redirect lines; it fails if REF cannot be found, so a shallow checkout cannot hide a removal.
   --removed takes page paths directly (for example "old-page/index.html"), for tests.
@@ -48,6 +52,35 @@ def ids_of(text):
     return set(a or b for a, b in re.findall(r'(?<![\w-])id\s*=\s*(?:"([^"]+)"|\'([^\']+)\')', text, re.I))
 
 
+META_RE = re.compile(r"<meta\b[^>]*>", re.I)
+ATTR_RE = re.compile(r"""([a-zA-Z-]+)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+))""")
+
+
+def hidden_by_meta(text):
+    """True if a robots or googlebot meta tag in the page carries noindex (or none, which means noindex and nofollow)."""
+    for tag in META_RE.findall(text):
+        attrs = {k.lower(): html.unescape(a or b or c).strip().lower() for k, a, b, c in ATTR_RE.findall(tag)}
+        if attrs.get("name") in ("robots", "googlebot") and \
+                {x.strip() for x in attrs.get("content", "").split(",")} & {"noindex", "none"}:
+            return True
+    return False
+
+
+def hidden_by_headers(headers_text):
+    """Path patterns of the _headers blocks that send an X-Robots-Tag with noindex (or none)."""
+    patterns, cur, hit = [], None, False
+    for line in headers_text.splitlines() + ["/end-of-file"]:
+        if not line.strip() or line.lstrip().startswith("#"):
+            continue
+        if not line[0].isspace():
+            if cur is not None and hit:
+                patterns.append(cur)
+            cur, hit = line.strip(), False
+        elif re.match(r"\s*x-robots-tag\s*:", line, re.I):
+            hit = hit or bool({x.strip().lower() for x in re.split(r"[,\s]+", line.split(":", 1)[1])} & {"noindex", "none"})
+    return patterns
+
+
 # href="..." / src='...' / href=bare, any case: every way a link can be written
 LINK_RE = re.compile(r'(?<![\w-])(href|src)\s*=\s*(?:"([^"]*)"|\'([^\']*)\'|([^\s"\'>]+))', re.I)
 
@@ -56,10 +89,14 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--root", default=".")
     ap.add_argument("--removed", nargs="*", default=[])
+    ap.add_argument("--live", action="store_true",
+                    help="the live-site rule: no page except 404.html may be hidden from search (turned on by itself for a "
+                         "pull request based on main and for main)")
     ap.add_argument("--base", help="git ref of the parent commit (for example HEAD^1): pages removed since then "
                                    "must have their two 301 lines. Fails if the ref cannot be found.")
     args = ap.parse_args()
     root = args.root
+    live = args.live or os.environ.get("GITHUB_BASE_REF") == "main" or os.environ.get("GITHUB_REF") == "refs/heads/main"
     problems = []
     removed_from_git = []
     if args.base:
@@ -109,6 +146,17 @@ def main():
         if k not in texts:
             texts[k] = ""  # a symlink was reported above; do not read through it
     ids = {k: ids_of(t) for k, t in texts.items()}
+
+    # 6. hidden pages: found by a meta tag in the page or an X-Robots-Tag rule in _headers
+    import fnmatch
+    hp = os.path.join(root, "_headers")
+    header_patterns = hidden_by_headers(read(hp)) if os.path.isfile(hp) else []
+    hidden = set()
+    for key, t in texts.items():
+        url_path = "/" if key == "" else "/404" if key == "404.html" else "/%s/" % key
+        if hidden_by_meta(t) or any(fnmatch.fnmatchcase(url_path, pat) or fnmatch.fnmatchcase(url_path.rstrip("/"), pat.rstrip("/"))
+                                    for pat in header_patterns):
+            hidden.add(key)
 
     # 5. titles
     for key, t in texts.items():
@@ -208,14 +256,22 @@ def main():
     smp = os.path.join(root, "sitemap.xml")
     if os.path.isfile(smp):
         locs = re.findall(r"<loc>([^<]*)</loc>", read(smp))
-        want = {SITE} | {SITE + p + "/" for p in pages}
+        want = ({SITE} if "" not in hidden else set()) | {SITE + p + "/" for p in pages if p not in hidden}
         got = set(locs)
         if len(locs) != len(got):
             bad("sitemap: has a duplicate <loc>")
+        for key in sorted(hidden):
+            url = SITE if key == "" else SITE + key + "/"
+            if key != "404.html" and url in got:
+                bad("hidden: %s is hidden from search but listed in the sitemap" % (key or "/"))
+                got.discard(url)
         for u in sorted(got - want):
             bad("sitemap: lists %s but no such page exists" % u)
         for u in sorted(want - got):
             bad("sitemap: is missing %s" % u)
+    if live:
+        for key in sorted(hidden - {"404.html"}):
+            bad("live: %s is hidden from search; on the live site only the 404 page may be" % (key or "/"))
     lp = os.path.join(root, "llms.txt")
     if os.path.isfile(lp):
         urls = set(re.findall(r"\((https://fosterstack\.com/[^)\s]*)\)", read(lp)))
