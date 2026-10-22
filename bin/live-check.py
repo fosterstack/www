@@ -145,7 +145,7 @@ def main():
     else:
         # only plain spaces and line breaks around an entry are ignored; any other control character (a tab, U+001F, ...)
         # is looked at after the text is decoded, and the entry is refused, so it is never fetched and no file is read for it
-        locs = [x.strip(" \r\n") for x in re.findall(r"<loc>([^<]*)</loc>", body.decode("utf-8", "replace"))]
+        locs = re.findall(r"<loc>([^<]*)</loc>", body.decode("utf-8", "replace"))   # the untouched text: nothing is trimmed before it is judged
     pages = []
     for raw in locs:
         u = html.unescape(raw)
@@ -185,15 +185,20 @@ def main():
         if not u.endswith("/"):
             continue
         for href in links_of(got.decode("utf-8", "replace")):
-            full = urljoin(u, href)               # resolved against its own page, so relative and absolute links are both read
-            parts = urlsplit(full)
-            host = (parts.hostname or "").lower()
+            try:
+                full = urljoin(u, href)           # resolved against its own page, so relative and absolute links are both read
+                parts = urlsplit(full)
+                host = (parts.hostname or "").lower()
+            except ValueError:
+                bad("link", "%s has a link that is not a valid address: %s" % (u, href))
+                continue
             if parts.scheme not in ("http", "https") or host not in ("fosterstack.com", "github.com"):
                 continue
             if host == "github.com" and not parts.path.startswith("/fosterstack/"):
                 continue
-            if parts.scheme != "https" or parts.username or parts.password or parts.port not in (None, 443):
-                bad("link", "%s links %s, which is not a plain https link (http, a port or credentials)" % (u, full))
+            # a plain link is https and the bare host: no port (not even :443), no user information (not even an empty one)
+            if parts.scheme != "https" or parts.netloc.lower() != host:
+                bad("link", "%s links %s, which is not a plain https link (http, a port or user information)" % (u, full))
                 continue
             clean_url = "https://%s%s" % (host, parts.path)
             (internal if host == "fosterstack.com" else external).setdefault(clean_url, u)

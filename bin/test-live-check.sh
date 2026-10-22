@@ -177,6 +177,25 @@ open(p, "w").write(s.replace("</urlset>", "<url><loc>https://fosterstack.com/" +
 PY
   expect_fail "a sitemap entry ending in $tail is refused" "FAIL sitemap: .*not a plain path"
 done
+# a literal CR or LF around a sitemap entry is refused too (never trimmed into a real page), and neither a fetch nor a file read happens
+for tail in $'\n' $'\r'; do
+  fresh; python3 - "$served/sitemap.xml" "$first" "$tail" <<'PY'
+import sys
+p = sys.argv[1]; s = open(p).read()
+open(p, "w", newline="").write(s.replace("</urlset>", "<url><loc>https://fosterstack.com/" + sys.argv[2] + "/" + sys.argv[3] + "</loc></url></urlset>"))
+PY
+  expect_fail "a sitemap entry with a literal CR or LF at its end is refused" "FAIL sitemap: .*control character"
+done
+# the bare host only: an explicit :443, an empty user, a bad port and a bad address are failures, and the run goes on to print them
+for link in '<a href="https://fosterstack.com:443/x/">x</a>' '<a href="https://@fosterstack.com/x/">x</a>' '<a href="https://github.com:443/fosterstack/cache">x</a>' '<a href="https://@github.com/fosterstack/cache">x</a>' '<a href="https://github.com:bad/fosterstack/cache">x</a>' '<a href="https://github.com:65536/fosterstack/cache">x</a>' '<a href="https://[github.com/fosterstack/cache">x</a>'; do
+  fresh; python3 - "$served/$first/index.html" "$site/$first/index.html" "$link" <<'PY'
+import sys
+for p in sys.argv[1:3]:
+    s = open(p).read(); open(p, "w").write(s.replace("</main>", "<p>" + sys.argv[3] + "</p></main>", 1))
+PY
+  expect_fail "$link is a plain-link failure, not a crash" "FAIL link: "
+  grep -q "live pages checked" "$tmp/out" || { echo "FAIL the run ended without its summary line for $link"; fail=1; }
+done
 # an empty live sitemap is a failure, not a green run over nothing
 fresh; : > "$served/sitemap.xml"
 expect_fail "an empty live sitemap is refused" "FAIL sitemap: .*no page"
