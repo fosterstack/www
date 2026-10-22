@@ -200,7 +200,7 @@ def main():
             if parts.scheme != "https" or parts.netloc.lower() != host:
                 bad("link", "%s links %s, which is not a plain https link (http, a port or user information)" % (u, full))
                 continue
-            clean_url = "https://%s%s" % (host, parts.path)
+            clean_url = "https://%s%s%s" % (host, parts.path, "?" + parts.query if parts.query else "")   # the query is part of the resource; only the fragment is dropped
             (internal if host == "fosterstack.com" else external).setdefault(clean_url, u)
     for v, src in sorted(internal.items()):
         if v in pages or v == SITE:
@@ -209,7 +209,7 @@ def main():
         if status != 200:
             bad("link", "%s links %s, which answered %s" % (src, v, status or "nothing"))
     for v, src in sorted(external.items()):
-        advisory = v.endswith("/security/advisories/new")
+        advisory = urlsplit(v).path.endswith("/security/advisories/new")
         status, _ = fetch(args.github.rstrip("/") + v[len("https://github.com"):],
                           accept=(200, 301, 302, 303, 307, 308) if advisory else (200,))
         if status in (200, 301, 302, 303, 307, 308) and (status == 200 or advisory):

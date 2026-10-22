@@ -22,6 +22,8 @@ class Live(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *a, **k): super().__init__(*a, directory=os.path.join(tmp, "served"), **k)
     def log_message(self, *a): pass
     def do_GET(self):
+        if "bad=1" in self.path:
+            self.send_response(404); self.end_headers(); return
         if self.path.startswith("/redir-"):
             self.send_response(301); self.send_header("Location", "/"); self.end_headers(); return
         if self.path.startswith("/slow-"):
@@ -33,7 +35,7 @@ class GH(http.server.BaseHTTPRequestHandler):
         n = self.path.split("/")[-1]
         if self.path.endswith("/security/advisories/new"):
             self.send_response(302); self.send_header("Location", "/login"); self.end_headers(); return
-        if "/dead/" in self.path:
+        if "/dead/" in self.path or "bad=1" in self.path:
             self.send_response(404); self.end_headers(); return
         for name, code in (("flaky", 503), ("flaky403", 403), ("flaky404", 404), ("flaky302", 302)):
             if "/%s/" % name in self.path:
@@ -195,6 +197,15 @@ for p in sys.argv[1:3]:
 PY
   expect_fail "$link is a plain-link failure, not a crash" "FAIL link: "
   grep -q "live pages checked" "$tmp/out" || { echo "FAIL the run ended without its summary line for $link"; fail=1; }
+done
+# the query string is part of the link: a dead link that differs only by its query is found, for both hosts and for a page that is already in the sitemap
+for link in '<a href="https://github.com/fosterstack/cache/actions?bad=1">x</a>' '<a href="/endpoint-xyz?bad=1">x</a>' "<a href=\"/$second/?bad=1\">x</a>" '<a href="https://fosterstack.com/x/?bad=1#frag">x</a>'; do
+  fresh; python3 - "$served/$first/index.html" "$site/$first/index.html" "$link" <<'PY'
+import sys
+for p in sys.argv[1:3]:
+    s = open(p).read(); open(p, "w").write(s.replace("</main>", "<p>" + sys.argv[3] + "</p></main>", 1))
+PY
+  expect_fail "a dead link that differs only by its query is found: $link" "FAIL link: .*bad=1"
 done
 # an empty live sitemap is a failure, not a green run over nothing
 fresh; : > "$served/sitemap.xml"
