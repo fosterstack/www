@@ -42,6 +42,7 @@ on:
           - howto-pages-11
           - howto-pages-12
           - proof-watch
+          - live-check
           - proof-selftest
         default: miss-cost
 
@@ -71,6 +72,9 @@ jobs:
       - name: self-test the site-rot check
         run: bash bin/test-check-site-rot.sh
 
+      - name: self-test the live check (a local server stands in for the live site and for GitHub)
+        run: bash bin/test-live-check.sh
+
   # proof-watch: on the daily schedule it decides whether today's run proves every bench job below (a new release tag of
   # fosterstack/cache, or Monday for the weekly run). It reads only the releases of fosterstack/cache and only tags matching
   # ^v[0-9]+\.[0-9]+\.[0-9]+$ (any other tag is reported, never run); see bin/proof-watch.sh. On a manual run with
@@ -97,6 +101,30 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: bash bin/proof-watch.sh
+
+  # live-check: once a day on the schedule (and by hand with which=live-check), the LIVE site is checked, not the repository: the page
+  # list comes from the live sitemap.xml; every listed page must answer 200 and be byte for byte the file on main (so the live site and
+  # what the site-rot check reads cannot drift apart unseen); every internal link and github.com/fosterstack link on the live pages must
+  # answer 200. One fixed timeout and ONE retry per request. The site-rot check runs first on main with the live rules (no page hidden
+  # from search, none listed hidden). Read-only: no secret, no write permission, no action beyond the pinned checkout. A failure is
+  # reported by proof-report in the ONE tracking issue (job name live-check in bin/proof-pages.txt); see bin/live-check.py.
+  live-check:
+    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.which == 'live-check')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main   # the live site is compared with main, whatever branch a manual run starts on
+          persist-credentials: false
+
+      - name: the site-rot check on main, with the live rules
+        run: python3 bin/check-site-rot.py --live
+
+      - name: the live site against main, and every link on it
+        run: python3 bin/live-check.py
 
   # Timed runs for the "what does a cache miss cost" page. Manual dispatch only; never runs on push or
   # pull request. No secrets, no write permission, no third-party action beyond the pinned checkout above.
@@ -799,8 +827,8 @@ jobs:
   # bin/proof-report.sh. After a fully GREEN scheduled run only, it leaves the one-line artifact "proven-release" (tag, run id) that
   # proof-watch reads the next day (so a red run is tried again the next day when the tag is new). Nothing is committed back and no page is edited by a workflow.
   proof-report:
-    needs: [proof-watch, bench-miss-cost, bench-server-down, bench-verify-release, bench-setup-pages, bench-howto-pages, bench-howto-pages-2, bench-howto-pages-3, bench-k8s-page, bench-ga-page, bench-howto-pages-4, bench-howto-pages-5, bench-howto-pages-6, bench-howto-pages-7, bench-howto-pages-8, bench-howto-pages-9, bench-howto-pages-10, bench-howto-pages-11, bench-howto-pages-12, bench-maclinux-linux-store, bench-maclinux-mac-restore, bench-maclinux-mac-store, bench-maclinux-linux-restore, bench-android, demo-github-actions, proof-selftest]
-    if: ${{ always() && ((github.event_name == 'schedule' && (needs.proof-watch.result == 'failure' || (needs.proof-watch.result == 'success' && (needs.proof-watch.outputs.run == 'true' || startsWith(needs.proof-watch.outputs.reason, 'the newest release tag') || startsWith(needs.proof-watch.outputs.reason, 'release lookup failed'))))) || (github.event_name == 'workflow_dispatch' && inputs.which == 'proof-selftest')) }}
+    needs: [proof-watch, live-check, bench-miss-cost, bench-server-down, bench-verify-release, bench-setup-pages, bench-howto-pages, bench-howto-pages-2, bench-howto-pages-3, bench-k8s-page, bench-ga-page, bench-howto-pages-4, bench-howto-pages-5, bench-howto-pages-6, bench-howto-pages-7, bench-howto-pages-8, bench-howto-pages-9, bench-howto-pages-10, bench-howto-pages-11, bench-howto-pages-12, bench-maclinux-linux-store, bench-maclinux-mac-restore, bench-maclinux-mac-store, bench-maclinux-linux-restore, bench-android, demo-github-actions, proof-selftest]
+    if: ${{ always() && ((github.event_name == 'schedule' && (needs.live-check.result == 'failure' || needs.live-check.result == 'success' || needs.proof-watch.result == 'failure' || (needs.proof-watch.result == 'success' && (needs.proof-watch.outputs.run == 'true' || startsWith(needs.proof-watch.outputs.reason, 'the newest release tag') || startsWith(needs.proof-watch.outputs.reason, 'release lookup failed'))))) || (github.event_name == 'workflow_dispatch' && inputs.which == 'proof-selftest') || (github.event_name == 'workflow_dispatch' && inputs.which == 'live-check' && (needs.live-check.result == 'failure' || needs.live-check.result == 'success'))) }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     concurrency:
@@ -820,10 +848,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           RUN_ID: ${{ github.run_id }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          TAG: ${{ needs.proof-watch.outputs.tag }}
+          TAG: ${{ needs.proof-watch.outputs.run == 'true' && needs.proof-watch.outputs.tag || '' }}   # empty on a day nothing was proven, so a live-check-only report never writes the proven-release artifact
           WATCH_REASON: ${{ needs.proof-watch.outputs.reason }}
           WATCH_RUN: ${{ needs.proof-watch.outputs.run }}
-          MODE: ${{ github.event_name == 'schedule' && 'schedule' || 'selftest' }}
+          MODE: ${{ (github.event_name == 'schedule' || inputs.which == 'live-check') && 'schedule' || 'selftest' }}
           OUT_FILE: proven-release.txt
         run: bash bin/proof-report.sh
 
