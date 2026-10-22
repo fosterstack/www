@@ -228,6 +228,28 @@ expect_fail "--live: an X-Robots-Tag noindex rule is refused" "live: .*$first.*h
 fresh; append "$site/_headers" "/*"; append "$site/_headers" "  X-Robots-Tag: noindex"
 expect_fail "--live: a noindex rule for every path is refused" "live: " --live
 
+# the page is read the way a browser reads it: a quoted ">" does not end a tag; a tag in a comment or a script is not a tag
+fresh; edit "$site/$first/index.html" "<head>" '<head><meta data-note=">" name="robots" content="noindex">'
+expect_fail "a quoted > inside a meta tag does not hide the tag" "hidden: .*$first.*sitemap"
+fresh; edit "$site/$first/index.html" "<head>" '<head><!-- <meta name="robots" content="noindex"> --><script>var t = '"'"'<meta name="robots" content="noindex">'"'"';</script>'
+expect_pass "a noindex tag in a comment or a script hides nothing" --live
+# the home page can be hidden too, and is then listed in the sitemap
+fresh; edit "$site/index.html" "<head>" '<head><meta name="robots" content="noindex">'
+expect_fail "a hidden home page that is listed in the sitemap is refused" "hidden: /"
+# _headers: absolute URL, placeholder, a named bot, none, comments and several rules in one block, and a value that only contains the word
+fresh; append "$site/_headers" "https://fosterstack.com/$first/"; append "$site/_headers" "  X-Robots-Tag: noindex"; unlist "$first"
+expect_fail "--live: an absolute URL in _headers is read as its path" "live: .*$first" --live
+fresh; append "$site/_headers" "/:slug/"; append "$site/_headers" "  X-Robots-Tag: noindex"; unlist "$first"
+expect_fail "--live: a :placeholder in _headers matches a page" "live: .*$first" --live
+fresh; append "$site/_headers" "/$first/"; append "$site/_headers" "  # a comment"; append "$site/_headers" "  Cache-Control: no-store"; append "$site/_headers" "  X-Robots-Tag: googlebot: noindex"; unlist "$first"
+expect_fail "--live: a noindex for one named bot, after a comment and another rule, hides the page" "live: .*$first" --live
+fresh; append "$site/_headers" "/$first/"; append "$site/_headers" "  X-Robots-Tag: none"; unlist "$first"
+expect_fail "--live: X-Robots-Tag none hides the page" "live: .*$first" --live
+fresh; append "$site/_headers" "/$first/"; append "$site/_headers" "  X-Robots-Tag: max-image-preview: none"; append "$site/_headers" "/$second/"; append "$site/_headers" "  X-Robots-Tag: index, max-snippet: 0"
+expect_pass "--live: a value that only contains the word none hides nothing" --live
+fresh; append "$site/_headers" "https://example.org/$first/"; append "$site/_headers" "  X-Robots-Tag: noindex"
+expect_pass "--live: a _headers rule for another host hides nothing here" --live
+
 # the check switches sentence 2 on for pull requests based on main and for main itself, and not for other bases
 fresh; hide "$first"; unlist "$first"
 if GITHUB_BASE_REF=main python3 "$here/bin/check-site-rot.py" --root "$site" >"$tmp/out" 2>&1; then echo "FAIL a pull request based on main may not hide a page"; fail=1; else grep -q "live: " "$tmp/out" && echo "ok   a pull request based on main may not hide a page" || { echo "FAIL based-on-main message"; fail=1; }; fi

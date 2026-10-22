@@ -22,6 +22,7 @@ Usage: check-site-rot.py [--root DIR] [--base REF] [--removed FILE...] [--live]
 """
 import argparse
 import html
+from html.parser import HTMLParser
 import os
 import re
 import subprocess
@@ -52,16 +53,41 @@ def ids_of(text):
     return set(a or b for a, b in re.findall(r'(?<![\w-])id\s*=\s*(?:"([^"]+)"|\'([^\']+)\')', text, re.I))
 
 
-META_RE = re.compile(r"<meta\b[^>]*>", re.I)
-ATTR_RE = re.compile(r"""([a-zA-Z-]+)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+))""")
+VALUE_DIRECTIVES = {"max-snippet", "max-image-preview", "max-video-preview", "unavailable_after"}
+
+
+class _RobotsMeta(HTMLParser):
+    """Finds robots and googlebot meta tags the way a browser reads the page: comments, script and style text are not tags,
+    and a quoted '>' does not end a tag."""
+
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.hidden = False
+
+    def handle_starttag(self, tag, attrs):
+        if tag != "meta":
+            return
+        a = {k.lower(): (v or "").strip().lower() for k, v in attrs}
+        if a.get("name") in ("robots", "googlebot") and {x.strip() for x in a.get("content", "").split(",")} & {"noindex", "none"}:
+            self.hidden = True
+
+    handle_startendtag = handle_starttag
 
 
 def hidden_by_meta(text):
     """True if a robots or googlebot meta tag in the page carries noindex (or none, which means noindex and nofollow)."""
-    for tag in META_RE.findall(text):
-        attrs = {k.lower(): html.unescape(a or b or c).strip().lower() for k, a, b, c in ATTR_RE.findall(tag)}
-        if attrs.get("name") in ("robots", "googlebot") and \
-                {x.strip() for x in attrs.get("content", "").split(",")} & {"noindex", "none"}:
+    parser = _RobotsMeta()
+    parser.feed(text)
+    parser.close()
+    return parser.hidden
+
+
+def header_hides(value):
+    """True if an X-Robots-Tag value carries noindex or none as a directive, alone or for one named bot ("googlebot: noindex").
+    A directive that only has the word as its value, such as "max-image-preview: none", hides nothing."""
+    for part in value.split(","):
+        m = re.fullmatch(r"\s*(?:([A-Za-z0-9_-]+)\s*:\s*)?(noindex|none)\s*", part, re.I)
+        if m and (m.group(1) or "").lower() not in VALUE_DIRECTIVES:
             return True
     return False
 
@@ -77,8 +103,22 @@ def hidden_by_headers(headers_text):
                 patterns.append(cur)
             cur, hit = line.strip(), False
         elif re.match(r"\s*x-robots-tag\s*:", line, re.I):
-            hit = hit or bool({x.strip().lower() for x in re.split(r"[,\s]+", line.split(":", 1)[1])} & {"noindex", "none"})
+            hit = hit or header_hides(line.split(":", 1)[1])
     return patterns
+
+
+def pattern_regex(pat):
+    """A _headers path pattern as a regex over the URL path: * matches anything, :name matches one path segment; an absolute
+    URL on this site is read as its path, one on another host matches nothing here."""
+    m = re.match(r"https?://([^/]+)(/.*)?$", pat)
+    if m:
+        if m.group(1) not in ("fosterstack.com", "www.fosterstack.com"):
+            return None
+        pat = m.group(2) or "/"
+    out = ""
+    for tok in re.split(r"(\*|:[A-Za-z][A-Za-z0-9_]*)", pat):
+        out += ".*" if tok == "*" else "[^/]+" if re.fullmatch(r":[A-Za-z][A-Za-z0-9_]*", tok) else re.escape(tok)
+    return re.compile(out)
 
 
 # href="..." / src='...' / href=bare, any case: every way a link can be written
@@ -148,14 +188,12 @@ def main():
     ids = {k: ids_of(t) for k, t in texts.items()}
 
     # 6. hidden pages: found by a meta tag in the page or an X-Robots-Tag rule in _headers
-    import fnmatch
     hp = os.path.join(root, "_headers")
-    header_patterns = hidden_by_headers(read(hp)) if os.path.isfile(hp) else []
+    header_res = [r for r in (pattern_regex(x) for x in (hidden_by_headers(read(hp)) if os.path.isfile(hp) else [])) if r]
     hidden = set()
     for key, t in texts.items():
         url_path = "/" if key == "" else "/404" if key == "404.html" else "/%s/" % key
-        if hidden_by_meta(t) or any(fnmatch.fnmatchcase(url_path, pat) or fnmatch.fnmatchcase(url_path.rstrip("/"), pat.rstrip("/"))
-                                    for pat in header_patterns):
+        if hidden_by_meta(t) or any(r.fullmatch(url_path) or r.fullmatch(url_path.rstrip("/") or "/") for r in header_res):
             hidden.add(key)
 
     # 5. titles
