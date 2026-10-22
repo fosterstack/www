@@ -22,6 +22,8 @@ class Live(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *a, **k): super().__init__(*a, directory=os.path.join(tmp, "served"), **k)
     def log_message(self, *a): pass
     def do_GET(self):
+        if self.path.startswith("/redir-"):
+            self.send_response(301); self.send_header("Location", "/"); self.end_headers(); return
         if self.path.startswith("/slow-"):
             import time; time.sleep(60)
         return super().do_GET()
@@ -151,15 +153,82 @@ open(p, "w").write(s.replace("</urlset>", "<url><loc>https://fosterstack.com/bad
 PY
 run || true
 python3 -c "import sys; d=open(sys.argv[1],encoding='utf-8',errors='replace').read(); sys.exit(0 if 'FAIL' in d and not any(0x80<=ord(c)<=0x9f or (ord(c)<32 and c!=chr(10)) for c in d) else 1)" "$tmp/out" && echo "ok   control characters from the live site are not printed" || { echo "FAIL control characters reached the output"; fail=1; }
+# a page that redirects (a steady 301) is a failure, a link with another scheme, port, credentials or an upper-case host is still read
+fresh; python3 - "$served/sitemap.xml" <<'PY'
+import sys
+p = sys.argv[1]; s = open(p).read()
+open(p, "w").write(s.replace("</urlset>", "<url><loc>https://fosterstack.com/redir-page/</loc></url></urlset>"))
+PY
+expect_fail "a page that keeps redirecting is reported" "FAIL page: .*redir-page.* 301"
+for link in '<a href="http://github.com/fosterstack/dead/x">x</a>' '<a href="https://GITHUB.COM/fosterstack/dead/x">x</a>' '<a href="https://user@github.com/fosterstack/dead/x">x</a>' '<a href="https://github.com:8443/fosterstack/dead/x">x</a>' '<a href="HTTPS://Github.Com/fosterstack/dead/x">x</a>'; do
+  fresh; python3 - "$served/$first/index.html" "$site/$first/index.html" "$link" <<'PY'
+import sys
+for p in sys.argv[1:3]:
+    s = open(p).read(); open(p, "w").write(s.replace("</main>", "<p>" + sys.argv[3] + "</p></main>", 1))
+PY
+  expect_fail "$link is not skipped" "FAIL link: "
+done
+# a sitemap entry with a trailing control character is refused, not trimmed into a real page
+for tail in '&#9;' '&#31;'; do
+  fresh; python3 - "$served/sitemap.xml" "$first" "$tail" <<'PY'
+import sys
+p = sys.argv[1]; s = open(p).read()
+open(p, "w").write(s.replace("</urlset>", "<url><loc>https://fosterstack.com/" + sys.argv[2] + "/" + sys.argv[3] + "</loc></url></urlset>"))
+PY
+  expect_fail "a sitemap entry ending in $tail is refused" "FAIL sitemap: .*not a plain path"
+done
+# an empty live sitemap is a failure, not a green run over nothing
+fresh; : > "$served/sitemap.xml"
+expect_fail "an empty live sitemap is refused" "FAIL sitemap: .*no page"
+
+# proof-report, with a stand-in gh that records what it is asked to do (no network)
+mkdir "$tmp/fakebin"
+cat >"$tmp/fakebin/gh" <<'GH'
+#!/usr/bin/env bash
+echo "gh $*" >> "$FAKE_LOG"
+case "$*" in
+  *"/jobs?"*) cat "$FAKE_JOBS" ;;
+  *"/logs"*) echo "2026-10-22T05:00:00Z FAIL live: https://fosterstack.com/x/ answered 404" ;;
+  "issue list"*) printf '%s' "${FAKE_OPEN:-}" ;;
+  *) : ;;
+esac
+exit 0
+GH
+chmod +x "$tmp/fakebin/gh"
+report() { # name, jobs-json, open-issue, TAG, WATCH_RUN
+  rm -f "$tmp/proven.txt" "$tmp/fake.log"; printf '%s' "$2" >"$tmp/jobs.json"
+  PATH="$tmp/fakebin:$PATH" FAKE_LOG="$tmp/fake.log" FAKE_JOBS="$tmp/jobs.json" FAKE_OPEN="$3" GH_TOKEN=x GITHUB_REPOSITORY=o/r RUN_ID=1 RUN_URL=http://x \
+    TAG="$4" WATCH_RUN="$5" WATCH_REASON="" MODE=schedule OUT_FILE="$tmp/proven.txt" bash bin/proof-report.sh >"$tmp/rep.out" 2>&1
+}
+okrun='{"jobs":[{"id":1,"name":"proof-watch","conclusion":"success","status":"completed","steps":[]},{"id":3,"name":"bench-miss-cost","conclusion":"success","status":"completed","steps":[]}]}'
+ok='{"jobs":[{"id":1,"name":"proof-watch","conclusion":"success","status":"completed","steps":[]},{"id":2,"name":"live-check","conclusion":"success","status":"completed","steps":[]},{"id":3,"name":"bench-miss-cost","conclusion":"skipped","status":"completed","steps":[]}]}'
+bad='{"jobs":[{"id":2,"name":"live-check","conclusion":"failure","status":"completed","steps":[{"name":"the live site against main, and every link on it","conclusion":"failure"}]},{"id":3,"name":"bench-miss-cost","conclusion":"skipped","status":"completed","steps":[]}]}'
+chk2() { if eval "$2"; then echo "ok   $1"; else echo "FAIL $1"; sed 's/^/     /' "$tmp/rep.out" "$tmp/fake.log" 2>/dev/null | head -6; fail=1; fi; }
+report a "$ok" "" "" false
+chk2 "report: a day with only the live check, all green, opens nothing and writes no proven-release file" "[ ! -e $tmp/proven.txt ] && ! grep -q 'issue create' $tmp/fake.log"
+report b "$bad" "" "" false
+chk2 "report: a failed live-check opens the one issue, naming the job, and writes no proven-release file" "grep -q 'issue create' $tmp/fake.log && grep -q 'live-check' $tmp/fake.log && [ ! -e $tmp/proven.txt ]"
+report c "$bad" "7" "" false
+chk2 "report: a failed live-check with an open issue comments on it, no second issue" "grep -q 'issue comment 7' $tmp/fake.log && ! grep -q 'issue create' $tmp/fake.log"
+report d "$ok" "7" "" false
+chk2 "report: a green day closes the open issue" "grep -q 'issue close 7' $tmp/fake.log"
+report e "$okrun" "" "v0.2.2" true
+chk2 "report: a green proof run with a release writes the proven-release file" "[ -s $tmp/proven.txt ]"
+report f "$ok" "" "" true
+chk2 "report: a proof run that skipped a bench job proved nothing for it" "grep -q 'issue create' $tmp/fake.log && [ ! -e $tmp/proven.txt ]"
+
 # the workflow is wired as promised (static reads of .github/workflows/hygiene.yml)
 wf=.github/workflows/hygiene.yml
 chk() { if eval "$2"; then echo "ok   $1"; else echo "FAIL $1"; fail=1; fi; }
 chk "the live-check job checks out main, whatever branch a manual run starts on" "awk '/^  live-check:/{f=1} f&&/ref: main/{r=1} /^  # Timed runs/{f=0} END{exit !r}' $wf"
 chk "issues: write is on exactly one job (proof-report)" "[ \$(grep -v '^\\s*#' $wf | grep -c 'issues: write') = 1 ] && awk '/^  proof-report:/{f=1} f&&/issues: write/{r=1} END{exit !r}' $wf"
-chk "the live-check job has contents: read and no write permission" "awk '/^  live-check:/{f=1} f&&/permissions:/{p=1} f&&p&&/write/{bad=1} /^  # Timed runs/{f=0} END{exit bad}' $wf"
+chk "the live-check job has exactly contents: read, and no write permission" "awk '/^  live-check:/{f=1} f&&/^    permissions:/{p=1;next} f&&p&&/^      [a-z-]+:/{n++; if (\$0 !~ /contents: read/) bad=1} f&&p&&!/^      /{p=0} /^  # Timed runs/{f=0} END{exit (bad||n!=1)}' $wf"
+chk "the live-check job runs only on the schedule or a manual which=live-check" "awk '/^  live-check:/{f=1;next} f&&/^    if:/{print; exit}' $wf | grep -q \"github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.which == 'live-check')\$\""
+chk "a manual live-check run is reported under the schedule mode, not the self-test mode" "grep -q \"MODE: \\\${{ (github.event_name == 'schedule' || inputs.which == 'live-check') && 'schedule' || 'selftest' }}\" $wf"
 chk "every uses: line is a full commit digest with a tag comment" "! grep -E '^\s*-?\s*uses:' $wf | grep -v -E 'uses: [^ ]+@[0-9a-f]{40} # v?[0-9]' | grep -q ."
 chk "a manual live-check run is reported (the report job's condition names it)" "awk '/^  proof-report:/{f=1} f&&/which == .live-check./{r=1} END{exit !r}' $wf"
 chk "the report's TAG is empty unless the proof watch decided to run" "grep -q \"TAG: \\\${{ needs.proof-watch.outputs.run == 'true' && needs.proof-watch.outputs.tag || '' }}\" $wf"
-chk "no new workflow file: only hygiene.yml and the existing ones" "[ \$(ls .github/workflows | wc -l) -le \$(git ls-tree --name-only origin/main .github/workflows/ 2>/dev/null | wc -l) ]"
+chk "the sitemap is fetched once: the page list and the comparison with main use the same answer" "[ \$(grep -c 'fetch(base + \"/sitemap.xml\")' bin/live-check.py) = 1 ] && grep -q 'sitemap_body' bin/live-check.py"
+chk "no new workflow file: hygiene.yml is the only one" "[ \"\$(ls .github/workflows)\" = hygiene.yml ]"
 
 [ "$fail" = 0 ] && echo "all live-check self-tests passed" || { echo "live-check self-test FAILED"; exit 1; }

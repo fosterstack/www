@@ -82,6 +82,17 @@ def links_of(text):
     return parser.hrefs
 
 
+def has_control(raw):
+    """A control character written out, or as a numeric reference (&#9; &#x1f;), which the decoder would otherwise drop."""
+    if re.search(r"[\x00-\x1f\x7f-\x9f]", raw):
+        return True
+    for m in re.finditer(r"&#(?:[xX]([0-9a-fA-F]+)|([0-9]+));", raw):
+        n = int(m.group(1), 16) if m.group(1) else int(m.group(2))
+        if n < 0x20 or 0x7f <= n <= 0x9f:
+            return True
+    return False
+
+
 def safe_suffix(suffix):
     """The part of a sitemap URL after the site root, if it is a plain relative path (no leading slash, no '..', no
     backslash, no query or fragment, no control characters); None otherwise."""
@@ -126,24 +137,36 @@ def main():
 
     # 1. the page list, from the live sitemap
     status, body = fetch(base + "/sitemap.xml")
+    sitemap_body = body
+    status_sitemap_ok = status == 200
     if status != 200:
         bad("sitemap", "sitemap.xml answered %s" % (status or "nothing"))
         locs = []
     else:
-        locs = [html.unescape(x).strip() for x in re.findall(r"<loc>([^<]*)</loc>", body.decode("utf-8", "replace"))]
+        # only plain spaces and line breaks around an entry are ignored; any other control character (a tab, U+001F, ...)
+        # is looked at after the text is decoded, and the entry is refused, so it is never fetched and no file is read for it
+        locs = [x.strip(" \r\n") for x in re.findall(r"<loc>([^<]*)</loc>", body.decode("utf-8", "replace"))]
     pages = []
-    for u in locs:
-        if not u.startswith(SITE):
+    for raw in locs:
+        u = html.unescape(raw)
+        if has_control(raw):
+            bad("sitemap", "the live sitemap lists %s, which is not a plain path on the site (it holds a control character)" % raw)
+        elif not u.startswith(SITE):
             bad("sitemap", "the live sitemap lists %s, which is not on %s" % (u, SITE))
         elif safe_suffix(u[len(SITE):]) is None:
             bad("sitemap", "the live sitemap lists %s, which is not a plain path on the site" % u)
         else:
             pages.append(u)
+    if status == 200 and not pages:
+        bad("sitemap", "the live sitemap lists no page")
 
     # 2. every listed page, and the three files, against main
     texts = {}
     for u in dict.fromkeys(pages + [SITE + "llms.txt", SITE + "robots.txt", SITE + "sitemap.xml"]):
-        status, got = fetch(live_url(u))
+        if u == SITE + "sitemap.xml":
+            status, got = (200, sitemap_body) if sitemap_body is not None and status_sitemap_ok else (0, b"")   # the same answer the page list came from
+        else:
+            status, got = fetch(live_url(u))
         label = u[len(SITE):] or "/"
         kind = "page" if u in pages else "drift"
         if status != 200:
@@ -164,13 +187,16 @@ def main():
         for href in links_of(got.decode("utf-8", "replace")):
             full = urljoin(u, href)               # resolved against its own page, so relative and absolute links are both read
             parts = urlsplit(full)
-            if parts.scheme != "https":
+            host = (parts.hostname or "").lower()
+            if parts.scheme not in ("http", "https") or host not in ("fosterstack.com", "github.com"):
                 continue
-            clean_url = parts._replace(query="", fragment="").geturl()
-            if parts.netloc == "fosterstack.com":
-                internal.setdefault(clean_url, u)
-            elif parts.netloc == "github.com" and parts.path.startswith("/fosterstack/"):
-                external.setdefault(clean_url, u)
+            if host == "github.com" and not parts.path.startswith("/fosterstack/"):
+                continue
+            if parts.scheme != "https" or parts.username or parts.password or parts.port not in (None, 443):
+                bad("link", "%s links %s, which is not a plain https link (http, a port or credentials)" % (u, full))
+                continue
+            clean_url = "https://%s%s" % (host, parts.path)
+            (internal if host == "fosterstack.com" else external).setdefault(clean_url, u)
     for v, src in sorted(internal.items()):
         if v in pages or v == SITE:
             continue
