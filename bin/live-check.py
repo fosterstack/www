@@ -22,6 +22,8 @@ import sys
 import time
 import urllib.error
 import urllib.request
+from html.parser import HTMLParser
+from urllib.parse import urljoin, urlsplit
 
 SITE = "https://fosterstack.com/"
 TIMEOUT = float(os.environ.get("LIVE_CHECK_TIMEOUT", "20"))
@@ -37,8 +39,9 @@ class _NoRedirect(urllib.request.HTTPRedirectHandler):
 OPENER = urllib.request.build_opener(_NoRedirect)
 
 
-def fetch(url):
-    """(status, body) with one retry; status 0 means no answer. Never raises."""
+def fetch(url, accept=(200,)):
+    """(status, body). ONE retry for any answer not in accept (a timeout, a refusal, a 5xx, a 403, a 404, a redirect: all may be a
+    flaky moment), so only a failure seen twice is reported; status 0 means no answer. Never raises."""
     last = (0, b"")
     for attempt in (1, 2):
         try:
@@ -49,12 +52,44 @@ def fetch(url):
             last = (e.code, b"")
         except Exception:
             last = (0, b"")
-        # a good answer, or a plain "no such thing", is final; a timeout, a refusal and a 5xx are tried once more
-        if last[0] in (200, 301, 302, 303, 307, 308, 400, 401, 403, 404, 410) :
+        if last[0] in accept:
             break
         if attempt == 1:
             time.sleep(RETRY_WAIT)
     return last
+
+
+class _Links(HTMLParser):
+    """Every href of every a and link tag, read the way a browser reads the page."""
+
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.hrefs = []
+
+    def handle_starttag(self, tag, attrs):
+        if tag in ("a", "link", "area"):
+            for k, v in attrs:
+                if k.lower() == "href" and v:
+                    self.hrefs.append(v.strip())
+
+    handle_startendtag = handle_starttag
+
+
+def links_of(text):
+    parser = _Links()
+    parser.feed(text)
+    parser.close()
+    return parser.hrefs
+
+
+def safe_suffix(suffix):
+    """The part of a sitemap URL after the site root, if it is a plain relative path (no leading slash, no '..', no
+    backslash, no query or fragment, no control characters); None otherwise."""
+    if suffix.startswith("/") or "\\" in suffix or "?" in suffix or "#" in suffix or re.search(r"[\x00-\x1f\x7f-\x9f]", suffix):
+        return None
+    if any(part in ("..", ".") for part in suffix.split("/")):
+        return None
+    return suffix
 
 
 def clean(text):
@@ -77,8 +112,12 @@ def main():
         return base + "/" + site_url[len(SITE):]
 
     def repo_bytes(site_url):
-        rel = site_url[len(SITE):]
-        path = os.path.join(args.root, rel + ("index.html" if rel.endswith("/") or rel == "" else ""))
+        rel = safe_suffix(site_url[len(SITE):])
+        if rel is None:
+            return None
+        path = os.path.realpath(os.path.join(args.root, rel + ("index.html" if rel.endswith("/") or rel == "" else "")))
+        if not path.startswith(os.path.realpath(args.root) + os.sep):
+            return None
         try:
             with open(path, "rb") as f:
                 return f.read()
@@ -96,6 +135,8 @@ def main():
     for u in locs:
         if not u.startswith(SITE):
             bad("sitemap", "the live sitemap lists %s, which is not on %s" % (u, SITE))
+        elif safe_suffix(u[len(SITE):]) is None:
+            bad("sitemap", "the live sitemap lists %s, which is not a plain path on the site" % u)
         else:
             pages.append(u)
 
@@ -120,22 +161,27 @@ def main():
     for u, got in texts.items():
         if not u.endswith("/"):
             continue
-        for m in re.finditer(r'(?<![\w-])href\s*=\s*"([^"]*)"', got.decode("utf-8", "replace"), re.I):
-            v = html.unescape(m.group(1)).split("#", 1)[0].split("?", 1)[0]
-            if v.startswith("/") and not v.startswith("//") and v:
-                internal.setdefault(v, u)
-            elif v.startswith("https://github.com/fosterstack/"):
-                external.setdefault(v, u)
+        for href in links_of(got.decode("utf-8", "replace")):
+            full = urljoin(u, href)               # resolved against its own page, so relative and absolute links are both read
+            parts = urlsplit(full)
+            if parts.scheme != "https":
+                continue
+            clean_url = parts._replace(query="", fragment="").geturl()
+            if parts.netloc == "fosterstack.com":
+                internal.setdefault(clean_url, u)
+            elif parts.netloc == "github.com" and parts.path.startswith("/fosterstack/"):
+                external.setdefault(clean_url, u)
     for v, src in sorted(internal.items()):
-        if SITE.rstrip("/") + v in pages or v == "/":
+        if v in pages or v == SITE:
             continue
-        status, _ = fetch(base + v)
+        status, _ = fetch(live_url(v))
         if status != 200:
             bad("link", "%s links %s, which answered %s" % (src, v, status or "nothing"))
     for v, src in sorted(external.items()):
-        target = args.github.rstrip("/") + v[len("https://github.com"):]
-        status, _ = fetch(target)
-        if status == 200 or (status in (301, 302, 303, 307, 308) and v.endswith("/security/advisories/new")):
+        advisory = v.endswith("/security/advisories/new")
+        status, _ = fetch(args.github.rstrip("/") + v[len("https://github.com"):],
+                          accept=(200, 301, 302, 303, 307, 308) if advisory else (200,))
+        if status in (200, 301, 302, 303, 307, 308) and (status == 200 or advisory):
             continue
         bad("link", "%s links %s, which answered %s" % (src, v, status or "nothing"))
 

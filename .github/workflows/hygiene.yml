@@ -117,6 +117,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: main   # the live site is compared with main, whatever branch a manual run starts on
           persist-credentials: false
 
       - name: the site-rot check on main, with the live rules
@@ -827,7 +828,7 @@ jobs:
   # proof-watch reads the next day (so a red run is tried again the next day when the tag is new). Nothing is committed back and no page is edited by a workflow.
   proof-report:
     needs: [proof-watch, live-check, bench-miss-cost, bench-server-down, bench-verify-release, bench-setup-pages, bench-howto-pages, bench-howto-pages-2, bench-howto-pages-3, bench-k8s-page, bench-ga-page, bench-howto-pages-4, bench-howto-pages-5, bench-howto-pages-6, bench-howto-pages-7, bench-howto-pages-8, bench-howto-pages-9, bench-howto-pages-10, bench-howto-pages-11, bench-howto-pages-12, bench-maclinux-linux-store, bench-maclinux-mac-restore, bench-maclinux-mac-store, bench-maclinux-linux-restore, bench-android, demo-github-actions, proof-selftest]
-    if: ${{ always() && ((github.event_name == 'schedule' && (needs.live-check.result == 'failure' || needs.live-check.result == 'success' || needs.proof-watch.result == 'failure' || (needs.proof-watch.result == 'success' && (needs.proof-watch.outputs.run == 'true' || startsWith(needs.proof-watch.outputs.reason, 'the newest release tag') || startsWith(needs.proof-watch.outputs.reason, 'release lookup failed'))))) || (github.event_name == 'workflow_dispatch' && inputs.which == 'proof-selftest')) }}
+    if: ${{ always() && ((github.event_name == 'schedule' && (needs.live-check.result == 'failure' || needs.live-check.result == 'success' || needs.proof-watch.result == 'failure' || (needs.proof-watch.result == 'success' && (needs.proof-watch.outputs.run == 'true' || startsWith(needs.proof-watch.outputs.reason, 'the newest release tag') || startsWith(needs.proof-watch.outputs.reason, 'release lookup failed'))))) || (github.event_name == 'workflow_dispatch' && inputs.which == 'proof-selftest') || (github.event_name == 'workflow_dispatch' && inputs.which == 'live-check' && (needs.live-check.result == 'failure' || needs.live-check.result == 'success'))) }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     concurrency:
@@ -850,7 +851,7 @@ jobs:
           TAG: ${{ needs.proof-watch.outputs.run == 'true' && needs.proof-watch.outputs.tag || '' }}   # empty on a day nothing was proven, so a live-check-only report never writes the proven-release artifact
           WATCH_REASON: ${{ needs.proof-watch.outputs.reason }}
           WATCH_RUN: ${{ needs.proof-watch.outputs.run }}
-          MODE: ${{ github.event_name == 'schedule' && 'schedule' || 'selftest' }}
+          MODE: ${{ (github.event_name == 'schedule' || inputs.which == 'live-check') && 'schedule' || 'selftest' }}
           OUT_FILE: proven-release.txt
         run: bash bin/proof-report.sh
 
