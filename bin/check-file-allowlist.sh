@@ -69,6 +69,10 @@ ALLOW_PATTERNS=(
   '^\.github/workflows/[A-Za-z0-9_-][A-Za-z0-9._-]*\.ya?ml$'
   '^functions/(api/)?[A-Za-z0-9._-]+\.js$'
   '^[A-Za-z0-9._-]+/index\.html$'   # pre-positioned pages, e.g. bcn-removed/index.html
+  '^checkout\.js$'
+  '^checkout-config\.js$'
+  '^tests/checkout\.test\.js$'
+  '^checkout/(success|cancel)/index\.html$'
 )
 
 # The only dot-prefixed paths allowed to exist. .github/ is where GitHub requires
