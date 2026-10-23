@@ -128,7 +128,7 @@ Detected OS   family="debian" version="13.6"
     <tbody>
       <tr><td>Grype</td><td><code>fosterstack-cache.openvex.json</code></td><td><code>grype IMAGE --vex fosterstack-cache.openvex.json</code></td></tr>
       <tr><td>Trivy</td><td><code>fosterstack-cache.openvex.json</code></td><td><code>trivy image --vex fosterstack-cache.openvex.json IMAGE</code></td></tr>
-      <tr><td>Docker Scout</td><td><code>fosterstack-cache.openvex.json</code></td><td><code>docker scout cves --vex-location fosterstack-cache.openvex.json --vex-author '^FosterStack LLC$' IMAGE</code> (see <a href="https://github.com/fosterstack/cache/blob/main/docs/#docker-scout">Docker Scout</a>)</td></tr>
+      <tr><td>Docker Scout</td><td><code>fosterstack-cache.openvex.json</code></td><td><code>docker scout cves --vex-location fosterstack-cache.openvex.json --vex-author '^FosterStack LLC$' IMAGE</code> (see <a href="https://github.com/fosterstack/cache/blob/main/docs/using-our-vex.md#docker-scout">Docker Scout</a>)</td></tr>
       <tr><td>Amazon Inspector</td><td><code>fosterstack-cache-&lt;version&gt;.inspector-filters.json</code></td><td>one suppression rule per statement: <code>aws inspector2 create-filter</code>, one rule per call</td></tr>
       <tr><td>Google Artifact Analysis</td><td><code>fosterstack-cache-&lt;version&gt;.csaf.json</code></td><td><code>gcloud artifacts vulnerabilities load-vex</code>, see <a href="https://github.com/fosterstack/cache/blob/main/.vex/README.md"><code>.vex/README.md</code></a> for naming your image path</td></tr>
     </tbody>
@@ -147,7 +147,7 @@ Detected OS   family="debian" version="13.6"
   <pre tabindex="0"><code>docker scout cves --vex-location fosterstack-cache.openvex.json \
   --vex-author '^FosterStack LLC$' \
   ghcr.io/fosterstack/cache:${VER}</code></pre>
-  <p>Run it once with and once without <code>--vex-location</code> and <code>--vex-author</code>: the difference is the set of findings that applicable <code>not_affected</code> and <code>fixed</code> statements suppress, the same audit as in <a href="https://github.com/fosterstack/cache/blob/main/docs/#reproducing-our-own-gate">Reproducing our own gate</a>.</p>
+  <p>Run it once with and once without <code>--vex-location</code> and <code>--vex-author</code>: the difference is the set of findings that applicable <code>not_affected</code> and <code>fixed</code> statements suppress, the same audit as in <a href="https://github.com/fosterstack/cache/blob/main/docs/scanning.md#reproducing-our-own-gate">Reproducing our own gate</a>.</p>
   <h2>Reproducing our own gate</h2>
   <p>The release pipeline's scan stage is public: <a href="https://github.com/fosterstack/cache/blob/main/.github/workflows/stage-verify.yml"><code>.github/workflows/stage-verify.yml</code></a> runs one job per scanner in <a href="https://github.com/fosterstack/cache/blob/main/.github/policy/scanners.json">the scanner list</a> (today Grype and OSV-Scanner) against the exact candidate digests: every variant and architecture, and for Grype every release archive too. The Grype and OSV-Scanner commands below are partial examples that use the gate's scanners and its severity policy on one public tag; they show what a scan of that tag reports and do not cover everything the gate covers.</p>
   <p>Grype runs in the gate at every severity with the published VEX applied. The VEX document ships with each release as <code>fosterstack-cache.openvex.json</code> and lives in-repo at <a href="https://github.com/fosterstack/cache/tree/main/.vex/"><code>.vex/</code></a>:</p>
