@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Checkout cancelled</title>
-<meta name="description" content="Checkout cancelled. Placeholder page.">
+<title>Send my key again</title>
+<meta name="description" content="Have your license key sent again. Draft, test mode.">
 <meta name="robots" content="noindex">
-<link rel="canonical" href="https://fosterstack.com/checkout-cancel/">
+<link rel="canonical" href="https://fosterstack.com/resend-key/">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -79,10 +79,16 @@
   <div class="tag">Infrastructure worth keeping — and kept patched.</div>
 </header>
 <main>
-  <h1>Checkout cancelled.</h1>
-  <p>Nothing was charged. You can go back to the <a href="/pricing/">pricing page</a> whenever you like.</p><p class="muted-note">This is a placeholder page. It has no checkout wiring yet.</p>
-  <div class="cta-row">
-    <a class="btn btn-secondary" href="/">FosterStack home</a>
+  <p class="notice">DRAFT, test mode only. TODO-COPY marks placeholders for the owner's wording.</p>
+  <h1>Send my key again</h1>
+  <p class="lede">TODO-COPY: Type the address you bought with.</p>
+  <p id="fp-closed" class="notice">TODO-COPY: Checkout is not open yet.</p>
+  <div id="fp-open" hidden>
+  <p><label for="fp-email">Email address</label><br>
+  <input id="fp-email" type="email" autocomplete="email" maxlength="254"></p>
+  <p><button id="fp-send">Send my key</button></p>
+  <p id="fp-result" role="status"></p>
+  <p class="muted-note">We never store the address you type. It is used once to send your key and then discarded. Amazon's email service may keep an address that bounces.</p>
   </div>
 </main>
 <footer>
@@ -96,5 +102,7 @@
     <p style="margin-top:.6rem">© 2026 FosterStack · <a href="/regulated/">For regulated markets</a> · <a href="https://github.com/fosterstack/cache">github.com/fosterstack/cache</a> · <a href="mailto:hello@fosterstack.com">hello@fosterstack.com</a></p>
   </div>
 </footer>
+<script src="/checkout-config.js"></script>
+<script src="/checkout.js"></script>
 </body>
 </html>
