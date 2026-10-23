@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Migrate from Build Cache Node: setup, checklist, checks</title>
+<meta name="description" content="Move from the Develocity Build Cache Node to a self-hosted cache: setup steps, a migration checklist with a real run, and what to check in any replacement.">
+<meta property="og:title" content="Migrate from Build Cache Node: setup, checklist, checks">
+<meta property="og:description" content="Move from the Develocity Build Cache Node to a self-hosted cache: setup steps, a migration checklist with a real run, and what to check in any replacement.">
+<meta property="og:url" content="https://fosterstack.com/migrate-build-cache-node/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="FosterStack">
+<link rel="canonical" href="https://fosterstack.com/migrate-build-cache-node/">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<style>
+  :root {
+    --bg: #ffffff; --fg: #16181d; --muted: #5b6472; --line: #e4e7ec;
+    --accent: #0d7a5f; --accent-fg: #ffffff; --card: #f6f8f9; --warn-bg: #fff7ed; --warn-line: #fdba74;
+    --mark: #0f4d66;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #101318; --fg: #e8eaf0; --muted: #98a2b3; --line: #262c36;
+      --accent: #2fbf95; --accent-fg: #08110e; --card: #171c23; --warn-bg: #241a10; --warn-line: #7c4a12;
+      --mark: #e8eaf0;
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 44rem; margin: 0 auto; padding: 0 1.25rem 4rem; }
+  header.site { max-width: 44rem; margin: 0 auto; padding: 1.25rem; display: flex; align-items: baseline; gap: .6rem; }
+  .logo { font-weight: 700; font-size: 1.05rem; letter-spacing: -.01em; }
+  .logo span { color: var(--accent); }
+  .logo .mark { width: 1.2em; height: 1.2em; vertical-align: -.24em; margin-right: .4em; }
+  .tag { color: var(--muted); font-size: .85rem; }
+  .notice {
+    background: var(--warn-bg); border: 1px solid var(--warn-line); border-radius: 8px;
+    padding: .7rem 1rem; font-size: .92rem; margin: 1.5rem 0 2.5rem;
+  }
+  h1 { font-size: 2rem; line-height: 1.2; letter-spacing: -.02em; margin-bottom: 1rem; }
+  .lede { font-size: 1.12rem; color: var(--muted); margin-bottom: 2rem; }
+  h2 { font-size: 1.25rem; margin: 3rem 0 .9rem; letter-spacing: -.01em; }
+  p + p { margin-top: .8rem; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: .8rem; margin-top: 1rem; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1rem 1.1rem; }
+  .card h3 { font-size: .98rem; margin-bottom: .35rem; }
+  .card p { font-size: .9rem; color: var(--muted); }
+  ul.trust { list-style: none; margin-top: .5rem; }
+  ul.trust li { padding: .45rem 0 .45rem 1.6rem; position: relative; }
+  ul.trust li::before { content: "✓"; position: absolute; left: .2rem; color: var(--accent); font-weight: 700; }
+  code, pre { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .88em; }
+  code { background: var(--card); border: 1px solid var(--line); border-radius: 5px; padding: .1em .35em; }
+  pre code { background: none; border: 0; padding: 0; color: inherit; font-size: 1em; }
+  button {
+    padding: .7rem 1.3rem; font-size: 1rem; font-weight: 600; cursor: pointer;
+    background: var(--accent); color: var(--accent-fg); border: 0; border-radius: 8px;
+  }
+  button:disabled { opacity: .6; cursor: default; }
+  table { width: 100%; border-collapse: collapse; font-size: .92rem; margin-top: 1rem; }
+  th, td { text-align: left; padding: .55rem .6rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  pre { background: #0f172a; color: #e2e8f0; padding: .9rem 1rem; border-radius: 8px;
+        overflow-x: auto; font-size: .9rem; line-height: 1.5; }
+  .cta-row { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1.1rem; }
+  .btn { display: inline-block; padding: .55rem 1rem; border-radius: 8px; font-weight: 600;
+         text-decoration: none; background: var(--accent); color: var(--accent-fg); }
+  .btn-secondary { background: transparent; color: inherit; border: 1px solid var(--muted); }
+  .muted-note { color: var(--muted); font-size: .93rem; margin-top: 1.1rem; }
+  footer { border-top: 1px solid var(--line); margin-top: 4rem; padding: 1.5rem 1.25rem 3rem; }
+  footer div { max-width: 44rem; margin: 0 auto; color: var(--muted); font-size: .82rem; }
+  a { color: var(--accent); }
+  code { overflow-wrap: anywhere; }
+  pre code { overflow-wrap: normal; }
+  .table-scroll { max-width: 100%; overflow-x: auto; }
+  main h3 { font-size: 1.05rem; margin: 2rem 0 .6rem; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+</style>
+</head>
+<body>
+<header class="site">
+  <div class="logo"><svg class="mark" viewBox="0 0 96 96" aria-hidden="true" focusable="false"><rect x="12" y="14" width="72" height="18" rx="5" fill="var(--mark)"/><rect x="12" y="39" width="48" height="18" rx="5" fill="var(--mark)"/><rect x="12" y="64" width="26" height="18" rx="5" fill="var(--accent)"/></svg>foster<span>stack</span></div>
+  <div class="tag">Infrastructure worth keeping — and kept patched.</div>
+</header>
+<main>
+  <h1>Migrate from Build Cache Node: setup, checklist, checks</h1>
+  <p class="lede">The Develocity Build Cache Node is going away, and your builds still need a remote cache. FosterStack Cache replaces it: run a new server, change one URL, and check that it works, about 30 minutes for Gradle with no data to move.</p>
+
+  <h2>Before you start</h2>
+  <p>A build cache holds copies of things your builds can always rebuild, so there is nothing to export from the old node. Your first build on the new server just fills it. If you have not read why the node is going away, see <a href="/build-cache-node-end-of-life/">Build Cache Node end of life</a>.</p>
+
+  <h2>Step 1: Run the new cache server</h2>
+  <pre tabindex="0"><code>docker run -d -p 127.0.0.1:8080:8080 -v fscache-data:/home/nonroot ghcr.io/fosterstack/cache:latest</code></pre>
+  <p>For anything beyond a first look, pin a specific version instead of <code>latest</code>. This command listens on this machine only. For other machines to use it, put an HTTPS proxy in front. For a walk-through, see <a href="/first-15-minutes-build-cache/">your first 15 minutes</a>. Other ways to run it: <a href="https://github.com/fosterstack/cache/blob/main/docs/install.md">bare binary with systemd</a>, <a href="https://github.com/fosterstack/cache/blob/main/docs/kubernetes.md">Kubernetes</a>, or a <a href="https://github.com/fosterstack/cache/blob/main/docs/offline-install.md">disconnected network</a>.</p>
+  <p>If the server can be reached by anyone you do not trust, turn on Basic Auth. Anyone who can write to the cache can change what your later builds use.</p>
+
+  <h2>Step 2: Gradle build cache setup</h2>
+  <p>Turn the cache on, in <code>gradle.properties</code>:</p>
+  <pre tabindex="0"><code>org.gradle.caching=true</code></pre>
+  <p>Then point Gradle at the new server in <code>settings.gradle.kts</code>. If you used the old node, you only change the URL:</p>
+  <pre tabindex="0"><code>// FosterStack Cache — remote Gradle build cache.
+// https://github.com/fosterstack/cache
+buildCache {
+    remote&lt;HttpBuildCache&gt; {
+        url = uri("https://cache.example.com/")
+        isPush = true
+        credentials {
+            username = "gradle"
+            password = System.getenv("FSCACHE_PASSWORD")
+        }
+    }
+}</code></pre>
+  <p>Or in <code>settings.gradle</code> (Groovy):</p>
+  <pre tabindex="0"><code>// FosterStack Cache — remote Gradle build cache.
+// https://github.com/fosterstack/cache
+buildCache {
+    remote(HttpBuildCache) {
+        url = 'https://cache.example.com/'
+        push = true
+        credentials {
+            username = 'gradle'
+            password = System.getenv('FSCACHE_PASSWORD')
+        }
+    }
+}</code></pre>
+  <p>Keep the comment lines: a cache block that points at an unfamiliar host looks like data theft to a reviewer without them. Keep the trailing slash on the URL. Leave the credentials block in even if the server has no password; it is ignored then.</p>
+
+  <h2>Step 3: Maven build cache setup</h2>
+  <p>Maven uses Apache's Build Cache Extension. FosterStack Cache implements the server side of it.</p>
+  <p>Add the extension in <code>.mvn/extensions.xml</code> (check Maven Central for the current version):</p>
+  <pre tabindex="0"><code>&lt;extensions&gt;
+  &lt;extension&gt;
+    &lt;groupId&gt;org.apache.maven.extensions&lt;/groupId&gt;
+    &lt;artifactId&gt;maven-build-cache-extension&lt;/artifactId&gt;
+    &lt;version&gt;1.2.3&lt;/version&gt;
+  &lt;/extension&gt;
+&lt;/extensions&gt;</code></pre>
+  <p>Point it at the server in <code>.mvn/maven-build-cache-config.xml</code>:</p>
+  <pre tabindex="0"><code>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;cache xmlns="http://maven.apache.org/BUILD-CACHE-CONFIG/1.2.0"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://maven.apache.org/BUILD-CACHE-CONFIG/1.2.0 https://maven.apache.org/xsd/build-cache-config-1.2.0.xsd"&gt;
+  &lt;configuration&gt;
+    &lt;enabled&gt;true&lt;/enabled&gt;
+    &lt;!-- FosterStack Cache — remote Maven build cache.
+         https://github.com/fosterstack/cache --&gt;
+    &lt;remote enabled="true" saveToRemote="true" id="fosterstack-cache"&gt;
+      &lt;url&gt;https://cache.example.com/&lt;/url&gt;
+    &lt;/remote&gt;
+  &lt;/configuration&gt;
+&lt;/cache&gt;</code></pre>
+  <p>The <code>remote</code> element must be inside <code>configuration</code>, and <code>saveToRemote="true"</code> is what makes the machine upload; without it the server stays empty. If the server uses Basic Auth, add a matching <code>&lt;server&gt;</code> with the same <code>id</code> (<code>fosterstack-cache</code>) in <code>~/.m2/settings.xml</code>. Then run <code>mvn install</code>.</p>
+  <p>The extension itself is Apache's project. If your hit rate looks low, start with the extension's own configuration guide.</p>
+
+  <h2>Step 4: Check that it works</h2>
+  <p>For Gradle, build, clean, and build again. Without the clean, the second build prints <code>UP-TO-DATE</code>, which tells you nothing about the cache:</p>
+  <pre tabindex="0"><code>./gradlew build --build-cache
+./gradlew clean
+./gradlew build --build-cache</code></pre>
+  <p>On the second build, look for <code>FROM-CACHE</code> next to tasks. This hit may come from your own machine, because Gradle also has a local cache that gives hits even when the remote is broken. To test the remote itself, run clean, delete the local cache, stop the daemon, then build with <code>-i</code>:</p>
+  <pre tabindex="0"><code>./gradlew clean
+rm -rf ~/.gradle/caches/build-cache-1
+./gradlew --stop
+./gradlew build --build-cache -i</code></pre>
+  <p>On the server, the hit counter should go up. The output also has comment lines that start with <code>#</code>; the numbers are on the counter lines:</p>
+  <pre tabindex="0"><code>curl -s https://cache.example.com/metrics | grep -E 'fscache_cache_(hits|misses)_total'</code></pre>
+  <p>For Maven, build twice from a clean checkout and look for cache hits in the log for unchanged modules.</p>
+
+  <h2>Step 5: Retire the old node</h2>
+  <p>Once builds hit the new server, stop the old Build Cache Node container. Watch the new one with <a href="/is-the-build-cache-server-healthy-what-to-alert-on/#monitor-build-cache-prometheus-grafana">monitoring</a>, and size its disk with <a href="/build-cache-server-sizing/">server sizing</a>.</p>
+
+  <h2 id="build-cache-node-migration-checklist">Build Cache Node migration checklist for Gradle</h2>
+  <p>Our advice, not a test result. Where a line says "in our runs", it comes from the table under How we checked.</p>
+  <h3>Find every place your builds point at the old node</h3>
+  <p>Search your repositories and CI settings for <code>HttpBuildCache</code> and for the node's address. The old node's address ends in <code>/cache/</code>. Write the list down: each entry is one line to change.</p>
+
+  <h3>Change one line in each place</h3>
+  <pre tabindex="0"><code>buildCache {
+    remote&lt;HttpBuildCache&gt; {
+-       url = uri(&quot;http://old-node.example.com:5071/cache/&quot;)
++       url = uri(&quot;https://cache.example.com/&quot;)
+        isPush = true
+    }
+}</code></pre>
+  <p>If the new server has a password, also add a <code>credentials</code> block. See <a href="/gradle-remote-build-cache-authentication/">authentication and 401 errors</a>.</p>
+
+  <h3>Decide about the <code>/cache/</code> part of the URL</h3>
+  <p>You can drop it, as above, or keep it. FosterStack Cache uses the whole request path as the key, so a prefix works. Entries under different paths are separate, so pick one and use it everywhere.</p>
+
+  <h3>Keep the old node running until you are sure</h3>
+  <p>With Gradle, rolling back is the same one-line change in reverse. In our runs, we tested that; see the table under How we checked.</p>
+
+  <h2>What you give up</h2>
+  <p>The old node had a small web page with a purge button. FosterStack Cache has no settings page. You set it with flags and environment variables, and a read-only status page shows size and hit counts. To empty the cache, remove its volume and start again.</p>
+
+  <h2 id="verify-replacement-build-cache">What to check in a replacement build cache</h2>
+  <p>A build cache sits inside your supply chain: what it stores ends up in your builds. Ask these seven questions of any candidate. We answer each one for FosterStack Cache.</p>
+
+  <h3>1. Does it speak your build tool's protocol?</h3>
+  <p>It should work with the tool's own remote cache setting, with nothing extra to install on developer machines. <strong>How to test:</strong> build, run clean, and build again with the local cache turned off, and look for <code>FROM-CACHE</code> on the second build. <strong>FosterStack Cache:</strong> Gradle through its <code>HttpBuildCache</code> setting; Maven through Apache's Build Cache Extension.</p>
+
+  <h3>2. Who can write to it?</h3>
+  <p>Anything that can write to the cache can change what later builds use. Ask for authentication, and ask what permission levels exist. <strong>FosterStack Cache:</strong> Basic Auth with a read-write login and an optional read-only login, where any write from the read-only one is refused. Per-person identity is not built.</p>
+
+  <h3>3. Can you verify what you download?</h3>
+  <p>Look for signatures, a software bill of materials, build provenance and vulnerability statements, and check whether you need an account to see them. <strong>FosterStack Cache:</strong> signed images and checksums, an SBOM per binary archive, build provenance and a VEX file, all public. See <a href="/how-we-build/">how we build</a>.</p>
+
+  <h3>4. Is it kept patched?</h3>
+  <p>Ask how often published files are rescanned and how fast fixes ship. <strong>FosterStack Cache:</strong> a release is blocked on scanner findings unless a VEX statement explains them, and the current release's images are rescanned daily, at every severity the scanners report. Vulnerable dependencies fixed fast — our target is 48 hours from disclosure (<a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md">the scope is in SECURITY.md</a>).</p>
+
+  <h3>5. Does it call home?</h3>
+  <p>A server in your build network should not need to reach out. <strong>FosterStack Cache:</strong> no telemetry, no update check, no licence check. It can run on a network with no route to the internet.</p>
+
+  <h3>6. How do you run and watch it?</h3>
+  <p>You want size limits, metrics and a way to see it is healthy. <strong>FosterStack Cache:</strong> size-capped eviction, Prometheus metrics, a health check and a read-only status page. There is no admin web console, on purpose.</p>
+
+  <h3>7. What are the licence terms, and what if the project goes away?</h3>
+  <p><strong>FosterStack Cache:</strong> MIT licensed, one static binary, nothing you need from us to keep running it. Paid tiers are described, not built, and security patches are never withheld from the free tier.</p>
+
+  <h2>How we checked</h2>
+  <p>In our runs for the table below, we used Gradle 9.8.0 and a small Java project, built twice against each server. The old side was a Build Cache Node image (version 21.2, built June 2025), run locally and set up to allow anonymous reads and writes for the test. The new side was a FosterStack Cache 0.2.1 server with no password. We did not test Maven in this run.</p>
+  <p>Each row is two builds of the same project with <code>gradle clean</code> in between and Gradle's own local cache turned off, so a hit can only come from the server:</p>
+  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
+    <tr><th>Pointed at</th><th>First build</th><th>Second build</th></tr>
+    <tr><td>The old node, URL ending in <code>/cache/</code></td><td><code>:compileJava</code> ran</td><td><code>:compileJava FROM-CACHE</code></td></tr>
+    <tr><td>FosterStack Cache, only the URL changed (no <code>/cache/</code>)</td><td><code>:compileJava</code> ran: the new server was empty</td><td><code>:compileJava FROM-CACHE</code></td></tr>
+    <tr><td>FosterStack Cache, URL kept with <code>/cache/</code></td><td><code>:compileJava</code> ran: separate entries</td><td><code>:compileJava FROM-CACHE</code></td></tr>
+    <tr><td>Back to the old node (rollback)</td><td><code>:compileJava FROM-CACHE</code>: its entries were still there</td><td>not run</td></tr>
+  </table></div>
+  <p>We then ran the steps again on a GitHub-hosted Linux machine with release 0.2.2, Gradle 9.8.0 and Maven 3.10.0. Results:</p>
+  <ul>
+    <li>The Kotlin and Groovy settings worked. Build, clean, build again showed <code>FROM-CACHE</code>. A second build with nothing changed printed <code>UP-TO-DATE</code>.</li>
+    <li>After the cache-clearing commands, the hit counter went up.</li>
+    <li>The <code>/metrics</code> command needed no login.</li>
+    <li>A URL kept with <code>/cache/</code> made its own entries.</li>
+    <li>A credentials block against a server with no password: the server ignored it and the cache still worked.</li>
+    <li><code>mvn install</code> twice: the second build restored from the cache.</li>
+  </ul>
+  <p>The old node rows and the rollback were not run again. <a href="https://github.com/fosterstack/www/actions/runs/38037262366">The run and its log are public</a>.</p>
+  <p>The new server's status page agreed: two entries stored, two hits, two misses. One small difference you may notice: a successful upload returns 200 from the old node and 201 from FosterStack Cache. Gradle accepted both.</p>
+
+  <h2>More than kept patched.</h2>
+  <ul class="trust">
+    <li>Signed releases you can verify in minutes.</li>
+    <li>Build record, parts list (SBOM) and vulnerability statements published with every release.</li>
+    <li>Scanned before every release. The current release is rescanned every day.</li>
+    <li>Images assembled twice on separate machines; the results must match.</li>
+    <li>Minimal image, no telemetry. FIPS variant available.</li>
+    <li>Vulnerable dependencies fixed fast — our target is 48 hours from disclosure (<a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md">the scope is in SECURITY.md</a>).</li>
+  </ul>
+  <p><a href="/how-we-build/">How we build</a> · <a href="/security/">Security policy</a> · <a href="/verify-a-release/">Verify a release</a></p>
+
+  <p class="muted-note">Full details: <a href="https://github.com/fosterstack/cache/blob/main/docs/gradle.md">Gradle docs</a>, <a href="https://github.com/fosterstack/cache/blob/main/docs/maven.md">Maven docs</a>, <a href="https://github.com/fosterstack/cache/blob/main/docs/migrate-from-bcn.md">migration guide on GitHub</a>.</p>
+  <div class="cta-row">
+    <a class="btn" href="https://github.com/fosterstack/cache">FosterStack Cache on GitHub</a>
+    <a class="btn btn-secondary" href="/">FosterStack home</a>
+  </div>
+</main>
+<footer>
+  <div>
+    <p>FosterStack is not affiliated with, endorsed by, or sponsored by Gradle Inc.
+    "Gradle" and "Develocity" are trademarks of Gradle Inc., used here only to identify
+    compatibility. FosterStack contains no Gradle Inc. code; it is a clean-room implementation
+    of the documented remote build cache HTTP protocol. Apache Maven is a trademark of the
+    Apache Software Foundation; the Maven Build Cache Extension is Apache's project, not
+    ours.</p>
+    <p style="margin-top:.6rem">© 2026 FosterStack · <a href="/regulated/">For regulated markets</a> · <a href="https://github.com/fosterstack/cache">github.com/fosterstack/cache</a> · <a href="mailto:hello@fosterstack.com">hello@fosterstack.com</a></p>
+  </div>
+</footer>
+</body>
+</html>
