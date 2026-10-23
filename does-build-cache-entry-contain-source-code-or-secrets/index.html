@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="en">
 <head>
+<meta name="robots" content="noindex, nofollow">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Does a Build Cache Entry Contain My Source Code or Secrets?</title>
@@ -9,6 +10,11 @@
 <meta property="og:description" content="We opened every stored entry from real Gradle builds on FosterStack Cache 0.2.1 and searched for fake secrets. What is stored, what is not, and who can read it.">
 <meta property="og:url" content="https://fosterstack.com/does-build-cache-entry-contain-source-code-or-secrets/">
 <meta property="og:type" content="website">
+<meta property="og:image" content="https://fosterstack.com/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="FosterStack. Infrastructure worth keeping — and kept patched.">
+<meta name="twitter:card" content="summary_large_image">
 <meta property="og:site_name" content="FosterStack">
 <link rel="canonical" href="https://fosterstack.com/does-build-cache-entry-contain-source-code-or-secrets/">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
@@ -89,6 +95,7 @@
 <main>
   <h1>Does a build cache entry contain my source code or secrets?</h1>
   <p class="lede">In our runs, FosterStack Cache stored what tasks produce, not your source files. That includes class files and anything a test prints, so a secret in an output is in the cache.</p>
+  <p class="muted-note"><strong>DRAFT for v0.3, private preview, not published and never merged before v0.3.0 is live.</strong></p>
 
   <h2>The short answer</h2>
   <ul class="trust">
@@ -108,7 +115,7 @@
     <li><strong>Keep secrets out of Java constants.</strong> A constant lives on in the class file, in the cache and in your jar.</li>
     <li><strong>Declare an environment variable as a task input if the task reads it.</strong> We changed one that a task read without declaring it, and the old result came back from the cache.</li>
     <li><strong>Give developers the read-only login and give CI the read-write login.</strong> See <a href="/gradle-build-cache-ci-writes-developers-read/">let CI write and developers read</a>. One login reaches every project on a server, so use one server per group that must not share. See <a href="/several-projects-share-one-build-cache-server/">several projects on one server</a>.</li>
-    <li><strong>Use HTTPS when the server is not on your own machine.</strong> Our runs used plain HTTP to a server on the same Mac. See <a href="/gradle-remote-build-cache-private-ca-https/">use your build cache over HTTPS with a private CA</a>.</li>
+    <li><strong>Use HTTPS when the server is not on your own machine.</strong> Our runs used plain HTTP to a server on the same Mac. See <a href="/gradle-remote-build-cache-private-ca-https/">use your build cache over HTTPS with a private CA</a>. The HTTPS can come from a proxy or from the server itself (<code>FSCACHE_TLS_CERT</code> and <code>FSCACHE_TLS_KEY</code>).</li>
   </ul>
   <p>What each task stores is on <a href="/what-gradle-stores-in-build-cache/">know what your Gradle build cache stores</a>. Who can change entries is on <a href="/can-someone-poison-our-build-cache/">can someone poison our shared build cache</a>.</p>
 

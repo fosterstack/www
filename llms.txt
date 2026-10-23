@@ -51,12 +51,20 @@ verifiable against the CI run that produced them.
 - [Changelog](https://fosterstack.com/changelog/): release notes for v0.1.0, v0.2.1 and v0.2.2.
 - [For regulated markets](https://fosterstack.com/regulated/): the FIPS build and the public release evidence.
 - [Build cache size limit, eviction and a full disk](https://fosterstack.com/build-cache-eviction-size-limit/): What a self-hosted build cache does when it reaches its size cap: least-recently-used eviction, real numbers from a 0.2.1 server, and what an oversized entry gets.
+- [What to verify in a replacement build cache](https://fosterstack.com/what-to-verify-in-a-replacement-build-cache/): A checklist you can run against any replacement build cache: signed releases, provenance, read-only logins, eviction, metrics, air-gapped use and licence.
+- [Is a remote build cache worth it? What we measured](https://fosterstack.com/is-a-remote-build-cache-worth-it/): Measured numbers for a self-hosted remote build cache: Gradle build times with no cache, an empty cache and a filled one, and what Maven restores, each with a public run.
+- [FosterStack Cache FAQ: Gradle, Maven, licence, security](https://fosterstack.com/faq/): Short answers about what it is, what it works with, its licence, verifying a release and what happens if it is down.
 - [Your first 15 minutes with a self-hosted build cache](https://fosterstack.com/first-15-minutes-build-cache/): A checklist from nothing to your first FROM-CACHE with a self-hosted Gradle build cache, with the commands timed on a GitHub-hosted machine, release 0.2.2.
 - [Let CI write, developers only read: Gradle and Maven cache](https://fosterstack.com/gradle-build-cache-ci-writes-developers-read/): Set up a Gradle build cache where CI uploads and laptops only download, with a read-only login the server enforces. Real run on server 0.2.1 and Gradle 9.8.0.
 - [Gradle remote build cache authentication and 401 errors](https://fosterstack.com/gradle-remote-build-cache-authentication/): Put a password on a self-hosted Gradle build cache and give Gradle the right one: env var, gradle.properties or -P, and what a wrong password looks like.
 - [Maven build cache extension not restoring: the causes](https://fosterstack.com/maven-build-cache-extension-not-restoring/): Maven build cache extension builds again instead of restoring from the remote? Causes with real log lines: config placement, saveToRemote, 401 and the local cache.
 - [How big a build cache server? CPU, RAM, disk and load](https://fosterstack.com/build-cache-server-sizing/): CPU, RAM, disk and the size cap.
 - [Air-gapped install](https://fosterstack.com/air-gapped-build-cache-install/): download, verify, transfer, run.
+- [What changes in v0.3.0 (draft)](https://fosterstack.com/whats-new-fosterstack-cache-v0-3-0/): what to check before you upgrade.
+- [Everything FosterStack does for security](https://fosterstack.com/everything-we-do-for-security/): every security practice that runs, one line each, with where to check it.
+- [Scanning FosterStack in your compliance pipeline](https://fosterstack.com/scan-fosterstack-cache-image/): what to expect when you scan the image and how to apply our VEX statements.
+- [Guides](https://fosterstack.com/guides/): every guide, grouped by topic.
+- [Roadmap honesty](https://fosterstack.com/roadmap/): what runs today and what is next.
 - [How FosterStack Cache is built and signed](https://fosterstack.com/how-we-build/): the release steps and what you can verify.
 - [Production build cache: Docker Compose, nginx and TLS](https://fosterstack.com/build-cache-docker-compose-production/): A Compose file for a self-hosted build cache behind nginx with TLS and a password, run for real on 0.2.1 and Gradle 9.8.0, with what was and was not tested.
 - [Build cache behind a corporate proxy: Gradle and Maven](https://fosterstack.com/gradle-build-cache-corporate-proxy/): How Gradle's remote build cache behaves behind a proxy: the settings, the loopback trap, a proxy that refuses, and how to tell it from a cache error. Real run.
@@ -110,8 +118,8 @@ Not yet shipped:
 - The paid tiers. Team ($49/mo: multi-user access control, SSO, per-project
   analytics, email support), Business ($199/mo: adds HA/replication, priority
   support with the CVE-response target), and Compliance ($499/mo billed
-  annually: adds the FIPS applicability statement, signed per-release
-  attestation letters, questionnaire hours, named-version LTS) are described,
+  annually: adds the FIPS applicability statement, a monthly
+  attestation letter covering every release, questionnaire hours) are described,
   not yet purchasable; the license key that unlocks them is not built.
   Everything in the repository is the free MIT core, including the -fips image
   and all release evidence.

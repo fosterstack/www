@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta name="robots" content="noindex, nofollow">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scanning FosterStack in your compliance pipeline</title>
+<meta name="description" content="DRAFT v0.3.0, not published: what to expect when you scan the FosterStack Cache image, and how to apply our published VEX statements in your scanner.">
+<meta property="og:title" content="Scanning FosterStack in your compliance pipeline">
+<meta property="og:description" content="DRAFT v0.3.0, not published: what to expect when you scan the FosterStack Cache image, and how to apply our published VEX statements in your scanner.">
+<meta property="og:url" content="https://fosterstack.com/scan-fosterstack-cache-image/">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://fosterstack.com/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="FosterStack. Infrastructure worth keeping — and kept patched.">
+<meta name="twitter:card" content="summary_large_image">
+<meta property="og:site_name" content="FosterStack">
+<link rel="canonical" href="https://fosterstack.com/scan-fosterstack-cache-image/">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<style>
+  :root {
+    --bg: #ffffff; --fg: #16181d; --muted: #5b6472; --line: #e4e7ec;
+    --accent: #0d7a5f; --accent-fg: #ffffff; --card: #f6f8f9; --warn-bg: #fff7ed; --warn-line: #fdba74;
+    --mark: #0f4d66;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #101318; --fg: #e8eaf0; --muted: #98a2b3; --line: #262c36;
+      --accent: #2fbf95; --accent-fg: #08110e; --card: #171c23; --warn-bg: #241a10; --warn-line: #7c4a12;
+      --mark: #e8eaf0;
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 44rem; margin: 0 auto; padding: 0 1.25rem 4rem; }
+  header.site { max-width: 44rem; margin: 0 auto; padding: 1.25rem; display: flex; align-items: baseline; gap: .6rem; }
+  .logo { font-weight: 700; font-size: 1.05rem; letter-spacing: -.01em; }
+  .logo span { color: var(--accent); }
+  .logo .mark { width: 1.2em; height: 1.2em; vertical-align: -.24em; margin-right: .4em; }
+  .tag { color: var(--muted); font-size: .85rem; }
+  .notice {
+    background: var(--warn-bg); border: 1px solid var(--warn-line); border-radius: 8px;
+    padding: .7rem 1rem; font-size: .92rem; margin: 1.5rem 0 2.5rem;
+  }
+  h1 { font-size: 2rem; line-height: 1.2; letter-spacing: -.02em; margin-bottom: 1rem; }
+  .lede { font-size: 1.12rem; color: var(--muted); margin-bottom: 2rem; }
+  h2 { font-size: 1.25rem; margin: 3rem 0 .9rem; letter-spacing: -.01em; }
+  p + p { margin-top: .8rem; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: .8rem; margin-top: 1rem; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1rem 1.1rem; }
+  .card h3 { font-size: .98rem; margin-bottom: .35rem; }
+  .card p { font-size: .9rem; color: var(--muted); }
+  ul.trust { list-style: none; margin-top: .5rem; }
+  ul.trust li { padding: .45rem 0 .45rem 1.6rem; position: relative; }
+  ul.trust li::before { content: "✓"; position: absolute; left: .2rem; color: var(--accent); font-weight: 700; }
+  code, pre { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .88em; }
+  code { background: var(--card); border: 1px solid var(--line); border-radius: 5px; padding: .1em .35em; }
+  pre code { background: none; border: 0; padding: 0; color: inherit; font-size: 1em; }
+  button {
+    padding: .7rem 1.3rem; font-size: 1rem; font-weight: 600; cursor: pointer;
+    background: var(--accent); color: var(--accent-fg); border: 0; border-radius: 8px;
+  }
+  button:disabled { opacity: .6; cursor: default; }
+  table { width: 100%; border-collapse: collapse; font-size: .92rem; margin-top: 1rem; }
+  th, td { text-align: left; padding: .55rem .6rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  pre { background: #0f172a; color: #e2e8f0; padding: .9rem 1rem; border-radius: 8px;
+        overflow-x: auto; font-size: .9rem; line-height: 1.5; }
+  .cta-row { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1.1rem; }
+  .btn { display: inline-block; padding: .55rem 1rem; border-radius: 8px; font-weight: 600;
+         text-decoration: none; background: var(--accent); color: var(--accent-fg); }
+  .btn-secondary { background: transparent; color: inherit; border: 1px solid var(--muted); }
+  .muted-note { color: var(--muted); font-size: .93rem; margin-top: 1.1rem; }
+  footer { border-top: 1px solid var(--line); margin-top: 4rem; padding: 1.5rem 1.25rem 3rem; }
+  footer div { max-width: 44rem; margin: 0 auto; color: var(--muted); font-size: .82rem; }
+  a { color: var(--accent); }
+
+  ol.steps { margin: .6rem 0 0 1.3rem; }
+  ol.steps li { padding: .3rem 0; }
+  code { overflow-wrap: anywhere; }
+  pre code { overflow-wrap: normal; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+</style>
+</head>
+<body>
+<header class="site">
+  <div class="logo"><svg class="mark" viewBox="0 0 96 96" aria-hidden="true" focusable="false"><rect x="12" y="14" width="72" height="18" rx="5" fill="var(--mark)"/><rect x="12" y="39" width="48" height="18" rx="5" fill="var(--mark)"/><rect x="12" y="64" width="26" height="18" rx="5" fill="var(--accent)"/></svg>foster<span>stack</span></div>
+  <div class="tag">Infrastructure worth keeping — and kept patched.</div>
+</header>
+<main>
+  <h1>Scanning FosterStack in your compliance pipeline</h1>
+  <p class="muted-note"><strong>DRAFT for v0.3, private preview, not published and never merged before v0.3.0 is live.</strong></p>
+  <p class="lede">Every scanner in <a href="https://github.com/fosterstack/cache/blob/main/.github/policy/scanners.json">the repo's scanner list</a> runs against a snapshot build of every release, and the current release's images are rescanned daily; <a href="https://github.com/fosterstack/cache/blob/main/RELEASING.md"><code>RELEASING.md</code></a> states exactly what the release scan does and does not attach to. This page is about what to expect when <em>you</em> scan our image, since a minimal image scans differently from a typical distro image in ways that surprise people the first time.</p>
+  <h2>What to expect</h2>
+  <p><strong>The production and <code>-fips</code> images report as <code>debian</code> in scanner OS detection</strong>, even though there's no shell, no package manager, and no way to <code>apt-get</code> anything. Confirmed directly against a real build:</p>
+  <pre tabindex="0"><code>$ trivy image ghcr.io/fosterstack/cache:${VER}
+...
+Detected OS   family="debian" version="13.6"
+...
+┌──────────────────────────────────┬──────────┬─────────────────┐
+│              Target               │   Type   │ Vulnerabilities │
+├──────────────────────────────────┼──────────┼─────────────────┤
+│ ghcr.io/fosterstack/cache (debian)│  debian  │        0        │
+├──────────────────────────────────┼──────────┼─────────────────┤
+│ usr/local/bin/fscache             │ gobinary │        0        │
+└──────────────────────────────────┴──────────┴─────────────────┘</code></pre>
+  <p>Google's distroless base ships an intact <code>/etc/os-release</code> deliberately (that's exactly what scanners key OS detection on), and we never strip it. The <code>gobinary</code> row is our own compiled binary, scanned by both tools' Go-module vulnerability catalogers directly.</p>
+  <h2>Package-DB asymmetry — expect this, it isn't a bug</h2>
+  <p>A scratch/distroless image has no package database. That has an asymmetric effect on checks:</p>
+  <ul>
+    <li><strong>"Is forbidden package X present?"</strong> checks — pass vacuously. There's no package manager, so nothing is "installed" in the sense those checks look for.</li>
+    <li><strong>"Is required package X present?"</strong> checks — fail or error, for the same reason.</li>
+  </ul>
+  <p>If you run a benchmark or policy pack written for a full-OS image (Debian, Ubuntu, etc.) against ours, expect confusing partial results — not a finding, just a mismatch between the benchmark's assumptions and a minimal image. Scanner content often has no OS or platform gating by default, so a scanner may score a scratch image against a full distro benchmark and produce results that don't mean what they look like they mean. Don't over-read a scratch image's score against a Debian-shaped policy without checking what each rule verifies.</p>
+  <h2>Exit codes: don't gate on the raw process exit code</h2>
+  <p>Trivy and Grype's exit codes conflate "ran and found something above your threshold" with "could not run at all" in ways that are easy to miss. <strong>Read per-rule verdicts from the results document (JSON/SARIF), never gate a pipeline purely on the raw exit code</strong> — a broken scan and a clean scan can both look like "exit 0" or both look like "exit 1" depending on flags, and conflating them ships a green gate that checks nothing.</p>
+  <h2>The -debug variant</h2>
+  <p>The <code>:debug</code> tag adds a busybox shell for interactive troubleshooting; it is not the image you deploy. Scanning it shows more than the production image, because busybox itself carries a small package surface, and any known finding there that has no fix is published as a VEX statement rather than hidden. The production and <code>-fips</code> images never include busybox.</p>
+  <h2>Using our VEX files in your scanner</h2>
+  <p>Each release carries our exceptions as published statements, generated from one source (<a href="https://github.com/fosterstack/cache/tree/main/.vex/"><code>.vex/</code></a>). Download them from the release page (<code>gh release download v${VER} --repo fosterstack/cache -p 'fosterstack-cache*'</code>) and check them against the signed release manifest as described in <a href="https://github.com/fosterstack/cache/blob/main/docs/verify-images.md">Verify our images</a>. Then apply the form your scanner reads:</p>
+  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
+    <thead><tr><th>Your scanner</th><th>File</th><th>How</th></tr></thead>
+    <tbody>
+      <tr><td>Grype</td><td><code>fosterstack-cache.openvex.json</code></td><td><code>grype IMAGE --vex fosterstack-cache.openvex.json</code></td></tr>
+      <tr><td>Trivy</td><td><code>fosterstack-cache.openvex.json</code></td><td><code>trivy image --vex fosterstack-cache.openvex.json IMAGE</code></td></tr>
+      <tr><td>Docker Scout</td><td><code>fosterstack-cache.openvex.json</code></td><td><code>docker scout cves --vex-location fosterstack-cache.openvex.json --vex-author '^FosterStack LLC$' IMAGE</code> (see <a href="https://github.com/fosterstack/cache/blob/main/docs/using-our-vex.md#docker-scout">Docker Scout</a>)</td></tr>
+      <tr><td>Amazon Inspector</td><td><code>fosterstack-cache-&lt;version&gt;.inspector-filters.json</code></td><td>one suppression rule per statement: <code>aws inspector2 create-filter</code>, one rule per call</td></tr>
+      <tr><td>Google Artifact Analysis</td><td><code>fosterstack-cache-&lt;version&gt;.csaf.json</code></td><td><code>gcloud artifacts vulnerabilities load-vex</code>, see <a href="https://github.com/fosterstack/cache/blob/main/.vex/README.md"><code>.vex/README.md</code></a> for naming your image path</td></tr>
+    </tbody>
+  </table></div>
+  <p>The three files are generated from the same statements. The OpenVEX and CSAF files carry every statement; the Inspector file carries one rule per <code>not_affected</code> or <code>fixed</code> statement and none for <code>affected</code> or <code>under_investigation</code>. Google applies whole-image statements only. <a href="https://github.com/fosterstack/cache/blob/main/.vex/README.md"><code>.vex/README.md</code></a> has the detail.</p>
+  <h2>Suppression rules</h2>
+  <p>A suppression rule in your scanner is only as trustworthy as the claim behind it, so ours work in one direction: <strong>every suppression traces to a published statement</strong>.</p>
+  <ul>
+    <li><strong>Our rules.</strong> We keep no scanner-side ignore that stands alone. A suppression in our repository must cite the statement that governs it (<a href="https://github.com/fosterstack/cache/blob/main/.vex/README.md"><code>.vex/README.md</code></a>), and the Inspector rules above are generated from the statements, never written by hand.</li>
+    <li><strong>Which statements become rules.</strong> <code>not_affected</code> and <code>fixed</code> statements become suppression rules. <code>affected</code> and <code>under_investigation</code> never do: those findings stay visible in your scanner.</li>
+    <li><strong>Scoped to what we shipped.</strong> Each rule is scoped by the CVE and by the digests of the release it was written for (and by package and version when the statement names one), so it does not hide the same CVE in a different image.</li>
+    <li><strong>Your own rules.</strong> Put the statement ID in the rule's reason or comment, so a reviewer on your side can trace it back to our file the same way.</li>
+  </ul>
+  <h2>Docker Scout</h2>
+  <p>Docker Scout reads OpenVEX directly. It applies only the statements whose author matches <code>--vex-author</code> (by default Docker's own), so name ours, the author recorded in the published file:</p>
+  <pre tabindex="0"><code>docker scout cves --vex-location fosterstack-cache.openvex.json \
+  --vex-author '^FosterStack LLC$' \
+  ghcr.io/fosterstack/cache:${VER}</code></pre>
+  <p>Run it once with and once without <code>--vex-location</code> and <code>--vex-author</code>: the difference is the set of findings that applicable <code>not_affected</code> and <code>fixed</code> statements suppress, the same audit as in <a href="https://github.com/fosterstack/cache/blob/main/docs/scanning.md#reproducing-our-own-gate">Reproducing our own gate</a>.</p>
+  <h2>Reproducing our own gate</h2>
+  <p>The release pipeline's scan stage is public: <a href="https://github.com/fosterstack/cache/blob/main/.github/workflows/stage-verify.yml"><code>.github/workflows/stage-verify.yml</code></a> runs one job per scanner in <a href="https://github.com/fosterstack/cache/blob/main/.github/policy/scanners.json">the scanner list</a> (today Grype and OSV-Scanner) against the exact candidate digests: every variant and architecture, and for Grype every release archive too. The Grype and OSV-Scanner commands below are partial examples that use the gate's scanners and its severity policy on one public tag; they show what a scan of that tag reports and do not cover everything the gate covers.</p>
+  <p>Grype runs in the gate at every severity with the published VEX applied. The VEX document ships with each release as <code>fosterstack-cache.openvex.json</code> and lives in-repo at <a href="https://github.com/fosterstack/cache/tree/main/.vex/"><code>.vex/</code></a>:</p>
+  <pre tabindex="0"><code>grype ghcr.io/fosterstack/cache:X.Y.Z \
+  --fail-on negligible --vex fosterstack-cache.openvex.json</code></pre>
+  <p>OSV-Scanner runs in the gate on the images and on the Go module manifests:</p>
+  <pre tabindex="0"><code>osv-scanner scan image ghcr.io/fosterstack/cache:X.Y.Z</code></pre>
+  <p>Trivy is not a gate command. If you run it, the example below uses the same severity set and the same file, which makes its result comparable but not gate-equivalent:</p>
+  <pre tabindex="0"><code>trivy image --scanners vuln \
+  --severity CRITICAL,HIGH,MEDIUM,LOW,UNKNOWN \
+  --vex fosterstack-cache.openvex.json \
+  ghcr.io/fosterstack/cache:X.Y.Z</code></pre>
+  <p>To see the findings without our statements applied, run Grype or Trivy without <code>--vex</code>, or Docker Scout without <code>--vex-location</code> and <code>--vex-author</code>. The difference between the two runs is the set of findings that applicable <code>not_affected</code> and <code>fixed</code> statements suppress, which is how you audit them.</p>
+  <h2>Confirming the scan is the release run</h2>
+  <p>Every scanner in the repo's list runs on every release, and the verdicts are in the public CI run: the scan is the CI run, in this repository's Actions tab. See <a href="https://github.com/fosterstack/cache/blob/main/docs/verify-images.md">Verify our images</a> for how to confirm the exact image you pulled came from that same run.</p>
+  <p class="muted-note">Related: <a href="/everything-we-do-for-security/">everything we do for security</a>, <a href="/verify-a-release/">verify a release yourself</a>.</p>
+  <p class="muted-note">Moving off the free Build Cache Node? See <a href="/build-cache-node-end-of-life/">what the end of life means</a> and the <a href="/migrate-build-cache-node/">migration guide</a>.</p>
+</main>
+<footer>
+  <div>
+    <p>FosterStack is not affiliated with, endorsed by, or sponsored by Gradle Inc.
+    "Gradle" and "Develocity" are trademarks of Gradle Inc., used here only to identify
+    compatibility. FosterStack contains no Gradle Inc. code; it is a clean-room implementation
+    of the documented remote build cache HTTP protocol. Apache Maven is a trademark of the
+    Apache Software Foundation; the Maven Build Cache Extension is Apache's project, not
+    ours.</p>
+    <p style="margin-top:.6rem">© 2026 FosterStack · <a href="/regulated/">For regulated markets</a> · <a href="https://github.com/fosterstack/cache">github.com/fosterstack/cache</a> · <a href="mailto:hello@fosterstack.com">hello@fosterstack.com</a></p>
+  </div>
+</footer>
+</body>
+</html>

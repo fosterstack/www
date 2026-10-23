@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta name="robots" content="noindex, nofollow">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Everything FosterStack does for security</title>
+<meta name="description" content="DRAFT v0.3.0, not published: the security practices that run on FosterStack Cache, one line each, with where to check them.">
+<meta property="og:title" content="Everything FosterStack does for security">
+<meta property="og:description" content="DRAFT v0.3.0, not published: the security practices that run on FosterStack Cache, one line each, with where to check them.">
+<meta property="og:url" content="https://fosterstack.com/everything-we-do-for-security/">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://fosterstack.com/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="FosterStack. Infrastructure worth keeping — and kept patched.">
+<meta name="twitter:card" content="summary_large_image">
+<meta property="og:site_name" content="FosterStack">
+<link rel="canonical" href="https://fosterstack.com/everything-we-do-for-security/">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<style>
+  :root {
+    --bg: #ffffff; --fg: #16181d; --muted: #5b6472; --line: #e4e7ec;
+    --accent: #0d7a5f; --accent-fg: #ffffff; --card: #f6f8f9; --warn-bg: #fff7ed; --warn-line: #fdba74;
+    --mark: #0f4d66;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #101318; --fg: #e8eaf0; --muted: #98a2b3; --line: #262c36;
+      --accent: #2fbf95; --accent-fg: #08110e; --card: #171c23; --warn-bg: #241a10; --warn-line: #7c4a12;
+      --mark: #e8eaf0;
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 44rem; margin: 0 auto; padding: 0 1.25rem 4rem; }
+  header.site { max-width: 44rem; margin: 0 auto; padding: 1.25rem; display: flex; align-items: baseline; gap: .6rem; }
+  .logo { font-weight: 700; font-size: 1.05rem; letter-spacing: -.01em; }
+  .logo span { color: var(--accent); }
+  .logo .mark { width: 1.2em; height: 1.2em; vertical-align: -.24em; margin-right: .4em; }
+  .tag { color: var(--muted); font-size: .85rem; }
+  .notice {
+    background: var(--warn-bg); border: 1px solid var(--warn-line); border-radius: 8px;
+    padding: .7rem 1rem; font-size: .92rem; margin: 1.5rem 0 2.5rem;
+  }
+  h1 { font-size: 2rem; line-height: 1.2; letter-spacing: -.02em; margin-bottom: 1rem; }
+  .lede { font-size: 1.12rem; color: var(--muted); margin-bottom: 2rem; }
+  h2 { font-size: 1.25rem; margin: 3rem 0 .9rem; letter-spacing: -.01em; }
+  p + p { margin-top: .8rem; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: .8rem; margin-top: 1rem; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1rem 1.1rem; }
+  .card h3 { font-size: .98rem; margin-bottom: .35rem; }
+  .card p { font-size: .9rem; color: var(--muted); }
+  ul.trust { list-style: none; margin-top: .5rem; }
+  ul.trust li { padding: .45rem 0 .45rem 1.6rem; position: relative; }
+  ul.trust li::before { content: "✓"; position: absolute; left: .2rem; color: var(--accent); font-weight: 700; }
+  code, pre { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .88em; }
+  code { background: var(--card); border: 1px solid var(--line); border-radius: 5px; padding: .1em .35em; }
+  pre code { background: none; border: 0; padding: 0; color: inherit; font-size: 1em; }
+  button {
+    padding: .7rem 1.3rem; font-size: 1rem; font-weight: 600; cursor: pointer;
+    background: var(--accent); color: var(--accent-fg); border: 0; border-radius: 8px;
+  }
+  button:disabled { opacity: .6; cursor: default; }
+  table { width: 100%; border-collapse: collapse; font-size: .92rem; margin-top: 1rem; }
+  th, td { text-align: left; padding: .55rem .6rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  pre { background: #0f172a; color: #e2e8f0; padding: .9rem 1rem; border-radius: 8px;
+        overflow-x: auto; font-size: .9rem; line-height: 1.5; }
+  .cta-row { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1.1rem; }
+  .btn { display: inline-block; padding: .55rem 1rem; border-radius: 8px; font-weight: 600;
+         text-decoration: none; background: var(--accent); color: var(--accent-fg); }
+  .btn-secondary { background: transparent; color: inherit; border: 1px solid var(--muted); }
+  .muted-note { color: var(--muted); font-size: .93rem; margin-top: 1.1rem; }
+  footer { border-top: 1px solid var(--line); margin-top: 4rem; padding: 1.5rem 1.25rem 3rem; }
+  footer div { max-width: 44rem; margin: 0 auto; color: var(--muted); font-size: .82rem; }
+  a { color: var(--accent); }
+
+  ol.steps { margin: .6rem 0 0 1.3rem; }
+  ol.steps li { padding: .3rem 0; }
+  code { overflow-wrap: anywhere; }
+  pre code { overflow-wrap: normal; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+</style>
+</head>
+<body>
+<header class="site">
+  <div class="logo"><svg class="mark" viewBox="0 0 96 96" aria-hidden="true" focusable="false"><rect x="12" y="14" width="72" height="18" rx="5" fill="var(--mark)"/><rect x="12" y="39" width="48" height="18" rx="5" fill="var(--mark)"/><rect x="12" y="64" width="26" height="18" rx="5" fill="var(--accent)"/></svg>foster<span>stack</span></div>
+  <div class="tag">Infrastructure worth keeping — and kept patched.</div>
+</header>
+<main>
+  <h1>Everything FosterStack does for security</h1>
+  <p class="muted-note"><strong>DRAFT for v0.3, private preview, not published and never merged before v0.3.0 is live.</strong></p>
+  <p class="lede">This is the list of security practices that run on the FosterStack Cache repository today, one line each. Every line links to the place that goes deep: a page that explains it, or the file that does it. <a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md">SECURITY.md</a> is the short policy (what we promise, including the patch target and how to report a vulnerability); this page is what we do.</p>
+  <h2>Source</h2>
+  <ul>
+    <li><strong>Signed commits.</strong> The <code>main</code> branch accepts only signed commits, under a repository ruleset that also requires the checks on every pull request (<a href="https://github.com/fosterstack/cache/rules">the repository's rules</a>, <a href="https://github.com/fosterstack/cache/blob/main/.github/policy/required-checks.json">required checks</a>).</li>
+    <li><strong>Signed release tags, checked first.</strong> The release chain starts by verifying the tag against a list of allowed signers kept on <code>main</code>, before any repository code runs (<a href="https://github.com/fosterstack/cache/blob/main/.github/workflows/stage-build.yml">build stage, admission step</a>, <a href="https://github.com/fosterstack/cache/blob/main/.github/policy/allowed_signers">allowed signers</a>).</li>
+    <li><strong>Release tags are protected.</strong> Creating a release tag is restricted by a repository rule, and a published release tag cannot be moved, updated or deleted (<a href="https://github.com/fosterstack/cache/rules">the repository's rules</a>).</li>
+    <li><strong>The merge gate runs from <code>main</code>.</strong> The check that judges a pull request is the copy on <code>main</code>, not the copy in the pull request, so a change cannot edit the rule that judges it (<a href="https://github.com/fosterstack/cache/blob/main/.github/workflows/agent-review-gate.yml">review gate</a>).</li>
+    <li><strong>CI runs a fork's code without secrets.</strong> The CI workflow runs on <code>pull_request</code>, never <code>pull_request_target</code>, so a fork's code runs with GitHub's no-secrets treatment (<a href="https://github.com/fosterstack/cache/blob/main/.github/workflows/ci.yml">CI</a>).</li>
+    <li><strong>A reserved branch for the automated auditor.</strong> Only the auditor's delivery identity may push to its branch prefix, and any other pusher fails the check (<a href="https://github.com/fosterstack/cache/blob/main/.github/workflows/reserved-branch-guard.yml">guard</a>).</li>
+  </ul>
+  <h2>Dependencies</h2>
+  <ul>
+    <li><strong>Every action in every workflow is pinned to a full commit digest.</strong> A tag or a branch reference fails the check on every pull request, and the check also reads the tag each digest claims to be (<a href="https://github.com/fosterstack/cache/blob/main/.github/agent/bin/check-action-pins.py">pin checker</a>).</li>
+    <li><strong>Container images are named by digest.</strong> An image a workflow runs, pulls or passes to an action must be a digest, never a tag, and the same checker fails the pull request otherwise (<a href="https://github.com/fosterstack/cache/blob/main/.github/agent/bin/check-action-pins.py">pin checker</a>).</li>
+    <li><strong>A new version waits seven days.</strong> A pull request that moves a pinned version is held until that version has been public for seven days, by a server-side time (<a href="https://github.com/fosterstack/cache/blob/main/.github/workflows/supply-chain.yml">supply-chain workflow</a>). Two exceptions, both still checked against published advisories: Go's own releases from go.dev, verified against their published checksum, and Wolfi packages (with v0.3, those packages are taken from our own archive and checked against their recorded hash before a build uses them).</li>
+    <li><strong>Everything we pin is checked daily.</strong> The inventory of pinned actions and packages is checked once a day against published advisories and malicious-package reports (<a href="https://github.com/fosterstack/cache/blob/main/.github/workflows/supply-chain.yml">supply-chain workflow</a>).</li>
+    <li><strong>Automated dependency review on every pull request.</strong> Newly added dependencies and their advisories are listed and checked before merge (<a href="https://github.com/fosterstack/cache/blob/main/.github/workflows/ci.yml">CI</a>).</li>
+    <li><strong>Updates are automated and judged.</strong> Patch and minor updates merge after the full gate; a major update is read against the upstream release notes and our usage by an automated reviewer before anyone merges it (<a href="https://github.com/fosterstack/cache/blob/main/.github/workflows/dependabot-auto-merge.yml">auto-merge</a>, <a href="https://github.com/fosterstack/cache/blob/main/.github/workflows/dependabot-reviewer.yml">reviewer</a>).</li>
+    <li><strong>The Go toolchain stays on the newest patch of a supported minor.</strong> A daily job proposes the bump when a newer supported release exists (<a href="https://github.com/fosterstack/cache/blob/main/.github/workflows/go-freshness.yml">freshness job</a>).</li>
+    <li><strong>Go vulnerability analysis on every change.</strong> <code>govulncheck</code> runs on every pull request and push; <code>gosec</code> and CodeQL read the code (<a href="https://github.com/fosterstack/cache/blob/main/.github/workflows/ci.yml">CI</a>, <a href="https://github.com/fosterstack/cache/blob/main/.github/workflows/codeql.yml">CodeQL</a>).</li>
+    <li><strong>Posture is measured in public.</strong> OpenSSF Scorecard runs weekly and its badge is on the README (<a href="https://github.com/fosterstack/cache/blob/main/.github/workflows/scorecard.yml">Scorecard</a>).</li>
+  </ul>
+  <h2>Build</h2>
+  <p>Where a line says "with v0.3", it describes the v0.3 release chain, which is not on <code>main</code> yet; the other lines describe what runs today.</p>
+  <ul>
+    <li><strong>One build, promoted by digest.</strong> The release is built once; the same bytes are scanned, tested and promoted, and the promoted digest is asserted equal to the scanned digest after every copy (<a href="https://github.com/fosterstack/cache/blob/main/.github/workflows/release.yml">release chain</a>).</li>
+    <li><strong>Every stage signs what it did.</strong> Admission, build, image assembly, reproducibility, each scan and acceptance each sign a statement naming the exact digests, and the next stage verifies it on entry (<a href="https://github.com/fosterstack/cache/blob/main/RELEASING.md">RELEASING.md</a>).</li>
+    <li><strong>Pinned toolchain.</strong> The build uses the Go version from <code>go.mod</code> with downloads of a newer toolchain disabled, and module manifests are verified, never rewritten (<a href="https://github.com/fosterstack/cache/blob/main/.github/workflows/stage-build.yml">build stage</a>).</li>
+    <li><strong>With v0.3, the Wolfi packages in the image come from our own archive.</strong> The image is assembled by apko from Wolfi packages that we keep in our own archive, plus the project's own package, which the build job makes. A scheduled job refreshes the archive and a committed pointer names its digest; the build pulls the archive by that digest and checks every package against its recorded hash, so a Wolfi package that was not archived and verified cannot reach an image (<a href="https://github.com/fosterstack/cache/blob/main/.github/workflows/stage-build.yml">build stage</a>, <a href="https://github.com/fosterstack/cache/blob/main/.github/workflows/go-freshness.yml">refresh job</a>).</li>
+    <li><strong>With v0.3, the build tools are downloaded at a pinned version and checked.</strong> The tools that make the packages and the image are fetched from their release pages at an exact version and verified against a checksum before they run (<a href="https://github.com/fosterstack/cache/blob/main/.github/workflows/stage-build.yml">build stage</a>).</li>
+    <li><strong>Distroless image, assembled by copy.</strong> Each image variant is a base image digest plus the binary bytes, with no build step inside the image; the production and FIPS images have no shell and no package manager (<a href="https://github.com/fosterstack/cache/blob/main/.github/workflows/stage-build.yml">build stage</a>).</li>
+    <li><strong>With v0.3, Build, Rebuild and a no-secret compare job.</strong> Build makes the apks and the images. Rebuild makes its own copy from the same commit in its own jobs, and a separate compare job, which holds no secret, no environment and no identity token, compares Build's and Rebuild's apks before the release job signs or publishes (<a href="https://github.com/fosterstack/cache/blob/main/.github/workflows/stage-reproducibility.yml">reproducibility stage</a>, <a href="https://github.com/fosterstack/cache/blob/main/.github/workflows/stage-promote.yml">release stage</a>).</li>
+    <li><strong>With v0.3, every build is its own job.</strong> Each build, for each architecture, runs in a fresh virtual machine that holds no stored secret, and no build shares a machine with the job that signs or publishes.</li>
+    <li><strong>With v0.3, the signer never receives an apk or an image that Rebuild made.</strong> The release job signs and publishes Build's exact artifacts, after checking each against the digest Build attested; the rebuilt files only feed the comparison. The one long-lived signing key reaches a single step of the release job.</li>
+    <li><strong>Assembled twice and compared.</strong> The image assembly is repeated on a fresh runner and the digests must be equal (<a href="https://github.com/fosterstack/cache/blob/main/.github/workflows/stage-reproducibility.yml">reproducibility stage</a>).</li>
+    <li><strong>A FIPS variant.</strong> A <code>-fips</code> build uses Go's FIPS 140-3 validated cryptographic module, announces itself at startup, and the whole test suite runs in <code>fips140=only</code> mode on every commit (<a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md#approved-only-cryptography">SECURITY.md</a>).</li>
+    <li><strong>Approved-only cryptography is checked by lint too.</strong> A lint rule denies the third-party cryptographic packages we name, such as <code>golang.org/x/crypto</code>, so code reaches for the validated module instead (<a href="https://github.com/fosterstack/cache/blob/main/.golangci.yml"><code>.golangci.yml</code></a>).</li>
+  </ul>
+  <h2>Scanning</h2>
+  <ul>
+    <li><strong>Scanners with different databases block every release.</strong> The set is one list in the repository, each scanner blocks at every severity including unknown, and nothing hard-codes a name or a count (<a href="https://github.com/fosterstack/cache/blob/main/.github/policy/scanners.json">scanner list</a>, <a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md#nothing-ships-with-a-known-cve">SECURITY.md</a>).</li>
+    <li><strong>Scanned on every pull request.</strong> The pull request gate builds the same image the release would ship and scans it (<a href="https://github.com/fosterstack/cache/blob/main/.github/workflows/scan.yml">scan workflow</a>).</li>
+    <li><strong>Four scanners, every day.</strong> The daily rescan builds main's candidate and scans it with four independent scanners, then tallies how many saw each finding (<a href="https://github.com/fosterstack/cache/blob/main/.github/workflows/main-candidate-rescan.yml">daily rescan</a>).</li>
+    <li><strong>Published images are rescanned daily.</strong> A CVE disclosed against bytes we already shipped raises a tracked issue (<a href="https://github.com/fosterstack/cache/blob/main/docs/scanning.md">scanning.md</a>).</li>
+    <li><strong>An automated audit reads every finding.</strong> Each day an automated auditor reads every scanner finding against the code and the published VEX, and writes up what each one needs (<a href="https://github.com/fosterstack/cache/blob/main/.github/workflows/auditor.yml">daily auditor</a>).</li>
+    <li><strong>Exceptions are published statements.</strong> The only way to except a finding is an OpenVEX statement with a justification, kept in the repository and published with each release (<a href="https://github.com/fosterstack/cache/tree/main/.vex/"><code>.vex/</code></a>, <a href="https://github.com/fosterstack/cache/blob/main/docs/scanning.md">scanning.md</a>).</li>
+    <li><strong>Scanner verdicts are signed.</strong> Each scanner's verdict is a signed statement bound to the digests it scanned (<a href="https://github.com/fosterstack/cache/blob/main/docs/verify-images.md">verify-images.md</a>).</li>
+  </ul>
+  <h2>Release</h2>
+  <ul>
+    <li><strong>Signed images.</strong> Every image is signed keylessly by the promotion workflow, in both registries (<a href="https://github.com/fosterstack/cache/blob/main/docs/verify-images.md">verify-images.md</a>).</li>
+    <li><strong>Signed provenance.</strong> Archives, SBOMs and the checksums file carry build provenance naming the CI run that made them (<a href="https://github.com/fosterstack/cache/blob/main/docs/verify-images.md">verify-images.md</a>).</li>
+    <li><strong>An SBOM for every archive</strong>, published with the release (<a href="https://github.com/fosterstack/cache/blob/main/RELEASING.md">RELEASING.md</a>).</li>
+    <li><strong>The VEX document ships with every release</strong> as <code>fosterstack-cache.openvex.json</code> (<a href="https://github.com/fosterstack/cache/blob/main/RELEASING.md#vex-statements">RELEASING.md</a>).</li>
+    <li><strong>One authorization before anything goes public.</strong> A single stage verifies the whole graph, fails closed on anything missing, and signs the approval that promotion requires (<a href="https://github.com/fosterstack/cache/blob/main/.github/workflows/stage-promote.yml">release stage</a>).</li>
+    <li><strong>Builds and signing are kept apart.</strong> Every build is its own job on its own virtual machine, the apk signing key reaches one step of one job, and the comparison of the rebuilt files runs in a job with no secrets.</li>
+    <li><strong>The release is checked as a customer would.</strong> After promotion the public digests are verified and pulled anonymously, and only then is the release published (<a href="https://github.com/fosterstack/cache/blob/main/.github/workflows/stage-promote.yml">promotion stage</a>).</li>
+    <li><strong>Acceptance runs against the exact artifacts.</strong> The archives and images that ship run the customer scenarios first: Gradle, Maven, Kubernetes and the artifact checks (<a href="https://github.com/fosterstack/cache/blob/main/.github/workflows/acceptance.yml">acceptance</a>, <a href="https://github.com/fosterstack/cache/blob/main/.github/workflows/stage-verify.yml">check stage</a>).</li>
+  </ul>
+  <h2>Runtime</h2>
+  <ul>
+    <li><strong>No telemetry and no outbound connections.</strong> The server sends nothing anywhere, and a release test traces the candidate from its first instruction with egress denied to prove it (<a href="https://github.com/fosterstack/cache/blob/main/.github/workflows/stage-verify.yml">check stage</a>, <a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md#data-handling">SECURITY.md</a>).</li>
+    <li><strong>No request access log.</strong> The only per-request logging is on failure, and it never carries a body, a credential or a client address (<a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md#data-handling">SECURITY.md</a>).</li>
+  </ul>
+  <h2>Watch</h2>
+  <ul>
+    <li><strong>A daily watch of what we depend on.</strong> Newly published advisories and malicious-package reports about anything we pin are read every day (<a href="https://github.com/fosterstack/cache/blob/main/.github/workflows/supply-chain.yml">supply-chain workflow</a>).</li>
+  </ul>
+
+  <p class="muted-note">Related: <a href="/how-we-build/">how releases are built and signed</a>, <a href="/verify-a-release/">verify a release yourself</a> and <a href="/security/">the security policy</a>.</p>
+  <p class="muted-note">Moving off the free Build Cache Node? See <a href="/build-cache-node-end-of-life/">what the end of life means</a> and the <a href="/migrate-build-cache-node/">migration guide</a>.</p>
+</main>
+<footer>
+  <div>
+    <p>FosterStack is not affiliated with, endorsed by, or sponsored by Gradle Inc.
+    "Gradle" and "Develocity" are trademarks of Gradle Inc., used here only to identify
+    compatibility. FosterStack contains no Gradle Inc. code; it is a clean-room implementation
+    of the documented remote build cache HTTP protocol. Apache Maven is a trademark of the
+    Apache Software Foundation; the Maven Build Cache Extension is Apache's project, not
+    ours.</p>
+    <p style="margin-top:.6rem">© 2026 FosterStack · <a href="/regulated/">For regulated markets</a> · <a href="https://github.com/fosterstack/cache">github.com/fosterstack/cache</a> · <a href="mailto:hello@fosterstack.com">hello@fosterstack.com</a></p>
+  </div>
+</footer>
+</body>
+</html>

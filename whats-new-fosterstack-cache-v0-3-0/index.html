@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta name="robots" content="noindex, nofollow">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>What's new in FosterStack Cache v0.3.0 (draft)</title>
+<meta name="description" content="What changes for you in FosterStack Cache v0.3.0: what to check before you upgrade. Draft, not published.">
+<meta property="og:title" content="What's new in FosterStack Cache v0.3.0 (draft)">
+<meta property="og:description" content="What changes for you in FosterStack Cache v0.3.0: what to check before you upgrade. Draft, not published.">
+<meta property="og:url" content="https://fosterstack.com/whats-new-fosterstack-cache-v0-3-0/">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://fosterstack.com/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="FosterStack. Infrastructure worth keeping — and kept patched.">
+<meta name="twitter:card" content="summary_large_image">
+<meta property="og:site_name" content="FosterStack">
+<link rel="canonical" href="https://fosterstack.com/whats-new-fosterstack-cache-v0-3-0/">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<style>
+  :root {
+    --bg: #ffffff; --fg: #16181d; --muted: #5b6472; --line: #e4e7ec;
+    --accent: #0d7a5f; --accent-fg: #ffffff; --card: #f6f8f9; --warn-bg: #fff7ed; --warn-line: #fdba74;
+    --mark: #0f4d66;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #101318; --fg: #e8eaf0; --muted: #98a2b3; --line: #262c36;
+      --accent: #2fbf95; --accent-fg: #08110e; --card: #171c23; --warn-bg: #241a10; --warn-line: #7c4a12;
+      --mark: #e8eaf0;
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 44rem; margin: 0 auto; padding: 0 1.25rem 4rem; }
+  header.site { max-width: 44rem; margin: 0 auto; padding: 1.25rem; display: flex; align-items: baseline; gap: .6rem; }
+  .logo { font-weight: 700; font-size: 1.05rem; letter-spacing: -.01em; }
+  .logo span { color: var(--accent); }
+  .logo .mark { width: 1.2em; height: 1.2em; vertical-align: -.24em; margin-right: .4em; }
+  .tag { color: var(--muted); font-size: .85rem; }
+  .notice {
+    background: var(--warn-bg); border: 1px solid var(--warn-line); border-radius: 8px;
+    padding: .7rem 1rem; font-size: .92rem; margin: 1.5rem 0 2.5rem;
+  }
+  h1 { font-size: 2rem; line-height: 1.2; letter-spacing: -.02em; margin-bottom: 1rem; }
+  .lede { font-size: 1.12rem; color: var(--muted); margin-bottom: 2rem; }
+  h2 { font-size: 1.25rem; margin: 3rem 0 .9rem; letter-spacing: -.01em; }
+  p + p { margin-top: .8rem; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: .8rem; margin-top: 1rem; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1rem 1.1rem; }
+  .card h3 { font-size: .98rem; margin-bottom: .35rem; }
+  .card p { font-size: .9rem; color: var(--muted); }
+  ul.trust { list-style: none; margin-top: .5rem; }
+  ul.trust li { padding: .45rem 0 .45rem 1.6rem; position: relative; }
+  ul.trust li::before { content: "✓"; position: absolute; left: .2rem; color: var(--accent); font-weight: 700; }
+  code, pre { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .88em; }
+  code { background: var(--card); border: 1px solid var(--line); border-radius: 5px; padding: .1em .35em; }
+  pre code { background: none; border: 0; padding: 0; color: inherit; font-size: 1em; }
+  button {
+    padding: .7rem 1.3rem; font-size: 1rem; font-weight: 600; cursor: pointer;
+    background: var(--accent); color: var(--accent-fg); border: 0; border-radius: 8px;
+  }
+  button:disabled { opacity: .6; cursor: default; }
+  table { width: 100%; border-collapse: collapse; font-size: .92rem; margin-top: 1rem; }
+  th, td { text-align: left; padding: .55rem .6rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  pre { background: #0f172a; color: #e2e8f0; padding: .9rem 1rem; border-radius: 8px;
+        overflow-x: auto; font-size: .9rem; line-height: 1.5; }
+  .cta-row { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1.1rem; }
+  .btn { display: inline-block; padding: .55rem 1rem; border-radius: 8px; font-weight: 600;
+         text-decoration: none; background: var(--accent); color: var(--accent-fg); }
+  .btn-secondary { background: transparent; color: inherit; border: 1px solid var(--muted); }
+  .muted-note { color: var(--muted); font-size: .93rem; margin-top: 1.1rem; }
+  footer { border-top: 1px solid var(--line); margin-top: 4rem; padding: 1.5rem 1.25rem 3rem; }
+  footer div { max-width: 44rem; margin: 0 auto; color: var(--muted); font-size: .82rem; }
+  a { color: var(--accent); }
+  code { overflow-wrap: anywhere; }
+  pre code { overflow-wrap: normal; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+</style>
+</head>
+<body>
+<header class="site">
+  <div class="logo"><svg class="mark" viewBox="0 0 96 96" aria-hidden="true" focusable="false"><rect x="12" y="14" width="72" height="18" rx="5" fill="var(--mark)"/><rect x="12" y="39" width="48" height="18" rx="5" fill="var(--mark)"/><rect x="12" y="64" width="26" height="18" rx="5" fill="var(--accent)"/></svg>foster<span>stack</span></div>
+  <div class="tag">Infrastructure worth keeping — and kept patched.</div>
+</header>
+<main>
+  <h1>What changes for you in FosterStack Cache v0.3.0</h1>
+  <p>You run FosterStack Cache for Gradle or Maven builds and you want to know what an upgrade to v0.3.0 changes. Three things may matter on your side: check them before you upgrade.</p>
+  <p class="muted-note"><strong>DRAFT for v0.3, private preview, not published and never merged before v0.3.0 is live.</strong></p>
+  <h2>Check these before you upgrade</h2>
+  <ul class="trust">
+    <li><strong>Linux only.</strong> v0.3.0 ships Linux archives (amd64 and arm64) and no macOS archive. On a Mac, run the Linux container image under Docker Desktop.</li>
+    <li><strong>No <code>-debug</code> image.</strong> v0.3.0 ships the <code>production</code> and <code>fips</code> images only. They hold only the <code>fscache</code> binary, with no shell, so look inside a running container from outside it with <code>kubectl debug</code> or <code>docker debug</code>; the README has a section on it.</li>
+    <li><strong>Inside the data folder.</strong> The data folder path is the same, but temporary files of writes in flight now live in a <code>+tmp</code> folder inside it.</li>
+  </ul>
+  <h2>Fixed in this release</h2>
+  <p>This release is built with Go 1.27.3. It fixes GO-2026-6809 (CVE-2026-111943) in Go's standard library: <code>crypto/x509</code> now distrusts compromised intermediate certificates. The fix ships in this release; there is no separate patch release for it. The CA certificate bundle is updated too (Wolfi's <code>ca-certificates-bundle</code> 20260909-r3), which removes three eMudhra roots: emSign Root CA C1, emSign ECC Root CA C3 and emSign ECC Root CA G3.</p>
+  <h2>What is new for Gradle and Maven users</h2>
+  <ul>
+    <li><strong>Optional HTTPS.</strong> Set <code>FSCACHE_TLS_CERT</code> and <code>FSCACHE_TLS_KEY</code> (both or neither) and the server serves HTTPS, TLS 1.2 or later.</li>
+    <li><strong>Clearer start-up.</strong> The server opens its listener first, warns about an <code>FSCACHE_*</code> variable it does not know, and reports how many uploads it found.</li>
+    <li><strong>Safer disk handling.</strong> A failed recovery check, or an error while serving or shutting down, keeps the "unclean" marker so the next start checks again. Temporary files no longer share a name space with cache keys, and keys whose last part starts with <code>..</code> are stored in a fixed place.</li>
+    <li><strong>Disk-trouble metrics.</strong> <code>store_writable</code>, <code>store_free_bytes</code> and <code>put_errors_total{reason}</code> are new, and the store gauges are present from start-up.</li>
+  </ul>
+  <h2>What stays the same</h2>
+  <p>The Gradle and Maven protocols stay as they are, and every <code>FSCACHE_*</code> setting you use today keeps its meaning. A request with more than 500 header values has been rejected with 431 (Request Header Fields Too Large) since 0.2.2, because of Go 1.27; Gradle and Maven send far fewer.</p>
+  <h2>Kept patched</h2>
+  <p>We keep FosterStack Cache patched. The server does not update itself, so watch the repository's releases on GitHub. Our target for vulnerable dependencies is 48 hours from disclosure; <a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md">the scope is in SECURITY.md</a>.</p>
+  <h2>How the release is built</h2>
+  <p>Signed at every stage, verified together at release. The image is built from signed packages, with no base image. Each build (one per architecture, and the assembly of the images) runs as its own job on a fresh virtual machine that GitHub provides and then discards. The key that signs the software packages inside the images (the package-signing key) exists in one place only, the release job's environment, and only one step in it receives the key. That job is handed only the exact files the build made, never the files from the second, independent rebuild. The comparison between the build and the rebuild runs in a job that holds no secrets and has no permission to publish. The signatures on the images, and on the checksum list that covers every release archive, are a different thing: they use short-lived certificates tied to the workflow that made them, so no long-lived key signs them. (The archives are not signed one by one; the signed checksum list covers each of them.)</p>
+  <p>This is designed against the build-isolation asks of SLSA and NIST SP 800-53; we claim no certification and no compliance. You can check the release yourself: see <a href="/verify-a-release/">verify a release yourself</a> and <a href="/how-we-build/">how we build</a>.</p>
+  <h2>What this release does not do</h2>
+  <ul>
+    <li>The jobs are separated at the level of a virtual machine, not on separate physical hardware.</li>
+    <li>The package signing key is not rotated automatically.</li>
+    <li>The release pipeline's own signing tools are not FIPS-validated. (The <code>-fips</code> image uses Go's FIPS 140-3 module, which is a different claim.)</li>
+    <li>There are no macOS or Windows binaries.</li>
+  </ul>
+  <h2>Upgrading</h2>
+  <p>The upgrade steps are the same as for any release: pull the new tag and start it on the same volume. See <a href="/upgrade-build-cache-server/#upgrade-to-v0-3-0">upgrading from 0.2.x to v0.3.0</a> for what to check first.</p>
+  <p class="muted-note">Related: <a href="/changelog/">changelog</a>, <a href="/security/">security policy</a>, <a href="/fips-140-3-build-cache/">the FIPS 140-3 build</a> and <a href="/air-gapped-build-cache-install/">installing without internet access</a>.</p>
+  <p class="muted-note">Moving off the free Build Cache Node? See <a href="/build-cache-node-end-of-life/">what the end of life means</a> and the <a href="/migrate-build-cache-node/">migration guide</a>.</p>
+</main>
+<footer>
+  <div>
+    <p>FosterStack is not affiliated with, endorsed by, or sponsored by Gradle Inc.
+    "Gradle" and "Develocity" are trademarks of Gradle Inc., used here only to identify
+    compatibility. FosterStack contains no Gradle Inc. code; it is a clean-room implementation
+    of the documented remote build cache HTTP protocol. Apache Maven is a trademark of the
+    Apache Software Foundation; the Maven Build Cache Extension is Apache's project, not
+    ours.</p>
+    <p style="margin-top:.6rem">© 2026 FosterStack · <a href="/regulated/">For regulated markets</a> · <a href="https://github.com/fosterstack/cache">github.com/fosterstack/cache</a> · <a href="mailto:hello@fosterstack.com">hello@fosterstack.com</a></p>
+  </div>
+</footer>
+</body>
+</html>

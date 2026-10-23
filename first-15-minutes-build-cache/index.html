@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="en">
 <head>
+<meta name="robots" content="noindex, nofollow">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Your first 15 minutes with a self-hosted build cache</title>
@@ -9,6 +10,11 @@
 <meta property="og:description" content="A checklist from nothing to your first FROM-CACHE with a self-hosted Gradle build cache, with the commands timed in a real run on release 0.2.2.">
 <meta property="og:url" content="https://fosterstack.com/first-15-minutes-build-cache/">
 <meta property="og:type" content="website">
+<meta property="og:image" content="https://fosterstack.com/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="FosterStack. Infrastructure worth keeping — and kept patched.">
+<meta name="twitter:card" content="summary_large_image">
 <meta property="og:site_name" content="FosterStack">
 <link rel="canonical" href="https://fosterstack.com/first-15-minutes-build-cache/">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
@@ -90,6 +96,7 @@
 <main>
   <h1>Your first 15 minutes with a self-hosted build cache</h1>
   <p class="lede">A checklist from nothing to your first <code>FROM-CACHE</code>, the line Gradle prints when it reuses a stored result. The commands take 20 seconds or less; we timed them on a clean GitHub-hosted machine that had Gradle and Java. Still, plan on about 15 minutes in all, because reading, choosing your values and pointing your own project at the server take you longer than the commands.</p>
+  <p class="muted-note"><strong>DRAFT for v0.3, private preview, not published and never merged before v0.3.0 is live.</strong></p>
 
   <h2>What we timed</h2>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
@@ -106,7 +113,7 @@
   <h3>1. Decide where it will run</h3>
   <ul class="trust">
     <li>A machine your CI runners and developers can reach. The server is one small program, and disk is what matters. See <a href="/build-cache-server-sizing/">server sizing</a>.</li>
-    <li>Plan on HTTPS for anything beyond a first try. Gradle sends the password with every request.</li>
+    <li>Plan on HTTPS for anything beyond a first try. Gradle sends the password with every request. Either put a proxy in front, or give the server its own certificate with <code>FSCACHE_TLS_CERT</code> and <code>FSCACHE_TLS_KEY</code> (both or neither).</li>
   </ul>
 
   <h3>2. Download it and check it is ours</h3>
@@ -158,7 +165,7 @@ gradle build --build-cache
 
   <h3>7. Before you roll it out to a team</h3>
   <ul class="trust">
-    <li>Put it behind HTTPS and give CI the read-write login and everyone else the read-only one: <a href="/gradle-build-cache-ci-writes-developers-read/">let CI write, developers only read</a>.</li>
+    <li>Serve it over HTTPS (a proxy in front, or the server's own TLS) and give CI the read-write login and everyone else the read-only one: <a href="/gradle-build-cache-ci-writes-developers-read/">let CI write, developers only read</a>.</li>
     <li>Watch it: <a href="/is-the-build-cache-server-healthy-what-to-alert-on/#monitor-build-cache-prometheus-grafana">monitoring</a>. Know how it forgets: <a href="/build-cache-eviction-size-limit/">eviction</a>.</li>
     <li>Know how to empty it: <a href="/reset-gradle-build-cache/">reset</a>, and how to move it: <a href="/upgrade-build-cache-server/#back-up-and-restore-build-cache">back up and restore</a>.</li>
   </ul>

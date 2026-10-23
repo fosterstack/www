@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="en">
 <head>
+<meta name="robots" content="noindex, nofollow">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Is My Build Cache Server Healthy? What to Alert On</title>
@@ -9,6 +10,11 @@
 <meta property="og:description" content="How to tell a FosterStack Cache server is healthy: what /healthz misses, which counters move when it breaks, what to alert on, and the Prometheus and Grafana setup.">
 <meta property="og:url" content="https://fosterstack.com/is-the-build-cache-server-healthy-what-to-alert-on/">
 <meta property="og:type" content="website">
+<meta property="og:image" content="https://fosterstack.com/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="FosterStack. Infrastructure worth keeping — and kept patched.">
+<meta name="twitter:card" content="summary_large_image">
 <meta property="og:site_name" content="FosterStack">
 <link rel="canonical" href="https://fosterstack.com/is-the-build-cache-server-healthy-what-to-alert-on/">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
@@ -89,6 +95,7 @@
 <main>
   <h1>Is my build cache server healthy? What to alert on</h1>
   <p class="lede">Watch three things: the server answers, uploads succeed, and builds get hits. FosterStack Cache reports all three, but <code>/healthz</code> alone only says the process is running.</p>
+  <p class="muted-note"><strong>DRAFT for v0.3, private preview, not published and never merged before v0.3.0 is live.</strong></p>
 
   <h2>The short answer</h2>
   <ul style="padding-left:1.25rem">
@@ -129,7 +136,7 @@
   - job_name: fscache
     static_configs:
       - targets: [&#x27;cache.example.com:8080&#x27;]</code></pre>
-  <p>This is a plain example. Use your own address, and HTTPS if you have put the server behind a proxy.</p>
+  <p>This is a plain example. Use your own address, and HTTPS if a proxy fronts the server. With the server's own TLS (<code>FSCACHE_TLS_CERT</code> and <code>FSCACHE_TLS_KEY</code>) the <code>/healthz</code> check moves to <code>https://</code> too.</p>
 
   <h3>The metrics</h3>
   <p>These are the names a running 0.2.1 server reports:</p>

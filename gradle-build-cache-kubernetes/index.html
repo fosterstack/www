@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="en">
 <head>
+<meta name="robots" content="noindex, nofollow">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Gradle build cache on Kubernetes (no Helm chart yet)</title>
@@ -9,6 +10,11 @@
 <meta property="og:description" content="Run a shared Gradle and Maven build cache on Kubernetes with plain manifests: one replica, update strategy, sizing, security context and in-cluster runners.">
 <meta property="og:url" content="https://fosterstack.com/gradle-build-cache-kubernetes/">
 <meta property="og:type" content="website">
+<meta property="og:image" content="https://fosterstack.com/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="FosterStack. Infrastructure worth keeping — and kept patched.">
+<meta name="twitter:card" content="summary_large_image">
 <meta property="og:site_name" content="FosterStack">
 <link rel="canonical" href="https://fosterstack.com/gradle-build-cache-kubernetes/">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
@@ -88,6 +94,7 @@
 <main>
   <h1>Gradle build cache on Kubernetes: plain manifests, no Helm chart yet</h1>
   <p class="lede">Run a shared build cache in your cluster with plain manifests: one Deployment, one volume, one Service. There is no Helm chart yet. It has not been through a beta on a production cluster, so treat it that way.</p>
+  <p class="muted-note"><strong>DRAFT for v0.3, private preview, not published and never merged before v0.3.0 is live.</strong></p>
 
   <h2>Is there a Helm chart?</h2>
   <p>Not yet. Today the supported way to deploy on Kubernetes is the plain manifests in the <a href="https://github.com/fosterstack/cache/blob/main/docs/kubernetes.md">Kubernetes guide</a>: a Secret, a volume claim, a Deployment and a Service. Copy them into one file and apply it with <code>kubectl apply -f</code>.</p>
@@ -114,6 +121,8 @@
 
   <h2>Runners in the same cluster</h2>
   <p>If your CI runners already run in this cluster, including Jenkins agents, GitHub Actions runner controller and GitLab runners, you need no load balancer and no ingress. Point Gradle at the cluster-internal name, for example <code>http://fscache.fscache-ns.svc.cluster.local/</code>, with <code>isAllowInsecureProtocol = true</code>. Gradle requires that for plain <code>http://</code> addresses. In our test with Gradle 9.8.0, only the literal <code>127.0.0.1</code> was let through without it. Here it is reasonable because the traffic never leaves the cluster network. See <a href="/jenkins-ci-build-cache/">Jenkins and CI build cache</a>.</p>
+  <h2>HTTPS: in front, or in the server</h2>
+  <p>There are two ways to serve HTTPS, and neither is preferred. <strong>TLS in front:</strong> a load balancer, Gateway or ingress terminates TLS and forwards plain HTTP to the Service, as in the manifests above; the server needs no certificate. <strong>TLS in the server:</strong> set <code>FSCACHE_TLS_CERT</code> and <code>FSCACHE_TLS_KEY</code> to a PEM certificate file and its private key file; the server then serves HTTPS only, on the same port, with TLS 1.2 as the minimum version. A missing, unreadable or mismatched file stops the start with a message naming the variable. Put the certificate in a Secret of type <code>kubernetes.io/tls</code>, mount it read-only, and make it readable by the container's non-root user (65532 in the guide's manifest). We tested neither route on the throwaway cluster.</p>
 
   <h2>Get the manifests</h2>
   <p>The four manifests (Secret, volume claim, Deployment, Service) and the steps to reach the cache from outside the cluster are in the <a href="https://github.com/fosterstack/cache/blob/main/docs/kubernetes.md">Kubernetes guide</a> on GitHub. Copy them into one file and apply it.</p>
@@ -136,6 +145,7 @@
     <a class="btn" href="https://github.com/fosterstack/cache/blob/main/docs/kubernetes.md">Kubernetes guide</a>
     <a class="btn btn-secondary" href="/migrate-build-cache-node/">Gradle and Maven setup</a>
   </div>
+  <p class="muted-note">Moving off the free Build Cache Node? See <a href="/build-cache-node-end-of-life/">what the end of life means</a> and the <a href="/migrate-build-cache-node/">migration guide</a>.</p>
 </main>
 <footer>
   <div>

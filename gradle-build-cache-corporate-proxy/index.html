@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="en">
 <head>
+<meta name="robots" content="noindex, nofollow">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Build cache behind a corporate proxy: Gradle and Maven</title>
@@ -9,6 +10,11 @@
 <meta property="og:description" content="Gradle and Maven behind a corporate proxy: the settings, the loopback difference, a refusing proxy, and telling it from a cache error. Gradle 9.8.0, Maven 3.10.0.">
 <meta property="og:url" content="https://fosterstack.com/gradle-build-cache-corporate-proxy/">
 <meta property="og:type" content="website">
+<meta property="og:image" content="https://fosterstack.com/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="FosterStack. Infrastructure worth keeping — and kept patched.">
+<meta name="twitter:card" content="summary_large_image">
 <meta property="og:site_name" content="FosterStack">
 <link rel="canonical" href="https://fosterstack.com/gradle-build-cache-corporate-proxy/">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
@@ -90,6 +96,7 @@
 <main>
   <h1>Build cache behind a corporate proxy: Gradle and Maven</h1>
   <p class="lede">Many companies make builds reach the network through a proxy. This page shows how the remote build cache behaves behind one, in Gradle and in Maven: the settings, the ways it goes wrong, and how to tell a proxy problem from a cache problem.</p>
+  <p class="muted-note"><strong>DRAFT for v0.3, private preview, not published and never merged before v0.3.0 is live.</strong></p>
   <p>In our runs Maven behaved differently from Gradle: it did not skip the proxy for loopback addresses. If you test on 127.0.0.1 with Maven, list it in <code>nonProxyHosts</code>: see <a href="#maven-build-cache-corporate-proxy">the Maven section</a>.</p>
 
   <h2>Checklist for Gradle</h2>
@@ -97,7 +104,7 @@
   <ul class="trust">
     <li>Ask for the cache's host and port to be allowed through the proxy (HTTPS).</li>
     <li>Put the proxy lines in <code>gradle.properties</code>, with the <code>systemProp.</code> prefix, and list internal hosts in <code>nonProxyHosts</code>.</li>
-    <li>Use HTTPS to the cache. See <a href="/build-cache-docker-compose-production/">a production setup with nginx and TLS</a>.</li>
+    <li>Use HTTPS to the cache: <a href="/build-cache-docker-compose-production/">a production setup with nginx and TLS</a>, or the server's own certificate (<code>FSCACHE_TLS_CERT</code> and <code>FSCACHE_TLS_KEY</code>).</li>
     <li>If the proxy re-signs TLS, Java will need your company's certificate authority.</li>
   </ul>
 
