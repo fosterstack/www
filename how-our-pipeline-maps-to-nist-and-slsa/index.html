@@ -1,13 +1,12 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta name="robots" content="noindex, nofollow">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>How our release pipeline maps to NIST and SLSA (draft)</title>
-<meta name="description" content="DRAFT v0.3.0: how the new release pipeline maps to NIST SP 800-204C and 800-204D and SLSA. Not published.">
-<meta property="og:title" content="How our release pipeline maps to NIST and SLSA (draft)">
-<meta property="og:description" content="DRAFT v0.3.0: how the new release pipeline maps to NIST SP 800-204C and 800-204D and SLSA. Not published.">
+<title>How our release pipeline maps to NIST and SLSA</title>
+<meta name="description" content="How the new release pipeline maps to NIST SP 800-204C and 800-204D and SLSA.">
+<meta property="og:title" content="How our release pipeline maps to NIST and SLSA">
+<meta property="og:description" content="How the new release pipeline maps to NIST SP 800-204C and 800-204D and SLSA.">
 <meta property="og:url" content="https://fosterstack.com/how-our-pipeline-maps-to-nist-and-slsa/">
 <meta property="og:type" content="website">
 <meta property="og:image" content="https://fosterstack.com/og-image.png">
@@ -95,7 +94,6 @@
 <main>
   <h1>How the v0.3.0 release pipeline maps to NIST and SLSA</h1>
   <p>If you have to explain our release pipeline to a security reviewer, start here. This page does two jobs: how each stage lines up with NIST SP 800-204C and 800-204D, and how the pipeline lines up with SLSA.</p>
-  <p class="muted-note"><strong>DRAFT for v0.3.0, not published and never merged before v0.3.0 is live.</strong></p>
   <h2>How we line up with NIST</h2>
   <p>We used two documents: SP 800-204C (<em>Implementation of DevSecOps for a Microservices-based Application with Service Mesh</em>), mainly sections 3.3, 4.6 and 4.8, and SP 800-204D (<em>Strategies for the Integration of Software Supply Chain Security in DevSecOps CI/CD Pipelines</em>), mainly sections 5.1.1 and 5.2. Both also cover running services in your own cluster; that is your environment, so the table covers our release pipeline only.</p>
   <p>The stages are described step by step on <a href="/how-we-build/">how we build</a>. "Signs" means the stage records what it did and signs it with a short-lived key, under its own workflow identity, logged in a public transparency log.</p>
