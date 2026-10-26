@@ -8,8 +8,12 @@ Fails (exit 1, one line per problem) on:
      redirect whose target page or #anchor does not exist, or a redirect whose source is a live page
   4. a mismatch between the sitemap, llms.txt and the home page's links to pages
   5. a <title> longer than 60 characters (or a page with none)
+  6. hidden pages (owner ratified Oct 22 2026): a page hidden from search (a robots or googlebot noindex tag, or an
+     X-Robots-Tag noindex rule in _headers) that is listed in the sitemap; and, for the live site only, any hidden
+     page except 404.html. The second applies with --live, and by itself when GitHub says this run is for a pull
+     request whose base is main (GITHUB_BASE_REF) or for main itself (GITHUB_REF), so a draft branch stays testable.
 
-Usage: check-site-rot.py [--root DIR] [--base REF] [--removed FILE...]
+Usage: check-site-rot.py [--root DIR] [--base REF] [--removed FILE...] [--live]
   --base REF asks git which pages were removed since REF (the workflow passes HEAD^1) and requires each to
   have its two redirect lines; it fails if REF cannot be found, so a shallow checkout cannot hide a removal.
   --removed takes page paths directly (for example "old-page/index.html"), for tests.
@@ -18,6 +22,7 @@ Usage: check-site-rot.py [--root DIR] [--base REF] [--removed FILE...]
 """
 import argparse
 import html
+from html.parser import HTMLParser
 import os
 import re
 import subprocess
@@ -48,6 +53,144 @@ def ids_of(text):
     return set(a or b for a, b in re.findall(r'(?<![\w-])id\s*=\s*(?:"([^"]+)"|\'([^\']+)\')', text, re.I))
 
 
+VALUE_DIRECTIVES = {"max-snippet", "max-image-preview", "max-video-preview", "unavailable_after"}
+
+
+class _RobotsMeta(HTMLParser):
+    """Finds robots and googlebot meta tags the way a browser reads the page: comments, script and style text are not tags,
+    and a quoted '>' does not end a tag."""
+
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.hidden = False
+
+    def handle_starttag(self, tag, attrs):
+        if tag != "meta":
+            return
+        a = {k.lower(): (v or "").strip().lower() for k, v in attrs}
+        if a.get("name") in ("robots", "googlebot") and {x.strip() for x in a.get("content", "").split(",")} & {"noindex", "none"}:
+            self.hidden = True
+
+    handle_startendtag = handle_starttag
+
+
+def hidden_by_meta(text):
+    """True if a robots or googlebot meta tag in the page carries noindex (or none, which means noindex and nofollow)."""
+    parser = _RobotsMeta()
+    parser.feed(text)
+    parser.close()
+    return parser.hidden
+
+
+def header_hides(value):
+    """True if an X-Robots-Tag value carries noindex or none as a directive, alone or for one named bot ("googlebot: noindex").
+    A directive that only has the word as its value, such as "max-image-preview: none", hides nothing."""
+    for part in value.split(","):
+        m = re.fullmatch(r"\s*(?:([A-Za-z0-9_-]+)\s*:\s*)?(noindex|none)\s*", part, re.I)
+        if m and (m.group(1) or "").lower() not in VALUE_DIRECTIVES:
+            return True
+    return False
+
+
+def parse_headers(headers_text):
+    """The _headers file as [(pattern, [(op, name, value)])], in file order: op is "set" for 'Name: value' and "detach" for '! Name'."""
+    blocks, cur = [], None
+    for line in headers_text.splitlines():
+        if not line.strip() or line.lstrip().startswith("#"):
+            continue
+        if not line[0].isspace():
+            cur = (line.strip(), [])
+            blocks.append(cur)
+        elif cur is not None:
+            t = line.strip()
+            if t.startswith("!"):
+                cur[1].append(("detach", t[1:].strip().lower(), ""))
+            elif ":" in t:
+                name, value = t.split(":", 1)
+                cur[1].append(("set", name.strip().lower(), value.strip()))
+    return blocks
+
+
+def _glob(text, host=False, names=None):
+    """* matches anything (it is :splat), :name matches one path segment (one label in a host); everything else is literal.
+    With names (a list) every placeholder becomes a capture group and its name is appended, so values can be expanded."""
+    one = r"[^./]+" if host else r"[^/]+"
+    out = ""
+    for tok in re.split(r"(\*|:[A-Za-z][A-Za-z0-9_]*)", text):
+        if tok == "*":
+            out += "(.*)" if names is not None else ".*"
+            if names is not None:
+                names.append("splat")
+        elif re.fullmatch(r":[A-Za-z][A-Za-z0-9_]*", tok):
+            out += "(%s)" % one if names is not None else one
+            if names is not None:
+                names.append(tok[1:])
+        else:
+            out += re.escape(tok)
+    return out
+
+
+SITE_HOSTS = ("fosterstack.com", "www.fosterstack.com")
+
+
+def pattern_matches(pat, host, path):
+    """Match a _headers pattern against a request for this host and path. Like Cloudflare, the pattern is matched against the
+    exact request: a pattern with a host only matches that host, and /name/ and /name are different paths. Returns None, or
+    the placeholders it captured ({"splat": ..., "name": ...}) so header values can be expanded."""
+    found = {}
+    m = re.match(r"https?://([^/]+)(/.*)?$", pat)
+    if m:
+        names = []
+        hm = re.fullmatch(_glob(m.group(1), host=True, names=names), host)
+        if not hm:
+            return None
+        found.update(zip(names, hm.groups()))
+        pat = m.group(2) or "/"
+    names = []
+    pm = re.fullmatch(_glob(pat, names=names), path)
+    if not pm:
+        return None
+    found.update(zip(names, pm.groups()))
+    return found
+
+
+def expand(value, found):
+    """Replace :name and :splat in a header value with what the pattern captured (an unknown :word stays as written)."""
+    return re.sub(r":([A-Za-z][A-Za-z0-9_]*)", lambda m: found.get(m.group(1), m.group(0)), value)
+
+
+def request_urls(key):
+    """Every request the site answers for one page: both hosts, with and without the trailing slash."""
+    if key == "":
+        paths = ["/"]
+    elif key == "404.html":
+        paths = ["/404", "/404.html"]
+    else:
+        paths = ["/%s/" % key, "/%s" % key]
+    return [(h, p) for h in SITE_HOSTS for p in paths]
+
+
+def hidden_by_headers(blocks, key):
+    """True if, for any request the page answers, the X-Robots-Tag it ends up with carries noindex or none: the matching
+    blocks are applied in file order, values add up, and '! X-Robots-Tag' removes what came before it."""
+    for host, path in request_urls(key):
+        values = []
+        for pat, rules in blocks:
+            found = pattern_matches(pat, host, path)
+            if found is None:
+                continue
+            for op, name, value in rules:
+                if name != "x-robots-tag":
+                    continue
+                if op == "detach":
+                    values = []
+                else:
+                    values.append(expand(value, found))
+        if any(header_hides(v) for v in values):
+            return True
+    return False
+
+
 # href="..." / src='...' / href=bare, any case: every way a link can be written
 LINK_RE = re.compile(r'(?<![\w-])(href|src)\s*=\s*(?:"([^"]*)"|\'([^\']*)\'|([^\s"\'>]+))', re.I)
 
@@ -56,15 +199,19 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--root", default=".")
     ap.add_argument("--removed", nargs="*", default=[])
+    ap.add_argument("--live", action="store_true",
+                    help="the live-site rule: no page except 404.html may be hidden from search (turned on by itself for a "
+                         "pull request based on main and for main)")
     ap.add_argument("--base", help="git ref of the parent commit (for example HEAD^1): pages removed since then "
                                    "must have their two 301 lines. Fails if the ref cannot be found.")
     args = ap.parse_args()
     root = args.root
+    live = args.live or os.environ.get("GITHUB_BASE_REF") == "main" or os.environ.get("GITHUB_REF") == "refs/heads/main"
     problems = []
     removed_from_git = []
     if args.base:
         # fail closed: a missing parent must never quietly turn into "nothing was removed"
-        shown = re.sub(r"[\x00-\x1f\x7f]", " ", args.base)
+        shown = re.sub(r"[\x00-\x1f\x7f-\x9f]", " ", args.base)
         if not re.fullmatch(r"[A-Za-z0-9_./~^@{}][A-Za-z0-9_./~^@{}-]*", args.base):
             print("FAIL base: %s is not a plain git ref" % shown)
             return 1
@@ -87,7 +234,7 @@ def main():
     def bad(msg):
         # one printable line per problem: text from a pull request must never start a line with "::"
         # (GitHub Actions reads such a line as a workflow command) or smuggle in a newline
-        problems.append(re.sub(r"[\x00-\x1f\x7f]", " ", msg))
+        problems.append(re.sub(r"[\x00-\x1f\x7f-\x9f]", " ", msg))
 
     # a symlink could point a page (or its title) at a file outside the site: refuse them
     for name in sorted(os.listdir(root)):
@@ -109,6 +256,14 @@ def main():
         if k not in texts:
             texts[k] = ""  # a symlink was reported above; do not read through it
     ids = {k: ids_of(t) for k, t in texts.items()}
+
+    # 6. hidden pages: found by a meta tag in the page or an X-Robots-Tag rule in _headers
+    hp = os.path.join(root, "_headers")
+    header_blocks = parse_headers(read(hp)) if os.path.isfile(hp) else []
+    hidden = set()
+    for key, t in texts.items():
+        if hidden_by_meta(t) or hidden_by_headers(header_blocks, key):
+            hidden.add(key)
 
     # 5. titles
     for key, t in texts.items():
@@ -208,14 +363,22 @@ def main():
     smp = os.path.join(root, "sitemap.xml")
     if os.path.isfile(smp):
         locs = re.findall(r"<loc>([^<]*)</loc>", read(smp))
-        want = {SITE} | {SITE + p + "/" for p in pages}
+        want = ({SITE} if "" not in hidden else set()) | {SITE + p + "/" for p in pages if p not in hidden}
         got = set(locs)
         if len(locs) != len(got):
             bad("sitemap: has a duplicate <loc>")
+        for key in sorted(hidden):
+            url = SITE if key == "" else SITE + key + "/"
+            if key != "404.html" and url in got:
+                bad("hidden: %s is hidden from search but listed in the sitemap" % (key or "/"))
+                got.discard(url)
         for u in sorted(got - want):
             bad("sitemap: lists %s but no such page exists" % u)
         for u in sorted(want - got):
             bad("sitemap: is missing %s" % u)
+    if live:
+        for key in sorted(hidden - {"404.html"}):
+            bad("live: %s is hidden from search; on the live site only the 404 page may be" % (key or "/"))
     lp = os.path.join(root, "llms.txt")
     if os.path.isfile(lp):
         urls = set(re.findall(r"\((https://fosterstack\.com/[^)\s]*)\)", read(lp)))
