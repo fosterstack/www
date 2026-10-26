@@ -1,6 +1,73 @@
-# /bcn-removed/ is pre-positioned for the day the incumbent's image is
-# verifiably gone (the bcn-watch trigger), and unpublished until then — the
-# draft lives in .drafts/, which Cloudflare Pages does not deploy
-# (dot-prefixed paths are excluded from upload). Until publication, any
-# stray inbound link lands on the homepage instead of a 404.
+# /bcn-removed/ is unpublished until the incumbent's image is verifiably gone
+# (the bcn-watch trigger). The draft page is NOT kept in this repo: everything
+# tracked here is public and is served, dot-prefixed folders included. Until
+# publication, any stray inbound link lands on the homepage instead of a 404.
 /bcn-removed/* / 302
+
+# Wave 1 consolidation (approved): each removed page redirects to its survivor. Two lines each: a rule with a trailing slash does not match the URL without one.
+/remote-build-cache-security/ /can-someone-poison-our-build-cache/#remote-build-cache-security 301
+/remote-build-cache-security /can-someone-poison-our-build-cache/#remote-build-cache-security 301
+/gradle-build-cache-http-status-codes/ /gradle-remote-build-cache-authentication/#gradle-build-cache-http-status-codes 301
+/gradle-build-cache-http-status-codes /gradle-remote-build-cache-authentication/#gradle-build-cache-http-status-codes 301
+/verify-container-image-signature-cosign/ /verify-a-release/#verify-container-image-signature-cosign 301
+/verify-container-image-signature-cosign /verify-a-release/#verify-container-image-signature-cosign 301
+/long-term-support-build-cache/ /security/#long-term-support-build-cache 301
+/long-term-support-build-cache /security/#long-term-support-build-cache 301
+/gradle-build-cache-docker-compose/ /build-cache-docker-compose-production/#gradle-build-cache-docker-compose 301
+/gradle-build-cache-docker-compose /build-cache-docker-compose-production/#gradle-build-cache-docker-compose 301
+
+# Wave 2 consolidation (approved): each removed page redirects to its survivor. Two lines each: a rule with a trailing slash does not match the URL without one.
+/build-cache-survives-restart/ /restart-build-cache-server-while-builds-run/#build-cache-survives-restart 301
+/build-cache-survives-restart /restart-build-cache-server-while-builds-run/#build-cache-survives-restart 301
+/back-up-and-restore-build-cache/ /upgrade-build-cache-server/#back-up-and-restore-build-cache 301
+/back-up-and-restore-build-cache /upgrade-build-cache-server/#back-up-and-restore-build-cache 301
+/migrate-maven-build-cache-to-a-new-server/ /upgrade-build-cache-server/#migrate-maven-build-cache-to-a-new-server 301
+/migrate-maven-build-cache-to-a-new-server /upgrade-build-cache-server/#migrate-maven-build-cache-to-a-new-server 301
+/run-two-build-cache-servers/ /build-cache-server-down-what-happens/#run-two-build-cache-servers 301
+/run-two-build-cache-servers /build-cache-server-down-what-happens/#run-two-build-cache-servers 301
+/run-build-cache-on-a-small-vm-or-laptop/ /build-cache-server-sizing/#run-build-cache-on-a-small-vm-or-laptop 301
+/run-build-cache-on-a-small-vm-or-laptop /build-cache-server-sizing/#run-build-cache-on-a-small-vm-or-laptop 301
+/how-many-builds-one-build-cache-server-at-once/ /build-cache-server-sizing/#how-many-builds-one-build-cache-server-at-once 301
+/how-many-builds-one-build-cache-server-at-once /build-cache-server-sizing/#how-many-builds-one-build-cache-server-at-once 301
+/maven-build-cache-what-is-stored/ /what-gradle-stores-in-build-cache/#maven-build-cache-what-is-stored 301
+/maven-build-cache-what-is-stored /what-gradle-stores-in-build-cache/#maven-build-cache-what-is-stored 301
+/build-cache-disk-full-what-happens/ /build-cache-eviction-size-limit/#build-cache-disk-full-what-happens 301
+/build-cache-disk-full-what-happens /build-cache-eviction-size-limit/#build-cache-disk-full-what-happens 301
+/build-cache-permission-denied-data-directory/ /build-cache-server-wont-start-errors/#build-cache-permission-denied-data-directory 301
+/build-cache-permission-denied-data-directory /build-cache-server-wont-start-errors/#build-cache-permission-denied-data-directory 301
+/monitor-build-cache-prometheus-grafana/ /is-the-build-cache-server-healthy-what-to-alert-on/#monitor-build-cache-prometheus-grafana 301
+/monitor-build-cache-prometheus-grafana /is-the-build-cache-server-healthy-what-to-alert-on/#monitor-build-cache-prometheus-grafana 301
+
+# Wave 3 consolidation (approved): each removed page redirects to its survivor. Two lines each: a rule with a trailing slash does not match the URL without one.
+/build-cache-node-faq/ /build-cache-node-end-of-life/#build-cache-node-faq 301
+/build-cache-node-faq /build-cache-node-end-of-life/#build-cache-node-faq 301
+/build-cache-node-migration-checklist/ /migrate-build-cache-node/#build-cache-node-migration-checklist 301
+/build-cache-node-migration-checklist /migrate-build-cache-node/#build-cache-node-migration-checklist 301
+/verify-replacement-build-cache/ /migrate-build-cache-node/#verify-replacement-build-cache 301
+/verify-replacement-build-cache /migrate-build-cache-node/#verify-replacement-build-cache 301
+/gradle-build-cache-tutorial/ /first-15-minutes-build-cache/#gradle-build-cache-tutorial 301
+/gradle-build-cache-tutorial /first-15-minutes-build-cache/#gradle-build-cache-tutorial 301
+/gradle-build-cache-hit-rate-low/ /gradle-remote-cache-not-working/#gradle-build-cache-hit-rate-low 301
+/gradle-build-cache-hit-rate-low /gradle-remote-cache-not-working/#gradle-build-cache-hit-rate-low 301
+/build-cache-cold-after-gradle-or-maven-upgrade/ /gradle-remote-cache-not-working/#build-cache-cold-after-gradle-or-maven-upgrade 301
+/build-cache-cold-after-gradle-or-maven-upgrade /gradle-remote-cache-not-working/#build-cache-cold-after-gradle-or-maven-upgrade 301
+/build-cache-one-module-changed-what-rebuilds/ /why-did-this-task-miss-the-build-cache/#build-cache-one-module-changed-what-rebuilds 301
+/build-cache-one-module-changed-what-rebuilds /why-did-this-task-miss-the-build-cache/#build-cache-one-module-changed-what-rebuilds 301
+/gradle-build-cache-buildsrc-included-builds/ /gradle-build-cache-monorepo/#gradle-build-cache-buildsrc-included-builds 301
+/gradle-build-cache-buildsrc-included-builds /gradle-build-cache-monorepo/#gradle-build-cache-buildsrc-included-builds 301
+/maven-build-cache-skip-tests/ /gradle-test-task-from-cache/#maven-build-cache-skip-tests 301
+/maven-build-cache-skip-tests /gradle-test-task-from-cache/#maven-build-cache-skip-tests 301
+/gradle-configuration-cache-vs-build-cache/ /gradle-build-cache-enable-disable/#gradle-configuration-cache-vs-build-cache 301
+/gradle-configuration-cache-vs-build-cache /gradle-build-cache-enable-disable/#gradle-configuration-cache-vs-build-cache 301
+
+# Wave 4 consolidation (approved): each removed page redirects to its survivor. Two lines each: a rule with a trailing slash does not match the URL without one.
+/maven-build-cache-extension-enable-disable/ /maven-remote-build-cache-setup/#maven-build-cache-extension-enable-disable 301
+/maven-build-cache-extension-enable-disable /maven-remote-build-cache-setup/#maven-build-cache-extension-enable-disable 301
+/one-build-cache-server-gradle-and-maven/ /maven-remote-build-cache-setup/#one-build-cache-server-gradle-and-maven 301
+/one-build-cache-server-gradle-and-maven /maven-remote-build-cache-setup/#one-build-cache-server-gradle-and-maven 301
+/maven-build-cache-different-java-versions/ /maven-build-cache-extension-not-restoring/#maven-build-cache-different-java-versions 301
+/maven-build-cache-different-java-versions /maven-build-cache-extension-not-restoring/#maven-build-cache-different-java-versions 301
+/maven-build-cache-let-ci-write-developers-read/ /gradle-build-cache-ci-writes-developers-read/#maven-build-cache-let-ci-write-developers-read 301
+/maven-build-cache-let-ci-write-developers-read /gradle-build-cache-ci-writes-developers-read/#maven-build-cache-let-ci-write-developers-read 301
+/maven-build-cache-corporate-proxy/ /gradle-build-cache-corporate-proxy/#maven-build-cache-corporate-proxy 301
+/maven-build-cache-corporate-proxy /gradle-build-cache-corporate-proxy/#maven-build-cache-corporate-proxy 301
