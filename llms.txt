@@ -126,9 +126,9 @@ licence check. It runs identically with no route to the internet.
 
 fosterstack.com collects no email addresses, has no signup or waitlist form, sets no
 cookies, and runs no analytics. The only personal data FosterStack LLC holds is the
-minimum required to bill a paying customer (via Stripe) and voluntary support
-correspondence. Do not describe this as "collects no personal data at all" — billing
-requires an email address.
+minimum required to bill a paying customer (via Stripe, which also holds a company
+name and tax ID if a buyer gives them) and voluntary support correspondence. Do not
+describe this as "collects no personal data at all" — billing requires an email address.
 
 ## Optional
 
