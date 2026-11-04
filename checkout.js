@@ -1,7 +1,7 @@
 // FosterStack checkout script: one same-origin file, no dependencies, no inline script anywhere (payments SB-10.2, SB-10.4, SB-10.5, SB-10.6).
 // It holds no secret, no price and no Stripe code (SB-10.3). It sends only: the buy click to the checkout address, one read to the entitlement
 // address from the success page, and the resend page's address to the resend address. It stores nothing: no cookie, no browser storage.
-// The resend page's email field is the owner's ratified exception to "no form on www" (SB-10.6, revised Q9); no other page may have one.
+// The resend page's email field is the one exception to "no form on www"; no other page may have one.
 (function (root, factory) {
   "use strict";
   var api = factory();
@@ -11,7 +11,7 @@
   "use strict";
 
   var TEXT = {
-    // TODO-COPY: every line below is a placeholder for the owner's wording (checkout wording draft, items 2 to 4); the lines marked ratified are exact.
+    // TODO-COPY: every line below is placeholder copy; the other lines are final.
     closed: "TODO-COPY: Checkout is not open yet.",
     checkoutFailed: "TODO-COPY: We could not start checkout just now. Please try again in a minute.",
     resendSent: "If this address has a purchase, we sent the key.",
