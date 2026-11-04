@@ -111,7 +111,7 @@
   <h3>1. Decide where it will run</h3>
   <ul class="trust">
     <li>A machine your CI runners and developers can reach. The server is one small program, and disk is what matters. See <a href="/build-cache-server-sizing/">server sizing</a>.</li>
-    <li>Plan on HTTPS for anything beyond a first try. Gradle sends the password with every request. Either put a proxy in front, or give the server its own certificate with <code>FSCACHE_TLS_CERT</code> and <code>FSCACHE_TLS_KEY</code> (both or neither).</li>
+    <li>Plan on HTTPS for anything beyond a first try. Gradle sends the password with every request. Put a proxy in front. From v0.3.0 you can instead give the server its own certificate with <code>FSCACHE_TLS_CERT</code> and <code>FSCACHE_TLS_KEY</code> (both or neither).</li>
   </ul>
 
   <h3>2. Download it and check it is ours</h3>

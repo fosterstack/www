@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Scanning FosterStack in your compliance pipeline</title>
-<meta name="description" content="What to expect when you scan the FosterStack Cache image, and how to apply our published VEX statements in your scanner.">
+<meta name="description" content="How to scan the FosterStack Cache image, and how to apply our published VEX statements in your scanner.">
 <meta property="og:title" content="Scanning FosterStack in your compliance pipeline">
-<meta property="og:description" content="What to expect when you scan the FosterStack Cache image, and how to apply our published VEX statements in your scanner.">
+<meta property="og:description" content="How to scan the FosterStack Cache image, and how to apply our published VEX statements in your scanner.">
 <meta property="og:url" content="https://fosterstack.com/scan-fosterstack-cache-image/">
 <meta property="og:type" content="website">
 <meta property="og:image" content="https://fosterstack.com/og-image.png">
@@ -95,32 +95,9 @@
 </header>
 <main>
   <h1>Scanning FosterStack in your compliance pipeline</h1>
-  <p class="lede">Every scanner in <a href="https://github.com/fosterstack/cache/blob/main/.github/policy/scanners.json">the repo's scanner list</a> runs against a snapshot build of every release, and the current release's images are rescanned daily; <a href="https://github.com/fosterstack/cache/blob/main/RELEASING.md"><code>RELEASING.md</code></a> states exactly what the release scan does and does not attach to. This page is about what to expect when <em>you</em> scan our image, since a minimal image scans differently from a typical distro image in ways that surprise people the first time.</p>
-  <h2>What to expect</h2>
-  <p><strong>The production and <code>-fips</code> images report as <code>debian</code> in scanner OS detection</strong>, even though there's no shell, no package manager, and no way to <code>apt-get</code> anything. Confirmed directly against a real build:</p>
-  <pre tabindex="0"><code>$ trivy image ghcr.io/fosterstack/cache:${VER}
-...
-Detected OS   family="debian" version="13.6"
-...
-┌──────────────────────────────────┬──────────┬─────────────────┐
-│              Target               │   Type   │ Vulnerabilities │
-├──────────────────────────────────┼──────────┼─────────────────┤
-│ ghcr.io/fosterstack/cache (debian)│  debian  │        0        │
-├──────────────────────────────────┼──────────┼─────────────────┤
-│ usr/local/bin/fscache             │ gobinary │        0        │
-└──────────────────────────────────┴──────────┴─────────────────┘</code></pre>
-  <p>Google's distroless base ships an intact <code>/etc/os-release</code> deliberately (that's exactly what scanners key OS detection on), and we never strip it. The <code>gobinary</code> row is our own compiled binary, scanned by both tools' Go-module vulnerability catalogers directly.</p>
-  <h2>Package-DB asymmetry — expect this, it isn't a bug</h2>
-  <p>A scratch/distroless image has no package database. That has an asymmetric effect on checks:</p>
-  <ul>
-    <li><strong>"Is forbidden package X present?"</strong> checks — pass vacuously. There's no package manager, so nothing is "installed" in the sense those checks look for.</li>
-    <li><strong>"Is required package X present?"</strong> checks — fail or error, for the same reason.</li>
-  </ul>
-  <p>If you run a benchmark or policy pack written for a full-OS image (Debian, Ubuntu, etc.) against ours, expect confusing partial results — not a finding, just a mismatch between the benchmark's assumptions and a minimal image. Scanner content often has no OS or platform gating by default, so a scanner may score a scratch image against a full distro benchmark and produce results that don't mean what they look like they mean. Don't over-read a scratch image's score against a Debian-shaped policy without checking what each rule verifies.</p>
+  <p class="lede">Every scanner in <a href="https://github.com/fosterstack/cache/blob/main/.github/policy/scanners.json">the repo's scanner list</a> runs against the exact candidate images of every release, and the current release's images are rescanned daily; <a href="https://github.com/fosterstack/cache/blob/main/RELEASING.md"><code>RELEASING.md</code></a> states exactly what the release scan does and does not attach to. This page is about scanning our image yourself.</p>
   <h2>Exit codes: don't gate on the raw process exit code</h2>
   <p>Trivy and Grype's exit codes conflate "ran and found something above your threshold" with "could not run at all" in ways that are easy to miss. <strong>Read per-rule verdicts from the results document (JSON/SARIF), never gate a pipeline purely on the raw exit code</strong> — a broken scan and a clean scan can both look like "exit 0" or both look like "exit 1" depending on flags, and conflating them ships a green gate that checks nothing.</p>
-  <h2>The -debug variant</h2>
-  <p>The <code>:debug</code> tag adds a busybox shell for interactive troubleshooting; it is not the image you deploy. Scanning it shows more than the production image, because busybox itself carries a small package surface, and any known finding there that has no fix is published as a VEX statement rather than hidden. The production and <code>-fips</code> images never include busybox.</p>
   <h2>Using our VEX files in your scanner</h2>
   <p>Each release carries our exceptions as published statements, generated from one source (<a href="https://github.com/fosterstack/cache/tree/main/.vex/"><code>.vex/</code></a>). Download them from the release page (<code>gh release download v${VER} --repo fosterstack/cache -p 'fosterstack-cache*'</code>) and check them against the signed release manifest as described in <a href="https://github.com/fosterstack/cache/blob/main/docs/verify-images.md">Verify our images</a>. Then apply the form your scanner reads:</p>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>

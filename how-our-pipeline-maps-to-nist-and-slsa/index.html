@@ -100,9 +100,9 @@
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <thead><tr><th>Stage</th><th>What it does</th><th>NIST practice</th><th>How much</th></tr></thead>
     <tbody>
-      <tr><td>Build</td><td>Checks that the tag is signed, then builds the binaries and both images once. The image is assembled from those packages, with no base image.</td><td>800-204D 5.1.1 "Secure Build"; 800-204C 3.3.3 (SBOM generation and code signing as pipeline tasks)</td><td>Matches the practice as we read it.</td></tr>
+      <tr><td>Build</td><td>Checks that the tag is signed, then builds the binaries and both images once. The image is assembled from the packages it built, with no base image.</td><td>800-204D 5.1.1 "Secure Build"; 800-204C 3.3.3 (SBOM generation and code signing as pipeline tasks)</td><td>Matches the practice as we read it.</td></tr>
       <tr><td>Sign</td><td>A separate stage records the build and signs it under its own identity, from the build's digest list only.</td><td>800-204D 5.1.1 (signing outside the build steps); 800-204C 4.6 (signing during each required stage)</td><td>Partly. 4.6 prefers multi-party signing; every signature here is made by automation in one repository.</td></tr>
-      <tr><td>Rebuild</td><td>Assembles the image again, independently, on a separate machine. The digests must match or the release fails.</td><td>No direct match in either document.</td><td>Not mapped. It repeats the image assembly; it does not rebuild the binaries from source.</td></tr>
+      <tr><td>Rebuild</td><td>Builds the packages and both images again from the same commit, on separate machines. Every digest must match Build's or the release fails.</td><td>No direct match in either document.</td><td>Not mapped.</td></tr>
       <tr><td>Check</td><td>Scans and acceptance tests run against the exact candidate images, and the stage signs a verdict for those digests.</td><td>800-204C 4.8 and 800-204D 5.2</td><td>Partly. The pipeline runs no static or dynamic application security testing itself, and the signed verdict records a pass, not the full scan report.</td></tr>
       <tr><td>Release</td><td>Verifies every stage's signature together, then publishes the same digests.</td><td>800-204C 4.6 (verify that all required signatures are present); 800-204D 5.1.1 (policy checks that the required attestations are found) and 5.2 (NIST SP 800-204D requirement DEPLOY-REQ-3)</td><td>Partly. The policy is code in the workflow file, not a separate signed policy document as 5.1.1 describes.</td></tr>
     </tbody>
@@ -110,7 +110,7 @@
   <p>In one line: signed at every stage, verified together at release.</p>
   <h2>How we line up with SLSA</h2>
   <p>SLSA is a public scale for how far you can trust the way software was built. Its Build track runs from Level 0 to Level 3. We assess v0.3.0 at Build Level 3.</p>
-  <p>Level 3 asks that the build runs on a hosted platform and that its provenance, the signed record of how the build ran, cannot be forged by the build itself. Here, the Build stage runs on a hosted CI platform and does not hold the signing identity. The Sign stage receives only the build's digest list, records the build and signs it under its own identity. The Release stage accepts a build only if that signature verifies. You can check this yourself: see <a href="/verify-a-release/">verify a release yourself</a>.</p>
+  <p>Level 3 asks that the build runs on a hosted platform and that its provenance, the signed record of how the build ran, cannot be forged by the build itself. Here, the Build stage runs on a hosted CI platform and cannot sign the provenance: only the Sign stage can. The Sign stage receives only the build's digest list, records the build and signs it under its own identity. The Release stage accepts a build only if that signature verifies. You can check this yourself: see <a href="/verify-a-release/">verify a release yourself</a>.</p>
   <p class="muted-note">Related: <a href="/verify-a-release/">verify a release yourself</a> and <a href="/how-we-build/">how releases are built and signed</a>.</p>
 </main>
 
