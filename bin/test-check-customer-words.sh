@@ -131,10 +131,17 @@ lndir() {
   mkdir -p "$(dirname "$1")"; ln -s "$(realpath -m --relative-to="$(dirname "$1")" "$2")" "$1"
   printf 'owner\n' >> "$2/x.md"; git add -A && git commit -qm pr
 }
-lndir some-page bin/pages-src;                  check 2 "T5b a new link some-page to a folder of pages exits 2" 'symbolic link at a customer file: some-page'
-lndir some-page bin/pages-src some-page/index.html; check 2 "T5b a page folder replaced by a link to a folder exits 2" 'symbolic link at a customer file: some-page'
-lndir assets.json bin/pages-src;                check 2 "T5b a new link assets.json to a folder of pages exits 2" 'symbolic link at a customer file: assets\.json'
+lndir some-page bin/pages-src;                  check 2 "T5b a new link some-page to a folder of pages exits 2" 'symbolic link at a customer file: some-page$'
+lndir some-page bin/pages-src some-page/index.html; check 2 "T5b a page folder replaced by a link to a folder exits 2" 'symbolic link at a customer file: some-page$'
+lndir assets.json bin/pages-src;                check 2 "T5b a new link assets.json to a folder of pages exits 2" 'symbolic link at a customer file: assets\.json$'
 lndir bin/sub bin/sub-src;                      check 0 "T5b a link to a folder under bin/ passes"
+# a link at .github itself: only the PULL_REQUEST_TEMPLATE.md probe refuses it (the template is the one customer file in that folder)
+rm -rf "$work/r"; mkdir -p "$work/r/.github/policy" "$work/r/bin/gh-src/policy"; cd "$work/r" || exit 2; git init -q
+printf '# header\n' > .github/policy/customer-words-allow.txt; printf '# header\n' > bin/gh-src/policy/customer-words-allow.txt
+printf 'fine\n' > bin/gh-src/PULL_REQUEST_TEMPLATE.md; git add -A && git commit -qm base
+git rm -rq .github; ln -s bin/gh-src .github; printf 'owner\n' >> bin/gh-src/PULL_REQUEST_TEMPLATE.md; git add -A && git commit -qm pr
+check 2 "T5b .github replaced by a link to a folder exits 2" 'symbolic link at a customer file: \.github$'
+lndir .github/other bin/other-src;              check 0 "T5b a link to a folder at .github/other passes"
 mk docs/a.md $'x\n' docs/a.md $'the owner\n'; git rm -q docs/a.md; git commit -qm rm; check 0 "T5 deleting a page passes"
 mk docs/a.md $'the owner\n' docs/b.md $'fine\n';                       check 0 "T5 a page with owner deleted and a clean one added passes"
 mk docs/a.md $'x\n' docs/b.md $'the owner\n';                          check 1 "T5 deleting one page and adding another with owner fails"
