@@ -96,11 +96,11 @@
   <h2>Check these before you upgrade</h2>
   <ul class="trust">
     <li><strong>Linux only.</strong> v0.3.0 ships Linux archives (amd64 and arm64) and no macOS archive. On a Mac, run the Linux container image under Docker Desktop.</li>
-    <li><strong>No <code>-debug</code> image.</strong> v0.3.0 ships the <code>production</code> and <code>fips</code> images only. They hold only the <code>fscache</code> binary, with no shell, so look inside a running container from outside it with <code>kubectl debug</code> or <code>docker debug</code>; the README has a section on it.</li>
+    <li><strong>No <code>-debug</code> image.</strong> v0.3.0 ships the <code>production</code> and <code>fips</code> images only. They hold only the <code>fscache</code> binary, with no shell, so look inside a running container from outside it with <code>kubectl debug</code> or <code>docker debug</code>; <a href="https://github.com/fosterstack/cache#debugging-a-running-container">the README has a section on it</a>.</li>
     <li><strong>Inside the data folder.</strong> The data folder path is the same, but temporary files of writes in flight now live in a <code>+tmp</code> folder inside it.</li>
   </ul>
   <h2>Fixed in this release</h2>
-  <p>This release is built with Go 1.27.3. It fixes GO-2026-6809 (CVE-2026-111943) in Go's standard library: <code>crypto/x509</code> now distrusts compromised intermediate certificates. The fix ships in this release; there is no separate patch release for it. The CA certificate bundle is updated too (Wolfi's <code>ca-certificates-bundle</code> 20260909-r3), which removes three eMudhra roots: emSign Root CA C1, emSign ECC Root CA C3 and emSign ECC Root CA G3.</p>
+  <p>This release is built with Go 1.27.3. It fixes <a href="https://pkg.go.dev/vuln/GO-2026-6809">GO-2026-6809</a> (CVE-2026-111943) in Go's standard library: <code>crypto/x509</code> now distrusts compromised intermediate certificates. The fix ships in this release; there is no separate patch release for it. The CA certificate bundle is updated too (Wolfi's <code>ca-certificates-bundle</code> 20260909-r3), which removes three eMudhra roots: emSign Root CA C1, emSign ECC Root CA C3 and emSign ECC Root CA G3.</p>
   <h2>What is new for Gradle and Maven users</h2>
   <ul>
     <li><strong>Optional HTTPS.</strong> Set <code>FSCACHE_TLS_CERT</code> and <code>FSCACHE_TLS_KEY</code> (both or neither) and the server serves HTTPS, TLS 1.2 or later.</li>
@@ -114,7 +114,7 @@
   <p>We keep FosterStack Cache patched. The server does not update itself, so watch the repository's releases on GitHub. Our target for vulnerable dependencies is 48 hours from disclosure; <a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md">the scope is in SECURITY.md</a>.</p>
   <h2>How the release is built</h2>
   <p>Signed at every stage, verified together at release. The image is built from signed packages, with no base image. Each build (one per architecture, and the assembly of the images) runs as its own job on a fresh virtual machine that GitHub provides and then discards. The key that signs the software packages inside the images (the package-signing key) exists in one place only, the release job's environment, and only one step in it receives the key. That job is handed only the exact files the build made, never the files from the second, independent rebuild. The comparison between the build and the rebuild runs in a job that holds no secrets and has no permission to publish. The signatures on the images, and on the checksum list that covers every release archive, are a different thing: they use short-lived certificates tied to the workflow that made them, so no long-lived key signs them. (The archives are not signed one by one; the signed checksum list covers each of them.)</p>
-  <p>This is designed against the build-isolation asks of SLSA and NIST SP 800-53; we claim no certification and no compliance. You can check the release yourself: see <a href="/verify-a-release/">verify a release yourself</a> and <a href="/how-we-build/">how we build</a>.</p>
+  <p>This is designed against the build-isolation asks of SLSA and NIST SP 800-204D; we claim no certification and no compliance. You can check the release yourself: see <a href="/verify-a-release/">verify a release yourself</a> and <a href="/how-we-build/">how we build</a>.</p>
   <h2>What this release does not do</h2>
   <ul>
     <li>The jobs are separated at the level of a virtual machine, not on separate physical hardware.</li>

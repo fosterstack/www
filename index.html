@@ -103,7 +103,6 @@
     <a href="/build-cache-node-end-of-life/">What that means and your options</a>.
   </div>
 
-
   <h1>Fast builds from cache are worth keeping.</h1>
   <p class="lede">
     FosterStack is a self-hosted remote build cache server — a Develocity Build Cache Node
@@ -134,7 +133,7 @@ curl localhost:8080/healthz   # -&gt; ok</code></pre>
     <div class="card"><h3>Authentication</h3><p>HTTP Basic Auth over TLS, wired the way Gradle and Maven already expect credentials. Constant-time comparison, no credential ever logged.</p></div>
     <div class="card"><h3>Metrics &amp; status</h3><p>Prometheus metrics, a read-only status page with hit rates and size-vs-cap, and a Grafana dashboard in the repo — so you know the cache is earning its keep.</p></div>
     <div class="card"><h3>30-minute migration</h3><p>A step-by-step guide for existing Build Cache Node deployments. Same protocol, same CI config shape — migrating is mostly a URL change.</p></div>
-    <div class="card"><h3>Verify every release</h3><p>Every step of our release produces signed provenance. When a FosterStack signature verifies, you know it's FosterStack code, a FosterStack build and a FosterStack image, and everything in between. <a href="/how-our-pipeline-maps-to-nist-and-slsa/">See how each stage maps</a>.</p></div>
+    <div class="card"><h3>Verify every release</h3><p>Every stage of our release signs what it did. When the signatures verify, you know it's FosterStack code, built and published by our pipeline. <a href="/how-our-pipeline-maps-to-nist-and-slsa/">See how each stage maps</a>.</p></div>
     <div class="card"><h3>Air-gapped ready</h3><p>No telemetry. Nothing outbound. It runs the same air-gapped.</p></div>
   </div>
 

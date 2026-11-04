@@ -95,12 +95,12 @@
   <p>You should not have to take our word for what you run. Signed at every stage, verified together at release. These steps check the image signatures, the signed file lists, the digest, how the release was built and its parts list, using only <code>cosign</code>, <code>gh</code>, <code>jq</code> and <code>sha256sum</code>. They are for v0.3.0 and later. For v0.2.x, see the <a href="https://github.com/fosterstack/cache/blob/main/docs/verify-images.md">image verification guide</a>.</p>
   <p>You need no account to pull the images or to run <code>cosign</code>. Downloading release files with <code>gh</code> needs <code>gh auth login</code>; you can also download them from the release page in a browser.</p>
   <h2>Set the version</h2>
-  <pre tabindex="0"><code>VER=$(curl -fsSL https://api.github.com/repos/fosterstack/cache/releases/latest \
-        | sed -n 's/.*"tag_name": *"v\([^"]*\)".*/\1/p')
+  <pre tabindex="0"><code>VER=0.3.0
 echo "$VER"
 IDENT="https://github.com/fosterstack/cache/.github/workflows"
 ISSUER=https://token.actions.githubusercontent.com</code></pre>
-  <p>There are two images, production and <code>-fips</code>. Run step 1 for each.</p>
+  <p>Set VER to the release you run, v0.3.0 or later.</p>
+  <p>There are two images, production and <code>-fips</code>.</p>
   <h2 id="verify-container-image-signature-cosign">1. The signature and who signed it</h2>
   <pre tabindex="0"><code>cosign verify ghcr.io/fosterstack/cache:${VER} \
   --certificate-identity "${IDENT}/stage-promote.yml@refs/tags/v${VER}" \
@@ -108,7 +108,7 @@ ISSUER=https://token.actions.githubusercontent.com</code></pre>
 cosign verify ghcr.io/fosterstack/cache:${VER}-fips \
   --certificate-identity "${IDENT}/stage-promote.yml@refs/tags/v${VER}" \
   --certificate-oidc-issuer "$ISSUER"</code></pre>
-  <p>This shows that the release stage of our public pipeline, at this release tag, signed these exact images. The signing certificate lasts minutes and is recorded in Rekor, the public transparency log. There is no signing key to steal.</p>
+  <p>This shows that the release stage of our public pipeline, at this release tag, signed these exact images. The signing certificate lasts minutes and is recorded in Rekor, the public transparency log. There is no image-signing key to steal.</p>
   <h2>2. The file lists are ours, and your files match them</h2>
   <pre tabindex="0"><code>gh release download v${VER} --repo fosterstack/cache \
   -p checksums.txt -p checksums.txt.bundle \
@@ -119,7 +119,7 @@ for f in checksums.txt release-files.sha256; do
     --certificate-identity "${IDENT}/stage-promote.yml@refs/tags/v${VER}" \
     --certificate-oidc-issuer "$ISSUER"
 done
-sha256sum -c &lt;(grep "fscache_${VER}_linux_amd64.tar.gz" checksums.txt)
+sha256sum -c &lt;(grep "fscache_${VER}_linux_amd64.tar.gz" checksums.txt | grep -v sbom)
 sha256sum -c &lt;(grep release-manifest.json release-files.sha256)</code></pre>
   <p>Do the signature check first. Without it, a list only proves that your files match a file anyone could have written. The archives are covered by the signed <code>checksums.txt</code>, and the manifest by the signed <code>release-files.sha256</code>.</p>
   <h2>3. The digest is the one in the release</h2>
@@ -127,7 +127,7 @@ sha256sum -c &lt;(grep release-manifest.json release-files.sha256)</code></pre>
   <p>Every statement names an image by digest, never by tag. The digest you pulled should be in this list.</p>
   <h2>4. How it was built</h2>
   <pre tabindex="0"><code>gh release download v${VER} --repo fosterstack/cache \
-  -p provenance.json -p provenance.bundle.json
+  -p provenance.bundle.json
 cosign verify-blob-attestation --bundle provenance.bundle.json \
   --type https://slsa.dev/provenance/v1 --check-claims=false \
   --certificate-identity "${IDENT}/stage-sign.yml@refs/tags/v${VER}" \
@@ -153,8 +153,8 @@ done</code></pre>
     <li>Provenance proves which workflow, at which tag, produced the digests it names.</li>
     <li>It does not prove the software has no bugs. Scan results and our statements about findings are separate: see <a href="/security/">the security policy</a>.</li>
   </ul>
-  <p>Each stage of the release also writes a record that anyone with the Witness tool can check. Those records are extra evidence outside the steps above, and are attached to the release.</p>
-  <p class="muted-note">Related: <a href="/how-we-build/">how releases are built and signed</a>, <a href="/how-our-pipeline-maps-to-nist-and-slsa/">how the pipeline maps to NIST and SLSA</a> <a href="/scan-fosterstack-cache-image/">scan the image yourself</a>, <a href="/fips-140-3-build-cache/">the FIPS 140-3 build</a>, <a href="/air-gapped-build-cache-install/">installing without internet access</a> and <a href="/upgrade-build-cache-server/">upgrading</a>.</p>
+  <p>Each stage of the release also writes a signed record with <a href="https://github.com/in-toto/witness">Witness</a>, an open-source build-record tool; the records are attached to the release.</p>
+  <p class="muted-note">Related: <a href="/how-we-build/">how releases are built and signed</a>, <a href="/how-our-pipeline-maps-to-nist-and-slsa/">how the pipeline maps to NIST and SLSA</a>, <a href="/scan-fosterstack-cache-image/">scan the image yourself</a>, <a href="/fips-140-3-build-cache/">the FIPS 140-3 build</a>, <a href="/air-gapped-build-cache-install/">installing without internet access</a> and <a href="/upgrade-build-cache-server/">upgrading</a>.</p>
   <p class="muted-note">Moving off the free Build Cache Node? See <a href="/build-cache-node-end-of-life/">what the end of life means</a> and the <a href="/migrate-build-cache-node/">migration guide</a>.</p>
 </main>
 <footer>

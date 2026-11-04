@@ -94,7 +94,6 @@
   <p class="lede">
     A contract lands with FIPS, SBOM and provenance requirements attached, and your build cache needs paperwork it has never had. FosterStack Cache gives that part of your pipeline public, checkable evidence: a FIPS 140-3 build, an SBOM, build provenance, signatures and VEX statements. It does not make you compliant.
   </p>
-
   <p>
     It usually starts with one customer. A contract lands on the table with
     federal or compliance requirements attached — FIPS-validated cryptography,
@@ -118,8 +117,7 @@
     in the repository, criterion by criterion.
   </p>
   <p>
-    What it does not do: make you compliant. FedRAMP and CMMC attach to your
-    service and your organization, never to a component you deploy. What a component can offer is <em>evidence and validated crypto for your
+    FedRAMP and CMMC assess your service and your organisation, not a component you deploy. What a component can offer is <em>evidence and validated crypto for your
     program</em>: one row of that questionnaire, answered with something written, signed and checkable instead of a shrug.
   </p>
 
@@ -128,17 +126,17 @@
     <li>Signed releases you can verify in minutes. How we sign and check our own releases: <a href="/how-we-build/">how we build</a>.</li>
     <li>Build record, parts list (SBOM) and vulnerability statements published with every release.</li>
     <li>Scanned before every release. The current release is rescanned every day.</li>
-    <li>The image of every release is assembled a second time, independently; the digests must match.</li>
-    <li>Minimal image with no base image, no telemetry. FIPS variant available, built from the same source as the standard image.</li>
+    <li>Every release is built a second time from the same commit, independently; the digests must match.</li>
+    <li>Minimal image with no base image, no telemetry. FIPS variant available, built from the same source as the production image.</li>
     <li>Vulnerable dependencies fixed fast — our target is 48 hours from disclosure (<a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md">the scope is in SECURITY.md</a>).</li>
   </ul>
   <p><a href="/how-we-build/">How we build</a> · <a href="/security/">Security policy</a> · <a href="/verify-a-release/">Verify a release</a></p>
 
   <p>
-    The evidence underneath is public and free — SBOMs, SLSA provenance,
-    signatures, VEX statements, the FIPS 140-3 validated module and its
+    The evidence underneath is public and free — SBOMs, build provenance,
+    signatures, VEX statements, the FIPS 140-3 validated module (CMVP certificate #5247) and its
     certificate number — verifiable by anyone, no account, no purchase. What
-    the <a href="/#pricing">Compliance tier</a> sells is the authored work on
+    the <a href="/pricing/">Compliance tier</a> sells is the authored work on
     top: a FIPS applicability statement mapping the validated module boundary
     onto this product, a monthly attestation letter covering every release, signed by FosterStack LLC
     and addressed to you, and security-questionnaire support up to 8 hours
@@ -162,18 +160,6 @@
     <a href="/verify-a-release/">Verify a release yourself</a>. To run the
     <code>-fips</code> image and confirm FIPS mode from its own startup log:
     <a href="/fips-140-3-build-cache/">FIPS 140-3 build cache</a>.
-  </p>
-
-  <p style="color:var(--muted); font-size:.95rem">
-    The Compliance tier, plainly: the security evidence underneath — SBOMs, SLSA
-    provenance, signatures, VEX statements, and the FIPS 140-3 validated module
-    (CMVP certificate #5247) — is public and free, verifiable by anyone. What the tier
-    describes is the authored analysis — a FIPS applicability statement mapping the
-    validated module boundary onto this product — plus a monthly attestation letter
-    covering every release, signed by FosterStack LLC, and time on your security questionnaires. FosterStack
-    Cache is not "FedRAMP compliant" or "CMMC compliant"; those attach to your service
-    and your organization, never to a component you deploy. It is validated crypto and
-    publishable evidence <em>for</em> your compliance program.
   </p>
 </main>
 <footer>
