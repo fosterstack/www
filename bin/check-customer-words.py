@@ -49,7 +49,7 @@ def main():
                 path = None   # a deleted file adds nothing
             elif raw.startswith("+++ b/"):
                 path = raw[6:].rstrip("\t")   # git ends a name that holds a space with a tab
-                if is_link and CUSTOMER_FILE.match(path):
+                if is_link and (CUSTOMER_FILE.match(path) or CUSTOMER_FILE.match(path + "/x.md") or CUSTOMER_FILE.match(path + "/PULL_REQUEST_TEMPLATE.md")):
                     fail("symbolic link at a customer file: " + path)
             else:
                 fail("unreadable file name in the diff header: " + raw)
