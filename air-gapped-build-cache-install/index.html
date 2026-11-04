@@ -115,7 +115,7 @@ cosign verify-blob \
 # 2. Prove your archive matches it
 sha256sum -c &lt;(grep "fscache_X.Y.Z_linux_amd64.tar.gz" checksums.txt | grep -v sbom)</code></pre>
   <p><code>grep -v sbom</code> drops the SBOM line, because that file is not carried across.</p>
-  <p>These steps are for v0.3.0 and later. For v0.2.x, see the <a href="https://github.com/fosterstack/cache/blob/v0.2.2/docs/verify-images.md">image verification guide</a>.</p>
+  <p>These steps are for v0.3.0 and later. For v0.2.x, use the <a href="https://github.com/fosterstack/cache/blob/v0.2.2/docs/verify-images.md">image verification guide</a>, but set <code>VER</code> to your version (for example <code>VER=0.2.2</code>) instead of running its first command.</p>
   <p>Both steps matter. The checksum alone only shows the archive matches a file you carried beside it. The signature is what ties that file to us.</p>
 
   <h2>Install on the isolated side</h2>
