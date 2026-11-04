@@ -119,7 +119,7 @@ docker run -d --name fscache -p 127.0.0.1:8080:8080 \
   ghcr.io/fosterstack/cache:0.2.2</code></pre>
 
   <h3>What we saw</h3>
-  <p>We upgraded from 0.1.0 to 0.2.1 and rolled back. 0.2.1 started normally on the 0.1.0 volume with all three values readable, and 0.1.0 then read the two entries 0.2.1 had written. We did the same from 0.2.1 to 0.2.2, the latest release, and back:</p>
+  <p>We upgraded from 0.1.0 to 0.2.1 and rolled back. 0.2.1 started normally on the 0.1.0 volume with all three values readable, and 0.1.0 then read the two entries 0.2.1 had written. We did the same from 0.2.1 to 0.2.2 and back:</p>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <tr><th>Step</th><th>Result</th></tr>
     <tr><td>0.2.1: store three entries on a fresh volume</td><td>201 each; the status page shows 3 entries, 29 bytes</td></tr>
@@ -135,7 +135,7 @@ docker run -d --name fscache -p 127.0.0.1:8080:8080 \
     <li><strong>Two images, no <code>-debug</code>.</strong> The production and <code>-fips</code> images hold the <code>fscache</code> binary and CA certificates, with no shell. If you used the <code>:debug</code> tag, look inside a running container from outside it with <code>kubectl debug</code> or <code>docker debug</code>.</li>
     <li><strong>The data folder is the same.</strong> The path has not moved. Temporary files of writes in flight now live in a <code>+tmp</code> folder inside it, so a backup of the volume still covers everything.</li>
     <li><strong>Your settings keep their meaning.</strong> Every <code>FSCACHE_*</code> setting works as before. The server now logs a warning for an <code>FSCACHE_*</code> variable it does not know, so read the log once after the upgrade for a misspelt name.</li>
-    <li><strong>Verification commands differ.</strong> If your pipeline verifies images, the signing workflow names changed with the new release chain. Use <a href="/verify-a-release/">verify a release yourself</a> for v0.3.0 and later.</li>
+    <li><strong>Verification commands differ.</strong> If your pipeline verifies images, the names of the workflows that sign releases changed in v0.3.0. Use <a href="/verify-a-release/">verify a release yourself</a> for v0.3.0 and later.</li>
   </ul>
   <p>Back up the volume first if refilling the cache is expensive for you, as in the back-up section below.</p>
 
@@ -146,7 +146,7 @@ docker run -d --name fscache -p 127.0.0.1:8080:8080 \
   </ul>
 
   <h2 id="back-up-and-restore-build-cache">Back up and restore a self-hosted build cache</h2>
-  <p>A big cache takes days of builds to fill again, and you may want to move it to a new host. A backup is worth it only if refilling is expensive for you, or if you are moving the cache to a new server. To simply empty a cache, see <a href="/reset-gradle-build-cache/">how to clear or reset a build cache</a>.</p>
+  <p>A big cache can take many builds to fill again, and you may want to move it to a new host. A backup is worth it only if refilling is expensive for you, or if you are moving the cache to a new server. To simply empty a cache, see <a href="/reset-gradle-build-cache/">how to clear or reset a build cache</a>.</p>
 
   <h3>Where the data lives</h3>
   <p>The Docker command in our guides mounts a volume at <code>/home/nonroot</code>. The server keeps its blobs and index in a <code>data</code> folder inside it, and it runs as user 65532. Backing up the volume backs up the cache.</p>

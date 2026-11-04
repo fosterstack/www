@@ -123,7 +123,7 @@ sha256sum -c &lt;(grep "fscache_X.Y.Z_linux_amd64.tar.gz" checksums.txt | grep -
   <p>For containers:</p>
   <pre tabindex="0"><code>docker load -i fscache-X.Y.Z.tar
 docker run -d -p 127.0.0.1:8080:8080 -v fscache-data:/home/nonroot ghcr.io/fosterstack/cache:X.Y.Z</code></pre>
-  <p>Real deployments terminate HTTPS at a proxy in front of the server, because Gradle sends the password with every request. The <a href="https://github.com/fosterstack/cache/blob/main/docs/offline-install.md">offline install guide</a> has the full detail, including what to do for later upgrades.</p>
+  <p>Serve HTTPS in real use, because Gradle sends the password with every request: put a proxy in front, or from v0.3.0 set <code>FSCACHE_TLS_CERT</code> and <code>FSCACHE_TLS_KEY</code>. The <a href="https://github.com/fosterstack/cache/blob/main/docs/offline-install.md">offline install guide</a> has the full detail, including what to do for later upgrades.</p>
 
   <h2>It does not call out</h2>
   <p>The server sends no telemetry and has no update or licence check, so it behaves the same with no route to the internet.</p>

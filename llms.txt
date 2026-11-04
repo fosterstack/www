@@ -43,7 +43,7 @@ verifiable against the CI run that produced them.
 - [Jenkins and CI build cache](https://fosterstack.com/jenkins-ci-build-cache/): Use one shared self-hosted build cache from Jenkins, GitHub Actions or GitLab runners: who should write, in-cluster setup, passwords, and how to check it works.
 - [Gradle build cache not working or hit rate low: causes](https://fosterstack.com/gradle-remote-cache-not-working/): Gradle remote build cache not working, hit rate low, or slow after an upgrade? Checks and three causes in order, with real output from FosterStack Cache 0.2.1.
 - [Maven remote build cache setup, on/off, and with Gradle](https://fosterstack.com/maven-remote-build-cache-setup/): Set up the Apache Maven Build Cache Extension against a self-hosted remote cache, switch it on and off, and use one server for Gradle and Maven. Real runs on 0.2.1.
-- [Gradle build cache on Kubernetes](https://fosterstack.com/gradle-build-cache-kubernetes/): Run a shared Gradle and Maven build cache on Kubernetes with plain manifests: one replica, update strategy, sizing, security context and in-cluster runners.
+- [Gradle build cache on Kubernetes with plain manifests](https://fosterstack.com/gradle-build-cache-kubernetes/): Run a shared Gradle and Maven build cache on Kubernetes with plain manifests: one replica, update strategy, sizing, security context and in-cluster runners.
 - [Security policy](https://fosterstack.com/security/): How to report a security problem in FosterStack Cache or this website, what we aim for on fixes, which version is supported, and the signed files we publish.
 - [Verify a release yourself](https://fosterstack.com/verify-a-release/): Verify a FosterStack Cache v0.3.0 release yourself with cosign, gh and jq: image signatures, signed file lists, digests, provenance and the parts list.
 - [FIPS 140-3 build cache](https://fosterstack.com/fips-140-3-build-cache/): Run the FIPS build of FosterStack Cache, which uses Go's validated FIPS 140-3 module, and confirm FIPS mode from the startup log and status page. Real output.
@@ -112,7 +112,7 @@ The cache core, HTTP surface, eviction, metrics and the signed release pipeline 
 shipped and testable today. There is no published schedule for what follows; the roadmap
 below says direction, not dates.
 
-Not yet shipped:
+Not built:
 
 - Production use beyond the project's own CI.
 - A Helm chart. Deploying to Kubernetes today means applying plain manifests.
