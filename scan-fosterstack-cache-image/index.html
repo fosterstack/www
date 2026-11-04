@@ -95,7 +95,7 @@
 </header>
 <main>
   <h1>Scanning FosterStack in your compliance pipeline</h1>
-  <p class="lede">Every scanner in <a href="https://github.com/fosterstack/cache/blob/main/.github/policy/scanners.json">the repo's scanner list</a> runs against the exact candidate images of every release, and the current release's images are rescanned daily; <a href="https://github.com/fosterstack/cache/blob/main/RELEASING.md">The release process</a> says what the release scan covers and what it does not. This page is about scanning our image yourself.</p>
+  <p class="lede">Every scanner in <a href="https://github.com/fosterstack/cache/blob/main/.github/policy/scanners.json">the repo's scanner list</a> runs against the exact candidate images of every release, and the current release's images are rescanned daily; <a href="https://github.com/fosterstack/cache/blob/main/RELEASING.md">the release process</a> says what the release scan covers and what it does not. This page is about scanning our image yourself.</p>
   <h2>Exit codes: don't gate on the raw process exit code</h2>
   <p>Trivy and Grype's exit codes conflate "ran and found something above your threshold" with "could not run at all" in ways that are easy to miss. <strong>Read per-rule verdicts from the results document (JSON/SARIF), never gate a pipeline purely on the raw exit code</strong> — a broken scan and a clean scan can both look like "exit 0" or both look like "exit 1" depending on flags, and conflating them ships a green gate that checks nothing.</p>
   <h2>Using our VEX files in your scanner</h2>

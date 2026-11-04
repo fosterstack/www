@@ -103,7 +103,7 @@
     <li><strong>Release tags are protected.</strong> Creating a release tag is restricted by a repository rule, and a published release tag cannot be moved, updated or deleted (<a href="https://github.com/fosterstack/cache/rules">the repository's rules</a>).</li>
     <li><strong>The merge gate runs from <code>main</code>.</strong> A pull request is judged by the checks on <code>main</code>, so it cannot change its own checks (<a href="https://github.com/fosterstack/cache/blob/main/.github/workflows/agent-review-gate.yml">review gate</a>).</li>
     <li><strong>CI runs a fork's code without secrets.</strong> The CI workflow runs on <code>pull_request</code>, never <code>pull_request_target</code>, so a fork's code runs with GitHub's no-secrets treatment (<a href="https://github.com/fosterstack/cache/blob/main/.github/workflows/ci.yml">CI</a>).</li>
-    <li><strong>An automated security reviewer writes to one branch of its own,</strong> and only its GitHub identity may push there, and any other pusher fails the check (<a href="https://github.com/fosterstack/cache/blob/main/.github/workflows/reserved-branch-guard.yml">guard</a>).</li>
+    <li><strong>An automated security reviewer writes to branches of its own,</strong> and a check fails any push to them from another GitHub identity (<a href="https://github.com/fosterstack/cache/blob/main/.github/workflows/reserved-branch-guard.yml">guard</a>).</li>
   </ul>
   <h2>Dependencies</h2>
   <ul>
