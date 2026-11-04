@@ -7,6 +7,7 @@ on:
   push:
     branches: [main]
   pull_request:
+    types: [opened, synchronize, reopened, edited]
   schedule:
     - cron: '17 5 * * *'   # daily: the proof-watch job decides whether today proves every bench job (new release tag, or Monday)
   workflow_dispatch:
@@ -76,7 +77,6 @@ jobs:
         run: bash bin/test-live-check.sh
 
       # A pull request may not ADD shop words to a page a customer can read (or to its own title or body).
-      # PR_TITLE and PR_BODY go in through env, never into the command line.
       - name: self-test the customer-words check
         run: bash bin/test-check-customer-words.sh
 
@@ -85,7 +85,8 @@ jobs:
         env:
           PR_TITLE: ${{ github.event.pull_request.title }}
           PR_BODY: ${{ github.event.pull_request.body }}
-        run: git diff -U0 -M --no-color --diff-filter=AMR HEAD^1 HEAD | python3 -I bin/check-customer-words.py
+        shell: bash
+        run: git diff -U0 --no-renames --no-color HEAD^1 HEAD | python3 -I bin/check-customer-words.py
 
   # proof-watch: on the daily schedule it decides whether today's run proves every bench job below (a new release tag of
   # fosterstack/cache, or Monday for the weekly run). It reads only the releases of fosterstack/cache and only tags matching
