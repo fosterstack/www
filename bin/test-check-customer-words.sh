@@ -118,6 +118,23 @@ rm -rf "$work/r"; mkdir -p "$work/r/.github/policy"; cd "$work/r" || exit 2; git
 printf '# header\n' > .github/policy/customer-words-allow.txt; printf 'fine\n' > a.txt; ln -s a.txt index.html
 git add -A && git commit -qm base; git rm -q index.html; git commit -qm pr
 check 0 "T5b deleting a covered link passes"
+# a link to a FOLDER: its own name need not look like a page, but the host serves every page inside the folder it points to
+# lndir <link-path> <target-dir> [base-file]: the PR commit adds a link at <link-path> to <target-dir>, which holds a page with "owner";
+# base-file (optional) is a regular file that exists in the base commit and is removed by the PR (a page folder replaced by the link)
+lndir() {
+  rm -rf "$work/r"; mkdir -p "$work/r/.github/policy"; cd "$work/r" || exit 2; git init -q
+  printf '# header\n' > .github/policy/customer-words-allow.txt
+  if [ -n "${3:-}" ]; then mkdir -p "$(dirname "$3")"; printf 'fine\n' > "$3"; fi
+  mkdir -p "$2"; printf 'fine\n' > "$2/x.md"
+  git add -A && git commit -qm base
+  if [ -n "${3:-}" ]; then git rm -q "$3"; fi
+  mkdir -p "$(dirname "$1")"; ln -s "$(realpath -m --relative-to="$(dirname "$1")" "$2")" "$1"
+  printf 'owner\n' >> "$2/x.md"; git add -A && git commit -qm pr
+}
+lndir some-page bin/pages-src;                  check 2 "T5b a new link some-page to a folder of pages exits 2" 'symbolic link at a customer file: some-page'
+lndir some-page bin/pages-src some-page/index.html; check 2 "T5b a page folder replaced by a link to a folder exits 2" 'symbolic link at a customer file: some-page'
+lndir assets.json bin/pages-src;                check 2 "T5b a new link assets.json to a folder of pages exits 2" 'symbolic link at a customer file: assets\.json'
+lndir bin/sub bin/sub-src;                      check 0 "T5b a link to a folder under bin/ passes"
 mk docs/a.md $'x\n' docs/a.md $'the owner\n'; git rm -q docs/a.md; git commit -qm rm; check 0 "T5 deleting a page passes"
 mk docs/a.md $'the owner\n' docs/b.md $'fine\n';                       check 0 "T5 a page with owner deleted and a clean one added passes"
 mk docs/a.md $'x\n' docs/b.md $'the owner\n';                          check 1 "T5 deleting one page and adding another with owner fails"
