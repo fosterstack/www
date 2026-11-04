@@ -99,7 +99,8 @@
   <p>Follow these steps:</p>
   <ol>
     <li><strong>Build once and save the log.</strong> Use the same tasks that missed.
-      <pre tabindex="0"><code>gradle compileJava greetEnv --info -Dorg.gradle.caching.debug=true &gt; run1.log</code></pre></li>
+      <pre tabindex="0"><code>gradle compileJava greetEnv --info -Dorg.gradle.caching.debug=true &gt; run1.log</code></pre>
+      <p>greetEnv is a task in our test project; use your own task name.</p></li>
     <li><strong>Keep only the key lines.</strong> The full log is long.
       <pre tabindex="0"><code>grep -E '^(Appending|Build cache key for task)' run1.log &gt; run1.keys</code></pre></li>
     <li><strong>Do the same for the build that missed.</strong> That is the other machine, the other folder or the build after your change. Save it as <code>run2.keys</code>.</li>

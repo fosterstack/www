@@ -123,7 +123,7 @@ curl localhost:8080/healthz   # -&gt; ok</code></pre>
     <a class="btn btn-secondary" href="https://github.com/fosterstack/cache/blob/main/docs/migrate-from-bcn.md">Migrate off Build Cache Node</a>
     <a class="btn btn-secondary" href="https://github.com/fosterstack/cache">Read the source</a>
   </p>
-  <p class="muted-note">Bugs and questions go to <a href="https://github.com/fosterstack/cache/issues">GitHub issues</a>, which is also where the roadmap is settled.</p>
+  <p class="muted-note">Bugs and questions go to <a href="https://github.com/fosterstack/cache/issues">GitHub issues</a>.</p>
 
   <h2>What you get that a bare HTTP endpoint doesn't give you</h2>
   <p>Yes — Gradle's remote cache protocol is just GET and PUT, and you could point it at any
@@ -132,7 +132,7 @@ curl localhost:8080/healthz   # -&gt; ok</code></pre>
     <div class="card"><h3>Cache management</h3><p>Size-capped LRU eviction that keeps a busy CI cache healthy without hand-tending — set the cap, and the oldest-unused entries make room.</p></div>
     <div class="card"><h3>Authentication</h3><p>HTTP Basic Auth over TLS, wired the way Gradle and Maven already expect credentials. Constant-time comparison, no credential ever logged.</p></div>
     <div class="card"><h3>Metrics &amp; status</h3><p>Prometheus metrics, a read-only status page with hit rates and size-vs-cap, and a Grafana dashboard in the repo — so you know the cache is earning its keep.</p></div>
-    <div class="card"><h3>30-minute migration</h3><p>A step-by-step guide for existing Build Cache Node deployments. Same protocol, same CI config shape — migrating is mostly a URL change.</p></div>
+    <div class="card"><h3>A short migration</h3><p>A step-by-step guide for existing Build Cache Node deployments. Same protocol, same CI config shape — migrating is mostly a URL change.</p></div>
     <div class="card"><h3>Verify every release</h3><p>Every stage of our release signs what it did. When the signatures verify, you know it's FosterStack code, built and published by our pipeline. <a href="/how-our-pipeline-maps-to-nist-and-slsa/">See how each stage maps</a>.</p></div>
     <div class="card"><h3>Air-gapped ready</h3><p>No telemetry. Nothing outbound. It runs the same air-gapped.</p></div>
   </div>
