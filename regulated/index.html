@@ -128,7 +128,7 @@
     <li>Scanned before every release. The current release is rescanned every day.</li>
     <li>Every release is built a second time from the same commit, independently; the digests must match.</li>
     <li>Minimal image with no base image, no telemetry. FIPS variant available, built from the same source as the production image.</li>
-    <li>Vulnerable dependencies fixed fast — our target is 48 hours from disclosure (<a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md">the scope is in SECURITY.md</a>).</li>
+    <li>Vulnerable dependencies fixed fast — our target is 48 hours from disclosure (<a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md">the scope is in our security policy</a>).</li>
   </ul>
   <p><a href="/how-we-build/">How we build</a> · <a href="/security/">Security policy</a> · <a href="/verify-a-release/">Verify a release</a></p>
 
@@ -146,9 +146,9 @@
   <p>
     Before you decide anything: pull the <code>-fips</code> image (public, no
     login), run the signature and provenance verification commands in
-    <a href="https://github.com/fosterstack/cache/blob/main/RELEASING.md">RELEASING.md</a>,
+    <a href="https://github.com/fosterstack/cache/blob/main/RELEASING.md">our release process</a>,
     read the scan posture in
-    <a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md">SECURITY.md</a>
+    <a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md">our security policy</a>
     — including what it says is not yet proven — and check the
     <a href="https://github.com/fosterstack/cache/blob/main/docs/quality/traceability.md">list</a> that maps each product promise to its evidence. If the evidence doesn't hold up under your audit, nothing else would either.
     That's the test we invite.

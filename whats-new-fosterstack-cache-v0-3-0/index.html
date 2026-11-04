@@ -111,7 +111,7 @@
   <h2>What stays the same</h2>
   <p>The Gradle and Maven protocols stay as they are, and every <code>FSCACHE_*</code> setting you use today keeps its meaning. A request with more than 500 header values has been rejected with 431 (Request Header Fields Too Large) since 0.2.2, because of Go 1.27; Gradle and Maven send far fewer.</p>
   <h2>Kept patched</h2>
-  <p>We keep FosterStack Cache patched. The server does not update itself, so watch the repository's releases on GitHub. Our target for vulnerable dependencies is 48 hours from disclosure; <a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md">the scope is in SECURITY.md</a>.</p>
+  <p>We keep FosterStack Cache patched. The server does not update itself, so watch the repository's releases on GitHub. Our target for vulnerable dependencies is 48 hours from disclosure; <a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md">the scope is in our security policy</a>.</p>
   <h2>How the release is built</h2>
   <p>Signed at every stage, verified together at release. The image is built from signed packages, with no base image, and each build runs as its own job on a fresh GitHub-hosted machine that is then discarded. The package-signing key exists only in the release job's environment, and only one step of that job receives it; that job is handed only the files from the first build, never those of the independent rebuild. A job with no secrets and no permission to publish compares the build and the rebuild.</p>
   <p>This is designed against the build-isolation asks of SLSA and NIST SP 800-204D. You can check the release yourself: see <a href="/verify-a-release/">verify a release yourself</a> and <a href="/how-we-build/">how we build</a>.</p>
