@@ -101,7 +101,7 @@
   <ul class="trust">
     <li>Ask for the cache's host and port to be allowed through the proxy (HTTPS).</li>
     <li>Put the proxy lines in <code>gradle.properties</code>, with the <code>systemProp.</code> prefix, and list internal hosts in <code>nonProxyHosts</code>.</li>
-    <li>Use HTTPS to the cache: <a href="/build-cache-docker-compose-production/">a production setup with nginx and TLS</a>, or the server's own certificate (<code>FSCACHE_TLS_CERT</code> and <code>FSCACHE_TLS_KEY</code>).</li>
+    <li>Use HTTPS to the cache: <a href="/build-cache-docker-compose-production/">a production setup with nginx and TLS</a>, or, from v0.3.0, the server's own certificate (<code>FSCACHE_TLS_CERT</code> and <code>FSCACHE_TLS_KEY</code>).</li>
     <li>If the proxy re-signs TLS, Java will need your company's certificate authority.</li>
   </ul>
   <p class="muted-note">Not tested: a proxy that asks for a password (407) or one that re-signs TLS. Our proxy was a small one we wrote for the test.</p>

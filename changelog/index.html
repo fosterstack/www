@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>FosterStack Cache changelog</title>
-<meta name="description" content="Release notes for FosterStack Cache v0.1.0, v0.2.1 and v0.2.2, quoted from GitHub as published, and a note that no release was published for v0.2.0.">
+<meta name="description" content="Release notes for FosterStack Cache v0.1.0, v0.2.1 and v0.2.2, quoted from GitHub, shortened where marked, and a note that no release was published for v0.2.0.">
 <meta property="og:title" content="FosterStack Cache changelog">
-<meta property="og:description" content="Release notes for FosterStack Cache v0.1.0, v0.2.1 and v0.2.2, quoted from GitHub as published, and a note that no release was published for v0.2.0.">
+<meta property="og:description" content="Release notes for FosterStack Cache v0.1.0, v0.2.1 and v0.2.2, quoted from GitHub, shortened where marked, and a note that no release was published for v0.2.0.">
 <meta property="og:url" content="https://fosterstack.com/changelog/">
 <meta property="og:type" content="website">
 <meta property="og:image" content="https://fosterstack.com/og-image.png">
@@ -104,13 +104,13 @@
     <p><strong>v0.2.2: security patch</strong></p>
     <p>This release is rebuilt with <strong>Go 1.27.2</strong>. It fixes <strong>GO-2026-6617</strong> (CVE-2026-97032) in Go's standard library: an HTTP/2 server could crash when a malicious client repeatedly sent requests while changing the HPACK header table size, because the server's HPACK encoder was modified from two goroutines without synchronization. Go 1.27.2 also contains the other fixes Go published on October 8, 2026.</p>
     <p>There is no change to how Cache behaves. Upgrade by pulling <code>:0.2.2</code> (or <code>:latest</code>); the image digests are in <code>release-manifest.json</code>.</p>
-    <p>See release-manifest.json for the full evidence bundle: image digests (GHCR canonical, Docker Hub mirror — identical digests), archive checksums, and the Rekor log index of every verified statement in the release chain.</p>
+    <p>See release-manifest.json for the full evidence bundle: image digests (GHCR canonical, Docker Hub mirror — identical digests), archive checksums, […] and the Rekor log index of every verified statement in the release chain.</p>
   </blockquote>
   <p><a href="https://github.com/fosterstack/cache/releases/tag/v0.2.2">v0.2.2 on GitHub</a></p>
 
   <h2>v0.2.1</h2>
   <p class="muted-note">Release name: fscache v0.2.1. Published 2026-09-21.</p>
-  <blockquote>See release-manifest.json for the full evidence bundle: image digests (GHCR canonical, Docker Hub mirror — identical digests), archive checksums, and the Rekor log index of every verified statement in the release chain.</blockquote>
+  <blockquote>See release-manifest.json for the full evidence bundle: image digests (GHCR canonical, Docker Hub mirror — identical digests), archive checksums, […] and the Rekor log index of every verified statement in the release chain.</blockquote>
   <p><a href="https://github.com/fosterstack/cache/releases/tag/v0.2.1">v0.2.1 on GitHub</a></p>
 
   <h2>v0.2.0</h2>

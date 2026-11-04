@@ -129,7 +129,7 @@
     &lt;/remote&gt;
   &lt;/configuration&gt;
 &lt;/cache&gt;</code></pre>
-  <p>Keep the comment: a cache setting that points at an unfamiliar host looks like data theft to a reviewer without it. Keep the trailing slash on the URL. Use HTTPS for a real server: behind a proxy, or with the server's own <code>FSCACHE_TLS_CERT</code> and <code>FSCACHE_TLS_KEY</code>.</p>
+  <p>Keep the comment: a cache setting that points at an unfamiliar host looks like data theft to a reviewer without it. Keep the trailing slash on the URL. Use HTTPS for a real server: behind a proxy, or, from v0.3.0, with the server's own <code>FSCACHE_TLS_CERT</code> and <code>FSCACHE_TLS_KEY</code>.</p>
 
   <h2>3. Add the password, if the server has one</h2>
   <p>In <code>~/.m2/settings.xml</code>, or your CI system's equivalent. The <code>id</code> must match the <code>id</code> in step 2:</p>
@@ -239,7 +239,7 @@ buildCache {
 
 skipCache=true:
 [INFO] Project demo:demo is marked as requiring force rebuild, will skip lookup in build cache</code></pre>
-  <p>With <code>remote.enabled=false</code> there is no download attempt in the log. With <code>remote.save.enabled=false</code> the build still looks in the server, finds nothing, and builds locally.</p>
+  <p>With <code>remote.enabled=false</code> there is no download attempt in the log. With <code>remote.save.enabled=false</code> the build still looks in the server; ours was empty, so it found nothing and built locally.</p>
 
   <h2>What the server held</h2>
   <p>We built a Gradle app and a Maven app against one server, each twice. Between the two builds we cleared the local copies, so the second build came from the server. The counts are the server's own, from its status page:</p>

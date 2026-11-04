@@ -253,7 +253,7 @@ jobs:
     </tbody>
   </table></div>
   <p>On Maven 3.10.0 an ordinary first-time miss is also logged as <code>[ERROR]</code>, so that line alone does not mean a login problem (shown in <a href="/maven-remote-build-cache-setup/">Maven build cache extension: remote server setup</a>).</p>
-  <p>The Gradle settings and the page's own Build steps behaved the same way in a GitHub Actions job on a hosted runner. A main build stored entries, a fresh checkout restored them, a pull request with the read-only login reused them and stored nothing, and a build with every variable empty ran without the cache.</p>
+  <p>The Gradle settings and the page's own Build steps behaved the same way in a GitHub Actions job on a hosted runner. A main build stored entries, a fresh checkout restored them, a pull request with the read-only login reused them and stored nothing, and a build with every variable empty ran without the cache. The server ran on the same machine as the job, so this does not show that a hosted runner can reach your own server.</p>
   <p class="muted-note">Tested with FosterStack Cache 0.2.1 on macOS (arm64, Java 21.0.12.1), Gradle 9.8.0, Maven 3.9.9 with Build Cache Extension 1.2.3, and on a Mac with Maven 3.10.0 against 0.2.2. Also with 0.2.2 on a GitHub-hosted Ubuntu 24 machine (Java 21.0.12.1, Gradle 9.8.0, Maven 3.10.0). The runs and their logs are public: <a href="https://github.com/fosterstack/www/actions/runs/38004412787">Gradle settings</a> and <a href="https://github.com/fosterstack/www/actions/runs/38046366699">this page's workflow steps</a>.</p>
 </main>
 <footer>

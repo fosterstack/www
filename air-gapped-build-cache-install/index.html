@@ -115,6 +115,7 @@ cosign verify-blob \
 # 2. Prove your archive matches it
 sha256sum -c &lt;(grep "fscache_X.Y.Z_linux_amd64.tar.gz" checksums.txt | grep -v sbom)</code></pre>
   <p><code>grep -v sbom</code> drops the SBOM line, because that file is not carried across.</p>
+  <p>These steps are for v0.3.0 and later. For v0.2.x, see the <a href="https://github.com/fosterstack/cache/blob/main/docs/verify-images.md">image verification guide</a>.</p>
   <p>Both steps matter. The checksum alone only shows the archive matches a file you carried beside it. The signature is what ties that file to us.</p>
 
   <h2>Install on the isolated side</h2>
@@ -129,7 +130,7 @@ docker run -d -p 127.0.0.1:8080:8080 -v fscache-data:/home/nonroot ghcr.io/foste
 
   <h2>What we saw</h2>
   <ul class="trust">
-    <li>The two verify steps printed <code>Verified OK</code> and <code>fscache_0.2.2_linux_amd64.tar.gz: OK</code>. An archive with eight extra bytes added at the end failed step 2 with <code>fscache_0.2.2_linux_amd64.tar.gz: FAILED</code>.</li>
+    <li>With 0.2.2 and its own signing workflow, the two verify steps printed <code>Verified OK</code> and <code>fscache_0.2.2_linux_amd64.tar.gz: OK</code>. An archive with eight extra bytes added at the end failed step 2 with <code>fscache_0.2.2_linux_amd64.tar.gz: FAILED</code>.</li>
     <li>We unpacked the archive and checked that <code>fscache</code> is a statically linked program. We then ran it in a network namespace that had only a loopback interface: it started, answered <code>/healthz</code>, and stored and returned an entry. This was not a real air gap: we did not test a machine with no network at all.</li>
     <li>For containers we used <code>docker pull</code> and <code>docker save</code> in place of <code>crane pull</code>. Then <code>docker load -i</code> and the <code>docker run</code> line above gave a server that answered <code>/healthz</code> on <code>127.0.0.1:8080</code>.</li>
   </ul>

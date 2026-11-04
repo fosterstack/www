@@ -98,7 +98,7 @@
   <p class="lede">You are about to run our software inside your build pipeline. How do you know the files you run are the ones we built? Every release is signed and checked at every step, and you can verify it yourself. This page says how.</p>
 
   <h2>We do it to our own pipeline first</h2>
-  <p>We started with a build cache, and we secure our own release pipeline the same way before we ask you to run it.</p>
+  <p>We started with a build cache, and we secure our own release pipeline before we ask you to run it.</p>
 
   <h2>Releases are built only in CI</h2>
   <p>No release file is ever made on a person's laptop, ours included. A release starts when a signed tag is pushed, and there is no manual release path. That is what lets the signatures mean something: a release that our CI workflow did not build does not carry its signature.</p>

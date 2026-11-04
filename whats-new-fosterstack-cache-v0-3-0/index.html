@@ -96,7 +96,7 @@
   <h2>Check these before you upgrade</h2>
   <ul class="trust">
     <li><strong>Linux only.</strong> v0.3.0 ships Linux archives (amd64 and arm64) and no macOS archive. On a Mac, run the Linux container image under Docker Desktop.</li>
-    <li><strong>No <code>-debug</code> image.</strong> v0.3.0 ships the <code>production</code> and <code>fips</code> images only. They hold only the <code>fscache</code> binary, with no shell, so look inside a running container from outside it with <code>kubectl debug</code> or <code>docker debug</code>; <a href="https://github.com/fosterstack/cache#debugging-a-running-container">the README has a section on it</a>.</li>
+    <li><strong>No <code>-debug</code> image.</strong> v0.3.0 ships the <code>production</code> and <code>fips</code> images only. They hold the <code>fscache</code> binary and CA certificates, with no shell, so look inside a running container from outside it with <code>kubectl debug</code> or <code>docker debug</code>; <a href="https://github.com/fosterstack/cache#debugging-a-running-container">the README has a section on it</a>.</li>
     <li><strong>Inside the data folder.</strong> The data folder path is the same, but temporary files of writes in flight now live in a <code>+tmp</code> folder inside it.</li>
   </ul>
   <h2>Fixed in this release</h2>

@@ -96,7 +96,7 @@
 
   <h2>What we recommend</h2>
   <ul class="trust">
-    <li><strong>Use HTTPS.</strong> Gradle sends the password with every request, so over plain HTTP it travels in the clear. Serve real servers over HTTPS: behind a proxy, or with the server's own <code>FSCACHE_TLS_CERT</code> and <code>FSCACHE_TLS_KEY</code>.</li>
+    <li><strong>Use HTTPS.</strong> Gradle sends the password with every request, so over plain HTTP it travels in the clear. Serve real servers over HTTPS: behind a proxy, or, from v0.3.0, with the server's own <code>FSCACHE_TLS_CERT</code> and <code>FSCACHE_TLS_KEY</code>.</li>
     <li><strong>Keep the <code>credentials</code> block even where the server has no password.</strong> One config then works against both a test server and a real one.</li>
     <li><strong>Give laptops the read-only login.</strong> That is the intended way to give laptops a cache they can read and not change. Use the read-write login for machines that upload, or set the client not to upload.</li>
   </ul>
@@ -158,7 +158,7 @@ buildCache {
   <p>Gradle refuses plain <code>http://</code> unless you opt in with <code>isAllowInsecureProtocol</code>. The address <code>127.0.0.1</code> is let through without it, but the name <code>localhost</code> is refused.</p>
 
   <h3 style="margin-top:2rem">If the password seems ignored</h3>
-  <p><code>./gradlew --stop</code> is a quick way to rule the Gradle daemon out. A changed password is picked up without a restart.</p>
+  <p><code>./gradlew --stop</code> is a quick way to rule the Gradle daemon out. In our macOS run, a changed password was picked up without a restart.</p>
 
   <p class="muted-note">Tested with FosterStack Cache 0.2.1 and Gradle 9.8.0 on macOS, and 0.2.2 on a GitHub-hosted Linux machine. <a href="https://github.com/fosterstack/www/actions/runs/38052086898">The run and its log are public</a>.</p>
 

@@ -146,7 +146,7 @@
   <p>A build started while the server was stopped printed one <code>Could not load entry</code> warning, then built all four modules locally. After the server was back, the next build built and stored all four. The one after that took all four from the cache.</p>
 
   <h2>How long the server is unreachable</h2>
-  <p>Every restart we timed took 0.01 to 0.15 seconds, with 20 entries and with 5,000 entries (about 49 MiB). This is on a busy laptop, not a promise for your server. After a kill, the server logs <code>unclean shutdown detected, reconciling stores before serving</code> and checks its files before it answers. No entries were lost.</p>
+  <p>Every restart we timed took 0.01 to 0.07 seconds on a Linux runner and 0.03 to 0.15 on a busy laptop, with 20 entries and with 5,000 entries (about 49 MiB). This is not a promise for your server. After a kill, the server logs <code>unclean shutdown detected, reconciling stores before serving</code> and checks its files before it answers. No entries were lost.</p>
 
   <h2>An upload in progress when the server stops</h2>
   <p>We sent a large file slowly with <code>curl</code> (2 MiB per second) and stopped the server 3 seconds in.</p>

@@ -99,7 +99,7 @@
   <h2>Exit codes: don't gate on the raw process exit code</h2>
   <p>Trivy and Grype's exit codes conflate "ran and found something above your threshold" with "could not run at all" in ways that are easy to miss. <strong>Read per-rule verdicts from the results document (JSON/SARIF), never gate a pipeline purely on the raw exit code</strong> — a broken scan and a clean scan can both look like "exit 0" or both look like "exit 1" depending on flags, and conflating them ships a green gate that checks nothing.</p>
   <h2>Using our VEX files in your scanner</h2>
-  <p>Each release carries our exceptions as published statements, generated from one source (<a href="https://github.com/fosterstack/cache/tree/main/.vex/"><code>.vex/</code></a>). Download them from the release page (<code>gh release download v${VER} --repo fosterstack/cache -p 'fosterstack-cache*'</code>) and check them against the signed release manifest as described in <a href="https://github.com/fosterstack/cache/blob/main/docs/verify-images.md">Verify our images</a>. Then apply the form your scanner reads:</p>
+  <p>Each release carries our exceptions as published statements, generated from one source (<a href="https://github.com/fosterstack/cache/tree/main/.vex/"><code>.vex/</code></a>). Download them from the release page (<code>gh release download vX.Y.Z --repo fosterstack/cache -p 'fosterstack-cache*'</code>) and check them against the signed release manifest as described in <a href="https://github.com/fosterstack/cache/blob/main/docs/verify-images.md">Verify our images</a>. Then apply the form your scanner reads:</p>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <thead><tr><th>Your scanner</th><th>File</th><th>How</th></tr></thead>
     <tbody>
@@ -123,7 +123,7 @@
   <p>Docker Scout reads OpenVEX directly. It applies only the statements whose author matches <code>--vex-author</code> (by default Docker's own), so name ours, the author recorded in the published file:</p>
   <pre tabindex="0"><code>docker scout cves --vex-location fosterstack-cache.openvex.json \
   --vex-author '^FosterStack LLC$' \
-  ghcr.io/fosterstack/cache:${VER}</code></pre>
+  ghcr.io/fosterstack/cache:X.Y.Z</code></pre>
   <p>Run it once with and once without <code>--vex-location</code> and <code>--vex-author</code>: the difference is the set of findings that applicable <code>not_affected</code> and <code>fixed</code> statements suppress, the same audit as in <a href="https://github.com/fosterstack/cache/blob/main/docs/scanning.md#reproducing-our-own-gate">Reproducing our own gate</a>.</p>
   <h2>Reproducing our own gate</h2>
   <p>The release pipeline's scan stage is public: <a href="https://github.com/fosterstack/cache/blob/main/.github/workflows/stage-verify.yml"><code>.github/workflows/stage-verify.yml</code></a> runs one job per scanner in <a href="https://github.com/fosterstack/cache/blob/main/.github/policy/scanners.json">the scanner list</a> (today Grype and OSV-Scanner) against the exact candidate digests: every variant and architecture, and for Grype every release archive too. The Grype and OSV-Scanner commands below are partial examples that use the gate's scanners and its severity policy on one public tag; they show what a scan of that tag reports and do not cover everything the gate covers.</p>

@@ -154,7 +154,7 @@ openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out s
   <p>The certificate has to name the address your builds use.</p>
 
   <h2>If it still does not work</h2>
-  <p>Work through <a href="/gradle-remote-cache-not-working/">Gradle remote build cache not working</a>. For the server side of HTTPS, see <a href="/build-cache-docker-compose-production/">production Docker Compose with nginx and TLS</a>, which also covers the server's own certificate (<code>FSCACHE_TLS_CERT</code> and <code>FSCACHE_TLS_KEY</code>).</p>
+  <p>Work through <a href="/gradle-remote-cache-not-working/">Gradle remote build cache not working</a>. For the server side of HTTPS, see <a href="/build-cache-docker-compose-production/">production Docker Compose with nginx and TLS</a>, which also covers, from v0.3.0, the server's own certificate (<code>FSCACHE_TLS_CERT</code> and <code>FSCACHE_TLS_KEY</code>).</p>
 
   <p class="muted-note">Tested with FosterStack Cache 0.2.1 behind a test TLS proxy on macOS (arm64, Java 27), and 0.2.2 on a GitHub-hosted Linux machine (Java 27), Gradle 9.8.0. The Linux runs matched the table; the combined store there held 121 certificates, since the count depends on your Java build. <a href="https://github.com/fosterstack/www/actions/runs/38037262366">The run and its log are public</a>.</p>
 </main>

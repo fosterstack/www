@@ -179,7 +179,7 @@ org.apache.http.client.HttpResponseException: status code: 403, reason phrase: F
 
   <h2>What this does not give you</h2>
   <p>There is no per-person identity. Everyone who holds the read-write login is the same writer to the server, so keep it to CI. See <a href="/can-someone-poison-our-build-cache/#remote-build-cache-security">who can write to a remote build cache</a> and <a href="/gradle-remote-build-cache-authentication/#gradle-build-cache-http-status-codes">the HTTP status codes</a>. To see why laptops then reuse CI's work, see <a href="/laptop-builds-reuse-ci-build-cache/">your laptop builds reuse what CI already built</a>.</p>
-  <p>We recommend HTTPS (behind a proxy, or with the server's own certificate: <code>FSCACHE_TLS_CERT</code> and <code>FSCACHE_TLS_KEY</code>), keep the CI password in your CI secret store and never in the repository.</p>
+  <p>We recommend HTTPS (behind a proxy, or, from v0.3.0, with the server's own certificate: <code>FSCACHE_TLS_CERT</code> and <code>FSCACHE_TLS_KEY</code>), keep the CI password in your CI secret store and never in the repository.</p>
 
   <h2>What the server stored</h2>
   <p>Each line is a build of the same small project, with Gradle's local cache off so that a hit could only have come from the server. You do not need that setting. On a Gradle home that had never built, the first CI build put 2 entries on the server, not 1.</p>

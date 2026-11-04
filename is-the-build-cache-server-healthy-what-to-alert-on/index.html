@@ -104,7 +104,7 @@
   </ul>
 
   <h2>What to alert on</h2>
-  <p>We recommend these alerts. Not tested: a disk that fills up, which may behave differently from a size cap or a read-only folder.</p>
+  <p>We recommend these alerts. We worked the alert rules out by hand from saved scrapes; we ran no Prometheus or alerting tool. The runs on this page used a size cap and a read-only folder; a full disk is covered on the <a href="/build-cache-eviction-size-limit/">size limit page</a>.</p>
   <ul style="padding-left:1.25rem">
     <li><strong>The server is not answering.</strong> Probe <code>/healthz</code> from another machine with <code>curl -sf --max-time 3</code>. Alert when it fails. When we stopped the server, this command exited with 7.</li>
     <li><strong>Uploads are failing.</strong> Alert when <code>fscache_http_requests_total</code> with <code>method="PUT"</code> and a 5xx status goes up. This is the signal for a data folder that cannot be written. In our runs it fired on both broken-folder cases and stayed quiet on healthy builds.</li>
@@ -134,7 +134,7 @@
   - job_name: fscache
     static_configs:
       - targets: [&#x27;cache.example.com:8080&#x27;]</code></pre>
-  <p>This is a plain example. Use your own address, and HTTPS if a proxy fronts the server. With the server's own TLS (<code>FSCACHE_TLS_CERT</code> and <code>FSCACHE_TLS_KEY</code>) the <code>/healthz</code> check moves to <code>https://</code> too.</p>
+  <p>This is a plain example. Use your own address, and HTTPS if a proxy fronts the server. From v0.3.0, with the server's own TLS (<code>FSCACHE_TLS_CERT</code> and <code>FSCACHE_TLS_KEY</code>) the <code>/healthz</code> check moves to <code>https://</code> too.</p>
 
   <h3>The metrics</h3>
   <p>These are the names a running 0.2.1 server reports:</p>

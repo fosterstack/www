@@ -103,6 +103,7 @@
   </ul>
 
   <h2>The order that keeps the cache working</h2>
+  <p>We ran steps 2 and 4; steps 1 and 3 and the simple way are our advice.</p>
   <ol>
     <li><strong>Pick a new username as well as a new password for the read-write login.</strong> The read-only and read-write usernames must differ. In step 2 your old read-write username becomes the read-only username, so the new one has to be different.</li>
     <li><strong>Restart the server with the new read-write login, and with your old read-write login as the read-only login.</strong> Set <code>FSCACHE_USERNAME</code> and <code>FSCACHE_PASSWORD</code> to the new pair. Set <code>FSCACHE_RO_USERNAME</code> and <code>FSCACHE_RO_PASSWORD</code> to the old read-write pair. A job that still has the old login can now restore results. It cannot store new ones, because the server takes one read-write login and one read-only login.</li>

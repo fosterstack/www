@@ -123,7 +123,7 @@
     <li><strong>Use HTTPS, on a network you control.</strong> Gradle sends the login with its requests. A proxy in front or the server's own certificate both work.</li>
     <li><strong>If you doubt an entry, clear the cache.</strong> See <a href="/reset-gradle-build-cache/">how to clear or reset a build cache</a>.</li>
   </ul>
-  <p>FosterStack Cache has one write login and one read-only login. There is no per-person identity: a write login is shared by whoever holds it, so the login alone does not say which writer did what.</p>
+  <p>FosterStack Cache has one write login and one read-only login. There is no per-person identity: a write login is shared by whoever holds it, so the login alone does not say which writer did what. We did not test whether the server records who wrote an entry.</p>
 
   <h2>What each login can do</h2>
   <p>We built a project, then tried each login against the stored entries with plain HTTP requests.</p>
@@ -143,7 +143,7 @@
   </table></div>
   <p class="muted-note">What the replaced entry did: the project's source says <code>core-1-</code>. The class file restored from the replaced entry contained <code>core-1-TAMPERED-</code>. Gradle did not complain.</p>
   <p class="muted-note">What the damaged entry did: Gradle stopped with <code>Failed to load cache entry ... Could not load from remote cache: Not in GZIP format</code>. It did not skip the entry and compile instead.</p>
-  <p class="muted-note">These results are for Gradle; we did not test Maven.</p>
+  <p class="muted-note">These results are for Gradle, from one server and one small project over plain HTTP; we did not test Maven or how anyone would get a login.</p>
   <p class="muted-note">Related: <a href="/security/">security policy</a>.</p>
   <p class="muted-note">Tested with FosterStack Cache 0.2.1 and Gradle 9.8.0 on macOS (arm64, Java 21).</p>
 </main>

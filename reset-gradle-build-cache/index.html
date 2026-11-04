@@ -114,7 +114,7 @@ $ curl -s localhost:8080/testkey -o /dev/null -w &#x27;GET testkey %{http_code}\
 GET testkey 404</code></pre>
 
   <h2>Kubernetes</h2>
-  <p>Delete the volume claim, then create it again. The Deployment cannot start without its claim, so the new claim is a required step.:</p>
+  <p>Delete the volume claim, then create it again. The Deployment cannot start without its claim, so the new claim is a required step:</p>
   <pre tabindex="0"><code>kubectl -n fscache-ns scale deploy/fscache --replicas=0
 kubectl -n fscache-ns delete pvc fscache-data
 kubectl -n fscache-ns apply -f fscache-pvc.yaml   # your claim manifest, the same one you first applied
