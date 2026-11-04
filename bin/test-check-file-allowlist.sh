@@ -31,6 +31,8 @@ must_fail "a contract file under .contracts/" ".contracts/checkout-session.md"
 must_fail "a dot folder nested in a page"   "some-page/.hidden/index.html"
 must_fail "another file in .well-known/"    ".well-known/drafts.html"
 must_fail "an unknown dot file at the root" ".env"
+must_pass "the Dependabot configuration" ".github/dependabot.yml"
+must_fail "a near-miss of the Dependabot configuration" ".github/dependabot.yml.bak" ".github/dependabot.yaml"
 must_fail "a file that is not on the list"  "notes.md"
 tracked=$(git ls-files)
 if [ -z "$tracked" ]; then echo "FAIL no tracked files found (run inside the repository)"; fail=1
