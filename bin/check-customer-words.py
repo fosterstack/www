@@ -1,16 +1,18 @@
 #!/usr/bin/env python3
 # bin/check-customer-words.py: fails a pull request that ADDS shop talk to a file a customer can read.
-# Reads `git diff -U0 -M --no-color --diff-filter=AMR HEAD^1 HEAD` on stdin; PR_TITLE and PR_BODY (env) are checked whole.
-# Exit 0 clean, 1 hits (every hit is printed), 2 any error (bad allowlist, input that is not a diff). Run as `python3 -I`.
+# Reads `git diff -U0 --no-renames --no-color HEAD^1 HEAD` on stdin; PR_TITLE and PR_BODY (env) are checked whole.
+# Exit 0 clean, 1 hits (every hit is printed), 2 any error (bad allowlist, bad text, input that is not a diff, a binary
+# change to a customer file). Run as `python3 -I`.
 # An added line with a hit passes only if .github/policy/customer-words-allow.txt has the exact line `path|text`.
 import os
 import re
 import sys
 
-WORDS = r"\b(owners?|lanes?|orchestrators?|advisors?|handoffs?|ratif(y|ied|ies|ication))\b"
+B, A = r"(?<![A-Za-z])", r"(?![A-Za-z])"   # letters only, so _owner_ and owner2 still match
+WORDS = B + r"(owners?|lanes?|orchestrators?|advisors?|handoffs?|ratif(y|ied|ies|ication))" + A
 REFS = r"docs/ratify|\bhandoffs?/|\baudits/|/srv/|lane-outbox|\bops#[0-9]+"
-RULES = r"\brules? [0-9]+\b"
-IDS = r"\b(SB|HS|CR|MC)-[0-9]+"
+RULES = B + r"rules?\s+[0-9]+"
+IDS = B + r"(SB|HS|CR|MC)-[0-9]+"
 BANNED = re.compile("|".join("(?:%s)" % p for p in (WORDS, REFS, RULES, IDS)), re.I)
 CUSTOMER_FILE = re.compile(r"^(?!bin/|\.github/(?!PULL_REQUEST_TEMPLATE\.md$)).*\.(html|md|txt|svg|xml)$")
 
@@ -36,14 +38,21 @@ def load_allowlist(path):
 def main():
     allowed = load_allowlist(os.environ.get("CUSTOMER_WORDS_ALLOW", ".github/policy/customer-words-allow.txt"))
     hits, path, in_header, saw_diff = [], None, False, False
-    data = sys.stdin.read()
+    data = sys.stdin.buffer.read().decode("utf-8")
     for raw in data.split("\n"):
         if raw.startswith("diff --git "):
             saw_diff, path, in_header = True, None, True
         elif in_header and raw.startswith("+++ "):
-            if not raw.startswith("+++ b/"):
+            if raw == "+++ /dev/null":
+                path = None   # a deleted file adds nothing
+            elif raw.startswith("+++ b/"):
+                path = raw[6:].rstrip("\t")   # git ends a name that holds a space with a tab
+            else:
                 fail("unreadable file name in the diff header: " + raw)
-            path = raw[6:]
+        elif raw.startswith("Binary files "):
+            m = re.match(r"Binary files .* and b/(.*) differ$", raw)
+            if m and CUSTOMER_FILE.match(m.group(1)):
+                fail("binary change to a customer file: " + m.group(1))
         elif raw.startswith("@@"):
             in_header = False   # from here on a line that starts with +++ is content, not a header
         elif not in_header and path and raw.startswith("+") and CUSTOMER_FILE.match(path):
@@ -52,10 +61,10 @@ def main():
                 hits.append("%s: %s" % (path, text))
     if data.strip() and not saw_diff:
         fail("input is not a git diff")
-    for label in ("PR_TITLE", "PR_BODY"):
+    for label, name in (("PR_TITLE", "title"), ("PR_BODY", "body")):
         for line in os.environ.get(label, "").splitlines():
             if BANNED.search(line):
-                hits.append("%s: %s" % (label.lower()[3:], line.strip()))
+                hits.append("%s: %s" % (name, line.strip()))
     for h in hits:
         print("customer-words: " + h)
     sys.exit(1 if hits else 0)
@@ -63,5 +72,5 @@ def main():
 
 try:
     main()
-except OSError as e:   # a missing or unreadable allowlist is a failure, never a pass
+except (OSError, ValueError) as e:   # an unreadable allowlist or text that is not UTF-8 is a failure, never a pass
     fail(str(e))

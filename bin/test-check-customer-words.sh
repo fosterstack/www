@@ -56,6 +56,10 @@ for w in docs/ratify/x handoffs/ audits/ /srv/ ops#794 "rule 9" "rules 3" SB-3 H
 done
 add docs/verify-release.md "see [REQ-REL-001](release-notes.md#req-rel-001)" 0 "T3 a public requirement id (a link to the release notes) passes"
 add docs/a.md "ruler 9" 0 "T4 'ruler 9' passes"
+# T4b a word cannot hide behind an underscore, a digit or markup, and "rule N" survives extra white space
+for w in _owner_ '**owner**' the_owner owner2 'rule  9' $'rule\t9'; do
+  add docs/a.md "text $w text" 1 "T4b added '$w' fails"
+done
 # T5 lines and files that must not count
 mk docs/a.md $'the owner\n' docs/a.md $'fine\n';                       check 0 "T5 a removed line with owner passes"
 mk docs/a.md $'the owner\nx\n' docs/a.md $'the owner\ny\n';            check 0 "T5 an unchanged context line with owner passes"
@@ -71,6 +75,9 @@ rm -rf "$work/r"; mkdir -p "$work/r/.github/policy"; cd "$work/r" || exit 2; git
 printf '# header\n' > .github/policy/customer-words-allow.txt; printf 'fine\n' > README.md; ln -s README.md index.html
 git add -A && git commit -qm base; rm index.html; printf '<p>owner</p>\n' > index.html; git add -A && git commit -qm pr
 check 1 "T5 a symlink replaced by a page holding owner fails"
+mk docs/a.md $'x\n' docs/a.md $'the owner\n'; git rm -q docs/a.md; git commit -qm rm; check 0 "T5 deleting a page passes"
+mk docs/a.md $'the owner\n' docs/b.md $'fine\n';                       check 0 "T5 a page with owner deleted and a clean one added passes"
+mk docs/a.md $'x\n' docs/b.md $'the owner\n';                          check 1 "T5 deleting one page and adding another with owner fails"
 # T6 depth and header tracking
 mk - "" some-page/index.html $'<p>approved by the owner</p>\n';         check 1 "T6 owner added in a nested page/index.html fails"
 mk - "" docs/a.md $'++ owner\n';                                        check 1 "T6 an added line that starts with ++ is still read" 'docs/a.md'
@@ -81,6 +88,14 @@ mk - "" 404.html $'owner\n';                                            check 1 
 mk - "" .github/PULL_REQUEST_TEMPLATE.md $'owner\n';                    check 1 "T6 the PR template fails"
 mk - "" x.json $'{"t": "lane"}\n';                                       check 0 "T6 a .json file is not a covered type"
 mk - "" x.css $'/* lane */\n';                                           check 0 "T6 a .css file is not a covered type"
+mk - "" "a b.md" $'owner\n';                                            check 1 "T6 a page name with a space is read"
+# T6b a binary change to a page fails closed; under bin/ or .github/ it is ignored
+mk - "" index.html $'fine\n'; printf '<!-- \0 --><p>owner</p>\n' > index.html; git commit -qam bin
+check 2 "T6b index.html changed to binary exits 2" 'binary change'
+mk - "" other.html $'fine\n'; mkdir some; printf '<!-- \0 --><p>owner</p>\n' > some/index.html; git add -A; git commit -q --amend --no-edit
+check 2 "T6b a new binary page exits 2" 'binary change'
+mk - "" bin/x.bin $'fine\n'; printf 'a\0' > bin/x.bin; git commit -qam bin
+check 0 "T6b a binary file under bin/ passes"
 # T7 allowlist: exact path|line
 mk - "" README.md $'Fix the file owner or mode\n'
 printf '# header\nREADME.md|Fix the file owner or mode\n' > .github/policy/customer-words-allow.txt
@@ -110,6 +125,10 @@ cd "$ROOT" || exit 2
 printf 'not a diff at all\n+++ b/docs/a.md\n' | CUSTOMER_WORDS_ALLOW="$work/r/.github/policy/customer-words-allow.txt" python3 -I "$SCRIPT" >/dev/null 2>&1; rc=$?
 if [ "$rc" -eq 2 ]; then echo "ok:   T9 input that is not a diff exits 2"; pass=$((pass+1)); else echo "FAIL: T9 input that is not a diff exits 2 (rc=$rc)"; fail=$((fail+1)); fi
 step="$(sed -n 's/^ *run: \(git diff .*check-customer-words\.py\)$/\1/p' .github/workflows/hygiene.yml)"   # the step's own command line
+printf 'diff --git a/docs/a.md b/docs/a.md\n+++ b/docs/a.md\n@@ -0,0 +1 @@\n+\377\n' | CUSTOMER_WORDS_ALLOW="$work/r/.github/policy/customer-words-allow.txt" python3 -I "$SCRIPT" >/dev/null 2>&1; rc=$?
+if [ "$rc" -eq 2 ]; then echo "ok:   T9 an invalid byte on stdin exits 2"; pass=$((pass+1)); else echo "FAIL: T9 an invalid byte on stdin exits 2 (rc=$rc)"; fail=$((fail+1)); fi
+printf '# header\n\377|owner\n' > "$work/bad-allow.txt"; : | CUSTOMER_WORDS_ALLOW="$work/bad-allow.txt" python3 -I "$SCRIPT" >/dev/null 2>&1; rc=$?
+if [ "$rc" -eq 2 ]; then echo "ok:   T9 an invalid byte in the allowlist exits 2"; pass=$((pass+1)); else echo "FAIL: T9 an invalid byte in the allowlist exits 2 (rc=$rc)"; fail=$((fail+1)); fi
 rm -rf "$work/r"; mkdir "$work/r"; (cd "$work/r" && git init -q && git commit -q --allow-empty -m only && bash --noprofile --norc -eo pipefail -c "${step//bin\/check-customer-words.py/$SCRIPT}" >/dev/null 2>&1); rc=$?   # no HEAD^1
 if [ -n "$step" ] && [ "$rc" -ne 0 ]; then echo "ok:   T9 a failing git diff fails the step"; pass=$((pass+1)); else echo "FAIL: T9 a failing git diff fails the step (rc=$rc)"; fail=$((fail+1)); fi
 
