@@ -91,11 +91,15 @@ mk - "" x.css $'/* lane */\n';                                           check 0
 mk - "" "a b.md" $'owner\n';                                            check 1 "T6 a page name with a space is read"
 # T6b a binary change to a page fails closed; under bin/ or .github/ it is ignored
 mk - "" index.html $'fine\n'; printf '<!-- \0 --><p>owner</p>\n' > index.html; git commit -qam bin
-check 2 "T6b index.html changed to binary exits 2" 'binary change'
+check 2 "T6b index.html changed to binary exits 2" 'binary change this check cannot read'
 mk - "" other.html $'fine\n'; mkdir some; printf '<!-- \0 --><p>owner</p>\n' > some/index.html; git add -A; git commit -q --amend --no-edit
-check 2 "T6b a new binary page exits 2" 'binary change'
+check 2 "T6b a new binary page exits 2" 'binary change this check cannot read'
 mk - "" bin/x.bin $'fine\n'; printf 'a\0' > bin/x.bin; git commit -qam bin
 check 0 "T6b a binary file under bin/ passes"
+mk - "" "docs/é.png" $'fine\n'; printf 'a\0' > "docs/é.png"; git commit -qam bin
+check 2 "T6b a binary file with a non-ASCII name exits 2" 'binary change this check cannot read'
+mk - "" bin/x.bin $'fine\n'; printf 'a\0' > bin/x.bin; git commit -qam bin; git rm -q bin/x.bin; git commit -qm rm
+check 0 "T6b a deleted binary file passes"
 # T7 allowlist: exact path|line
 mk - "" README.md $'Fix the file owner or mode\n'
 printf '# header\nREADME.md|Fix the file owner or mode\n' > .github/policy/customer-words-allow.txt

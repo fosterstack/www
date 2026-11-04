@@ -2,7 +2,7 @@
 # bin/check-customer-words.py: fails a pull request that ADDS shop talk to a file a customer can read.
 # Reads `git diff -U0 --no-renames --no-color HEAD^1 HEAD` on stdin; PR_TITLE and PR_BODY (env) are checked whole.
 # Exit 0 clean, 1 hits (every hit is printed), 2 any error (bad allowlist, bad text, input that is not a diff, a binary
-# change to a customer file). Run as `python3 -I`.
+# change to a customer file or one it cannot read). Run as `python3 -I`.
 # An added line with a hit passes only if .github/policy/customer-words-allow.txt has the exact line `path|text`.
 import os
 import re
@@ -49,10 +49,10 @@ def main():
                 path = raw[6:].rstrip("\t")   # git ends a name that holds a space with a tab
             else:
                 fail("unreadable file name in the diff header: " + raw)
-        elif raw.startswith("Binary files "):
+        elif raw.startswith("Binary files ") and not raw.endswith(" and /dev/null differ"):   # a deleted file adds nothing
             m = re.match(r"Binary files .* and b/(.*) differ$", raw)
-            if m and CUSTOMER_FILE.match(m.group(1)):
-                fail("binary change to a customer file: " + m.group(1))
+            if not m or CUSTOMER_FILE.match(m.group(1)):   # git quotes non-ASCII names, which the match cannot read
+                fail("binary change this check cannot read: " + raw)
         elif raw.startswith("@@"):
             in_header = False   # from here on a line that starts with +++ is content, not a header
         elif not in_header and path and raw.startswith("+") and CUSTOMER_FILE.match(path):
