@@ -1,0 +1,2 @@
+# Exact lines a customer-facing file may keep although they contain a banned word.
+# One entry per line: <path>|<the added line, trimmed>. No globs, no word-only entries. See bin/check-customer-words.py.
