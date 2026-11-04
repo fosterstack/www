@@ -82,9 +82,8 @@ asking us.
 
 - Trademark hygiene: "Gradle"/"Develocity" appear only for compatibility identification;
   the footer disclaimer stays. No Gradle code claims, no affiliation implications.
-- The trust pitch (MIT core, one public image, identical bytes free/paid, license-key
-  unlock, security patches never withheld from free tier) is our policy, not
-  marketing filler. Changes to it need a maintainer's approval.
+- Keep the home page's promises about licensing and security patches (MIT core, one public image, identical bytes
+  free and paid, patches never withheld from the free tier) as they are; changing them needs a maintainer's approval.
 - No fabricated testimonials, logos, or usage numbers — FTC posture.
 - No calendar commitments. No launch dates, no "beta in <month>", no phase language.
   The dateless roadmap stays (the homepage no longer carries a version or "early" label); a schedule
