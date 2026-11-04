@@ -96,7 +96,7 @@
 
   <h2>How a CI runner uses a remote build cache</h2>
   <p>The cache is a plain web server. Your build tool (Gradle, or Maven with Apache's Build Cache Extension) asks it for finished task results and uploads new ones. Any runner that can reach the server over HTTP can use it. There is no plugin to install on the CI system.</p>
-  <p>We have not tested it with any particular CI product. Our own tests run in GitHub Actions. The protocol is the same everywhere, so what matters is that the runner can reach the server and holds a login.</p>
+  <p>Not tested: any particular CI product. The protocol is the same everywhere, so what matters is that the runner can reach the server and holds a login.</p>
 
   <h2>Let CI write, let developers read</h2>
   <p>The simplest safe setup is that only CI uploads to the cache and laptops only download. The server can enforce this: give laptops the optional read-only login (<code>FSCACHE_RO_USERNAME</code> and <code>FSCACHE_RO_PASSWORD</code>), and any write they attempt is refused. On the Gradle side you can also stop uploads from non-CI machines in <code>settings.gradle.kts</code>:</p>
@@ -121,10 +121,10 @@ buildCache {
   <p>Replace <code>fscache-ns</code> with your namespace. Plain HTTP is acceptable here only because the traffic never leaves the cluster network. The manifests are in the <a href="https://github.com/fosterstack/cache/blob/main/docs/kubernetes.md">Kubernetes guide</a>.</p>
 
   <h2>Runners outside the cluster, or on plain servers</h2>
-  <p>Run the server on a host the runners can reach and put HTTPS in front of it. Gradle sends the password with every request, so over plain HTTP it travels in the clear. Gradle refuses plain HTTP unless you opt in with <code>isAllowInsecureProtocol</code>, which is a useful warning, not a nuisance. (In our test with Gradle 9.8.0, the address <code>127.0.0.1</code> was allowed without it, but the name <code>localhost</code> was refused.) Setup is in the <a href="https://github.com/fosterstack/cache/blob/main/docs/install.md">install guide</a>.</p>
+  <p>Run the server on a host the runners can reach and put HTTPS in front of it. Gradle sends the password with every request, so over plain HTTP it travels in the clear. Gradle refuses plain HTTP unless you opt in with <code>isAllowInsecureProtocol</code>, which is a useful warning, not a nuisance. (With Gradle 9.8.0, the address <code>127.0.0.1</code> was allowed without it, but the name <code>localhost</code> was refused.) Setup is in the <a href="https://github.com/fosterstack/cache/blob/main/docs/install.md">install guide</a>.</p>
 
   <h2>Give the runner the password</h2>
-  <p>Store it in your CI system's secret store and expose it as the <code>FSCACHE_PASSWORD</code> environment variable. If builds stop using the cache after you change the secret, check the build log for a line like <code>Could not load entry ... response status 401: Unauthorized</code>, which means the password Gradle sent was wrong. In our test with Gradle 9.8.0 on macOS, a changed environment variable reached an already-running daemon on the next build, so a restart was not needed; <code>./gradlew --stop</code> is still a quick way to rule the daemon out.</p>
+  <p>Store it in your CI system's secret store and expose it as the <code>FSCACHE_PASSWORD</code> environment variable. If builds stop using the cache after you change the secret, check the build log for a line like <code>Could not load entry ... response status 401: Unauthorized</code>, which means the password Gradle sent was wrong. With Gradle 9.8.0 on macOS, a changed environment variable reached an already-running daemon on the next build, so a restart was not needed; <code>./gradlew --stop</code> is still a quick way to rule the daemon out.</p>
 
   <h2>Check that CI is really using the cache</h2>
   <p>Run the same build twice on two different agents. The second should show <code>FROM-CACHE</code> next to tasks. A runner's local cache can hide a broken remote, so run once with <code>-i</code>, which prints remote errors. Gradle treats a broken remote as non-fatal, so the build carries on without it. On the server, the hit and miss counters at <code>/metrics</code> should move.</p>
@@ -135,6 +135,7 @@ buildCache {
     <a class="btn btn-secondary" href="/">FosterStack home</a>
   </div>
   <p class="muted-note">Moving off the free Build Cache Node? See <a href="/build-cache-node-end-of-life/">what the end of life means</a> and the <a href="/migrate-build-cache-node/">migration guide</a>.</p>
+  <p class="muted-note">Tested with Gradle 9.8.0 on macOS.</p>
 </main>
 <footer>
   <div>

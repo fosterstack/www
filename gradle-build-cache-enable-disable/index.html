@@ -106,7 +106,6 @@
   </ul>
 
   <h2>Which one to use</h2>
-  <p>Our advice, not a test result.</p>
   <ul class="trust">
     <li><strong>Everyone, always:</strong> the property in <code>gradle.properties</code>, checked in with the project. New machines then need no flags.</li>
     <li><strong>CI only:</strong> pass <code>--build-cache</code> in the CI command and leave the property out.</li>
@@ -139,14 +138,14 @@
     <tr><td>Shows up as</td><td>"Reusing configuration cache."</td><td><code>FROM-CACHE</code> next to a task</td></tr>
   </table></div>
   <p>A remote cache server such as FosterStack Cache is for the build cache only. If Gradle suggests enabling the configuration cache, that is a separate local feature and has nothing to do with the server.</p>
-  <p>Our advice, not a test result. They solve different problems. The configuration cache helps most on large builds, where planning takes a while. The build cache helps most where the same work is done on many machines, such as CI runners and developer laptops. To set up a shared build cache, start with <a href="/first-15-minutes-build-cache/">your first 15 minutes with the build cache</a>.</p>
+  <p>They solve different problems. The configuration cache helps most on large builds, where planning takes a while. The build cache helps most where the same work is done on many machines, such as CI runners and developer laptops. To set up a shared build cache, start with <a href="/first-15-minutes-build-cache/">your first 15 minutes with the build cache</a>.</p>
 
   <h2>If you do not see FROM-CACHE</h2>
   <p>Work through <a href="/gradle-remote-cache-not-working/">remote cache not working</a>, which also covers a low hit rate. To clear stored results, see <a href="/reset-gradle-build-cache/">reset the build cache</a>. For the authentication errors, see <a href="/gradle-remote-build-cache-authentication/">authentication and 401 errors</a>.</p>
 
-  <h2>How we checked</h2>
+  <h2>What the runs showed</h2>
   <h3>Switching the cache on and off</h3>
-  <p>A four-module project with the cache address set in <code>settings.gradle.kts</code> (shown above). Each run used its own copy of the project and an empty Gradle home, so the only Gradle state shared was the cache server. An earlier set of runs started from a project folder that still held build output left over from an earlier test; we repeated all of them from a clean copy and got the same results. The table below shows the clean runs. We ran only <code>:core:compileJava</code> and looked at what Gradle printed next to it. Every build ended with <code>BUILD SUCCESSFUL</code>.</p>
+  <p>These runs used the cache address from <code>settings.gradle.kts</code> shown above, and only <code>:core:compileJava</code>. Every build ended with <code>BUILD SUCCESSFUL</code>.</p>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <thead><tr><th>How it was switched</th><th>Command</th><th>Result</th></tr></thead>
     <tbody>
@@ -160,7 +159,7 @@
     </tbody>
   </table></div>
   <h3>Configuration cache and build cache together</h3>
-  <p>The same small project, both flags on, the build cache pointed at a server. We ran this on Gradle 9.8.0 and a 0.2.1 server:</p>
+  <p>With both flags on and the build cache pointed at a server:</p>
   <pre tabindex="0"><code>gradle build --configuration-cache --build-cache</code></pre>
   <p><strong>1. The first build.</strong> In our runs, nothing was cached anywhere:</p>
   <pre tabindex="0"><code>Calculating task graph as no cached configuration is available for tasks: build
@@ -185,8 +184,7 @@ BUILD SUCCESSFUL in 2s
 Configuration cache entry stored.</code></pre>
   <p>That fourth step is the clearest way to see they are separate: in our runs, one was invalidated and the other was not.</p>
 
-  <p class="muted-note">The on/off runs: Gradle 9.8.0 with FosterStack Cache 0.2.1, macOS (arm64), Java 27.</p>
-  <p class="muted-note">We ran the page again on a GitHub-hosted Linux machine with FosterStack Cache 0.2.2, Gradle 9.8.0 and Java 21. The seven on/off runs (a four-module project), the read-only run and the four configuration-cache steps (a one-module project) all gave the results and lines shown above (timings aside). The server's status page counted one hit in step 3. <a href="https://github.com/fosterstack/www/actions/runs/38052086898">The run and its log are public</a>.</p>
+  <p class="muted-note">Tested with FosterStack Cache 0.2.1 on macOS (arm64, Java 27) and 0.2.2 on a GitHub-hosted Linux machine (Java 21), Gradle 9.8.0. Both gave the results and lines shown, timings aside. <a href="https://github.com/fosterstack/www/actions/runs/38052086898">The run and its log are public.</a></p>
 </main>
 
 <footer>

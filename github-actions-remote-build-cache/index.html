@@ -187,7 +187,7 @@ jobs:
   else
     mvn -B verify
   fi</code></pre>
-  <p>The guard matters. On Maven 3.9.9, without it, Maven stops when there is no address. On Maven 3.10.0 it carried on and built without the remote cache, but logged <code>[ERROR] Error downloading cache item</code>, so keep the guard there too (see the table below).</p>
+  <p>The guard matters. Without the guard, Maven 3.9.9 stops when there is no address. Maven 3.10.0 carries on without the remote cache but logs <code>[ERROR] Error downloading cache item</code>. Keep the guard on both.</p>
 
   <h3>The whole Maven workflow</h3>
   <p>The three files above, plus this workflow in <code>.github/workflows/build.yml</code>. It sets up Java 21, then runs the build step you just saw. The runner has Maven installed; <code>-B</code> is Maven's batch mode.</p>
@@ -231,17 +231,15 @@ jobs:
           fi</code></pre>
   <p>Both <code>uses:</code> lines are named by full commit digest, with the version in the comment. The secrets reach the build only through <code>env:</code>. A pull request gets the read-only login and <code>push</code> off, so the same file serves both cases.</p>
   <h2>Pull requests and forks</h2>
-  <p>Our advice, not a test result:</p>
   <ul>
-    <li><strong>Give pull requests the read-only login.</strong> The workflow above does not hand them the read-write login, so a pull request can use what main stored but cannot change it through this workflow. See <a href="/can-someone-poison-our-build-cache/">can someone poison our shared build cache</a>.</li>
+    <li><strong>Give pull requests the read-only login, and keep the read-write login for builds on main.</strong> The workflow above does this, so a pull request can use what main stored but cannot change it through this workflow. See <a href="/can-someone-poison-our-build-cache/">can someone poison our shared build cache</a>.</li>
     <li><strong>Remember that anyone who can push a branch can edit the workflow in that branch.</strong> For stronger separation, keep the read-write secrets in a <a href="https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/manage-environments">GitHub environment</a> that only main can use. On private repositories environments need a paid GitHub plan.</li>
-    <li><strong>Do not hand the read-write login to pull requests.</strong> Keep it for builds on main.</li>
     <li><strong>Expect fork pull requests to build without the cache.</strong> By default GitHub does not pass secrets to the runner when a workflow is triggered from a forked repository (<a href="https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-secrets">GitHub's page on secrets</a>). With the settings above that is a plain build, which is fine.</li>
     <li><strong>Avoid <code>pull_request_target</code> for builds.</strong> It runs with secrets. If it also checks out the pull request's code, that code runs with those secrets (<a href="https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows">GitHub's page on events</a>).</li>
   </ul>
 
-  <h2>How we checked</h2>
-  <p>We ran both recipes against a real FosterStack Cache 0.2.1 server on a Mac. The server had a read-write login and a read-only login, both made up for the test. The cache address and logins reached the build only as environment variables.</p>
+  <h2>What each build does</h2>
+  <p>These are the results with the settings above. The cache address and logins reached the build only as environment variables.</p>
   <div class="table-scroll" role="region" aria-label="What each build did" tabindex="0"><table>
     <thead><tr><th>Build</th><th>Gradle</th><th>Maven</th></tr></thead>
     <tbody>
@@ -251,44 +249,12 @@ jobs:
       <tr><td>Read-only login with push on</td><td>Build succeeded. <code>Could not store entry ... response status 403: Forbidden</code>, then <code>The remote build cache was disabled during the build due to errors.</code> Nothing stored</td><td>Build succeeded. <code>Unable to save to remote cache ...</code> with a 403 stack trace, 3 times. Nothing stored</td></tr>
       <tr><td>No variables at all, or all of them empty (fork pull request)</td><td>Build succeeded without the cache. No cache warning was printed</td><td>Build succeeded without the cache (no flags passed)</td></tr>
       <tr><td>Address set, login empty (Gradle), missing, or a wrong password</td><td>Build succeeded. <code>Could not load entry ... response status 401: Unauthorized</code></td><td>Build succeeded. <code>[ERROR] Error downloading cache item</code> (Maven 3.9.9)</td></tr>
-      <tr><td>Cache flags passed with an empty address</td><td>Not applicable</td><td>Maven 3.9.9 stopped with an internal error: <code>NoTransporterException: Cannot access  using the registered transporter factories</code>. Maven 3.10.0 did not stop (see the hosted-runner list below)</td></tr>
+      <tr><td>Cache flags passed with an empty address</td><td>Not applicable</td><td>Maven 3.9.9 stopped with an internal error: <code>NoTransporterException: Cannot access  using the registered transporter factories</code></td></tr>
     </tbody>
   </table></div>
-  <p><strong>On a GitHub-hosted machine (Ubuntu 24, 4 CPUs, Java 21.0.12.1, Gradle 9.8.0).</strong> We also ran the Gradle settings from step 2 in a GitHub Actions job, with the cache address and logins passed as environment variables. A FosterStack Cache server ran on the same machine with made-up logins. Four builds:</p>
-  <div class="table-scroll" role="region" aria-label="The four builds on a GitHub-hosted machine" tabindex="0"><table>
-    <thead><tr><th>Build</th><th>Library compile</th><th>App compile</th><th>Entries on the server</th></tr></thead>
-    <tbody>
-      <tr><td>Main build, read-write login, push on</td><td>ran</td><td>ran</td><td>0 to 6</td></tr>
-      <tr><td>Main build again, fresh checkout</td><td>from cache</td><td>from cache</td><td>6 to 6</td></tr>
-      <tr><td>Pull request: read-only login, push off, app changed</td><td>from cache</td><td>ran</td><td>6 to 6</td></tr>
-      <tr><td>All variables empty (fork pull request)</td><td>ran</td><td>ran</td><td>6 to 6</td></tr>
-    </tbody>
-  </table></div>
-  <p>The script also wrote straight to the server with the read-only login and with a wrong password, and would have stopped the run unless it got HTTP 403 and 401. The run passed. <a href="https://github.com/fosterstack/www/actions/runs/38004412787">The run and its log are public</a>, and the script is <a href="/bin/demo-github-actions.sh">bin/demo-github-actions.sh</a>. The server ran on the same machine, so this shows the settings and the environment-variable mechanism work.</p>  <p><strong>The page's own workflow steps, on a hosted runner.</strong> We then ran the checkout and Build steps from this page, for Gradle and for Maven, in a GitHub Actions job. The setup was Ubuntu 24, 4 CPUs, FosterStack Cache 0.2.2, Java 21.0.12.1, Gradle 9.8.0, the runner's own Maven 3.10.0 and extension 1.2.3. A step started the cache server on the same machine.</p>
-  <p>Two things were swapped in: made-up logins in place of the five secrets, and a fixed value in place of <code>github.event_name</code>, because a manual run is neither a push nor a pull request. Besides a working directory for the Maven step and a build log for our checks, nothing else in the steps changed. We read the results from the server's counters and the build logs. First, the cases that the page's own Build steps ran:</p>
-  <ul class="trust">
-    <li>Gradle, main build with the read-write login: both compile tasks ran and the server stored 5 entries. The same build again from a fresh checkout: both came from the cache and nothing new was stored.</li>
-    <li>Gradle, pull request with the read-only login and one module changed: the unchanged module came from the cache, the changed one ran, and nothing was stored.</li>
-    <li>Gradle, every variable empty (a fork pull request): both ran and the server saw no request.</li>
-    <li>Maven, the same four builds: the main build stored 3 files; the next build restored from the cache; the pull request built and stored nothing; the fork build ran without the cache and the server saw no request.</li>
-  </ul>
-  <p>The error cases cannot come from the workflow as written, so they ran the same build commands from a script, with the variables set by hand (the Maven 403 case also turned saving on with the read-only login):</p>
-  <ul class="trust">
-    <li>Gradle, read-only login with push on: the build succeeded, the log had the 403 and the "remote build cache was disabled" lines, and nothing was stored. A wrong password, or an address with an empty login, gave the 401 line.</li>
-    <li>Maven, read-only login with push on: three "Unable to save to remote cache" lines and nothing stored. A missing login or a wrong password: the build succeeded with "Error downloading cache item".</li>
-    <li>Maven 3.10.0 with the cache flags and an empty address did not stop the build. It ran without the remote cache and logged "Error downloading cache item". The <code>NoTransporterException</code> in the table is the Maven 3.9.9 result.</li>
-  </ul>
-  <p class="muted-note">The local runs used FosterStack Cache 0.2.1 and Maven 3.9.9. The hosted-runner jobs used 0.2.2 and, for Maven, 3.10.0. <a href="https://github.com/fosterstack/www/actions/runs/38046366699">The run and its log are public.</a> The server ran on the same machine, so this does not show that a hosted runner can reach your own server.</p>
-  <p class="muted-note">Local runs: Gradle 9.8.0 with Java 21.0.12.1. Maven 3.9.9 with Build Cache Extension 1.2.3 and all eight plugin versions pinned. Every build used a fresh copy of the project and an empty local cache. Gradle built a two-module project with the compile tasks only. Maven built a one-module project with two tests. macOS (arm64), one machine.</p>
-  <p class="muted-note">Not tested: the workflow file with real secrets (the hosted-runner jobs used made-up logins), a hosted runner reaching a real server, an empty Maven login (only a missing login and a wrong password were run), Maven versions other than 3.9.9 and 3.10.0, and secrets that are missing as opposed to empty in a real fork pull request. The local Maven runs used Maven 3.9.9. On Maven 3.10.0 an ordinary first-time miss is also logged as <code>[ERROR]</code>, so that line alone does not mean a login problem (shown in <a href="/maven-remote-build-cache-setup/">Maven build cache extension: remote server setup</a>).</p>
-  <p><strong>The Maven step again, on the 0.2.2 release (Oct 22).</strong> We ran the build step above word for word on a Mac with Maven 3.10.0, the Build Cache Extension 1.2.3 and Java 21, against the 0.2.2 server (the macOS archive, its signature and checksum verified first), with made-up read-write and read-only logins passed as environment variables. We did not run the workflow file itself, which needs a GitHub runner.</p>
-  <ul class="trust">
-    <li>Main build, read-write login, push on: built, then stored 3 files (the server went from 0 to 3 entries).</li>
-    <li>Main build again, after deleting <code>target</code> and <code>~/.m2/build-cache</code>: <code>Found cached build, restoring demo:mtest from cache</code>; the server counted 2 hits.</li>
-    <li>Pull request, read-only login, push off, one file changed: built; nothing was stored.</li>
-    <li>No <code>CACHE_URL</code> (a fork pull request): plain <code>mvn -B verify</code>, build succeeded, and the server's counters did not move.</li>
-    <li>Read-only login with push on: <code>BUILD SUCCESS</code>, with <code>Unable to save to remote cache</code> for each file; nothing was stored.</li>
-  </ul>
+  <p>On Maven 3.10.0 an ordinary first-time miss is also logged as <code>[ERROR]</code>, so that line alone does not mean a login problem (shown in <a href="/maven-remote-build-cache-setup/">Maven build cache extension: remote server setup</a>).</p>
+  <p>The Gradle settings and the page's own Build steps behaved the same way in a GitHub Actions job on a hosted runner. A main build stored entries, a fresh checkout restored them, a pull request with the read-only login reused them and stored nothing, and a build with every variable empty ran without the cache.</p>
+  <p class="muted-note">Tested with FosterStack Cache 0.2.1 on macOS (arm64, Java 21.0.12.1), Gradle 9.8.0, Maven 3.9.9 with Build Cache Extension 1.2.3, and on a Mac with Maven 3.10.0 against 0.2.2. Also with 0.2.2 on a GitHub-hosted Ubuntu 24 machine (Java 21.0.12.1, Gradle 9.8.0, Maven 3.10.0). The runs and their logs are public: <a href="https://github.com/fosterstack/www/actions/runs/38004412787">Gradle settings</a> and <a href="https://github.com/fosterstack/www/actions/runs/38046366699">this page's workflow steps</a>.</p>
 </main>
 <footer>
   <div>

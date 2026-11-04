@@ -112,7 +112,7 @@
   </ul>
 
   <h2>What to do</h2>
-  <p><strong>Our advice, not a test result.</strong> Measure your own project before you pick a limit. The server's status page (<code>/statusz</code>) shows the entry count and the size in bytes. To see how it changes as you build, see <a href="/is-the-build-cache-server-healthy-what-to-alert-on/">is my build cache server healthy, and what to alert on</a>. To pick a size limit, see <a href="/build-cache-server-sizing/">how big a server does a build cache need</a> and <a href="/build-cache-eviction-size-limit/">how the size limit works</a>.</p>
+  <p>We recommend that you measure your own project before you pick a limit. The server's status page (<code>/statusz</code>) shows the entry count and the size in bytes. To see how it changes as you build, see <a href="/is-the-build-cache-server-healthy-what-to-alert-on/">is my build cache server healthy, and what to alert on</a>. To pick a size limit, see <a href="/build-cache-server-sizing/">how big a server does a build cache need</a> and <a href="/build-cache-eviction-size-limit/">how the size limit works</a>.</p>
 
   <h2>Gradle: what one build stored</h2>
   <h3>What the 13 entries were (Mac run)</h3>
@@ -127,7 +127,7 @@
       <tr><td>Kotlin build script compilation, second stage</td><td>4</td></tr>
     </tbody>
   </table></div>
-  <p>These are the lines Gradle printed:</p>
+  <p>Your count depends on your project: our Linux run, with slightly different build files, stored 12 entries (29,821 bytes). These are the lines Gradle printed:</p>
 <pre tabindex="0"><code>Stored cache entry for task ':core:compileJava' with cache key ...
 Stored cache entry for Kotlin DSL script compilation (Project/TopLevel/stage1) with cache key ...
 Stored cache entry for Kotlin DSL script compilation (Project/TopLevel/stage2) with cache key ...</code></pre>
@@ -136,7 +136,7 @@ Stored cache entry for Kotlin DSL script compilation (Project/TopLevel/stage2) w
   <p>These tasks ran and stored nothing: <code>classes</code>, <code>jar</code>, <code>assemble</code> and <code>build</code> for each of the four modules. In our other runs the jar tasks never printed <code>FROM-CACHE</code> either. In our builds you will see them run on every fresh checkout.</p>
 
   <h3>See it for your own build</h3>
-  <p>Start from an empty cache, run your build once with <code>-i</code>, and count. We ran exactly this command, with the output saved, and it printed the same 13 entries:</p>
+  <p>Start from an empty cache, run your build once with <code>-i</code>, and count. On our build it printed the 13 entries above:</p>
 <pre tabindex="0"><code>gradle build -i | grep "Stored cache entry"</code></pre>
   <p>If your Gradle home has already compiled your build scripts, you will not see the script entries again: in a second run with the same Gradle home against a new empty server, only the 4 <code>compileJava</code> entries were stored, and the server held 4 entries and 11,425 bytes.</p>
 
@@ -164,39 +164,18 @@ Stored cache entry for Kotlin DSL script compilation (Project/TopLevel/stage2) w
 <pre tabindex="0"><code>[INFO] Saved to remote cache http://127.0.0.1:18180//v1.1/demo/core/&lt;key&gt;/core.jar</code></pre>
 
   <h3>What a restored build adds</h3>
-  <p>The second build restored all three modules and built nothing, and it uploaded one file: <code>build-cache-report.xml</code>. So our fully restored build still added one entry, 1,318 bytes (46,128 minus 44,810). We saw two builds, so we cannot say whether every restored build does the same.</p>
+  <p>The second build restored all three modules and built nothing, and it uploaded one file: <code>build-cache-report.xml</code>. So our fully restored build still added one entry, 1,318 bytes (46,128 minus 44,810).</p>
   <p>On the first build, against an empty server, Maven 3.10.0 also printed three <code>[ERROR] Error downloading cache item ... buildinfo.xml</code> lines (Maven 3.9.9 logs these misses as <code>[INFO] Cache item not found</code>). Those were ordinary misses on an empty cache, and the build succeeded; see <a href="/maven-remote-build-cache-setup/#maven-build-cache-extension-enable-disable">enable or disable the Maven build cache extension</a>.</p>
 
   <h3>What this means for sizing</h3>
-  <p>In this tiny project the <code>buildinfo.xml</code> files were bigger than the jars: about 9 KB each against about 5 KB, and together 27,661 of the 44,810 bytes. We did not test how that balance changes with large jars.</p>
+  <p>In this tiny project the <code>buildinfo.xml</code> files were bigger than the jars: about 9 KB each against about 5 KB, and together 27,661 of the 44,810 bytes.</p>
   <p>We tried one small project with jars of a few kilobytes. We did not test large jars, many versions of the same module, or a project with test reports.</p>
 
   <h2>If you do not see what you expect</h2>
   <p>Look at <a href="/gradle-remote-cache-not-working/#gradle-build-cache-hit-rate-low">why the hit rate is low</a> and <a href="/gradle-build-cache-enable-disable/">enable or disable the Gradle build cache</a>. A task that stored nothing in your build, such as the jar tasks in ours, could not come from the cache.</p>
   <p>See <a href="/maven-build-cache-extension-not-restoring/">Maven build cache not restoring</a>.</p>
 
-  <h2>How we checked</h2>
-  <p><strong>Gradle.</strong> The four-module build from <a href="/gradle-build-cache-monorepo/">Gradle build cache for a monorepo</a>: <code>core</code>, <code>util</code>, <code>api</code> and <code>app</code>, each with 12 small Java classes and a Kotlin build file. Our first run used a project folder that still held build output from an earlier check; we repeated it, with the same 13 entries, from a clean copy and got the same results. We started a new, empty server and ran <code>gradle build --console=plain --no-daemon -i</code> once, with the local cache off and a new, empty Gradle home. The <code>-i</code> flag makes Gradle print a line each time it stores something. The build ended with <code>BUILD SUCCESSFUL</code>. The project has no tests, so there are no test entries here; for those, see <a href="/gradle-test-task-from-cache/">Gradle test task FROM-CACHE</a>.</p>
-  <p>The server's status page then said: 13 entries, 36,054 bytes. When we repeated the run, the entry count was the same and the size varied by a few dozen bytes (36,054 to 36,103 across our runs).</p>
-  <p><strong>Maven.</strong> The three-module project from <a href="/maven-build-cache-extension-multi-module/">Maven build cache extension in a multi-module project</a>: <code>core</code>, <code>util</code> and <code>app</code>. We started a new, empty server and ran <code>mvn verify</code> twice, each time from a fresh copy of the project with an empty local build cache. Both builds ran on the same Mac and shared one already-filled local Maven repository, offline (<code>-o -B</code>, plus options for the repository and the local cache location). Both ended with <code>BUILD SUCCESS</code>. In our runs the extension printed one <code>Saved to remote cache</code> line for each entry that ended up on the server, and the server's status page (<code>/statusz</code>) gave the counts.</p>
-  <p class="muted-note">Run on Gradle 9.8.0 with FosterStack Cache 0.2.1, macOS (arm64), Java 27.</p>
-  <p class="muted-note">Run on Maven 3.10.0 with maven-build-cache-extension 1.2.3 and FosterStack Cache 0.2.1, macOS (arm64), Java 27 (Homebrew).</p>
-  <h3>Second run: Linux, 0.2.2 (the Gradle half)</h3>
-  <p>We ran the four-module Gradle build again on a GitHub-hosted Linux machine with FosterStack Cache 0.2.2, Gradle 9.8.0 and Java 21. We wrote the build files again, because they are not shown here, so the counts differ a little from the Mac run: 12 entries here, 13 there.</p>
-  <ul class="trust">
-    <li><code>gradle build -i</code> printed 12 <code>Stored cache entry</code> lines, not 13: one <code>compileJava</code> entry for each of the four modules, 5 entries for the first stage of build script compilation and 3 for the second. The server held 12 entries and 29,821 bytes.</li>
-    <li>The <code>classes</code>, <code>jar</code>, <code>assemble</code> and <code>build</code> tasks of the four modules stored nothing and never came from the cache.</li>
-    <li>A second run with the same Gradle home against a new empty server stored only the 4 <code>compileJava</code> entries: 4 entries and 8,386 bytes.</li>
-  </ul>
-  <p class="muted-note">The Gradle half: <a href="https://github.com/fosterstack/www/actions/runs/38073731609">the run and its log are public</a>.</p>
-  <h3>Second run: Linux, 0.2.2 (the Maven half)</h3>
-  <p>The Maven runs above were on a Mac with 0.2.1. We ran the three-module build again on a GitHub-hosted Linux machine with FosterStack Cache 0.2.2, Maven 3.10.0 and Java 21.</p>
-  <ul class="trust">
-    <li>The first build against an empty server saved 7 entries: 3 jars, 3 <code>buildinfo.xml</code> files and 1 <code>build-cache-report.xml</code>, with three <code>[ERROR] Error downloading cache item ... buildinfo.xml</code> lines for the misses.</li>
-    <li>The 3 jars came to 10,077 bytes in all (about 3.4 KB each; the Mac run: about 5 KB each). The 3 <code>buildinfo.xml</code> files came to 27,781 bytes, about the same as on the Mac. The server held 39,311 bytes (the Mac run: 44,810). The <code>buildinfo.xml</code> files were again bigger than the jars. We downloaded each saved file from the server to measure it, and the sizes added up to the server's number.</li>
-    <li>A second build from a fresh copy restored all three modules and added one entry, the report, of 1,318 bytes, the same size as on the Mac.</li>
-  </ul>
-  <p class="muted-note"><a href="https://github.com/fosterstack/www/actions/runs/38070836344">The run and its log are public</a>.</p>
+  <p class="muted-note">Tested with FosterStack Cache 0.2.1 on macOS (arm64, Java 27), Gradle 9.8.0, Maven 3.10.0 and Build Cache Extension 1.2.3, and with 0.2.2 on a GitHub-hosted Linux machine (Java 21). The Gradle run and its log are <a href="https://github.com/fosterstack/www/actions/runs/38073731609">public</a>, and so is the <a href="https://github.com/fosterstack/www/actions/runs/38070836344">Maven run</a>.</p>
 </main>
 
 <footer>

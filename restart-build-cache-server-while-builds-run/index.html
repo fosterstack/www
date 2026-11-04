@@ -105,9 +105,9 @@
   </ul>
 
   <h2>What to do</h2>
-  <p>Our advice, not a test result:</p>
+  <p>We recommend:</p>
   <ul>
-    <li><strong>Stop the server with a normal stop, not a kill.</strong> <code>docker stop</code> sends a normal stop first, per Docker's documentation. We started the server binary directly and did not test Docker.</li>
+    <li><strong>Stop the server with a normal stop, not a kill.</strong> <code>docker stop</code> sends a normal stop first, per Docker's documentation. We did not test Docker; we started the server binary directly.</li>
     <li><strong>Restart in a quiet moment.</strong> The server was back in well under a second in our runs, so a quiet moment keeps the chance of a warning small.</li>
     <li><strong>Do not worry about one warning.</strong> The lines to expect are <code>Could not store entry</code> or <code>Could not load entry</code>, then <code>The remote build cache was disabled during the build due to errors</code>. The next build stores what was missed.</li>
     <li><strong>Keep the same data folder or volume.</strong> That is what keeps the stored results. See <a href="#build-cache-survives-restart">does the build cache survive a restart</a>, below.</li>
@@ -117,7 +117,7 @@
   <p>If the server is down for a whole build, nothing breaks either. That case is on <a href="/build-cache-server-down-what-happens/">what happens when the cache server is down</a>.</p>
 
   <h2 id="build-cache-survives-restart">Does the build cache survive a restart?</h2>
-  <p>You restart the cache server, or it crashes, or the container is replaced. Do your stored build results come back? We tested a clean stop, a forced kill and a wrong data folder.</p>
+  <p>You restart the cache server, or it crashes, or the container is replaced. Do your stored build results come back?</p>
   <ul class="trust">
     <li>After a clean stop and start on the same data folder, every result was still there.</li>
     <li>After the server was killed with <code>kill -9</code> and started again on the same folder, every result was still there.</li>
@@ -132,9 +132,8 @@
   </ul>
   <p>To copy the data somewhere safe, or to move it to another server, see <a href="/upgrade-build-cache-server/">upgrade, back up and restore</a>.</p>
 
-  <h2>How we checked</h2>
-  <p>We ran the Gradle builds on this page twice on a Mac, once with Java 21 and once with Java 27, with the same results. A third run on Linux is in the last section.</p>
-  <p><strong>Restarts during a build.</strong> FosterStack Cache 0.2.1 on a Mac (arm64), no password. Gradle 9.8.0, one fresh copy of the project per build, no reused daemon, the local build cache off. To keep builds open long enough to overlap a restart, each of the four modules had a cacheable task that sleeps for 8 seconds. We sent the signal to the server's process ID and started it again on the same data folder. All builds ended with <code>BUILD SUCCESSFUL</code>. Each row is one run; we did not repeat them.</p>
+  <h2>What happens when the server stops during a build</h2>
+  <p>Each row is a build with four modules whose tasks take about 8 seconds each. We stopped the server during the build and started it again on the same data folder. All builds ended with <code>BUILD SUCCESSFUL</code>.</p>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <thead><tr><th>Server stopped during the build</th><th>Back after</th><th>What the build printed</th><th>Entries stored</th><th>Next build, from cache</th></tr></thead>
     <tbody>
@@ -144,19 +143,13 @@
       <tr><td>Kill</td><td>14 seconds</td><td>One <code>Could not store entry</code>, then the remote cache was disabled</td><td>2 of 4</td><td>2 of 4</td></tr>
     </tbody>
   </table></div>
-  <p>We also started a build while the server was stopped. It printed one <code>Could not load entry</code> warning, then built all four modules locally. After we started the server, the next build built and stored all four. The one after that took all four from the cache.</p>
+  <p>A build started while the server was stopped printed one <code>Could not load entry</code> warning, then built all four modules locally. After the server was back, the next build built and stored all four. The one after that took all four from the cache.</p>
 
-  <p><strong>How long the server was unreachable.</strong> We stopped and started it five times in a row for each case, and polled <code>/healthz</code> until it answered. This measures the restart on a busy laptop, not a promise for your server.</p>
-  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
-    <thead><tr><th>Data in the cache</th><th>Normal stop, then start</th><th>Kill, then start</th></tr></thead>
-    <tbody>
-      <tr><td>20 small entries</td><td>0.03 to 0.05 seconds</td><td>0.03 seconds</td></tr>
-      <tr><td>5,000 entries, about 49 MiB</td><td>0.03 to 0.06 seconds</td><td>0.05 to 0.15 seconds</td></tr>
-    </tbody>
-  </table></div>
-  <p>After a kill, the server logs <code>unclean shutdown detected, reconciling stores before serving</code> and checks its files before it answers. No entries were lost in these runs.</p>
+  <h2>How long the server is unreachable</h2>
+  <p>Every restart we timed took 0.01 to 0.15 seconds, with 20 entries and with 5,000 entries (about 49 MiB). This is on a busy laptop, not a promise for your server. After a kill, the server logs <code>unclean shutdown detected, reconciling stores before serving</code> and checks its files before it answers. No entries were lost.</p>
 
-  <p><strong>An upload in progress when the server stops.</strong> To catch an upload in progress we used <code>curl</code> to send a large file slowly (2 MiB per second) and stopped the server 3 seconds in.</p>
+  <h2>An upload in progress when the server stops</h2>
+  <p>We sent a large file slowly with <code>curl</code> (2 MiB per second) and stopped the server 3 seconds in.</p>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <thead><tr><th>Upload</th><th>Stop</th><th>What happened</th><th>Entry afterwards</th></tr></thead>
     <tbody>
@@ -165,37 +158,9 @@
       <tr><td>40 MiB</td><td>Normal stop</td><td>The server gave up after 10.0 seconds and exited with an error. The upload broke. A 26 MiB temporary file stayed on disk</td><td>Not found (404)</td></tr>
     </tbody>
   </table></div>
-  <p>In both 20 MiB cases, an entry that was stored earlier stayed readable. We did not test whether a later start removes the temporary file left by the 40 MiB case.</p>
+  <p>An entry that was stored earlier stayed readable in all three cases.</p>
 
-  <p><strong>What survives a restart.</strong> A four-module Gradle 9.8.0 project (the one from <a href="/gradle-build-cache-monorepo/">Gradle build cache for a monorepo</a>) against a server set up with <code>FSCACHE_DATA_DIR</code> pointing at a folder, on FosterStack Cache 0.2.1 (macOS, arm64). Every build used a fresh copy of the project and an empty Gradle home, so the only shared thing was the server. Our first run used a project folder that still held build output from an earlier check; we repeated all four steps from a clean copy and got the same results. All four builds ended with <code>BUILD SUCCESSFUL</code>. "From cache" counts the four <code>compileJava</code> tasks that printed <code>FROM-CACHE</code>.</p>
-  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
-    <thead><tr><th>Step</th><th>Server state before the build</th><th>Entries in the status page</th><th>From cache</th></tr></thead>
-    <tbody>
-      <tr><td>1. First build</td><td>New, empty data folder A</td><td>0, then 13 afterwards</td><td>0 of 4</td></tr>
-      <tr><td>2. Clean restart</td><td>Stopped normally, started on folder A</td><td>13 (same as before)</td><td>4 of 4</td></tr>
-      <tr><td>3. Crash</td><td>Killed with <code>kill -9</code>, started on folder A</td><td>13 (same as before)</td><td>4 of 4</td></tr>
-      <tr><td>4. Wrong folder</td><td>Started on a different empty folder B</td><td>0</td><td>0 of 4</td></tr>
-    </tbody>
-  </table></div>
-  <p>The status page is the server's <code>/statusz</code> address. It showed the same 13 entries and the same size in bytes right after each restart, before any build ran.</p>
-  <p>In this test we killed the server while it was idle. Kills in the middle of an upload are in the upload table above.</p>
-
-  <p>Not tested: Docker, Kubernetes or Compose rollouts, Maven builds, releases other than 0.2.1 and 0.2.2, and more than one build running at once.</p>
-
-  <h3>Second run: Linux, 0.2.2</h3>
-  <p>The runs above were on a Mac with 0.2.1. We ran the same steps again on a GitHub-hosted Linux machine with FosterStack Cache 0.2.2, Gradle 9.8.0 and Java 21. In the build tests we stopped the server while the build's third 8-second task was running, 2 seconds after the second one finished.</p>
-  <ul class="trust">
-    <li>The four rows of the first table came out the same. Back after 2 seconds: no cache message, and the next build took 4 of 4 from the cache. Back after 14 seconds: one <code>Could not store entry</code>, the remote cache was then disabled, and the next build took 2 of 4. A normal stop and <code>kill -9</code> gave the same results.</li>
-    <li>A build started while the server was stopped printed one <code>Could not load entry</code> warning, disabled the remote cache and built all four modules locally.</li>
-    <li>The next build, with the server back, built and stored all four. The one after that took all four from the cache.</li>
-    <li>Every restart we timed took 0.01 to 0.07 seconds, with 20 entries and with 5,000 entries (about 48 MiB).</li>
-    <li>After a kill the log said <code>unclean shutdown detected, reconciling stores before serving</code>, and after five kills the 5,000 entries were all still there.</li>
-    <li>We sent uploads at 2 MiB per second and stopped the server after 3 seconds. A 20 MiB upload with a normal stop finished with <code>201</code>. The server exited with code 0 after 7.3 seconds.</li>
-    <li>A 20 MiB upload with a kill broke. A 6 MiB temporary file stayed behind, the entry was not found (404), and the next start removed the file.</li>
-    <li>A 40 MiB upload with a normal stop broke when the server gave up at 10.0 seconds and exited with code 1. A 26 MiB temporary file stayed on disk and the entry was not found. An entry stored earlier stayed readable in all three cases.</li>
-    <li>After a clean stop and after a kill, the status page showed the same entries and bytes (11 entries on this test project; the Mac run had 13) and the next build took everything from the cache. A build using a different, empty cache folder took none from the cache.</li>
-  </ul>
-  <p class="muted-note"><a href="https://github.com/fosterstack/www/actions/runs/38067965540">The run and its log are public</a>.</p>
+  <p class="muted-note">Tested with FosterStack Cache 0.2.1 on macOS (arm64, Java 21 and 27) and 0.2.2 on a GitHub-hosted Linux machine (Java 21), Gradle 9.8.0. <a href="https://github.com/fosterstack/www/actions/runs/38067965540">The run and its log are public</a>.</p>
 </main>
 
 <footer>

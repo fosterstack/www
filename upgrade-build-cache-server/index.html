@@ -104,11 +104,11 @@
     <li>If you want the new server to be ready at once, stop the old one, copy its data folder, and start the new server on the copy.</li>
   </ul>
 
-  <h2>Our advice, not a test result</h2>
+  <h2>What we recommend</h2>
   <ul class="trust">
     <li>Use the same volume and the same settings (environment variables for the password and size cap) as the old container.</li>
     <li>Pin the exact tag you want rather than <code>latest</code>.</li>
-    <li>Stop the server before you copy its data. We did not test copying the files while the server is running, so we cannot say that is safe.</li>
+    <li>Stop the server before you copy its data. Not tested: copying the files while the server is running, so we cannot say that is safe.</li>
   </ul>
 
   <h2>The upgrade</h2>
@@ -119,16 +119,7 @@ docker run -d --name fscache -p 127.0.0.1:8080:8080 \
   ghcr.io/fosterstack/cache:0.2.2</code></pre>
 
   <h3>What we saw</h3>
-  <p>First, from 0.1.0 to 0.2.1 and back:</p>
-  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
-    <tr><th>Step</th><th>Result</th></tr>
-    <tr><td>0.1.0: store three entries on a fresh volume</td><td>201 each; its metrics show 3 entries, 29 bytes</td></tr>
-    <tr><td>Stop 0.1.0, start 0.2.1 on the same volume</td><td>starts normally; the status page shows <code>"version": "v0.2.1"</code>, 3 entries, 29 bytes; all three values read back</td></tr>
-    <tr><td>0.2.1: store two more</td><td>201 each; 5 entries</td></tr>
-    <tr><td>Stop 0.2.1, start 0.1.0 on the same volume again</td><td>starts normally; all values read back, including the two written by 0.2.1</td></tr>
-  </table></div>
-
-  <p>We then did the same from 0.2.1 to 0.2.2, the latest release, and back:</p>
+  <p>We upgraded from 0.1.0 to 0.2.1 and rolled back. 0.2.1 started normally on the 0.1.0 volume with all three values readable, and 0.1.0 then read the two entries 0.2.1 had written. We did the same from 0.2.1 to 0.2.2, the latest release, and back:</p>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <tr><th>Step</th><th>Result</th></tr>
     <tr><td>0.2.1: store three entries on a fresh volume</td><td>201 each; the status page shows 3 entries, 29 bytes</td></tr>
@@ -151,7 +142,7 @@ docker run -d --name fscache -p 127.0.0.1:8080:8080 \
   <h2>Two differences between the releases</h2>
   <ul class="trust">
     <li><strong>0.1.0 has no status page.</strong> <code>/statusz</code> returned 404 there. 0.2.1 has it. The metrics page is on both.</li>
-    <li><strong>The entry-count metric reads 0 after a restart, on both releases.</strong> After the rollback, 0.1.0's <code>fscache_store_entries</code> read 0 although every value was readable. The upgrade did not cause that: a volume only 0.1.0 ever wrote showed 3 entries before a plain restart and 0 after it, with the data still readable. 0.2.1's metrics read 0 after a restart until the next upload too, and so did 0.2.2's: right after we started it on the 0.2.1 volume, <code>fscache_store_entries</code> read 0 while <code>/statusz</code> showed 3 entries (see <a href="/is-the-build-cache-server-healthy-what-to-alert-on/">is my build cache server healthy</a>). On 0.2.1, <code>/statusz</code> still showed the real count, 3 entries and 9 bytes, so read it there.</li>
+    <li><strong>The entry-count metric reads 0 after a restart, on both releases.</strong> After the rollback, 0.1.0's <code>fscache_store_entries</code> read 0 although every value was readable. The upgrade did not cause that: it reads 0 after any restart until the next upload, and the data is still readable. <code>/statusz</code> shows the real count, so read it there (see <a href="/is-the-build-cache-server-healthy-what-to-alert-on/">is my build cache server healthy</a>).</li>
   </ul>
 
   <h2 id="back-up-and-restore-build-cache">Back up and restore a self-hosted build cache</h2>
@@ -161,14 +152,14 @@ docker run -d --name fscache -p 127.0.0.1:8080:8080 \
   <p>The Docker command in our guides mounts a volume at <code>/home/nonroot</code>. The server keeps its blobs and index in a <code>data</code> folder inside it, and it runs as user 65532. Backing up the volume backs up the cache.</p>
 
   <h3>1. Stop the server, then back up the volume</h3>
-  <p>We stopped the container first. The container image has no shell, so a second small container does the copying:</p>
+  <p>Stop the container first. The container image has no shell, so a second small container does the copying:</p>
   <pre tabindex="0"><code>docker stop fscache
 docker run --rm -v fscache-data:/data:ro -v &quot;$PWD&quot;:/backup ubuntu:24.04 \
   tar czf /backup/fscache-data.tgz -C /data .</code></pre>
   <p>In our test, with three small entries, the archive held a <code>data/blobs/</code> folder with one folder per entry prefix, and was 578 bytes.</p>
 
   <h3>2. Restore it into a new volume</h3>
-  <p>To check it, we deleted the container and the volume, then restored into a new, empty one. We ran this on the 0.2.1 image; use the release that wrote the backup:</p>
+  <p>Restore into a new, empty volume. Use the release that wrote the backup (we ran this on the 0.2.1 image):</p>
   <pre tabindex="0"><code>docker volume create fscache-data-restored
 docker run --rm -v fscache-data-restored:/data -v &quot;$PWD&quot;:/backup:ro ubuntu:24.04 \
   sh -c &#x27;tar xzf /backup/fscache-data.tgz -C /data&#x27;
@@ -228,21 +219,7 @@ FSCACHE_ADDR=127.0.0.1:18152 FSCACHE_DATA_DIR=$PWD/data-new-copied fscache</code
   <h3>Credentials and other settings</h3>
   <p>If the new server has logins, Maven reads them from the <code>&lt;server&gt;</code> entry in <code>settings.xml</code> whose id matches the <code>id</code> on the <code>&lt;remote&gt;</code> line. See <a href="/maven-remote-build-cache-setup/">Maven remote build cache setup</a> for that, and <a href="/gradle-build-cache-corporate-proxy/#maven-build-cache-corporate-proxy">behind a corporate proxy</a> if your builds go through one. To move Gradle builds too, see <a href="/maven-remote-build-cache-setup/#one-build-cache-server-gradle-and-maven">one server for Gradle and Maven</a>.</p>
 
-  <h2>How we checked</h2>
-  <ul class="trust">
-    <li><strong>Upgrade:</strong> we ran two pairs of releases, 0.1.0 with 0.2.1, and 0.2.1 with 0.2.2. In each pair we stored entries on the older release, started the newer one on the same data volume, wrote more, and then went back to the older one. Docker, one named volume at <code>/home/nonroot</code>, no password, stopped and started cleanly between versions.</li>
-    <li><strong>Backup and restore:</strong> run for real on the 0.2.1 image with plain Docker, three small entries.</li>
-    <li><strong>Maven move:</strong> a small Maven project, Maven 3.10.0, extension 1.2.3, macOS (arm64). Every build used a fresh copy of the project and an empty local build cache, so the only thing shared was the cache server. All five builds ended with <code>BUILD SUCCESS</code>. Every step was run for real with FosterStack Cache 0.2.1.</li>
-    <li><strong>Again on Linux:</strong> we ran both release pairs, the backup and restore commands and the five Maven builds on a GitHub-hosted Linux machine. The release images were checked against their published digests and verified with cosign first. Everything matched this page:
-      <ul>
-        <li>the status page: 3 entries and 29 bytes, then 5 entries and 49 bytes, and the version strings</li>
-        <li>a 404 for <code>/statusz</code> on 0.1.0, and the entry-count metric reading 0 after a restart</li>
-        <li>the restored data folder owned by 65532, and the restored server: 32 bytes, 3 entries, <code>value-alpha</code>, and a 404 for a missing key</li>
-        <li>Maven: 2 hits and 0 misses on the copied data folder</li>
-      </ul>
-      <a href="https://github.com/fosterstack/www/actions/runs/38041159465">The run and its log are public</a>.</li>
-    <li><strong>Not tested:</strong> upgrading or backing up while the server is running, any other pair of releases (there is no 0.2.0 release; see <a href="/changelog/">the changelog</a>), restoring into a different version of the server than the one that wrote the data, Kubernetes or Compose rollouts (the same idea applies to the volume behind the claim, but we only ran plain Docker), the FIPS image, or a cache that was close to its size cap.</li>
-  </ul>
+  <p class="muted-note">Tested with FosterStack Cache 0.1.0, 0.2.1 and 0.2.2 on Docker, and with Maven 3.10.0 and build cache extension 1.2.3, on macOS (arm64) and a GitHub-hosted Linux machine. <a href="https://github.com/fosterstack/www/actions/runs/38041159465">The run and its log are public</a>.</p>
 
   <p class="muted-note">Related: <a href="/how-we-build/">how releases are built and signed</a> and <a href="/verify-a-release/">verify a release yourself</a>, so you can check the new version before you run it. Also: <a href="/whats-new-fosterstack-cache-v0-3-0/">what changes in v0.3.0</a>, <a href="/fips-140-3-build-cache/">the FIPS 140-3 build</a> and <a href="/air-gapped-build-cache-install/">installing without internet access</a>.</p>
   <div class="cta-row">

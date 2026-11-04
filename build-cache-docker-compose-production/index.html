@@ -96,7 +96,7 @@
   <p class="lede">Run a shared Gradle build cache for your team in one Compose file, with a password and a size limit. For real use, serve HTTPS: Gradle sends the password with every request. Put a proxy in front (below), or set <code>FSCACHE_TLS_CERT</code> and <code>FSCACHE_TLS_KEY</code> and let the server answer HTTPS itself.</p>
 
   <h2 id="gradle-build-cache-docker-compose">Gradle build cache with Docker Compose</h2>
-  <p>Our advice, not a test result. This is the shape we suggest once you go past a first trial.</p>
+  <p>This is the shape we recommend once you go past a first trial.</p>
 
   <h2>Try it first, on one machine</h2>
   <pre tabindex="0"><code>docker run -d -p 127.0.0.1:8080:8080 -v fscache-data:/home/nonroot ghcr.io/fosterstack/cache:latest</code></pre>
@@ -141,7 +141,7 @@ curl -s -u gradle:change-me localhost:8080/testkey123; echo</code></pre>
   <p>If a client cannot connect, look from the client side with <code>openssl s_client -connect HOST:PORT -alpn http/1.1</code>: the server does not log handshake failures at the default log level.</p>
 
   <h2>Production: nginx and TLS in front</h2>
-  <p>A Compose file for a shared build cache that only answers over HTTPS, with a password, behind nginx. It was run for real on FosterStack Cache 0.2.1 and Gradle 9.8.0. The file pins 0.2.2, a security-patch release whose release notes say it changes no behaviour.</p>
+  <p>A Compose file for a shared build cache that only answers over HTTPS, with a password, behind nginx. The file pins 0.2.2, a security-patch release whose release notes say it changes no behaviour.</p>
 
   <h2>Production: compose.yaml</h2>
   <pre tabindex="0"><code>services:
@@ -186,12 +186,12 @@ volumes:
         proxy_set_header Host $host;
     }
 }</code></pre>
-  <p>The <code>client_max_body_size</code> line matters. See How we checked, below.</p>
+  <p>The <code>client_max_body_size</code> line matters. See the results table below.</p>
   <p>The Compose file expects <code>certs/cert.pem</code> and <code>certs/key.pem</code>. To try it on one machine, make a test certificate that is valid for two days:</p>
   <pre tabindex="0"><code>mkdir -p certs &amp;&amp; openssl req -x509 -newkey rsa:2048 -nodes -days 2 -subj "/CN=localhost" -addext "subjectAltName=DNS:localhost,IP:127.0.0.1" -keyout certs/key.pem -out certs/cert.pem</code></pre>
   <p>Put <code>compose.yaml</code>, <code>nginx.conf</code> and the <code>certs</code> folder in one directory, then start the stack from there:</p>
   <pre tabindex="0"><code>docker compose up -d</code></pre>
-  <p>On a real server, use a certificate from an authority your clients trust.</p>
+  <p>On a real server, use a certificate from an authority your clients trust. We tested only with a self-signed certificate.</p>
 
   <h2>Gradle over HTTPS</h2>
   <p>In our runs, with a certificate Gradle does not trust, the build still succeeds, but without the cache, and prints:</p>
@@ -204,11 +204,7 @@ systemProp.javax.net.ssl.trustStore=/path/to/trust.jks
 systemProp.javax.net.ssl.trustStorePassword=changeit</code></pre>
   <p>In our runs, with that, the first build ran <code>:compileJava</code> and the second printed <code>&gt; Task :compileJava FROM-CACHE</code>, through the proxy, over HTTPS, with the password. With a certificate from an authority Java already trusts you would not need the truststore lines. The Gradle side of the setup is in <a href="/first-15-minutes-build-cache/#gradle-build-cache-tutorial">the tutorial</a>.</p>
 
-  <h2>How we checked</h2>
-  <ul class="trust">
-    <li><strong>Tested:</strong> the two production files above, with Docker Compose on a Mac, nginx 1.29 as the proxy, a <strong>self-signed</strong> certificate for <code>localhost</code>, and a real Gradle build over HTTPS. We also ran every check in the table below, the two production files and the keytool step on a GitHub-hosted Linux machine with release 0.2.2, after verifying the image with cosign. The results were the same. We rewrote the calls under "Check it works" so that each result prints on its own line, then ran the new version on a GitHub-hosted Linux machine, with and without a password. Each result printed on its own line. The logs are public: <a href="https://github.com/fosterstack/www/actions/runs/38034105775">the first run</a> and <a href="https://github.com/fosterstack/www/actions/runs/38037262366">the run of the check calls</a>.</li>
-    <li><strong>Not tested:</strong> a certificate from a public authority or automatic renewal, a public server on port 443, other proxies or load balancers, Kubernetes ingress, and long-running use.</li>
-  </ul>
+  <h2>What the production setup does</h2>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <tr><th>Check</th><th>Result</th></tr>
     <tr><td><code>https://localhost:8443/healthz</code> with the certificate trusted</td><td><code>ok</code></td></tr>
@@ -228,6 +224,7 @@ systemProp.javax.net.ssl.trustStorePassword=changeit</code></pre>
     <a class="btn" href="/migrate-build-cache-node/">Gradle and Maven setup</a>
     <a class="btn btn-secondary" href="/">FosterStack home</a>
   </div>
+  <p class="muted-note">Tested with FosterStack Cache 0.2.1 on macOS (Docker Compose, nginx 1.29, Gradle 9.8.0) and 0.2.2 on a GitHub-hosted Linux machine. The logs are public: <a href="https://github.com/fosterstack/www/actions/runs/38034105775">the first run</a> and <a href="https://github.com/fosterstack/www/actions/runs/38037262366">the run of the check calls</a>.</p>
 </main>
 <footer>
   <div>

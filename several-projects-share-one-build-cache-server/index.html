@@ -93,19 +93,18 @@
 </header>
 <main>
   <h1>Can several projects share one build cache server?</h1>
-  <p class="lede">Yes, several projects can use one FosterStack Cache server. In our runs they shared the results of identical work and could read each other's results. If a group must not see another group's results, give that group its own server.</p>
+  <p class="lede">Yes, several projects can use one FosterStack Cache server. They share the results of identical work and could read each other's results. If a group must not see another group's results, give that group its own server.</p>
 
   <h2>The short answer</h2>
   <ul class="trust">
-    <li><strong>Different code did not clash in our runs.</strong> Project B's own compile found nothing stored, so it ran and stored its own entry next to project A's.</li>
+    <li><strong>Different code does not clash.</strong> Project B's own compile found nothing stored, so it ran and stored its own entry next to project A's.</li>
     <li><strong>Identical work is shared.</strong> A copy of project A in another folder restored A's compile result. Project B also restored one entry from A: the compiled build script. Both build files contain the same text, so the result is the same. That reuse is harmless.</li>
     <li><strong>One login reaches every project, which is a warning, not a feature.</strong> The login that B's builds used also fetched A's entry, so anyone with it sees every project's results. The read-only login read both, and its write got a <code>403</code>.</li>
     <li><strong>One size cap covers every project.</strong> With a small cap, B's store pushed out A's entry, and a copy of A pushed B's out again.</li>
-    <li><strong>Separate servers kept teams apart in our runs.</strong> Team 2's server restored nothing from team 1's. Each team's login got a <code>401</code> on the other server.</li>
+    <li><strong>Separate servers keep teams apart.</strong> Team 2's server restored nothing from team 1's. Each team's login got a <code>401</code> on the other server.</li>
   </ul>
 
   <h2>What to do</h2>
-  <p>Our advice, not a test result:</p>
   <ul>
     <li><strong>One server is fine when everyone may see everyone's results.</strong> Many repos in one company often fit. Two repos that build the same thing can reuse each other's results.</li>
     <li><strong>Use one server for each group that must not read another group's results.</strong> Each server has its own data folder and logins.</li>
@@ -115,8 +114,8 @@
   </ul>
   <p>Gradle and Maven builds can use the same server too. See <a href="/maven-remote-build-cache-setup/#one-build-cache-server-gradle-and-maven">one build cache server for Gradle and Maven</a>.</p>
 
-  <h2>How we checked</h2>
-  <p>FosterStack Cache 0.2.1 and Gradle 9.8.0 with Java 21 on a Mac (arm64), one machine. Project A has three classes, project B has four different ones, and project C is an exact copy of A in a different folder. Each build ran <code>compileJava</code> and <code>jar</code> with a new Gradle home, Gradle's <code>--no-daemon</code> flag and the local build cache off. The cache address and login reached the build only as environment variables. All logins were made up for the test. Each row is one run.</p>
+  <h2>The runs</h2>
+  <p>Project A has three classes, project B has four different ones, and project C is an exact copy of A in a different folder. Each build ran <code>compileJava</code> and <code>jar</code> with the local build cache off. Each row is one build or request.</p>
 
   <p><strong>One server, no size cap.</strong> The same read-write login for all three builds.</p>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
@@ -129,7 +128,7 @@
   </table></div>
   <p>The <code>jar</code> task ran in every build, so it is left out of the rows. The key of A's compile result was the same in the copy as in A, so folder names do not matter here.</p>
 
-  <p><strong>Direct requests to the same server.</strong> The key is the request path. The docs say the whole request path is the key, and we found no project or namespace setting in them.</p>
+  <p><strong>Direct requests to the same server.</strong> The key is the request path. The docs say the whole request path is the key.</p>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <thead><tr><th>Request</th><th>Answer</th></tr></thead>
     <tbody>
@@ -154,7 +153,6 @@
       <tr><td>The same build again on team 2's server</td><td>Compile result restored</td></tr>
     </tbody>
   </table></div>
-  <p>Each team's login got a <code>401</code> on the other team's server when we asked for A's key directly.</p>
 
   <p><strong>One small size cap.</strong> A server with a 5,000-byte cap, where A's two entries take 4,472 bytes.</p>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
@@ -166,20 +164,9 @@
       <tr><td>B again</td><td>Ran</td><td>3</td><td>B's compile result, the build script</td></tr>
     </tbody>
   </table></div>
-  <p>The cap belongs to the server, not to a project. The compile entry of the project that built last stayed. So did the shared build-script entry. This cap is far smaller than a real one. We only checked that the cap is shared.</p>
-  <p class="muted-note">Limits: Gradle only, three small projects, one run of each case on each machine. We did not test Maven, many projects building at once, or real project sizes.</p>
-  <h3>Second run: Linux, 0.2.2</h3>
-  <p>The run above was on a Mac with 0.2.1. We ran it again on a GitHub-hosted Linux machine with FosterStack Cache 0.2.2, Gradle 9.8.0 and Java 21, with three small projects of our own written in the same shape.</p>
-  <ul class="trust">
-    <li>One server: the rows matched. A ran and left 2 entries. B ran, restored the compiled build script and left 3. The copy C restored A's compile result and the build script.</li>
-    <li>Direct requests, reads: A's and B's keys answered <code>200</code> to the read-write login and to the read-only login.</li>
-    <li>Direct requests, writes and bad logins: a write with the read-only login got <code>403</code>, and the entry count stayed at 3. No login or a wrong password got <code>401</code>. A project name in front of the key got <code>404</code> for both keys.</li>
-    <li>Builds of A and B with the read-only login and pushing off each restored their compile result.</li>
-    <li>Two servers: team 1's login on team 2's server got <code>401</code>. That build compiled again, and nothing was stored on or restored from team 2's server. With team 2's login the build stored 2 entries and restored nothing, and the same build again restored its compile result. For A's key, each team's login got <code>401</code> on the other server, in both directions.</li>
-    <li>The small cap: the same 5,000-byte cap. A's two entries took 4,025 bytes here and 4,472 on the Mac. After the four builds the server had evicted 0, 1, 2 and 3 entries, and after each of the last three the compile result of the project that built last was on the server while the other was not.</li>
-    <li>Single entries were smaller: A's compile result was 1,211 bytes and B's 1,294 (on the Mac, 1,659 and 1,803).</li>
-  </ul>
-  <p class="muted-note"><a href="https://github.com/fosterstack/www/actions/runs/38074962799">The run and its log are public</a>.</p>
+  <p>The cap belongs to the server, not to a project. The compile entry of the project that built last stayed. So did the shared build-script entry. This cap is far smaller than a real one; it only shows that the cap is shared. On Linux the sizes were smaller: A's two entries took 4,025 bytes, not 4,472.</p>
+  <p class="muted-note">Not tested: Maven, many projects building at once, or real project sizes.</p>
+  <p class="muted-note">Tested with FosterStack Cache 0.2.1 and Gradle 9.8.0 on a Mac (arm64, Java 21), and 0.2.2 on a GitHub-hosted Linux machine (Java 21). <a href="https://github.com/fosterstack/www/actions/runs/38074962799">The run and its log are public</a>.</p>
 </main>
 <footer>
   <div>

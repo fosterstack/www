@@ -103,8 +103,8 @@
     <li>You set the cache up once, in the parent project. Modules need no changes.</li>
   </ul>
 
-  <h2>What we ran</h2>
-  <p>Three modules: <code>core</code> has no dependencies, <code>util</code> uses <code>core</code>, and <code>app</code> uses <code>util</code>. Each has six small Java classes. Every build used a fresh copy of the project and an empty local build cache, so the only shared thing was the cache server. All six builds ended with <code>BUILD SUCCESS</code>.</p>
+  <h2>The builds</h2>
+  <p>Three modules: <code>core</code> has no dependencies, <code>util</code> uses <code>core</code>, and <code>app</code> uses <code>util</code>. Each has six small Java classes. Every build used a fresh copy of the project and an empty local build cache, so the only shared thing was the cache server.</p>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <thead><tr><th>Build</th><th>core</th><th>util</th><th>app</th></tr></thead>
     <tbody>
@@ -152,10 +152,7 @@
   <h2>If modules are not restored</h2>
   <p>See <a href="/maven-build-cache-extension-not-restoring/">Maven build cache not restoring</a>. To turn the cache off or skip it for one build, see <a href="/maven-remote-build-cache-setup/#maven-build-cache-extension-enable-disable">enable or disable the extension</a>.</p>
 
-  <p class="muted-note">First run: Maven 3.10.0 with maven-build-cache-extension 1.2.3 and FosterStack Cache 0.2.1, macOS (arm64).</p>
-  <h3>Second run: Linux, 0.2.2</h3>
-  <p>The run above was on a Mac with 0.2.1. We ran the table again on a GitHub-hosted Linux machine with FosterStack Cache 0.2.2, Maven 3.10.0, extension 1.2.3 and Java 21, each build on a fresh copy of the project with an empty local build cache. All six rows matched the table, and every build ended with <code>BUILD SUCCESS</code>.</p>
-  <p class="muted-note"><a href="https://github.com/fosterstack/www/actions/runs/38070836344">The run and its log are public</a>.</p>
+  <p class="muted-note">Tested with FosterStack Cache 0.2.1 on macOS (arm64) and 0.2.2 on a GitHub-hosted Linux machine (Java 21), Maven 3.10.0, maven-build-cache-extension 1.2.3. <a href="https://github.com/fosterstack/www/actions/runs/38070836344">The run and its log are public</a>.</p>
 </main>
 
 <footer>

@@ -104,7 +104,7 @@
   <p>No release file is ever made on a person's laptop, ours included. A release starts when a signed tag is pushed, and there is no manual release path. That is what lets the signatures mean something: a release that our CI workflow did not build does not carry its signature.</p>
 
   <h2>The stages a release goes through</h2>
-  <p>Signed at every stage, verified together at release. Each stage signs a statement about what it did, each stage checks the one before it, and the Release stage verifies them all together. A signature shows who signed these exact files; it does not show the software has no bugs.</p>
+  <p>Signed at every stage, verified together at release. Each stage signs a statement about what it did, each stage checks the one before it, and the Release stage verifies them all together.</p>
   <ol class="steps">
     <li><strong>Build.</strong> The stage first checks that the tag is signed, then builds the binaries and both images, for amd64 and arm64, once. It signs what it built.</li>
     <li><strong>Sign.</strong> A separate stage, with its own identity, receives only the build's digests, records the build and signs it.</li>
@@ -112,7 +112,7 @@
     <li><strong>Check.</strong> The scanners we list (the list is in the repository), the Gradle and Maven tests and the no-phone-home test run against the exact images, and the stage signs its verdict for those digests. A finding blocks the release unless a published VEX statement explains why it does not apply.</li>
     <li><strong>Release.</strong> The only stage that can publish. It verifies every earlier signature together, then publishes the same digests that were built and judged, with no rebuild.</li>
   </ol>
-  <p class="muted-note">The full description, as the pipeline actually runs, is in <a href="https://github.com/fosterstack/cache/blob/main/RELEASING.md">RELEASING.md</a>.</p>
+  <p class="muted-note">The full description is in <a href="https://github.com/fosterstack/cache/blob/main/RELEASING.md">the release process</a>.</p>
 
   <h2>What you get with each release</h2>
   <ul class="trust">
@@ -125,12 +125,12 @@
   <p>All of it is public. You do not need an account or a purchase to check any of it. The commands are on <a href="/verify-a-release/">verify a release yourself</a>.</p>
 
   <h2>Kept patched</h2>
-  <p>The current release's images are scanned again every day, so a vulnerability disclosed against something we already shipped raises an issue without anyone having to remember to look. We keep it patched. Our target for vulnerable dependencies is 48 hours from disclosure (<a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md">the scope is in SECURITY.md</a>); more on the <a href="/security/">security page</a>.</p>
+  <p>The current release's images are scanned again every day, so a vulnerability disclosed against something we already shipped raises an issue without anyone having to remember to look. We keep it patched. Our target for vulnerable dependencies is 48 hours from disclosure (the scope is in <a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md">our security policy</a>); more on the <a href="/security/">security page</a>.</p>
 
   <h2>What we do not claim</h2>
   <ul class="trust">
         <li>A signature shows who signed these exact files. It does not show the software has no bugs, and it is not a certification by anyone.</li>
-    <li>The paid tiers are not built. Everything here is the free MIT core.</li>
+    <li>Everything here is the free MIT core.</li>
   </ul>
 
   <div class="cta-row">

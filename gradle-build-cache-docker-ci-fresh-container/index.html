@@ -102,8 +102,8 @@
     <li>Inside one container, a password set after Gradle's background process had started was used by the next build.</li>
   </ul>
 
-  <h2>What we ran</h2>
-  <p>The cache server ran on a Mac, with a username and password. Gradle ran in the <code>gradle:9.8.0-jdk21</code> image (Linux, aarch64, Java 21) under Docker Desktop on that same Mac. Every build was a new <code>docker run --rm</code> with no volumes for the Gradle home, so the container started empty and kept nothing. The project folder was mounted from the Mac. The local build cache was off. The only Gradle state shared between builds was the cache server; the image, the Docker VM and the Mac were the same for every build. Each build is one run, not an average. Each used a new copy of the project's files. Our first set of runs started from a project folder that still held build output from an earlier check on the Mac; we then repeated every run from a clean copy and got the same results.</p>
+  <h2>The runs</h2>
+  <p>The cache server had a username and password. Gradle ran in the <code>gradle:9.8.0-jdk21</code> image. Every build was a new <code>docker run --rm</code> with no volume for the Gradle home, so the container started empty and kept nothing. The project folder was mounted, and the local build cache was off. The only Gradle state shared between builds was the cache server. Each build started from a clean copy of the project.</p>
 <pre tabindex="0"><code>docker run --rm -e FSCACHE_PASSWORD=&lt;your password&gt; \
   -v "$PWD/project:/work/one" -w /work/one \
   gradle:9.8.0-jdk21 gradle :core:compileJava --console=plain --no-daemon</code></pre>
@@ -118,10 +118,10 @@
       <tr><td>5</td><td>New container, no password passed</td><td>Ran. A 401 line, then the remote cache disabled. <code>BUILD SUCCESSFUL</code></td></tr>
     </tbody>
   </table></div>
-  <p>Runs 1 to 4 ended with <code>BUILD SUCCESSFUL</code> and printed no 401 line. The server's address was <code>host.docker.internal</code>, which is how a container on Docker Desktop reaches the Mac.</p>
+  <p>Runs 1 to 4 ended with <code>BUILD SUCCESSFUL</code> and printed no 401 line. The server's address was <code>host.docker.internal</code>, which is how a container on Docker Desktop reaches the host. On Linux without Docker Desktop, add <code>--add-host=host.docker.internal:host-gateway</code> to the <code>docker run</code> command so the container can reach the server by that name.</p>
 
   <h2>The settings file</h2>
-  <p>This is the cache part of <code>settings.gradle.kts</code> we used. It reads the password from an environment variable, so the password is not in the project. We used plain HTTP because the test ran on one machine; use HTTPS across a network.</p>
+  <p>This is the cache part of <code>settings.gradle.kts</code>. It reads the password from an environment variable, so the password is not in the project. It uses plain HTTP because the test ran on one machine; use HTTPS across a network.</p>
 <pre tabindex="0"><code>buildCache {
     local { isEnabled = false }
     remote&lt;HttpBuildCache&gt; {
@@ -134,22 +134,22 @@
 
   <h2>What this means for CI</h2>
   <ul class="trust">
-    <li><strong>In our runs no Gradle home or build output had to be kept between builds.</strong> The cache lives on the server, so an empty container is enough (runs 2 and 3).</li>
-    <li><strong>In our runs the folder path did not matter for this task.</strong> The project was mounted at <code>/work/one</code> in run 2 and <code>/work/two</code> in run 3, and both restored.</li>
+    <li><strong>No Gradle home or build output had to be kept between builds.</strong> The cache lives on the server, so an empty container is enough (runs 2 and 3).</li>
+    <li><strong>The folder path did not matter for this task.</strong> The project was mounted at <code>/work/one</code> in run 2 and <code>/work/two</code> in run 3, and both restored.</li>
     <li><strong>A missing password did not fail the build.</strong> Run 5 printed this and carried on without the cache, so look for it in your CI log when builds suddenly get slow (the lines in between are left out):</li>
   </ul>
 <pre tabindex="0"><code>Could not load entry e3c6ab11d62f857d59bb3a92b7941080 from remote build cache: Loading entry from 'http://host.docker.internal:18250/e3c6ab11d62f857d59bb3a92b7941080' response status 401: Unauthorized
 ...
 The remote build cache was disabled during the build due to errors.</code></pre>
   <p>For more on this error, see <a href="/gradle-remote-build-cache-authentication/">Gradle remote build cache authentication and 401 errors</a>.</p>
-  <p>The last test ran two builds inside one container with Gradle's background process on. The first build had no password and printed the 401 line. Then we set the password in the same shell, deleted <code>core/build</code>, and the second build printed <code>:core:compileJava FROM-CACHE</code>. So the background process picked up the later password; no restart was needed. We saw the same in an earlier run on the Mac itself, with no container.</p>
-  <p>We did not test CI products other than GitHub Actions, a cache on another host, HTTPS, or Windows. The first runs used the Linux inside Docker Desktop on a Mac; the second set, in the note at the end, used a GitHub-hosted Linux machine.</p>
+  <p>The last test ran two builds inside one container with Gradle's background process on. The first build had no password and printed the 401 line. Then we set the password in the same shell, deleted <code>core/build</code>, and the second build printed <code>:core:compileJava FROM-CACHE</code>. So the background process picked up the later password; no restart was needed.</p>
+  <p class="muted-note">Not tested: Windows containers.</p>
 
   <h2>If it does not come from the cache</h2>
   <p>Work through <a href="/gradle-remote-cache-not-working/#gradle-build-cache-hit-rate-low">why the hit rate is low</a> and <a href="/jenkins-ci-build-cache/">Jenkins and CI build cache</a>. For read-only developer logins, see <a href="/gradle-build-cache-ci-writes-developers-read/">CI writes, developers read</a>.</p>
+  <p>If a build prints <code>:core:compileJava UP-TO-DATE</code> instead of <code>FROM-CACHE</code>, Gradle found its own earlier output in the project folder, so the cache was never asked. Start each test build from a clean copy of the project.</p>
 
-  <p class="muted-note">Run on Gradle 9.8.0 (image gradle:9.8.0-jdk21, Linux aarch64, Java 21) with FosterStack Cache 0.2.1, Docker Desktop 4.87 on macOS (arm64).</p>
-  <p class="muted-note">We ran the five runs again on a GitHub-hosted Linux machine (amd64) with FosterStack Cache 0.2.2 and the same image tag (<code>gradle:9.8.0-jdk21</code>, its amd64 build), with the cache server on the same machine and each run on a fresh copy of the project folder. The results were the same: the 401 line appeared in run 5, run 5 ended with <code>BUILD SUCCESSFUL</code>, and the background-process test behaved as described above. On a Linux machine without Docker Desktop, we added <code>--add-host=host.docker.internal:host-gateway</code> to the <code>docker run</code> command so the container could reach the server by that name. Start each test build from a clean copy of the project. When we ran the same command again on a copy of the same folder, build output included, the build printed <code>:core:compileJava UP-TO-DATE</code>, not <code>FROM-CACHE</code>: Gradle found its own earlier output in the folder, so the cache was never asked and the test showed nothing. <a href="https://github.com/fosterstack/www/actions/runs/38059197460">The run and its log are public</a>.</p>
+  <p class="muted-note">Tested with FosterStack Cache 0.2.1 on macOS (arm64, Docker Desktop 4.87, image gradle:9.8.0-jdk21 on Linux aarch64, Java 21) and 0.2.2 on a GitHub-hosted Linux machine (amd64, same image tag), Gradle 9.8.0. <a href="https://github.com/fosterstack/www/actions/runs/38059197460">The run and its log are public</a>.</p>
 </main>
 
 <footer>

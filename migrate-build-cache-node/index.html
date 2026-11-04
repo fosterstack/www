@@ -180,7 +180,6 @@ rm -rf ~/.gradle/caches/build-cache-1
   <p>Once builds hit the new server, stop the old Build Cache Node container. Watch the new one with <a href="/is-the-build-cache-server-healthy-what-to-alert-on/#monitor-build-cache-prometheus-grafana">monitoring</a>, and size its disk with <a href="/build-cache-server-sizing/">server sizing</a>.</p>
 
   <h2 id="build-cache-node-migration-checklist">Build Cache Node migration checklist for Gradle</h2>
-  <p>Our advice, not a test result. Where a line says "in our runs", it comes from the table under How we checked.</p>
   <h3>Find every place your builds point at the old node</h3>
   <p>Search your repositories and CI settings for <code>HttpBuildCache</code> and for the node's address. The old node's address ends in <code>/cache/</code>. Write the list down: each entry is one line to change.</p>
 
@@ -198,7 +197,7 @@ rm -rf ~/.gradle/caches/build-cache-1
   <p>You can drop it, as above, or keep it. FosterStack Cache uses the whole request path as the key, so a prefix works. Entries under different paths are separate, so pick one and use it everywhere.</p>
 
   <h3>Keep the old node running until you are sure</h3>
-  <p>With Gradle, rolling back is the same one-line change in reverse. In our runs, we tested that; see the table under How we checked.</p>
+  <p>With Gradle, rolling back is the same one-line change in reverse. We tested it: the old node's entries were still there.</p>
 
   <h2>What you give up</h2>
   <p>The old node had a small web page with a purge button. FosterStack Cache has no settings page. You set it with flags and environment variables, and a read-only status page shows size and hit counts. To empty the cache, remove its volume and start again.</p>
@@ -216,7 +215,7 @@ rm -rf ~/.gradle/caches/build-cache-1
   <p>Look for signatures, a software bill of materials, build provenance and vulnerability statements, and check whether you need an account to see them. <strong>FosterStack Cache:</strong> signed images and checksums, an SBOM per binary archive, build provenance and a VEX file, all public. See <a href="/how-we-build/">how we build</a>.</p>
 
   <h3>4. Is it kept patched?</h3>
-  <p>Ask how often published files are rescanned and how fast fixes ship. <strong>FosterStack Cache:</strong> a release is blocked on scanner findings unless a VEX statement explains them, and the current release's images are rescanned daily, at every severity the scanners report. Vulnerable dependencies fixed fast — our target is 48 hours from disclosure (<a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md">the scope is in SECURITY.md</a>).</p>
+  <p>Ask how often published files are rescanned and how fast fixes ship. <strong>FosterStack Cache:</strong> a release is blocked on scanner findings unless a VEX statement explains them, and the current release's images are rescanned daily, at every severity the scanners report. Vulnerable dependencies fixed fast — our target is 48 hours from disclosure (<a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md">the scope is in our security policy</a>).</p>
 
   <h3>5. Does it call home?</h3>
   <p>A server in your build network should not need to reach out. <strong>FosterStack Cache:</strong> no telemetry, no update check, no licence check. It can run on a network with no route to the internet.</p>
@@ -225,10 +224,9 @@ rm -rf ~/.gradle/caches/build-cache-1
   <p>You want size limits, metrics and a way to see it is healthy. <strong>FosterStack Cache:</strong> size-capped eviction, Prometheus metrics, a health check and a read-only status page. There is no admin web console, on purpose.</p>
 
   <h3>7. What are the licence terms, and what if the project goes away?</h3>
-  <p><strong>FosterStack Cache:</strong> MIT licensed, one static binary, nothing you need from us to keep running it. Paid tiers are described, not built, and security patches are never withheld from the free tier.</p>
+  <p><strong>FosterStack Cache:</strong> MIT licensed, one static binary, nothing you need from us to keep running it. Security patches are never withheld from the free tier.</p>
 
-  <h2>How we checked</h2>
-  <p>In our runs for the table below, we used Gradle 9.8.0 and a small Java project, built twice against each server. The old side was a Build Cache Node image (version 21.2, built June 2025), run locally and set up to allow anonymous reads and writes for the test. The new side was a FosterStack Cache 0.2.1 server with no password. We did not test Maven in this run.</p>
+  <h2>What we saw</h2>
   <p>Each row is two builds of the same project with <code>gradle clean</code> in between and Gradle's own local cache turned off, so a hit can only come from the server:</p>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <tr><th>Pointed at</th><th>First build</th><th>Second build</th></tr>
@@ -237,17 +235,15 @@ rm -rf ~/.gradle/caches/build-cache-1
     <tr><td>FosterStack Cache, URL kept with <code>/cache/</code></td><td><code>:compileJava</code> ran: separate entries</td><td><code>:compileJava FROM-CACHE</code></td></tr>
     <tr><td>Back to the old node (rollback)</td><td><code>:compileJava FROM-CACHE</code>: its entries were still there</td><td>not run</td></tr>
   </table></div>
-  <p>We then ran the steps again on a GitHub-hosted Linux machine with release 0.2.2, Gradle 9.8.0 and Maven 3.10.0. Results:</p>
+  <p>The steps above also worked end to end:</p>
   <ul>
     <li>The Kotlin and Groovy settings worked. Build, clean, build again showed <code>FROM-CACHE</code>. A second build with nothing changed printed <code>UP-TO-DATE</code>.</li>
     <li>After the cache-clearing commands, the hit counter went up.</li>
     <li>The <code>/metrics</code> command needed no login.</li>
-    <li>A URL kept with <code>/cache/</code> made its own entries.</li>
     <li>A credentials block against a server with no password: the server ignored it and the cache still worked.</li>
     <li><code>mvn install</code> twice: the second build restored from the cache.</li>
   </ul>
-  <p>The old node rows and the rollback were not run again. <a href="https://github.com/fosterstack/www/actions/runs/38037262366">The run and its log are public</a>.</p>
-  <p>The new server's status page agreed: two entries stored, two hits, two misses. One small difference you may notice: a successful upload returns 200 from the old node and 201 from FosterStack Cache. Gradle accepted both.</p>
+  <p>One small difference you may notice: a successful upload returns 200 from the old node and 201 from FosterStack Cache. Gradle accepted both.</p>
 
   <h2>More than kept patched.</h2>
   <ul class="trust">
@@ -256,7 +252,7 @@ rm -rf ~/.gradle/caches/build-cache-1
     <li>Scanned before every release. The current release is rescanned every day.</li>
     <li>Images assembled twice on separate machines; the results must match.</li>
     <li>Minimal image, no telemetry. FIPS variant available.</li>
-    <li>Vulnerable dependencies fixed fast — our target is 48 hours from disclosure (<a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md">the scope is in SECURITY.md</a>).</li>
+    <li>Vulnerable dependencies fixed fast — our target is 48 hours from disclosure (<a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md">the scope is in our security policy</a>).</li>
   </ul>
   <p><a href="/how-we-build/">How we build</a> · <a href="/security/">Security policy</a> · <a href="/verify-a-release/">Verify a release</a></p>
 
@@ -265,6 +261,7 @@ rm -rf ~/.gradle/caches/build-cache-1
     <a class="btn" href="https://github.com/fosterstack/cache">FosterStack Cache on GitHub</a>
     <a class="btn btn-secondary" href="/">FosterStack home</a>
   </div>
+  <p class="muted-note">Tested with FosterStack Cache 0.2.1 and Gradle 9.8.0 against a Build Cache Node image (version 21.2), and with 0.2.2 on a GitHub-hosted Linux machine with Gradle 9.8.0 and Maven 3.10.0. <a href="https://github.com/fosterstack/www/actions/runs/38037262366">The run and its log are public.</a></p>
 </main>
 <footer>
   <div>

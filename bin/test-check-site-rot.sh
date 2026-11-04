@@ -196,7 +196,7 @@ expect_fail "a 302 line is not a 301 twin" "no matching"
 fresh; rm -rf "$site/$second"; ln -s "$site/$first" "$site/$second"
 expect_fail "a symbolic link in the site is refused" "symbolic link"
 
-# --- hidden pages and the sitemap (owner ratified Oct 22 2026, ops/docs/ratify/2026-10-22-www-noindex-and-sitemap.md)
+# --- hidden pages and the sitemap
 # Sentence 1: no page that is hidden from search may be listed in the sitemap.
 # Sentence 2: on the live site no page except the 404 page may be hidden from search. It applies with --live, and the
 # check turns it on by itself for a pull request whose base is main (GITHUB_BASE_REF) and for main itself (GITHUB_REF).

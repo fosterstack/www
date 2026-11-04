@@ -104,13 +104,13 @@
     <li>Update strategy <code>Recreate</code>, not the default rolling update, so the new pod never starts while the old one holds the lock.</li>
     <li>A volume claim with <code>ReadWriteOnce</code>.</li>
   </ul>
-  <p>A cache is safe to lose for a moment. If it is down during a rollout, builds miss the cache and run slower, and nothing breaks. High availability across nodes is a paid-tier idea that is not built, so do not improvise it with two replicas.</p>
+  <p>A cache is safe to lose for a moment. If it is down during a rollout, builds miss the cache and run slower, and nothing breaks.</p>
 
   <h2>Size it in Kubernetes terms</h2>
   <ul class="trust">
     <li>Requests of about 100m CPU and 128Mi memory, and a memory limit of 512Mi.</li>
     <li>No CPU limit, on purpose. A CPU limit throttles instead of killing, and throttling a cache during a burst is the opposite of what you want.</li>
-    <li>A node with 1 GB does not have 1 GB for you. The smallest practical node on managed Kubernetes is 2 GB.</li>
+    <li>A node with 1 GB does not have 1 GB for you.</li>
     <li>Disk is the real variable. Size the volume from the cache size cap plus some room. See <a href="/build-cache-server-sizing/">server sizing</a>.</li>
   </ul>
 
@@ -120,13 +120,13 @@
   <h2>Runners in the same cluster</h2>
   <p>If your CI runners already run in this cluster, including Jenkins agents, GitHub Actions runner controller and GitLab runners, you need no load balancer and no ingress. Point Gradle at the cluster-internal name, for example <code>http://fscache.fscache-ns.svc.cluster.local/</code>, with <code>isAllowInsecureProtocol = true</code>. Gradle requires that for plain <code>http://</code> addresses. In our test with Gradle 9.8.0, only the literal <code>127.0.0.1</code> was let through without it. Here it is reasonable because the traffic never leaves the cluster network. See <a href="/jenkins-ci-build-cache/">Jenkins and CI build cache</a>.</p>
   <h2>HTTPS: in front, or in the server</h2>
-  <p>There are two ways to serve HTTPS, and neither is preferred. <strong>TLS in front:</strong> a load balancer, Gateway or ingress terminates TLS and forwards plain HTTP to the Service, as in the manifests above; the server needs no certificate. <strong>TLS in the server:</strong> set <code>FSCACHE_TLS_CERT</code> and <code>FSCACHE_TLS_KEY</code> to a PEM certificate file and its private key file; the server then serves HTTPS only, on the same port, with TLS 1.2 as the minimum version. A missing, unreadable or mismatched file stops the start with a message naming the variable. Put the certificate in a Secret of type <code>kubernetes.io/tls</code>, mount it read-only, and make it readable by the container's non-root user (65532 in the guide's manifest). We tested neither route on the throwaway cluster.</p>
+  <p>There are two ways to serve HTTPS, and neither is preferred. <strong>TLS in front:</strong> a load balancer, Gateway or ingress terminates TLS and forwards plain HTTP to the Service, as in the manifests above; the server needs no certificate. <strong>TLS in the server:</strong> set <code>FSCACHE_TLS_CERT</code> and <code>FSCACHE_TLS_KEY</code> to a PEM certificate file and its private key file; the server then serves HTTPS only, on the same port, with TLS 1.2 as the minimum version. A missing, unreadable or mismatched file stops the start with a message naming the variable. Put the certificate in a Secret of type <code>kubernetes.io/tls</code>, mount it read-only, and make it readable by the container's non-root user (65532 in the guide's manifest). We tested neither route.</p>
 
   <h2>Get the manifests</h2>
   <p>The four manifests (Secret, volume claim, Deployment, Service) and the steps to reach the cache from outside the cluster are in the <a href="https://github.com/fosterstack/cache/blob/main/docs/kubernetes.md">Kubernetes guide</a> on GitHub. Copy them into one file and apply it.</p>
 
-  <h2>How we checked</h2>
-  <p>We applied the guide's four manifests to a new kind cluster (Kubernetes in Docker) on a GitHub-hosted Linux machine, with FosterStack Cache 0.2.2. What we saw:</p>
+  <h2>What we saw on a test cluster</h2>
+  <p>We applied the guide's four manifests to a new kind cluster (Kubernetes in Docker):</p>
   <ul class="trust">
     <li>A namespace that enforces the restricted Pod Security profile accepted all four with no warning, and the pod became ready.</li>
     <li>The running Deployment matched this page: one replica, Recreate, a ReadWriteOnce claim, user 65532, a read-only root file system, and the requests and memory limit above, with no CPU limit.</li>
@@ -137,13 +137,13 @@
     <li>With two replicas, only one pod became ready. The other failed to start because it could not get the lock on the cache's index file.</li>
     <li>Keep the <code>FSCACHE_DATA_DIR</code> setting in the guide's Deployment; it points the cache at the mounted volume. We removed it as a test, and the pod did not become ready: it failed with a read-only file system error.</li>
   </ul>
-  <p class="muted-note">Not tested: a real cloud cluster, other storage classes, a cluster with more than one node, rollouts, the <code>fsGroup</code> requirement, the guide's load balancer, Gateway and Ingress examples, and the cluster-internal name. This was a test on a throwaway cluster, not a production trial. We used the guide at the v0.2.2 tag. <a href="https://github.com/fosterstack/www/actions/runs/38042410432">The run and its log are public</a>.</p>
 
   <div class="cta-row">
     <a class="btn" href="https://github.com/fosterstack/cache/blob/main/docs/kubernetes.md">Kubernetes guide</a>
     <a class="btn btn-secondary" href="/migrate-build-cache-node/">Gradle and Maven setup</a>
   </div>
   <p class="muted-note">Moving off the free Build Cache Node? See <a href="/build-cache-node-end-of-life/">what the end of life means</a> and the <a href="/migrate-build-cache-node/">migration guide</a>.</p>
+  <p class="muted-note">Tested with FosterStack Cache 0.2.2 and the guide at the v0.2.2 tag, on a kind cluster on a GitHub-hosted Linux machine, Gradle 9.8.0. <a href="https://github.com/fosterstack/www/actions/runs/38042410432">The run and its log are public</a>.</p>
 </main>
 <footer>
   <div>

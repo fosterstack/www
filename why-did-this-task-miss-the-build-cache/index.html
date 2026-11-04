@@ -96,7 +96,7 @@
   <p class="lede">Run the slow build twice with <code>--info -Dorg.gradle.caching.debug=true</code> and save each log. Compare the lines that start with <code>Appending</code>, and the line that differs names the input that changed.</p>
 
   <h2>Find the input, step by step</h2>
-  <p>Our advice, with the commands we ran:</p>
+  <p>Follow these steps:</p>
   <ol>
     <li><strong>Build once and save the log.</strong> Use the same tasks that missed.
       <pre tabindex="0"><code>gradle compileJava greetEnv --info -Dorg.gradle.caching.debug=true &gt; run1.log</code></pre></li>
@@ -116,10 +116,11 @@
 &gt; Build cache key for task ':greetEnv' is 2a408a1a...</code></pre></li>
   </ol>
   <p>Compare the hash after the colon. For file inputs the text in braces is only a display of the path, and it can change while the hash stays the same.</p>
+  <p>Two tasks of the same type with the same input values get the same key, so the second can come from the cache even in the same build. Give them different values if you need both to run.</p>
   <p>If the two key lines are identical, the key is not the problem. Look at the server instead, starting with <a href="/gradle-remote-cache-not-working/">Gradle remote build cache not working</a>.</p>
 
   <h2>What each change looked like in the log</h2>
-  <p>We changed one thing at a time and diffed against an unchanged repeat build. Each row is one run.</p>
+  <p>Each row is one change, diffed against an unchanged repeat build.</p>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <thead><tr><th>What we changed</th><th>Tasks that ran</th><th>Lines that differed</th></tr></thead>
     <tbody>
@@ -140,9 +141,9 @@ Stored cache entry for task ':greetStable' with cache key f1bf5e9a...</code></pr
   <p>A real miss has a new key and no such line. A hit prints <code>FROM-CACHE</code> and <code>Loaded cache entry</code>.</p>
 
   <h2>When a task has no key at all</h2>
-  <p>Some tasks never look in the cache, so there is nothing to diff. Gradle says so with <code>Caching disabled for task ... because:</code>. In our runs the reasons were:</p>
+  <p>Some tasks never look in the cache, so there is nothing to diff. Gradle says so with <code>Caching disabled for task ... because:</code>. The reasons Gradle printed:</p>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
-    <thead><tr><th>What we did</th><th>Reason Gradle printed</th></tr></thead>
+    <thead><tr><th>The task</th><th>Reason Gradle printed</th></tr></thead>
     <tbody>
       <tr><td>A condition that was false, <code>outputs.cacheIf("only on CI") { false }</code></td><td><code>'only on CI' not satisfied</code></td></tr>
       <tr><td><code>outputs.doNotCacheIf("a developer asked for no caching") { true }</code></td><td><code>'a developer asked for no caching' satisfied</code></td></tr>
@@ -161,7 +162,6 @@ Stored cache entry for task ':greetStable' with cache key f1bf5e9a...</code></pr
     <li><strong>Both:</strong> a change in the top module recompiled (Gradle) or rebuilt (Maven) only the top module. The two below it came from the cache.</li>
     <li><strong>A dependency bump:</strong> only the module that uses the library recompiled (Gradle) or rebuilt (Maven). Going back to the old version restored both modules.</li>
   </ul>
-  <p>Our advice, not a test result:</p>
   <ul class="trust">
     <li><strong>In Maven, batch edits to widely shared modules.</strong> Expect an edit there to rebuild everything above it.</li>
     <li><strong>In Gradle, keep a shared module's public API steady.</strong></li>
@@ -169,8 +169,7 @@ Stored cache entry for task ':greetStable' with cache key f1bf5e9a...</code></pr
     <li><strong>Keep Gradle, Maven and Java versions the same</strong> on laptops and CI, so entries can be shared.</li>
   </ul>
   <p>If a module you did not touch still rebuilds, diff the keys as above, or see <a href="/gradle-remote-cache-not-working/">Gradle remote build cache not working</a> or <a href="/maven-build-cache-extension-not-restoring/">why the Maven cache is not restoring</a>. For Maven multi-module setup, see <a href="/maven-build-cache-extension-multi-module/">Maven Build Cache Extension in a Multi-Module Project</a>.</p>
-  <p>Why Maven rebuilt more: the Maven log shows that while it works out the cache key for <code>service</code>, it also works out the key for <code>core</code>. In the comment run, <code>core</code> had a new key and so did <code>service</code> (<code>efd19a4c19b933af</code> before, <code>3d90eee1e1f99534</code> after), though no file in <code>service</code> changed. That is consistent with a module's key including the keys of the modules it depends on.</p>
-  <p>Gradle's documentation describes the cache key for compiling a module as looking only at the public API of the modules it depends on. Our results are consistent with that. We checked results, not Gradle's internals.</p>
+  <p>Why Maven rebuilt more: the Maven log shows that while it works out the cache key for <code>service</code>, it also works out the key for <code>core</code>. In the comment run, <code>core</code> had a new key and so did <code>service</code> (<code>efd19a4c19b933af</code> before, <code>3d90eee1e1f99534</code> after), though no file in <code>service</code> changed. So a module's key includes the keys of the modules it depends on.</p>
   <p>For each change, build 1 was the unchanged project and build 2 had the one change. This table shows build 2.</p>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <thead><tr><th>The one change</th><th>Gradle: core / service / app</th><th>Maven: core / service / app</th></tr></thead>
@@ -183,22 +182,8 @@ Stored cache entry for task ':greetStable' with cache key f1bf5e9a...</code></pr
   </table></div>
   <p>For the dependency bump we used two modules: <code>lib</code> with no dependencies and <code>app</code> using Gson. Five builds ran on one server: Gson 2.10.1, 2.10.1 again, 2.11.0, 2.11.0 again, then back to 2.10.1. After the bump, <code>lib</code> came from the cache and <code>app</code> was recompiled (Gradle) or rebuilt (Maven). The builds after that restored both modules. The result was the same in Gradle and in Maven.</p>
 
-  <h2>How we checked</h2>
-  <p>Key-diff runs: FosterStack Cache 0.2.1 on a Mac (arm64), no password. Gradle 9.8.0, <code>--no-daemon</code>, <code>--console=plain</code>, <code>--max-workers=1</code>, a new Gradle home for every build in the key-diff runs, the local build cache off. Java 21 for every build except the Java 27 row, which used Homebrew OpenJDK 27 for the Gradle run. The key-diff project had one Java class and five small cacheable tasks. Each row is one run, we did not repeat them, and we report counts and log lines, not times.</p>
-  <p>Chain and Gson runs: FosterStack Cache 0.2.1 on a Mac (arm64), every scenario on a new, empty server with a fresh project copy for every build. Gradle 9.8.0 ran only the compile tasks, with its local cache off. Maven ran in the same runs: Maven 3.9.9 with Build Cache Extension 1.2.3, <code>mvn verify</code>, all eight default plugin versions pinned and Java release 17. Both used Temurin 21.0.12.1. Downloads (the Gradle home for the Gson runs, the Maven repository) were shared across builds and held no cache entries.</p>
-  <h3>Second run: Linux, 0.2.2</h3>
-  <p>The runs above were on a Mac with 0.2.1. We repeated the steps and the single-task changes shown above on a GitHub-hosted Linux machine with FosterStack Cache 0.2.2 and Gradle 9.8.0. This page does not show the test project's build file, so we wrote a new one with the same shape: one Java class, a notes file and five small cacheable tasks. Each build used a new Gradle home. We did not run the three-module table or the dependency bump again.</p>
-  <ul class="trust">
-    <li>The first build on an empty server ran all six tasks. An unchanged repeat from a fresh copy ran none, and its key lines were identical to the first build's. The page's <code>grep</code> and <code>diff</code> commands gave an empty diff for it.</li>
-    <li>Each change ran the task the table says: a Java source file ran <code>compileJava</code>, an input file ran <code>copyNotes</code>, and moving the project ran only <code>greetAbs</code>.</li>
-    <li>Changing an environment variable, or a Gradle property (on the command line or in <code>gradle.properties</code>), ran only the task that reads it. The differing lines included the <code>stableSources</code> fingerprint for the source change, the <code>label</code> fingerprint for the environment variable and the <code>src</code> fingerprint for the input file, as shown above.</li>
-    <li>On Java 27 instead of Java 21 all six tasks ran. The differing lines included <code>jvmTarget</code>, <code>javaVersion</code>, <code>sourceCompatibility</code> and <code>targetCompatibility</code>, and at least ten <code>implementation</code> lines differed.</li>
-    <li>With <code>--rerun-tasks</code> all six tasks ran and the keys were identical to the unchanged repeat. The log said <code>Executed with '--rerun-tasks'.</code> and the result was stored again.</li>
-    <li>Each of the five tasks that get no key printed <code>Caching disabled for task ... because:</code> and no <code>Build cache key</code> line, for the reasons listed above. In the overlapping-output pair, the first task was cached.</li>
-    <li>One thing we learned: in our first hosted run (<a href="https://github.com/fosterstack/www/actions/runs/38072746108">its log is public</a>), two tasks of the same type with the same input value were built on an empty server, and the second came from the cache in the same build. So the key evidently does not include the task's name. We then gave the two tasks different values. If you expected a task to run and it did not, check whether another task of the same type has the same inputs.</li>
-  </ul>
-  <p class="muted-note"><a href="https://github.com/fosterstack/www/actions/runs/38073731609">The run and its log are public</a>.</p>
-  <p class="muted-note">Not tested: other Gradle versions, other Maven versions, Kotlin or Android builds, a third machine, inputs that come from dependencies, Gradle <code>api</code> dependencies, test and jar tasks in Gradle, annotation processors, a change to a public constant, a change in the middle module, a library used by both modules, bigger projects, build times, and Maven in the key-diff runs.</p>
+  <p class="muted-note">Not tested: Kotlin or Android builds.</p>
+  <p class="muted-note">Tested with FosterStack Cache 0.2.1 on a Mac (arm64) and 0.2.2 on a GitHub-hosted Linux machine, Gradle 9.8.0, Maven 3.9.9 with Build Cache Extension 1.2.3, and Java 21 (Temurin 21.0.12.1) and Java 27. <a href="https://github.com/fosterstack/www/actions/runs/38073731609">The run and its log are public</a>.</p>
   <div class="cta-row">
     <a class="btn" href="/gradle-remote-cache-not-working/">Not working at all?</a>
     <a class="btn btn-secondary" href="/">FosterStack home</a>

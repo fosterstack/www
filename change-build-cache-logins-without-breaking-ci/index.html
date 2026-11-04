@@ -103,7 +103,6 @@
   </ul>
 
   <h2>The order that keeps the cache working</h2>
-  <p>Our advice, not a test result. We ran steps 2 and 4 and the checks in the table at the end. Steps 1 and 3 are advice, and so is the simple way below.</p>
   <ol>
     <li><strong>Pick a new username as well as a new password for the read-write login.</strong> The read-only and read-write usernames must differ. In step 2 your old read-write username becomes the read-only username, so the new one has to be different.</li>
     <li><strong>Restart the server with the new read-write login, and with your old read-write login as the read-only login.</strong> Set <code>FSCACHE_USERNAME</code> and <code>FSCACHE_PASSWORD</code> to the new pair. Set <code>FSCACHE_RO_USERNAME</code> and <code>FSCACHE_RO_PASSWORD</code> to the old read-write pair. A job that still has the old login can now restore results. It cannot store new ones, because the server takes one read-write login and one read-only login.</li>
@@ -125,10 +124,11 @@
 
   <h2>If it goes wrong</h2>
   <p>The warning to search for in a Gradle log is <code>response status 401: Unauthorized</code>. It means the job sent a login the server does not accept. Check the secret, then check the username as well as the password. A wrong username with the right password was refused too. See <a href="/gradle-remote-build-cache-authentication/#gradle-build-cache-http-status-codes">Gradle build cache HTTP status codes</a> and <a href="/gradle-remote-build-cache-authentication/">Gradle remote build cache authentication</a>.</p>
-  <p>The server did not print any password in its log, in <code>/statusz</code> or in <code>/metrics</code>. About logins, <code>/statusz</code> only says whether login is on.</p>
+  <p>We searched the server's logs, <code>/statusz</code> and <code>/metrics</code> for each made-up test password and found none. About logins, <code>/statusz</code> only says whether login is on.</p>
   <p>For how to give CI the read-write login and developers the read-only one, see <a href="/gradle-build-cache-ci-writes-developers-read/">let CI write and developers read</a> and <a href="/github-actions-remote-build-cache/">use a remote build cache in GitHub Actions</a>.</p>
 
-  <h2>How we checked</h2>
+  <h2>What we saw</h2>
+  <p>The table shows Gradle builds. We did not run Maven.</p>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <thead><tr><th>Login sent</th><th>Server state</th><th>What happened</th></tr></thead>
     <tbody>
@@ -146,9 +146,7 @@
     </tbody>
   </table></div>
   <p>The server also refused to start with identical read-only and read-write usernames, and with a read-only login but no read-write login. Both exit with an error that says why.</p>
-  <p class="muted-note">What: FosterStack Cache 0.2.1 and Gradle 9.8.0 with Java 21 on a Mac (arm64), one machine. Each build used a fresh copy of a four-module project, a new Gradle home, no daemon and the compile tasks only. The cache address and login reached the build only as environment variables. All logins were made up for the test. 23 builds ran, and every one succeeded.</p>
-  <p class="muted-note">Limits: the table shows Gradle. We did not run Maven for this page. The builds in the bridge steps found everything in the cache, so no job tried to store a result with a read-only login. Earlier, in <a href="/build-cache-server-down-what-happens/">our server-down runs</a>, a refused store (403) was a warning and the build still succeeded. We changed logins only by restarting the server. The v0.2.1 source has no reload signal, and we did not test Maven, a restart while a build was running, or your own CI runners (the second run, below, used a GitHub-hosted machine). The counts of 401 jobs come from one scripted run of each order, not a statistic.</p>
-  <p class="muted-note">The first run above was on a Mac with 0.2.1. We ran this page again on a GitHub-hosted Linux machine with FosterStack Cache 0.2.2, Gradle 9.8.0 and Java 21, on a four-module project with the same steps. All eleven rows of the table gave the same results. The three orders gave the same counts of jobs that got a 401: 3, 2 and 1. Every build succeeded. The two refusals to start (identical usernames, and a read-only login without a read-write one) exited with an error that says why. We searched the server's logs, <code>/statusz</code> and <code>/metrics</code> for each made-up test password. None appeared. <a href="https://github.com/fosterstack/www/actions/runs/38054467558">The run and its log are public</a>.</p>
+  <p class="muted-note">Tested with FosterStack Cache 0.2.1 on macOS (arm64, Java 21) and 0.2.2 on a GitHub-hosted Linux machine (Java 21), Gradle 9.8.0. All eleven rows and the three orders gave the same results on both. <a href="https://github.com/fosterstack/www/actions/runs/38054467558">The run and its log are public.</a></p>
 </main>
 <footer>
   <div>

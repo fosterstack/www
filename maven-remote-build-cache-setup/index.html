@@ -180,7 +180,7 @@ mvn package
     <li><code>-Dmaven.build.cache.remote.enabled=false</code> stops all contact with the server.</li>
     <li><code>-Dmaven.build.cache.remote.save.enabled=false</code> lets the build download but never upload.</li>
   </ul>
-  <p><strong>Our advice, not a test result:</strong> which one to use.</p>
+  <p>We recommend this for choosing one:</p>
   <ul class="trust">
     <li><strong>A suspect build:</strong> <code>enabled=false</code> rules the cache out completely.</li>
     <li><strong>Make sure you build fresh:</strong> <code>skipCache=true</code>, for example for a release build.</li>
@@ -232,30 +232,17 @@ buildCache {
   &lt;/servers&gt;
 &lt;/settings&gt;</code></pre>
 
-  <h2>How we checked</h2>
-  <p><strong>Timed run.</strong> We followed steps 1 to 4 in a new project on a GitHub-hosted machine, with release 0.2.2, Maven 3.10.0, extension 1.2.3 and Java 21. The two builds took 11.8 seconds with an empty <code>~/.m2</code> and 8.8 seconds with one that had built before. Writing the three files took milliseconds. A runner times commands, not people, so the ten minutes is mostly editing and choosing. <a href="https://github.com/fosterstack/www/actions/runs/38032103243">The run and its log are public</a>, and the script is <a href="/bin/bench-setup-pages.sh">bin/bench-setup-pages.sh</a>.</p>
-  <p><strong>Setup run (step 4).</strong> Maven 3.10.0, extension 1.2.3, a 0.2.1 server and a one-file project, as described in step 4.</p>
-  <p><strong>Switch run.</strong> A small Maven project with the extension set up as described in steps 1 to 3. Every build used a fresh copy of the project and an empty local build cache, so the only shared thing was the server. All seven builds ended with <code>BUILD SUCCESS</code>. Maven 3.10.0, maven-build-cache-extension 1.2.3 and FosterStack Cache 0.2.1, macOS (arm64).</p>
-  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
-    <thead><tr><th>Build</th><th>Added to the command</th><th>Result</th></tr></thead>
-    <tbody>
-      <tr><td>1</td><td>nothing (empty server)</td><td>Compiled, and saved the result to the server</td></tr>
-      <tr><td>2</td><td>nothing (another machine)</td><td>Restored from the cache, no compile</td></tr>
-      <tr><td>3</td><td><code>-Dmaven.build.cache.enabled=false</code></td><td>Compiled. The cache was off</td></tr>
-      <tr><td>4</td><td><code>-Dmaven.build.cache.skipCache=true</code></td><td>Compiled, although a result was stored</td></tr>
-      <tr><td>5</td><td><code>-Dmaven.build.cache.remote.enabled=false</code></td><td>Compiled. It did not ask the server at all</td></tr>
-      <tr><td>6</td><td><code>-Dmaven.build.cache.remote.save.enabled=false</code> (empty server)</td><td>Compiled. The server still had 0 entries</td></tr>
-      <tr><td>7</td><td>same as 6, again</td><td>Compiled again, because nothing was ever stored</td></tr>
-    </tbody>
-  </table></div>
-  <p>What Maven prints for the first two switches:</p>
+  <h2>What the switches print</h2>
+  <p>Maven prints this for the first two switches:</p>
 <pre tabindex="0"><code>enabled=false:
 [INFO] Cache disabled by command line flag, project will be built fully and not cached
 
 skipCache=true:
 [INFO] Project demo:demo is marked as requiring force rebuild, will skip lookup in build cache</code></pre>
-  <p>In our run, with <code>remote.enabled=false</code> there was no download attempt in the log. With <code>remote.save.enabled=false</code> the build still looked in the server, found nothing, and built locally.</p>
-  <p><strong>Mixed run.</strong> A repository with a Gradle app and a Maven app, both pointed at one 0.2.1 server, on Gradle 9.8.0, Maven 3.10.0 and extension 1.2.3. Each app was built twice. For Gradle, we ran <code>gradle clean</code> in between. For Maven, we deleted <code>target</code> and the extension's local cache folder, so the only copy left was on the server. (We also turned Gradle's local cache off.)</p>
+  <p>With <code>remote.enabled=false</code> there is no download attempt in the log. With <code>remote.save.enabled=false</code> the build still looks in the server, finds nothing, and builds locally.</p>
+
+  <h2>What the server held</h2>
+  <p>We built a Gradle app and a Maven app against one server, each twice. Between the two builds we cleared the local copies, so the second build came from the server. The counts are the server's own, from its status page:</p>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <tr><th>Build</th><th>Result</th><th>Server afterwards</th></tr>
     <tr><td>Gradle, first</td><td><code>:compileJava</code> ran</td><td>1 entry</td></tr>
@@ -263,21 +250,20 @@ skipCache=true:
     <tr><td>Maven, first</td><td>built, then three lines of <code>Saved to remote cache</code></td><td>4 entries in all</td></tr>
     <tr><td>Maven, second</td><td><code>Found cached build, restoring demo:maven-app from cache</code></td><td>3 hits in all</td></tr>
   </table></div>
-  <p>The counts are the server's own, from its status page. Gradle stores its work under keys of a single long hex number. The Maven extension stores its files under a path. Here is what the server held on disk afterwards:</p>
+  <p>Gradle stores its work under keys of a single long hex number. The Maven extension stores its files under a path. Here is what the server held on disk afterwards:</p>
   <pre tabindex="0"><code>blobs/8a/8a2fb682ab19c1d434fd2d1ee3e8b27a                              (Gradle)
 blobs/v1.1/demo/maven-app/3aa3eaca44f8d0fa/ma/maven-app.jar            (Maven)
 blobs/v1.1/demo/maven-app/3aa3eaca44f8d0fa/bu/buildinfo.xml            (Maven)
 blobs/v1.1/demo/maven-app/e17172d0-.../bu/build-cache-report.xml       (Maven)
 blobs/v1.1/demo/maven-app/14c158a7-.../bu/build-cache-report.xml       (Maven)</code></pre>
   <p>They sit side by side in one store, under one size cap, watched by one set of metrics. See <a href="/build-cache-server-sizing/">server sizing</a> and <a href="/is-the-build-cache-server-healthy-what-to-alert-on/#monitor-build-cache-prometheus-grafana">monitoring</a>.</p>
-  <p class="muted-note">Not tested: anything about speed (the apps in the mixed run are tiny, and the point was that one server handled both tools), and, in the mixed run, Gradle, Maven or extension versions other than those named above.</p>
-
   <p class="muted-note">Mixed Gradle and Maven shop? Both can use the same server: see <a href="#one-build-cache-server-gradle-and-maven">one server for Gradle and Maven</a>, <a href="/migrate-build-cache-node/">Gradle and Maven setup</a> and the <a href="/first-15-minutes-build-cache/#gradle-build-cache-tutorial">Gradle build cache tutorial</a>. For CI runners, see <a href="/jenkins-ci-build-cache/">Jenkins and CI build cache</a>.</p>
   <div class="cta-row">
     <a class="btn" href="/migrate-build-cache-node/">Gradle and Maven setup</a>
     <a class="btn btn-secondary" href="/">FosterStack home</a>
   </div>
   <p class="muted-note">Moving off the free Build Cache Node? See <a href="/build-cache-node-end-of-life/">what the end of life means</a> and the <a href="/migrate-build-cache-node/">migration guide</a>.</p>
+  <p class="muted-note">Tested with FosterStack Cache 0.2.1 on macOS (arm64) and 0.2.2 on a GitHub-hosted machine (Java 21), Maven 3.10.0 (and 3.9.9 for the cache-miss message), Build Cache Extension 1.2.3, Gradle 9.8.0. <a href="https://github.com/fosterstack/www/actions/runs/38032103243">The run and its log are public</a>.</p>
 </main>
 <footer>
   <div>

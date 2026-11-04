@@ -104,7 +104,7 @@
   <p>Send the report, not a patch. Please do not post details publicly before a fix ships.</p>
 
   <h2>Kept patched</h2>
-  <p>We keep FosterStack Cache patched. Vulnerable dependencies fixed fast — our target is 48 hours from disclosure (<a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md">the scope is in SECURITY.md</a>). Security patches are never withheld from the free tier: the same fix ships to everyone on the same day.</p>
+  <p>We keep FosterStack Cache patched. Vulnerable dependencies fixed fast — our target is 48 hours from disclosure (<a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md">the scope is in our security policy</a>). Security patches are never withheld from the free tier: the same fix ships to everyone on the same day.</p>
 
   <h2 id="long-term-support-build-cache">Which version gets fixes</h2>
   <p>"LTS" means a version that keeps getting fixes, so you can stay on it. Today the supported version is the latest minor release: there is no list of older versions that get fixes.</p>
@@ -124,7 +124,7 @@
     <li>A VEX file saying which known vulnerabilities do and do not affect the release.</li>
     <li>A <code>release-manifest.json</code> listing every file and its digest.</li>
   </ul>
-  <p>The commands are under "Verifying a release" in <a href="https://github.com/fosterstack/cache/blob/main/RELEASING.md">RELEASING.md</a>. See also <a href="/how-we-build/">how we build</a>.</p>
+  <p>The commands are under "Verifying a release" in <a href="https://github.com/fosterstack/cache/blob/main/RELEASING.md">the release process</a>. See also <a href="/how-we-build/">how we build</a>.</p>
   <p>The current release's images are scanned again every day, so a vulnerability disclosed against something we already shipped raises an issue.</p>
 
   <h2>What the server does with your data</h2>
@@ -134,7 +134,6 @@
   <h2>What we do not claim</h2>
   <ul class="trust">
     <li>The server has a read-write login and an optional read-only login. There is no per-person identity.</li>
-    <li>The paid tiers are not built.</li>
     <li>We do not promise a date for any release or any support period.</li>
   </ul>
 

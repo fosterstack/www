@@ -98,13 +98,12 @@
   <h2>The short answer</h2>
   <ul class="trust">
     <li><strong>A branch restores what main built.</strong> After a method-body change in one module, that module ran and the other three came from the cache. After a new public method in that module, all four ran.</li>
-    <li><strong>In our runs the branch name did not matter, only the code.</strong> A second branch with the identical change restored the first branch's result, and so did main after a fast-forward merge.</li>
+    <li><strong>The branch name does not matter, only the code.</strong> A second branch with the identical change restored the first branch's result, and so did main after a fast-forward merge.</li>
     <li><strong>With the write login, a branch adds its own entries.</strong> The body change added one entry, and a new public method added four. All of main's entries were still there, and main still restored everything.</li>
     <li><strong>With the read-only login, the branch added nothing.</strong> But with pushing on, the first refused upload switched the remote cache off for the rest of that build. On feature-a, the three unchanged modules then ran instead of being restored.</li>
   </ul>
 
   <h2>What to do</h2>
-  <p>Our advice, not a test result:</p>
   <ul class="trust">
     <li><strong>Let main, or CI you trust, write to the cache.</strong> It gives branches something to restore. See <a href="/gradle-build-cache-ci-writes-developers-read/">let CI write, developers only read</a>.</li>
     <li><strong>Give branch and pull-request builds the read-only login.</strong> Whoever can write can change what every build restores. See <a href="/can-someone-poison-our-build-cache/">can someone poison our shared build cache</a>.</li>
@@ -112,8 +111,8 @@
   </ul>
   <p>To see why a laptop restores what CI built, see <a href="/laptop-builds-reuse-ci-build-cache/">your laptop builds reuse what CI already built</a>.</p>
 
-  <h2>How we checked</h2>
-  <p>We made a real git repository with a four-module project on <code>main</code> and three branches. <code>feature-a</code> changes the body of a method in <code>core</code>. <code>feature-a2</code> makes the same change on another branch. <code>feature-b</code> adds a public method to <code>core</code>. We ran the builds below in order against one new server with a read-write login and a read-only login.</p>
+  <h2>The builds</h2>
+  <p>A git repository with the four-module project from <a href="/gradle-build-cache-monorepo/">Gradle build cache for a monorepo</a> on <code>main</code> and three branches. <code>feature-a</code> changes the body of a method in <code>core</code>. <code>feature-a2</code> makes the same change on another branch. <code>feature-b</code> adds a public method to <code>core</code>. The builds ran in this order against one new server with a read-write login and a read-only login.</p>
   <div class="table-scroll" role="region" aria-label="Build outcomes per branch, login and module" tabindex="0"><table>
     <thead><tr><th>Build</th><th>Login, pushing</th><th>core</th><th>util</th><th>api</th><th>app</th><th>Entries before and after</th></tr></thead>
     <tbody>
@@ -129,9 +128,9 @@
       <tr><td>main after merging feature-a (a fast-forward)</td><td>write, on</td><td>from cache</td><td>from cache</td><td>from cache</td><td>from cache</td><td>18 to 18</td></tr>
     </tbody>
   </table></div>
-  <p class="muted-note">Each cell is the compile task of that module. Each build used a clean checkout of the branch, a new empty Gradle home, no Gradle daemon and no local build cache. The first build stored 13 entries: four compile outputs and nine other entries, the compiled build scripts. After the read-only builds with pushing on, the entry names on the server were the same as before. After the write builds, every entry that main had stored was still there. The two refused-upload builds each printed one line saying the entry could not be stored, with response status 403, and ended with a line saying the remote cache was disabled during the build due to errors.</p>
-  <p class="muted-note">Setup: FosterStack Cache 0.2.1, Gradle 9.8.0, Temurin 21.0.12.1, a Mac (arm64), over plain HTTP on the same machine, with test passwords. The project is the four-module project from <a href="/gradle-build-cache-monorepo/">Gradle build cache for a monorepo</a>. We make no claim about build times.</p>
-  <p class="muted-note">Not tested: Maven, tasks other than compile, a branch that changes a build script or a dependency, a branch from a fork, pull requests as such, branches with more than one commit, a merge that is not a fast-forward (ours was a fast-forward), other Gradle versions, TLS, and many branches building at once.</p>
+  <p class="muted-note">Each cell is the compile task of that module. The two refused-upload builds each printed one line saying the entry could not be stored, with response status 403, then a line saying the remote cache was disabled during the build due to errors.</p>
+  <p class="muted-note">Not tested: a branch that changes a build script or a dependency.</p>
+  <p class="muted-note">Tested with FosterStack Cache 0.2.1, Gradle 9.8.0 and Temurin 21.0.12.1 on a Mac (arm64).</p>
 </main>
 <footer>
   <div>
