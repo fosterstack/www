@@ -23,6 +23,16 @@ pass=0; fail=0
 export GIT_AUTHOR_NAME=t GIT_AUTHOR_EMAIL=t@t GIT_COMMITTER_NAME=t GIT_COMMITTER_EMAIL=t@t   # identity by environment: the test writes no git configuration
 work="$(mktemp -d)"; trap 'rm -rf "$work"' EXIT
 
+# the rest of the step and of its trigger, read from the file: a missing line would turn the check off while every case below still passes
+step_has() {   # <description> <exact line of the step>
+  if printf '%s\n' "$lint_step" | grep -qxF -- "$2"; then echo "ok:   workflow $1"; pass=$((pass+1)); else echo "FAIL: workflow $1 (the line '${2# *}' is not in the step)"; fail=$((fail+1)); fi
+}
+step_has "step runs only on a pull_request" "        if: github.event_name == 'pull_request'"
+step_has "step gets the title through env" "          PR_TITLE: \${{ github.event.pull_request.title }}"
+step_has "step gets the body through env" "          PR_BODY: \${{ github.event.pull_request.body }}"
+if printf '%s\n' "$lint_run" | grep -qF '${{'; then echo "FAIL: workflow run line interpolates an expression"; fail=$((fail+1)); else echo "ok:   workflow run line interpolates no expression"; pass=$((pass+1)); fi
+if awk '/^  pull_request:/{s=1;next} s&&/^  [A-Za-z]/{s=0} s' "$CI_YML" | grep -qE '^    types: \[.*\bedited\b.*\]'; then echo "ok:   workflow pull_request types include edited"; pass=$((pass+1)); else echo "FAIL: workflow pull_request types do not include edited"; fail=$((fail+1)); fi
+
 # mk <old-path-or-"-"> <old-content> <new-path> <new-content>: base commit with the old file, then the PR commit.
 mk() {
   rm -rf "$work/r"; mkdir "$work/r"; cd "$work/r" || exit 2
@@ -87,6 +97,27 @@ rm -rf "$work/r"; mkdir -p "$work/r/.github/policy"; cd "$work/r" || exit 2; git
 printf '# header\n' > .github/policy/customer-words-allow.txt; printf 'fine\n' > README.md; ln -s README.md index.html
 git add -A && git commit -qm base; rm index.html; printf '<p>owner</p>\n' > index.html; git add -A && git commit -qm pr
 check 1 "T5 a symlink replaced by a page holding owner fails"
+# T5b a symlink at a customer file: git hands the check the link's target NAME, never the target's lines, so it exits 2
+# lnk <old-link-path-or-"-"> <new-link-path> <target-path> [old-target-path]: the target holds "fine" in the base commit and "owner" in the PR commit;
+# an old link path points at old-target-path (default: the target) in the base commit
+lnk() {
+  rm -rf "$work/r"; mkdir -p "$work/r/.github/policy"; cd "$work/r" || exit 2; git init -q
+  printf '# header\n' > .github/policy/customer-words-allow.txt
+  mkdir -p "$(dirname "$3")" "$(dirname "$2")"; printf 'fine\n' > "$3"
+  if [ "$1" = - ]; then printf 'fine\n' > "$2"; else mkdir -p "$(dirname "${4:-$3}")"; printf 'fine\n' > "${4:-$3}"; ln -s "$(realpath -m --relative-to="$(dirname "$1")" "${4:-$3}")" "$1"; fi
+  git add -A && git commit -qm base
+  if [ "$1" != - ]; then git rm -q "$1"; fi
+  mkdir -p "$(dirname "$2")"; rm -f "$2"; ln -s "$(realpath -m --relative-to="$(dirname "$2")" "$3")" "$2"
+  printf 'owner\n' >> "$3"; git add -A && git commit -qm pr
+}
+lnk - .well-known/security.txt bin/proof-pages.txt; check 2 "T5b a page replaced by a link to a file under bin/ exits 2" 'symbolic link at a customer file: \.well-known/security\.txt'
+lnk - x/index.html bin/proof-pages.txt;             check 2 "T5b a new page that is a link exits 2" 'symbolic link at a customer file: x/index\.html'
+lnk .well-known/security.txt .well-known/security.txt bin/other.txt bin/old.txt; check 2 "T5b a covered link retargeted exits 2" 'symbolic link at a customer file'
+lnk - bin/x.txt bin/proof-pages.txt;                check 0 "T5b a link under bin/ passes"
+rm -rf "$work/r"; mkdir -p "$work/r/.github/policy"; cd "$work/r" || exit 2; git init -q
+printf '# header\n' > .github/policy/customer-words-allow.txt; printf 'fine\n' > a.txt; ln -s a.txt index.html
+git add -A && git commit -qm base; git rm -q index.html; git commit -qm pr
+check 0 "T5b deleting a covered link passes"
 mk docs/a.md $'x\n' docs/a.md $'the owner\n'; git rm -q docs/a.md; git commit -qm rm; check 0 "T5 deleting a page passes"
 mk docs/a.md $'the owner\n' docs/b.md $'fine\n';                       check 0 "T5 a page with owner deleted and a clean one added passes"
 mk docs/a.md $'x\n' docs/b.md $'the owner\n';                          check 1 "T5 deleting one page and adding another with owner fails"
@@ -127,13 +158,13 @@ printf '# header\nREADME.md|Fix the file owner or mode\n' > .github/policy/custo
 check 0 "T7 leading and trailing whitespace is trimmed"
 for bad in 'README.md|' 'owner' 'docs/*.md|owner' 'docs/a.md?|owner' '|owner'; do
   mk - "" README.md $'fine\n'; printf '%s\n' "$bad" > .github/policy/customer-words-allow.txt
-  check 2 "T7 malformed allowlist line '$bad' exits 2"
+  check 2 "T7 malformed allowlist line '$bad' exits 2" 'malformed allowlist line' ':1:' 
 done
 # T8 the PR title and body
 mk - "" README.md $'fine\n'; PR_TITLE="the lane fix" check 1 "T8 a title with lane fails" 'title'
 mk - "" README.md $'fine\n'; PR_BODY=$'one\nthe advisor said' check 1 "T8 a body with advisor fails" 'body'
 mk - "" README.md $'fine\n'; PR_BODY="" PR_TITLE="plain title" check 0 "T8 an empty body and a clean title pass"
-# T8b the edited-title workflow runs the script on empty input, with the title and body in the environment
+# T8b the title and body path alone: empty diff on stdin, title and body in the environment (an edited event pipes the full pull request diff again)
 cd "$ROOT" || exit 2
 out="$(PR_BODY="a lane here" python3 -I "$SCRIPT" < /dev/null 2>&1)"; rc=$?
 if [ "$rc" -eq 1 ] && printf '%s\n' "$out" | grep -q '^customer-words: body:'; then echo "ok:   T8b empty input and a body with lane exits 1 and names the body"; pass=$((pass+1)); else echo "FAIL: T8b empty input and a body with lane (rc=$rc)"; fail=$((fail+1)); fi
@@ -145,12 +176,12 @@ mk - "" docs/a.md $'owner\n'; printf 'a lane here\n' > docs/b.md; git add -A; gi
 git reset -q --soft HEAD~2; git commit -qm pr2
 check 1 "T9 two hits in two files exit 1 and both files are printed" 'docs/a.md' 'docs/b.md'
 cd "$ROOT" || exit 2
-printf 'not a diff at all\n+++ b/docs/a.md\n' | CUSTOMER_WORDS_ALLOW="$work/r/.github/policy/customer-words-allow.txt" python3 -I "$SCRIPT" >/dev/null 2>&1; rc=$?
-if [ "$rc" -eq 2 ]; then echo "ok:   T9 input that is not a diff exits 2"; pass=$((pass+1)); else echo "FAIL: T9 input that is not a diff exits 2 (rc=$rc)"; fail=$((fail+1)); fi
-printf 'diff --git a/docs/a.md b/docs/a.md\n+++ b/docs/a.md\n@@ -0,0 +1 @@\n+\377\n' | CUSTOMER_WORDS_ALLOW="$work/r/.github/policy/customer-words-allow.txt" python3 -I "$SCRIPT" >/dev/null 2>&1; rc=$?
-if [ "$rc" -eq 2 ]; then echo "ok:   T9 an invalid byte on stdin exits 2"; pass=$((pass+1)); else echo "FAIL: T9 an invalid byte on stdin exits 2 (rc=$rc)"; fail=$((fail+1)); fi
-printf '# header\n\377|owner\n' > "$work/bad-allow.txt"; : | CUSTOMER_WORDS_ALLOW="$work/bad-allow.txt" python3 -I "$SCRIPT" >/dev/null 2>&1; rc=$?
-if [ "$rc" -eq 2 ]; then echo "ok:   T9 an invalid byte in the allowlist exits 2"; pass=$((pass+1)); else echo "FAIL: T9 an invalid byte in the allowlist exits 2 (rc=$rc)"; fail=$((fail+1)); fi
+out="$(printf 'not a diff at all\n+++ b/docs/a.md\n' | CUSTOMER_WORDS_ALLOW="$work/r/.github/policy/customer-words-allow.txt" python3 -I "$SCRIPT" 2>&1)"; rc=$?
+if [ "$rc" -eq 2 ] && printf '%s\n' "$out" | grep -q 'not a git diff'; then echo "ok:   T9 input that is not a diff exits 2"; pass=$((pass+1)); else echo "FAIL: T9 input that is not a diff exits 2 (rc=$rc: $out)"; fail=$((fail+1)); fi
+out="$(printf 'diff --git a/docs/a.md b/docs/a.md\n+++ b/docs/a.md\n@@ -0,0 +1 @@\n+\377\n' | CUSTOMER_WORDS_ALLOW="$work/r/.github/policy/customer-words-allow.txt" python3 -I "$SCRIPT" 2>&1)"; rc=$?
+if [ "$rc" -eq 2 ] && printf '%s\n' "$out" | grep -q "codec can't decode byte"; then echo "ok:   T9 an invalid byte on stdin exits 2"; pass=$((pass+1)); else echo "FAIL: T9 an invalid byte on stdin exits 2 (rc=$rc: $out)"; fail=$((fail+1)); fi
+printf '# header\n\377|owner\n' > "$work/bad-allow.txt"; out="$(: | CUSTOMER_WORDS_ALLOW="$work/bad-allow.txt" python3 -I "$SCRIPT" 2>&1)"; rc=$?
+if [ "$rc" -eq 2 ] && printf '%s\n' "$out" | grep -q "codec can't decode byte"; then echo "ok:   T9 an invalid byte in the allowlist exits 2"; pass=$((pass+1)); else echo "FAIL: T9 an invalid byte in the allowlist exits 2 (rc=$rc: $out)"; fail=$((fail+1)); fi
 # the step's own command, under the shell the step uses: a base commit that does not exist must fail the step
 # GitHub runs `shell: bash` as bash --noprofile --norc -eo pipefail and a step with no shell line as plain bash -e
 if [ "$lint_shell" = "bash" ]; then step_shell=(bash --noprofile --norc -eo pipefail -c); else step_shell=(bash -e -c); fi

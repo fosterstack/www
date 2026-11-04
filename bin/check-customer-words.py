@@ -37,16 +37,20 @@ def load_allowlist(path):
 
 def main():
     allowed = load_allowlist(os.environ.get("CUSTOMER_WORDS_ALLOW", ".github/policy/customer-words-allow.txt"))
-    hits, path, in_header, saw_diff = [], None, False, False
+    hits, path, in_header, saw_diff, is_link = [], None, False, False, False
     data = sys.stdin.buffer.read().decode("utf-8")
     for raw in data.split("\n"):
         if raw.startswith("diff --git "):
-            saw_diff, path, in_header = True, None, True
+            saw_diff, path, in_header, is_link = True, None, True, False
+        elif in_header and (raw in ("new file mode 120000", "new mode 120000") or re.match(r"index [0-9a-f]+\.\.[0-9a-f]+ 120000$", raw)):
+            is_link = True   # a symbolic link: git shows its target name, not the lines a visitor would read
         elif in_header and raw.startswith("+++ "):
             if raw == "+++ /dev/null":
                 path = None   # a deleted file adds nothing
             elif raw.startswith("+++ b/"):
                 path = raw[6:].rstrip("\t")   # git ends a name that holds a space with a tab
+                if is_link and CUSTOMER_FILE.match(path):
+                    fail("symbolic link at a customer file: " + path)
             else:
                 fail("unreadable file name in the diff header: " + raw)
         elif raw.startswith("Binary files ") and not raw.endswith(" and /dev/null differ"):   # a deleted file adds nothing
