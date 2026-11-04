@@ -206,7 +206,7 @@ test("test_wb_11_resend_is_the_only_page_with_an_email_field", () => {
   const withField = pages.filter((p) => /<(input|textarea|form|select)\b/i.test(fs.readFileSync(p, "utf8"))).map((p) => path.relative(root, p));
   assert.deepEqual(withField, [path.join("resend-key", "index.html")]);
   const js = fs.readFileSync(path.join(root, "checkout.js"), "utf8");
-  assert.match(js, /ratified exception/i, "the code says why the one field exists");
+  assert.match(js, /one exception/i, "the code says why the one field exists");
 });
 
 test("test_sb_10_4_cancel_page_static", () => {
