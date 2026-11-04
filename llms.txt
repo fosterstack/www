@@ -60,7 +60,7 @@ verifiable against the CI run that produced them.
 - [Maven build cache extension not restoring: the causes](https://fosterstack.com/maven-build-cache-extension-not-restoring/): Maven build cache extension builds again instead of restoring from the remote? Causes with real log lines: config placement, saveToRemote, 401 and the local cache.
 - [How big a build cache server? CPU, RAM, disk and load](https://fosterstack.com/build-cache-server-sizing/): CPU, RAM, disk and the size cap.
 - [Air-gapped install](https://fosterstack.com/air-gapped-build-cache-install/): download, verify, transfer, run.
-- [What changes in v0.3.0 (draft)](https://fosterstack.com/whats-new-fosterstack-cache-v0-3-0/): what to check before you upgrade.
+- [What changes in v0.3.0](https://fosterstack.com/whats-new-fosterstack-cache-v0-3-0/): what to check before you upgrade.
 - [Everything FosterStack does for security](https://fosterstack.com/everything-we-do-for-security/): every security practice that runs, one line each, with where to check it.
 - [Scanning FosterStack in your compliance pipeline](https://fosterstack.com/scan-fosterstack-cache-image/): what to expect when you scan the image and how to apply our VEX statements.
 - [Guides](https://fosterstack.com/guides/): every guide, grouped by topic.

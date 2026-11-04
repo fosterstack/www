@@ -1,7 +1,6 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta name="robots" content="noindex, nofollow">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Can Someone Poison Our Shared Build Cache?</title>
@@ -95,7 +94,6 @@
 <main>
   <h1>Can someone poison our shared build cache?</h1>
   <p class="lede">Anyone who holds the write login can change what every other build restores. FosterStack Cache does not stop that holder. It lets you give everyone else a read-only login, and in our runs the server refused their writes.</p>
-  <p class="muted-note"><strong>DRAFT for v0.3, private preview, not published and never merged before v0.3.0 is live.</strong></p>
 
   <h2>The short answer</h2>
   <p>The server has two logins. The write login lets a client store and replace entries. The read-only login lets a client only read them.</p>

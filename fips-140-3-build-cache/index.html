@@ -1,7 +1,6 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta name="robots" content="noindex, nofollow">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>FIPS 140-3 build cache: run the FIPS image and confirm it</title>
@@ -94,7 +93,6 @@
 <main>
   <h1>FIPS 140-3 build cache: run the FIPS image and confirm it</h1>
   <p class="lede">Your contract asks for FIPS-validated cryptography, and you have to show what your build cache actually runs. FosterStack Cache has a FIPS build that uses Go's validated FIPS 140-3 cryptographic module. This page shows how to run it and how to see for yourself that it is in FIPS mode. The outputs below are from the real 0.2.2 images.</p>
-  <p class="muted-note"><strong>DRAFT for v0.3, private preview, not published and never merged before v0.3.0 is live.</strong></p>
 
   <h2>What the FIPS build is</h2>
   <p>It is the same source as the production build, compiled so that it uses Go's validated FIPS 140-3 module (CMVP certificate #5247). It is available as a container image tag ending in <code>-fips</code>, and as Linux binaries for amd64 and arm64, named <code>fscache-fips_X.Y.Z_linux_amd64.tar.gz</code> and <code>fscache-fips_X.Y.Z_linux_arm64.tar.gz</code>. The FIPS image has no shell. There is no macOS FIPS build.</p>

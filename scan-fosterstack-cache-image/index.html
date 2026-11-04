@@ -1,13 +1,12 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta name="robots" content="noindex, nofollow">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Scanning FosterStack in your compliance pipeline</title>
-<meta name="description" content="DRAFT v0.3.0, not published: what to expect when you scan the FosterStack Cache image, and how to apply our published VEX statements in your scanner.">
+<meta name="description" content="What to expect when you scan the FosterStack Cache image, and how to apply our published VEX statements in your scanner.">
 <meta property="og:title" content="Scanning FosterStack in your compliance pipeline">
-<meta property="og:description" content="DRAFT v0.3.0, not published: what to expect when you scan the FosterStack Cache image, and how to apply our published VEX statements in your scanner.">
+<meta property="og:description" content="What to expect when you scan the FosterStack Cache image, and how to apply our published VEX statements in your scanner.">
 <meta property="og:url" content="https://fosterstack.com/scan-fosterstack-cache-image/">
 <meta property="og:type" content="website">
 <meta property="og:image" content="https://fosterstack.com/og-image.png">
@@ -96,7 +95,6 @@
 </header>
 <main>
   <h1>Scanning FosterStack in your compliance pipeline</h1>
-  <p class="muted-note"><strong>DRAFT for v0.3, private preview, not published and never merged before v0.3.0 is live.</strong></p>
   <p class="lede">Every scanner in <a href="https://github.com/fosterstack/cache/blob/main/.github/policy/scanners.json">the repo's scanner list</a> runs against a snapshot build of every release, and the current release's images are rescanned daily; <a href="https://github.com/fosterstack/cache/blob/main/RELEASING.md"><code>RELEASING.md</code></a> states exactly what the release scan does and does not attach to. This page is about what to expect when <em>you</em> scan our image, since a minimal image scans differently from a typical distro image in ways that surprise people the first time.</p>
   <h2>What to expect</h2>
   <p><strong>The production and <code>-fips</code> images report as <code>debian</code> in scanner OS detection</strong>, even though there's no shell, no package manager, and no way to <code>apt-get</code> anything. Confirmed directly against a real build:</p>

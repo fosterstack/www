@@ -1,7 +1,6 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta name="robots" content="noindex, nofollow">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Gradle build cache on Kubernetes (no Helm chart yet)</title>
@@ -94,7 +93,6 @@
 <main>
   <h1>Gradle build cache on Kubernetes: plain manifests, no Helm chart yet</h1>
   <p class="lede">Run a shared build cache in your cluster with plain manifests: one Deployment, one volume, one Service. There is no Helm chart yet. It has not been through a beta on a production cluster, so treat it that way.</p>
-  <p class="muted-note"><strong>DRAFT for v0.3, private preview, not published and never merged before v0.3.0 is live.</strong></p>
 
   <h2>Is there a Helm chart?</h2>
   <p>Not yet. Today the supported way to deploy on Kubernetes is the plain manifests in the <a href="https://github.com/fosterstack/cache/blob/main/docs/kubernetes.md">Kubernetes guide</a>: a Secret, a volume claim, a Deployment and a Service. Copy them into one file and apply it with <code>kubectl apply -f</code>.</p>
