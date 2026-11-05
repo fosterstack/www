@@ -87,7 +87,11 @@ mk docs/a.md $'the owner\n' docs/a.md $'fine\n';                       check 0 "
 mk docs/a.md $'the owner\nx\n' docs/a.md $'the owner\ny\n';            check 0 "T5 an unchanged context line with owner passes"
 mk - "" bin/x.sh $'# owner\n';                                           check 0 "T5 owner added under bin/ passes"
 mk - "" bin/proof-pages.txt $'owner\n';                                 check 0 "T5 owner added in a .txt under bin/ passes"
-mk - "" .github/workflows/x.yml $'# owner\n';                           check 0 "T5 owner added in a workflow passes"
+mk - "" .github/workflows/x.yml $'# owner\n';                           check 1 "T5 owner added in a workflow fails"
+mk - "" .github/other/x.yml $'# owner\n';                              check 0 "T5 owner added in a .yml outside .github/workflows passes"
+mk - "" .github/workflows/sub/x.yml $'# owner\n';                      check 0 "T5 owner added in a nested folder of .github/workflows passes"
+mk - "" .github/workflows/x.yaml $'# the lane\n';                      check 1 "T5 a .yaml workflow with lane fails"
+mk - "" .github/workflows/x.yml $'# a plain comment\n';                check 0 "T5 a clean workflow line passes"
 mk - "" .github/policy/x.md $'owner\n';                              check 0 "T5 owner added under .github/policy passes"
 mk docs/a.md $'the owner\n' docs/b.md $'the owner\n';                  check 1 "T5 a moved page keeps its old lines checked"
 mk docs/a.md $'the owner\n' docs/b.md $'the owner\nmore\n';            check 1 "T5 a moved and edited page is checked whole"
@@ -167,6 +171,12 @@ mk - "" "docs/é.png" $'fine\n'; printf 'a\0' > "docs/é.png"; git commit -qam b
 check 2 "T6b a binary file with a non-ASCII name exits 2" 'binary change this check cannot read'
 mk - "" bin/x.bin $'fine\n'; printf 'a\0' > bin/x.bin; git commit -qam bin; git rm -q bin/x.bin; git commit -qm rm
 check 0 "T6b a deleted binary file passes"
+# T11 the real workflow files, added whole on an empty base, are clean (the exact-line allowlist excuses any listed line)
+rm -rf "$work/r"; mkdir -p "$work/r/.github/workflows" "$work/r/.github/policy"; cd "$work/r" || exit 2; git init -q
+printf '# header\n' > .github/policy/customer-words-allow.txt; git add -A && git commit -qm base
+cp "$ROOT"/.github/workflows/*.yml .github/workflows/; cp "$ROOT/.github/policy/customer-words-allow.txt" .github/policy/; git add -A && git commit -qm pr
+ALLOW=.github/policy/customer-words-allow.txt check 0 "T11 every real workflow file is clean when added whole"
+cd "$ROOT" || exit 2
 # T7 allowlist: exact path|line
 mk - "" README.md $'Fix the file owner or mode\n'
 printf '# header\nREADME.md|Fix the file owner or mode\n' > .github/policy/customer-words-allow.txt
