@@ -57,7 +57,7 @@ done
 add docs/verify-release.md "see [REQ-REL-001](release-notes.md#req-rel-001)" 0 "T3 a public requirement id (a link to the release notes) passes"
 add docs/a.md "ruler 9" 0 "T4 'ruler 9' passes"
 # T4b a word cannot hide behind an underscore, a digit or markup, and "rule N" survives extra white space
-for w in _owner_ '**owner**' the_owner owner2 'rule  9' $'rule\t9'; do
+for w in _owner_ '**owner**' the_owner owner2 'rule  9' $'rule\t9' _audits/ _ops#794 _SB-3; do
   add docs/a.md "text $w text" 1 "T4b added '$w' fails"
 done
 # T5 lines and files that must not count

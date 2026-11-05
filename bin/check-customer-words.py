@@ -10,7 +10,7 @@ import sys
 
 B, A = r"(?<![A-Za-z])", r"(?![A-Za-z])"   # letters only, so _owner_ and owner2 still match
 WORDS = B + r"(owners?|lanes?|orchestrators?|advisors?|handoffs?|ratif(y|ied|ies|ication))" + A
-REFS = r"docs/ratify|\bhandoffs?/|\baudits/|/srv/|lane-outbox|\bops#[0-9]+"
+REFS = r"docs/ratify|(?<![A-Za-z])handoffs?/|(?<![A-Za-z])audits/|/srv/|lane-outbox|(?<![A-Za-z])ops#[0-9]+"
 RULES = B + r"rules?\s+[0-9]+"
 IDS = B + r"(SB|HS|CR|MC)-[0-9]+"
 BANNED = re.compile("|".join("(?:%s)" % p for p in (WORDS, REFS, RULES, IDS)), re.I)
