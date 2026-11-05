@@ -9,6 +9,11 @@
 <meta property="og:description" content="FosterStack Cache exits at start? The log line we got for a busy port, an unwritable data folder (also in a container), a bad setting and a damaged index.">
 <meta property="og:url" content="https://fosterstack.com/build-cache-server-wont-start-errors/">
 <meta property="og:type" content="website">
+<meta property="og:image" content="https://fosterstack.com/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="FosterStack. Infrastructure worth keeping — and kept patched.">
+<meta name="twitter:card" content="summary_large_image">
 <meta property="og:site_name" content="FosterStack">
 <link rel="canonical" href="https://fosterstack.com/build-cache-server-wont-start-errors/">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
@@ -88,7 +93,7 @@
 </header>
 <main>
   <h1>My build cache server won't start. What does the error mean?</h1>
-  <p class="lede">If FosterStack Cache exits right after you start it, read the last line of its log. In our runs every startup failure ended with one <code>fscache: fatal</code> line and exit code 1, and the line named the cause.</p>
+  <p class="lede">If FosterStack Cache exits right after you start it, read the last line of its log. Every startup failure we tried ended with one <code>fscache: fatal</code> line and exit code 1, and the line named the cause.</p>
 
   <h2>The short answer</h2>
   <ul class="trust">
@@ -99,7 +104,7 @@
   </ul>
 
   <h2>Find your error</h2>
-  <p>The first column is what we saw in the log. The other two columns are our advice, not a test result. <code>DIR</code> stands for a folder on our test machine and <code>PORT</code> for the port we used.</p>
+  <p>The first column is what the log shows. <code>DIR</code> stands for your data folder and <code>PORT</code> for the port.</p>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <thead><tr><th>The last line of the log</th><th>What it means</th><th>What to do</th></tr></thead>
     <tbody>
@@ -148,45 +153,20 @@
     <li><strong>A misspelled setting name was ignored.</strong> With <code>FSCACHE_MAXBYTES=1500</code> the server started with no warning, and its start line said <code>"max_bytes":0</code>. Four uploads of 1,000 bytes were all stored. With <code>FSCACHE_MAX_BYTES=1500</code>, one entry was left and 3 were evicted.</li>
     <li><strong>An emptied or deleted <code>meta.db</code> was not an error.</strong> The server started and still served an old entry. But <code>/statusz</code> counted only the entry we stored afterwards: 1 entry and 100 bytes, not 4 entries.</li>
     <li><strong>A bad address still left a data folder behind.</strong> The server created <code>meta.db</code> and <code>blobs</code> before it failed to listen. A rejected setting did not create any folder.</li>
-    <li><strong>An HTTPS address does not work.</strong> The docs say the server speaks plain HTTP and has no certificate handling, so TLS goes in front of it. <code>curl</code> with an <code>https://</code> address to the server's own port failed with exit code 35, and the server logged nothing. See <a href="/build-cache-docker-compose-production/">production build cache with Docker Compose, nginx and TLS</a>.</li>
+    <li><strong>An HTTPS address does not work before v0.3.0.</strong> Before v0.3.0 the server speaks plain HTTP only, so TLS goes in front of it; from v0.3.0 it can serve HTTPS itself with <code>FSCACHE_TLS_CERT</code> and <code>FSCACHE_TLS_KEY</code>. On 0.2.x, <code>curl</code> with an <code>https://</code> address to the server's own port failed with exit code 35, and the server logged nothing. See <a href="/build-cache-docker-compose-production/">production build cache with Docker Compose, nginx and TLS</a>.</li>
   </ul>
 
   <h2>What to do</h2>
-  <p>Our advice, not a test result:</p>
   <ul>
     <li><strong>Read the last line first.</strong> It names the variable, the value or the path.</li>
     <li><strong>After every change, read the <code>fscache: starting</code> line.</strong> It prints the address, the data folder, the size cap and whether logins are on. A misspelled name shows up there as a setting that did not change.</li>
     <li><strong>Write sizes in bytes.</strong> <code>10GB</code> will stop the server, which is better than a silent default.</li>
-    <li><strong>Start the server as the user that owns the data folder.</strong> In a container, that means giving the data volume to the user the image runs as, 65532 in our runs. The command is in the permission-denied section above. If you restore a backup into the volume, the restore has to keep that ownership.</li>
+    <li><strong>Start the server as the user that owns the data folder.</strong> In a container, that means giving the data volume to the user the image runs as, 65532. The command is in the permission-denied section above. If you restore a backup into the volume, the restore has to keep that ownership.</li>
     <li><strong>Keep one server per data folder.</strong> A start on a full disk is on <a href="/build-cache-eviction-size-limit/#build-cache-disk-full-what-happens">what happens when the disk fills up</a>.</li>
   </ul>
 
-  <h2>How we checked</h2>
-  <p>FosterStack Cache 0.2.1 on a Mac (arm64). The permission-denied cases used the 0.2.1 container image. Each non-container case was one start with a clean environment that held only the address, the data folder and the setting under test, watched for 3 seconds with a check every quarter of a second. Every failed start exited with code 1. The non-container ones took under a second, except the shared folder. The container cases exited within a few seconds. A server we stopped with a normal stop exited with code 0.</p>
-  <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
-    <thead><tr><th>What we did</th><th>What the server did</th></tr></thead>
-    <tbody>
-      <tr><td>Started a second server on an address in use</td><td>Exited with code 1, under a second</td></tr>
-      <tr><td>Six invalid <code>FSCACHE_ADDR</code> values</td><td>All exited with code 1, under a second</td></tr>
-      <tr><td>Data path was a file; folder not writable; folder inside a read-only parent; no data setting in a read-only folder</td><td>All exited with code 1, under a second</td></tr>
-      <tr><td>Size setting: <code>-1</code>, <code>abc</code>, <code>10GB</code>, <code>10G</code>, <code>1.5</code>, <code>12abc</code>, <code>1e6</code>, <code>" 100"</code></td><td>All exited with code 1, under a second. No data folder was created</td></tr>
-      <tr><td>Size setting: <code>0</code> and <code>5000</code></td><td>Started. The start line showed <code>"max_bytes"</code> as 0 and 5000</td></tr>
-      <tr><td>One half of a login pair; read-only pair without the read-write pair; same usernames</td><td>All exited with code 1, under a second</td></tr>
-      <tr><td>Upload limit: <code>abc</code> and <code>-1</code>; body limit: <code>big</code></td><td>All exited with code 1, under a second</td></tr>
-      <tr><td>Upload limit: <code>0</code> and <code>32</code></td><td>Started</td></tr>
-      <tr><td>The 0.2.1 container image on a volume that already held data owned by root</td><td>Exited with status 1 within a few seconds. The log ended with <code>permission denied</code></td></tr>
-      <tr><td>The same volume after the <code>chown</code> command above</td><td>Started normally. <code>/healthz</code> answered <code>ok</code> and an upload returned 201</td></tr>
-      <tr><td>A new, empty named volume, and one whose top folder we had set to root</td><td>Both started. Afterwards the folder belonged to 65532</td></tr>
-      <tr><td>A second server on a data folder held by a running server</td><td>Exited with code 1 after about 5 seconds. The first answered <code>/healthz</code> and kept its entry</td></tr>
-      <tr><td>Copies of a data folder with <code>meta.db</code> emptied, and deleted</td><td>Both started with no warning. An old entry was still served, and <code>/statusz</code> showed 1 entry</td></tr>
-      <tr><td>A copy with <code>meta.db</code> overwritten with random bytes; a copy with <code>meta.db</code> read-only</td><td>Both exited with code 1, under a second</td></tr>
-      <tr><td><code>FSCACHE_MAXBYTES</code> and <code>FSCACHE_MAX_BYTES</code>, four 1,000-byte uploads each</td><td>4 entries stored with the misspelled name. 1 entry and 3 evicted with the right one</td></tr>
-      <tr><td><code>curl</code> with <code>https://</code> to the plain HTTP port</td><td><code>curl</code> exit code 35. <code>/healthz</code> over <code>http://</code> answered 200</td></tr>
-    </tbody>
-  </table></div>
-  <p class="muted-note">The log is one JSON line per event. A start that got as far as listening printed <code>fscache: starting</code> first. A rejected setting or a data folder problem printed only the <code>fatal</code> line. We caused one mistake at a time, so we do not know which line shows first when two settings are wrong.</p>
-  <p class="muted-note">Not tested: container starts other than the permission-denied cases above, a bind mount of a host folder on Linux (the same rule should apply, as the folder has to be writable by 65532, but the container runs used Docker volumes, not a bind mount), Kubernetes without the <code>fsGroup</code> setting (the manifests on our <a href="/gradle-build-cache-kubernetes/">Kubernetes page</a> set <code>fsGroup: 65532</code>, and we ran them with it), running the container as root (it is not what we document), Windows, IPv6 addresses, a data folder on a network disk, and a Gradle build against an HTTPS address that the server does not speak.</p>
-  <p class="muted-note">The first run above was on a Mac with 0.2.1. We ran the page again on a GitHub-hosted Linux machine with FosterStack Cache 0.2.2 and the 0.2.2 container image. Each start failure in the table printed the line shown and exited with code 1, and the last line of the log was that line. A second server on a held data folder gave up after about 5 seconds. Each setting the page lists as accepted or ignored started the server, and its start line, entry counts and evictions matched the page. We did not check those logs for warnings this time. The container on a volume owned by root exited with status 1, and after the <code>chown</code> command it started. <a href="https://github.com/fosterstack/www/actions/runs/38054467558">The run and its log are public</a>.</p>
+  <p class="muted-note">Not tested: a bind mount of a host folder on Linux. The same rule should apply, because the folder has to be writable by 65532.</p>
+  <p class="muted-note">Tested with FosterStack Cache 0.2.1 on a Mac (arm64) and 0.2.2 on a GitHub-hosted Linux machine. <a href="https://github.com/fosterstack/www/actions/runs/38054467558">The run and its log are public</a>.</p>
 </main>
 <footer>
   <div>

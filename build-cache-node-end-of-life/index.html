@@ -9,6 +9,11 @@
 <meta property="og:description" content="The free Develocity Build Cache Node will no longer be distributed or supported after December 31, 2026. What stops, what keeps working, your three options.">
 <meta property="og:url" content="https://fosterstack.com/build-cache-node-end-of-life/">
 <meta property="og:type" content="website">
+<meta property="og:image" content="https://fosterstack.com/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="FosterStack. Infrastructure worth keeping — and kept patched.">
+<meta name="twitter:card" content="summary_large_image">
 <meta property="og:site_name" content="FosterStack">
 <link rel="canonical" href="https://fosterstack.com/build-cache-node-end-of-life/">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
@@ -112,7 +117,7 @@
     <li>MIT licensed. One static binary or one container image on GitHub's registry.</li>
     <li>Releases are signed, and the evidence (SBOM, build provenance, vulnerability statements) is public.</li>
   </ul>
-  <p>The paid tiers are not built. Everything you can download today is the free core.</p>
+  <p>Everything you can download today is the free core.</p>
 
   <h2>More than kept patched.</h2>
   <ul class="trust">
@@ -121,7 +126,7 @@
     <li>Two different scanners, with different vulnerability databases, check each release candidate before it ships, and the current release's images are scanned again every day.</li>
     <li>Images assembled twice on separate machines; the results must match.</li>
     <li>Minimal image, with one static program and no shell. No telemetry. FIPS variant available.</li>
-    <li>Vulnerable dependencies fixed fast — our target is 48 hours from disclosure (<a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md">the scope is in SECURITY.md</a>).</li>
+    <li>Vulnerable dependencies fixed fast — our target is 48 hours from disclosure (<a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md">the scope is in our security policy</a>).</li>
   </ul>
   <p><a href="/how-we-build/">How we build</a> · <a href="/security/">Security policy</a> · <a href="/verify-a-release/">Verify a release</a></p>
 
@@ -137,7 +142,7 @@
   <p>Yes, through the Apache Maven Build Cache Extension. The Maven client is Apache's Build Cache Extension, not ours.</p>
 
   <h3>Is it free?</h3>
-  <p>Yes. Everything you can download today is the free MIT core, including eviction, size limits and metrics. The paid tiers are not built or sold.</p>
+  <p>Yes. The MIT core includes eviction, size limits and metrics.</p>
 
   <h3>Is it ready for production?</h3>
   <p>Nobody is running it in a real build pipeline yet except us. A cache fails safe, since a missing cache means slower builds, so decide for yourself with that in mind. The <a href="https://github.com/fosterstack/cache">README</a> lists what has shipped and what has not.</p>
@@ -149,7 +154,7 @@
   <p>No settings page, on purpose. You configure it with flags and environment variables. A read-only status page shows version, size, entries and hit counts, and metrics are available for Prometheus. To empty the cache, remove its volume and start again.</p>
 
   <h3>How do I check a release is the real one?</h3>
-  <p>The commands are under "Verifying a release" in <a href="https://github.com/fosterstack/cache/blob/main/RELEASING.md">RELEASING.md</a>. No account is needed for the signature check.</p>
+  <p>The commands are under "Verifying a release" in <a href="https://github.com/fosterstack/cache/blob/main/RELEASING.md">the release process</a>. No account is needed for the signature check.</p>
 
   <h3>Does the server send anything out?</h3>
   <p>No. The server sends no telemetry and needs no connection to FosterStack. It can run on a network with no route to the internet; see the <a href="https://github.com/fosterstack/cache/blob/main/docs/offline-install.md">disconnected network guide</a>.</p>

@@ -8,7 +8,7 @@ Fails (exit 1, one line per problem) on:
      redirect whose target page or #anchor does not exist, or a redirect whose source is a live page
   4. a mismatch between the sitemap, llms.txt and the home page's links to pages
   5. a <title> longer than 60 characters (or a page with none)
-  6. hidden pages (owner ratified Oct 22 2026): a page hidden from search (a robots or googlebot noindex tag, or an
+  6. hidden pages: a page hidden from search (a robots or googlebot noindex tag, or an
      X-Robots-Tag noindex rule in _headers) that is listed in the sitemap; and, for the live site only, any hidden
      page except 404.html. The second applies with --live, and by itself when GitHub says this run is for a pull
      request whose base is main (GITHUB_BASE_REF) or for main itself (GITHUB_REF), so a draft branch stays testable.
