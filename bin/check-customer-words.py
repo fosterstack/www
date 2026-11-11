@@ -3,6 +3,8 @@
 # Reads `git diff -U0 --no-renames --no-color HEAD^1 HEAD` on stdin; PR_TITLE and PR_BODY (env) are checked whole.
 # Exit 0 clean, 1 hits (every hit is printed), 2 any error (bad allowlist, bad text, input that is not a diff, a binary
 # change to a customer file or one it cannot read). Run as `python3 -I`.
+# Reads pages (.html .md .txt .svg .xml) outside bin/ and .github/, the PR template, .github/workflows/*.y(a)ml:
+# Read: .github/workflows/hygiene.yml. Not read: .github/policy/x.md.
 # An added line with a hit passes only if .github/policy/customer-words-allow.txt has the exact line `path|text`.
 import os
 import re
@@ -14,7 +16,10 @@ REFS = r"docs/ratify|(?<![A-Za-z])handoffs?/|(?<![A-Za-z])audits/|/srv/|lane-out
 RULES = B + r"rules?\s+[0-9]+"
 IDS = B + r"(SB|HS|CR|MC)-[0-9]+"
 BANNED = re.compile("|".join("(?:%s)" % p for p in (WORDS, REFS, RULES, IDS)), re.I)
-CUSTOMER_FILE = re.compile(r"^(?!bin/|\.github/(?!PULL_REQUEST_TEMPLATE\.md$)).*\.(html|md|txt|svg|xml)$")
+CUSTOMER_FILE = re.compile(
+    r"^(?!bin/|\.github/(?!PULL_REQUEST_TEMPLATE\.md$)).*\.(html|md|txt|svg|xml)$"
+    r"|^\.github/workflows/[^/]+\.ya?ml$"
+)
 
 
 def fail(msg):

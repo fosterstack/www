@@ -82,12 +82,16 @@ add docs/a.md "ruler 9" 0 "T4 'ruler 9' passes"
 for w in _owner_ '**owner**' the_owner owner2 'rule  9' $'rule\t9' _audits/ _ops#794 _SB-3; do
   add docs/a.md "text $w text" 1 "T4b added '$w' fails"
 done
-# T5 lines and files that must not count
+# T5 lines and files that must not count: removed or context lines, bin/, .github/ except the template and .yml/.yaml files directly under .github/workflows
 mk docs/a.md $'the owner\n' docs/a.md $'fine\n';                       check 0 "T5 a removed line with owner passes"
 mk docs/a.md $'the owner\nx\n' docs/a.md $'the owner\ny\n';            check 0 "T5 an unchanged context line with owner passes"
 mk - "" bin/x.sh $'# owner\n';                                           check 0 "T5 owner added under bin/ passes"
 mk - "" bin/proof-pages.txt $'owner\n';                                 check 0 "T5 owner added in a .txt under bin/ passes"
-mk - "" .github/workflows/x.yml $'# owner\n';                           check 0 "T5 owner added in a workflow passes"
+mk - "" .github/workflows/x.yml $'# owner\n';                           check 1 "T5 owner added in a workflow fails"
+mk - "" .github/other/x.yml $'# owner\n';                              check 0 "T5 owner added in a .yml outside .github/workflows passes"
+mk - "" .github/workflows/sub/x.yml $'# owner\n';                      check 0 "T5 owner added in a nested folder of .github/workflows passes"
+mk - "" .github/workflows/x.yaml $'# the lane\n';                      check 1 "T5 a .yaml workflow with lane fails"
+mk - "" .github/workflows/x.yml $'# a plain comment\n';                check 0 "T5 a clean workflow line passes"
 mk - "" .github/policy/x.md $'owner\n';                              check 0 "T5 owner added under .github/policy passes"
 mk docs/a.md $'the owner\n' docs/b.md $'the owner\n';                  check 1 "T5 a moved page keeps its old lines checked"
 mk docs/a.md $'the owner\n' docs/b.md $'the owner\nmore\n';            check 1 "T5 a moved and edited page is checked whole"
@@ -135,7 +139,7 @@ lndir some-page bin/pages-src;                  check 2 "T5b a new link some-pag
 lndir some-page bin/pages-src some-page/index.html; check 2 "T5b a page folder replaced by a link to a folder exits 2" 'symbolic link at a customer file: some-page$'
 lndir assets.json bin/pages-src;                check 2 "T5b a new link assets.json to a folder of pages exits 2" 'symbolic link at a customer file: assets\.json$'
 lndir bin/sub bin/sub-src;                      check 0 "T5b a link to a folder under bin/ passes"
-# a link at .github itself: only the PULL_REQUEST_TEMPLATE.md probe refuses it (the template is the one customer file in that folder)
+# a link at .github itself: only the PULL_REQUEST_TEMPLATE.md probe refuses it (x.md under .github/ is not a customer file, so the template probe is the one that matches)
 rm -rf "$work/r"; mkdir -p "$work/r/.github/policy" "$work/r/bin/gh-src/policy"; cd "$work/r" || exit 2; git init -q
 printf '# header\n' > .github/policy/customer-words-allow.txt; printf '# header\n' > bin/gh-src/policy/customer-words-allow.txt
 printf 'fine\n' > bin/gh-src/PULL_REQUEST_TEMPLATE.md; git add -A && git commit -qm base
@@ -156,7 +160,7 @@ mk - "" .github/PULL_REQUEST_TEMPLATE.md $'owner\n';                    check 1 
 mk - "" x.json $'{"t": "lane"}\n';                                       check 0 "T6 a .json file is not a covered type"
 mk - "" x.css $'/* lane */\n';                                           check 0 "T6 a .css file is not a covered type"
 mk - "" "a b.md" $'owner\n';                                            check 1 "T6 a page name with a space is read"
-# T6b a binary change to a page fails closed; under bin/ or .github/ it is ignored
+# T6b a binary change to a page fails closed; under bin/ or .github/ (bar the template and workflow files) it is ignored
 mk - "" index.html $'fine\n'; printf '<!-- \0 --><p>owner</p>\n' > index.html; git commit -qam bin
 check 2 "T6b index.html changed to binary exits 2" 'binary change this check cannot read'
 mk - "" other.html $'fine\n'; mkdir some; printf '<!-- \0 --><p>owner</p>\n' > some/index.html; git add -A; git commit -q --amend --no-edit
