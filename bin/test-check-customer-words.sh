@@ -82,7 +82,7 @@ add docs/a.md "ruler 9" 0 "T4 'ruler 9' passes"
 for w in _owner_ '**owner**' the_owner owner2 'rule  9' $'rule\t9' _audits/ _ops#794 _SB-3; do
   add docs/a.md "text $w text" 1 "T4b added '$w' fails"
 done
-# T5 lines and files that must not count: removed or context lines, bin/, .github/ except the template and workflow files
+# T5 lines and files that must not count: removed or context lines, bin/, .github/ except the template and files directly under .github/workflows
 mk docs/a.md $'the owner\n' docs/a.md $'fine\n';                       check 0 "T5 a removed line with owner passes"
 mk docs/a.md $'the owner\nx\n' docs/a.md $'the owner\ny\n';            check 0 "T5 an unchanged context line with owner passes"
 mk - "" bin/x.sh $'# owner\n';                                           check 0 "T5 owner added under bin/ passes"
