@@ -1,0 +1,18 @@
+version: 2
+updates:
+  # The Actions in hygiene.yml are pinned by SHA; Dependabot proposes the new SHA with its tag as the comment.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    # A new version waits 7 days before Dependabot proposes it.
+    cooldown:
+      default-days: 7
+    # Minor and patch bumps arrive as one pull request a week; each major is its own pull request.
+    groups:
+      actions-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
