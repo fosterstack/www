@@ -9,6 +9,11 @@
 <meta property="og:description" content="A checklist from nothing to your first FROM-CACHE with a self-hosted Gradle build cache, with the commands timed in a real run on release 0.2.2.">
 <meta property="og:url" content="https://fosterstack.com/first-15-minutes-build-cache/">
 <meta property="og:type" content="website">
+<meta property="og:image" content="https://fosterstack.com/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="FosterStack. Infrastructure worth keeping — and kept patched.">
+<meta name="twitter:card" content="summary_large_image">
 <meta property="og:site_name" content="FosterStack">
 <link rel="canonical" href="https://fosterstack.com/first-15-minutes-build-cache/">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
@@ -89,7 +94,7 @@
 </header>
 <main>
   <h1>Your first 15 minutes with a self-hosted build cache</h1>
-  <p class="lede">A checklist from nothing to your first <code>FROM-CACHE</code>, the line Gradle prints when it reuses a stored result. The commands take 20 seconds or less; we timed them on a clean GitHub-hosted machine that had Gradle and Java. Still, plan on about 15 minutes in all, because reading, choosing your values and pointing your own project at the server take you longer than the commands.</p>
+  <p class="lede">A checklist from nothing to your first <code>FROM-CACHE</code>, the line Gradle prints when it reuses a stored result. The commands take 20 seconds or less; we timed them on a clean GitHub-hosted machine that had Gradle and Java. Plan on about 15 minutes.</p>
 
   <h2>What we timed</h2>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
@@ -100,13 +105,13 @@
     <tr><td>Build, clean, build again, and see <code>FROM-CACHE</code></td><td>18.2 seconds</td><td>7.8 seconds</td></tr>
     <tr><td><strong>All the steps</strong></td><td><strong>19.7 seconds</strong></td><td><strong>8.4 seconds</strong></td></tr>
   </table></div>
-  <p class="muted-note">Same commands as the checklist below, with Gradle's own cache on. With it off, as in the tutorial, they took 8.5 seconds on a machine that had built before. <a href="https://github.com/fosterstack/www/actions/runs/38032103243">The run and its log are public</a>, and so is <a href="/bin/bench-setup-pages.sh">the script</a>.</p>
+  <p class="muted-note">Same commands as the checklist below, with Gradle's own cache on. With it off, as in the tutorial, they took 8.5 seconds on a machine that had built before.</p>
 
   <h2>The checklist</h2>
   <h3>1. Decide where it will run</h3>
   <ul class="trust">
     <li>A machine your CI runners and developers can reach. The server is one small program, and disk is what matters. See <a href="/build-cache-server-sizing/">server sizing</a>.</li>
-    <li>Plan on HTTPS for anything beyond a first try. Gradle sends the password with every request.</li>
+    <li>Plan on HTTPS for anything beyond a first try. Gradle sends the password with every request. Put a proxy in front. From v0.3.0 you can instead give the server its own certificate with <code>FSCACHE_TLS_CERT</code> and <code>FSCACHE_TLS_KEY</code> (both or neither).</li>
   </ul>
 
   <h3>2. Download it and check it is ours</h3>
@@ -146,7 +151,7 @@ buildCache {
         }
     }
 }</code></pre>
-  <p>Use <code>127.0.0.1</code> for a first try on the same machine. On Gradle 9.8.0 the name <code>localhost</code> was refused without an opt-in. Maven instead? See <a href="/maven-remote-build-cache-setup/">the Maven setup</a>.</p>
+  <p>Use <code>127.0.0.1</code> for a first try on the same machine, not <code>localhost</code> (see "If Gradle refuses localhost" below). Maven instead? See <a href="/maven-remote-build-cache-setup/">the Maven setup</a>.</p>
 
   <h3>6. Build twice and look for FROM-CACHE</h3>
   <pre tabindex="0"><code>export FSCACHE_PASSWORD=&lt;a long secret&gt;
@@ -158,7 +163,7 @@ gradle build --build-cache
 
   <h3>7. Before you roll it out to a team</h3>
   <ul class="trust">
-    <li>Put it behind HTTPS and give CI the read-write login and everyone else the read-only one: <a href="/gradle-build-cache-ci-writes-developers-read/">let CI write, developers only read</a>.</li>
+    <li>Serve it over HTTPS (a proxy in front, or the server's own TLS) and give CI the read-write login and everyone else the read-only one: <a href="/gradle-build-cache-ci-writes-developers-read/">let CI write, developers only read</a>.</li>
     <li>Watch it: <a href="/is-the-build-cache-server-healthy-what-to-alert-on/#monitor-build-cache-prometheus-grafana">monitoring</a>. Know how it forgets: <a href="/build-cache-eviction-size-limit/">eviction</a>.</li>
     <li>Know how to empty it: <a href="/reset-gradle-build-cache/">reset</a>, and how to move it: <a href="/upgrade-build-cache-server/#back-up-and-restore-build-cache">back up and restore</a>.</li>
   </ul>
@@ -170,7 +175,6 @@ gradle build --build-cache
   <pre tabindex="0"><code>FSCACHE_ADDR=127.0.0.1:8080 FSCACHE_DATA_DIR=./data \
   FSCACHE_USERNAME=gradle FSCACHE_PASSWORD=demo-pass \
   FSCACHE_MAX_BYTES=1073741824 ./fscache</code></pre>
-  <p>In this run the port was 18090 instead of 8080. The outputs below do not show the port.</p>
 
   <h3>A small project</h3>
   <p>Four files. <code>settings.gradle.kts</code> says where the cache is:</p>
@@ -239,20 +243,18 @@ BUILD SUCCESSFUL in 5s
   &quot;cache_hits&quot;: 1,
   &quot;cache_misses&quot;: 1,</code></pre>
 
-  <h3>The one thing that tripped us up</h3>
-  <p>Our first attempt failed before any build ran, because we used <code>http://localhost:...</code>:</p>
+  <h3>If Gradle refuses localhost</h3>
+  <p>With <code>http://localhost:...</code> the build fails before any task runs:</p>
   <pre tabindex="0"><code>FAILURE: Build failed with an exception.
 
 * What went wrong:
 Using insecure protocols with remote build cache, without explicit opt-in, is unsupported.</code></pre>
-  <p>Gradle refuses plain <code>http://</code> unless you set <code>isAllowInsecureProtocol = true</code>. With Gradle 9.8.0, the address <code>127.0.0.1</code> was allowed without it, but the name <code>localhost</code> was refused, with or without a <code>credentials</code> block. That is why the file above uses <code>127.0.0.1</code>. For a real server, use HTTPS and skip the opt-in. Gradle sends the password with every request.</p>
+  <p>Gradle refuses plain <code>http://</code> unless you set <code>isAllowInsecureProtocol = true</code>. With Gradle 9.8.0, the address <code>127.0.0.1</code> was allowed without it, but the name <code>localhost</code> was refused, with or without a <code>credentials</code> block. For a real server, use HTTPS and skip the opt-in. Gradle sends the password with every request.</p>
 
   <p class="muted-note">If your second build shows no <code>FROM-CACHE</code>, work through <a href="/gradle-remote-cache-not-working/">Gradle remote build cache not working</a>. The status codes are explained in <a href="/gradle-remote-build-cache-authentication/#gradle-build-cache-http-status-codes">Gradle build cache HTTP status codes</a>.</p>
 
-  <h2>How we checked</h2>
-  <p>The tutorial run used release 0.2.1 of the server and Gradle 9.8.0. The table comes from a separate run: a GitHub-hosted machine, release 0.2.2, Gradle 9.8.0, Java 21. We ran it twice, first on a machine that had never built, then again after it had.</p>
-
-  <p class="muted-note">This is a first try, not a production plan. The paid tiers are not built.</p>
+  <p class="muted-note">This is a first try, not a production plan.</p>
+  <p class="muted-note">Tested with FosterStack Cache 0.2.1 (the tutorial) and 0.2.2 (the timings) on a GitHub-hosted machine, Gradle 9.8.0, Java 21. <a href="https://github.com/fosterstack/www/actions/runs/38032103243">The run and its log are public</a>.</p>
   <div class="cta-row">
     <a class="btn" href="#gradle-build-cache-tutorial">Gradle build cache tutorial</a>
     <a class="btn btn-secondary" href="/">FosterStack home</a>

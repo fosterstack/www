@@ -9,6 +9,11 @@
 <meta property="og:description" content="We opened every stored entry from real Gradle builds on FosterStack Cache 0.2.1 and searched for fake secrets. What is stored, what is not, and who can read it.">
 <meta property="og:url" content="https://fosterstack.com/does-build-cache-entry-contain-source-code-or-secrets/">
 <meta property="og:type" content="website">
+<meta property="og:image" content="https://fosterstack.com/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="FosterStack. Infrastructure worth keeping — and kept patched.">
+<meta name="twitter:card" content="summary_large_image">
 <meta property="og:site_name" content="FosterStack">
 <link rel="canonical" href="https://fosterstack.com/does-build-cache-entry-contain-source-code-or-secrets/">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
@@ -101,19 +106,19 @@
   </ul>
 
   <h2>What to do</h2>
-  <p>Our advice, not a test result:</p>
+  <p>We recommend:</p>
   <ul>
     <li><strong>Treat read access to the cache like read access to your build outputs.</strong> Class files can be decompiled, and they keep string constants.</li>
     <li><strong>Do not print secrets in tests, and do not write them into task outputs.</strong> Both end up in the cache. Test reports also name the machine that ran them.</li>
     <li><strong>Keep secrets out of Java constants.</strong> A constant lives on in the class file, in the cache and in your jar.</li>
     <li><strong>Declare an environment variable as a task input if the task reads it.</strong> We changed one that a task read without declaring it, and the old result came back from the cache.</li>
     <li><strong>Give developers the read-only login and give CI the read-write login.</strong> See <a href="/gradle-build-cache-ci-writes-developers-read/">let CI write and developers read</a>. One login reaches every project on a server, so use one server per group that must not share. See <a href="/several-projects-share-one-build-cache-server/">several projects on one server</a>.</li>
-    <li><strong>Use HTTPS when the server is not on your own machine.</strong> Our runs used plain HTTP to a server on the same Mac. See <a href="/gradle-remote-build-cache-private-ca-https/">use your build cache over HTTPS with a private CA</a>.</li>
+    <li><strong>Use HTTPS when the server is not on your own machine.</strong> Our runs used plain HTTP to a server on the same machine. See <a href="/gradle-remote-build-cache-private-ca-https/">use your build cache over HTTPS with a private CA</a>. The HTTPS can come from a proxy or, from v0.3.0, from the server itself (<code>FSCACHE_TLS_CERT</code> and <code>FSCACHE_TLS_KEY</code>).</li>
   </ul>
   <p>What each task stores is on <a href="/what-gradle-stores-in-build-cache/">know what your Gradle build cache stores</a>. Who can change entries is on <a href="/can-someone-poison-our-build-cache/">can someone poison our shared build cache</a>.</p>
 
-  <h2>How we checked</h2>
-  <p>FosterStack Cache 0.2.1 on a Mac (arm64) with a login turned on. Gradle 9.8.0 and Java 21 built a small project twice, each time from a fresh copy, with the local build cache off. Every secret was made up. We stopped the server, opened every file in its data folder with <code>gunzip</code> and <code>tar</code>, and searched each entry, and each file inside it, for each fake secret. Each row is what we found in these two builds.</p>
+  <h2>What we found in the stored entries</h2>
+  <p>We built a small project twice, then opened every file in the server's data folder and searched each one for each fake secret. Each row is what we found.</p>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <thead><tr><th>What we put in</th><th>Where it showed up in the stored entries</th></tr></thead>
     <tbody>
@@ -138,7 +143,8 @@
     </tbody>
   </table></div>
   <p class="muted-note">Keys appear in Gradle's own <code>-i</code> output, and the server's index file holds them, so a key is not a secret from someone who can read your build logs or the server's files.</p>
-  <p class="muted-note">Not tested: Maven, Kotlin and Android builds, cacheable packaging tasks such as a shaded jar, which may store your resources, other Gradle plugins, other releases, Linux and Docker file permissions, and entries from builds with a different Java version.</p>
+  <p class="muted-note">Not tested: cacheable packaging tasks such as a shaded jar, which may store your resources.</p>
+  <p class="muted-note">Tested with FosterStack Cache 0.2.1 on macOS (arm64), Gradle 9.8.0, Java 21.</p>
 </main>
 <footer>
   <div>

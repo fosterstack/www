@@ -9,6 +9,11 @@
 <meta property="og:description" content="There is no purge button. How to empty a self-hosted Gradle and Maven build cache with Docker, Compose, Kubernetes or a plain binary, tested on 0.2.1.">
 <meta property="og:url" content="https://fosterstack.com/reset-gradle-build-cache/">
 <meta property="og:type" content="website">
+<meta property="og:image" content="https://fosterstack.com/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="FosterStack. Infrastructure worth keeping — and kept patched.">
+<meta name="twitter:card" content="summary_large_image">
 <meta property="og:site_name" content="FosterStack">
 <link rel="canonical" href="https://fosterstack.com/reset-gradle-build-cache/">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
@@ -101,7 +106,7 @@
   <pre tabindex="0"><code>docker rm -f fscache
 docker volume rm fscache-data
 # then run your original docker run command again</code></pre>
-  <p>Tested on the 0.2.1 image. Before the reset, <code>/statusz</code> showed one stored entry. After removing the container and the volume and starting again:</p>
+  <p>Before the reset, <code>/statusz</code> showed one stored entry. After removing the container and the volume and starting again:</p>
   <pre tabindex="0"><code>$ curl -s localhost:8080/statusz | grep -E &#x27;&quot;store_entries&quot;|&quot;store_bytes&quot;&#x27;
   &quot;store_bytes&quot;: 0,
   &quot;store_entries&quot;: 0,
@@ -109,7 +114,7 @@ $ curl -s localhost:8080/testkey -o /dev/null -w &#x27;GET testkey %{http_code}\
 GET testkey 404</code></pre>
 
   <h2>Kubernetes</h2>
-  <p>Delete the volume claim, then create it again. The Deployment cannot start without its claim, so the new claim is a required step. Tested on a throwaway cluster:</p>
+  <p>Delete the volume claim, then create it again. The Deployment cannot start without its claim, so the new claim is a required step:</p>
   <pre tabindex="0"><code>kubectl -n fscache-ns scale deploy/fscache --replicas=0
 kubectl -n fscache-ns delete pvc fscache-data
 kubectl -n fscache-ns apply -f fscache-pvc.yaml   # your claim manifest, the same one you first applied
@@ -118,18 +123,18 @@ kubectl -n fscache-ns scale deploy/fscache --replicas=1</code></pre>
   <p>Keep it at one replica. See <a href="/gradle-build-cache-kubernetes/">Gradle build cache on Kubernetes</a>.</p>
 
   <h2>A plain binary</h2>
-  <p>Stop the process, delete the data directory, and start it again.</p>
+  <p>Stop the process, delete the data directory, and start it again. A plain restart alone keeps the entries.</p>
 
   <h2>Check it worked</h2>
   <p>The status page at <code>/statusz</code> shows the entry count and the stored size. Both should be zero straight after a reset. For a size cap that fills up on its own, see <a href="/build-cache-server-sizing/">server sizing</a>.</p>
-
-  <p class="muted-note">We ran the Docker, Docker Compose and plain-binary resets again on a GitHub-hosted Linux machine with FosterStack Cache 0.2.2. After each one the server held 0 entries and the key stored before returned 404. After the Docker and Docker Compose resets, a new write got 201. For the binary, a plain restart first kept the entry, so the empty result came from deleting the data directory. The Kubernetes steps were not run there. <a href="https://github.com/fosterstack/www/actions/runs/38052086898">The run and its log are public</a>.</p>
 
   <p class="muted-note">Full detail: <a href="https://github.com/fosterstack/cache/blob/main/docs/docker-deploy.md">Docker deploy guide</a>. Related: <a href="/build-cache-docker-compose-production/#gradle-build-cache-docker-compose">Gradle build cache with Docker Compose</a>.</p>
   <div class="cta-row">
     <a class="btn" href="/migrate-build-cache-node/">Gradle and Maven setup</a>
     <a class="btn btn-secondary" href="/">FosterStack home</a>
   </div>
+  <p class="muted-note">Moving off the free Build Cache Node? See <a href="/build-cache-node-end-of-life/">what the end of life means</a> and the <a href="/migrate-build-cache-node/">migration guide</a>.</p>
+  <p class="muted-note">Tested with FosterStack Cache 0.2.1 (Docker and Kubernetes, the Kubernetes steps on a throwaway cluster) and 0.2.2 on a GitHub-hosted Linux machine (Docker, Docker Compose and a plain binary). <a href="https://github.com/fosterstack/www/actions/runs/38052086898">The run and its log are public.</a></p>
 </main>
 <footer>
   <div>

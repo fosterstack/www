@@ -9,6 +9,11 @@
 <meta property="og:description" content="Fix the PKIX path building failed error for a Gradle build cache behind HTTPS with a private CA: trust store settings and a Maven Central trap. Tested on 0.2.1.">
 <meta property="og:url" content="https://fosterstack.com/gradle-remote-build-cache-private-ca-https/">
 <meta property="og:type" content="website">
+<meta property="og:image" content="https://fosterstack.com/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="FosterStack. Infrastructure worth keeping — and kept patched.">
+<meta name="twitter:card" content="summary_large_image">
 <meta property="og:site_name" content="FosterStack">
 <link rel="canonical" href="https://fosterstack.com/gradle-remote-build-cache-private-ca-https/">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
@@ -88,7 +93,7 @@
 </header>
 <main>
   <h1>Use your Gradle build cache over HTTPS with a private CA</h1>
-  <p class="lede">With the right trust store, Gradle uses a cache behind HTTPS with your own certificate authority, and in our runs the cache hits worked. We ran real builds with a private CA and saw the exact error without it. With the standard Java settings we used, a trust store that held only our CA made Java ignore its normal list of trusted CAs. Our downloads from Maven Central then failed, until we put the normal list into the store as well.</p>
+  <p class="lede">With the right trust store, Gradle uses a cache behind HTTPS with your own certificate authority, and in our runs the cache hits worked. With the standard Java settings we used, a trust store that held only our CA made Java ignore its normal list of trusted CAs. Our downloads from Maven Central then failed, until we put the normal list into the store as well.</p>
 
   <h2>The short answer</h2>
   <ul class="trust">
@@ -97,9 +102,9 @@
     <li>A trust store with only your CA replaced Java's normal list of trusted authorities, and the build then failed to download from Maven Central. A store that holds the normal list plus your CA worked.</li>
   </ul>
 
-  <h2>What we ran</h2>
-  <p>The cache server speaks plain HTTP, so HTTPS comes from a TLS front end in front of it. For this test the front end was a small TLS proxy we wrote, a stand-in for nginx or any other TLS front end; for a real nginx setup see <a href="/build-cache-docker-compose-production/">production Docker Compose with nginx and TLS</a>. The certificate came from a private test CA. The address was <code>https://127.0.0.1:18443/</code>, and the certificate names that IP address.</p>
-  <p>All six builds ran on the same Mac, each from a fresh copy of the project and a new empty Gradle home, with Java 27 (Homebrew) and the local build cache off. The cache server (with no login) and the test certificate were shared, so runs 3 to 6 read the entry that run 2 stored. We ran the installed <code>gradle</code> command with <code>--no-daemon</code>; Gradle still started a single-use daemon for each build. Every build ended with <code>BUILD SUCCESSFUL</code> except run 5, which is the one that was meant to fail. Runs 1 to 4 ran <code>gradle compileJava</code>; runs 5 and 6 ran <code>gradle test</code>, because they needed Maven Central.</p>
+  <h2>What the six runs showed</h2>
+  <p>Before v0.3.0 the server speaks plain HTTP only, so HTTPS comes from a TLS front end; from v0.3.0 the server can hold the certificate itself (see the end of this page). Our test used a small TLS proxy; for a real nginx setup see <a href="/build-cache-docker-compose-production/">production Docker Compose with nginx and TLS</a>. The certificate came from a private test CA. The address was <code>https://127.0.0.1:18443/</code>, and the certificate names that IP address.</p>
+  <p>Every build ended with <code>BUILD SUCCESSFUL</code> except run 5, which is the one that was meant to fail. The cache server had no login, so runs 3 to 6 read the entry that run 2 stored. Runs 1 to 4 ran <code>gradle compileJava</code>; runs 5 and 6 ran <code>gradle test</code>, because they needed Maven Central.</p>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <thead><tr><th>Run</th><th>Trust setting</th><th>Result</th></tr></thead>
     <tbody>
@@ -138,21 +143,20 @@ chmod u+w truststore-combined.p12
 keytool -importcert -alias testca -file ca/ca.crt -keystore truststore-combined.p12 -storepass changeit -noprompt</code></pre>
   <p>The Java default file uses the password <code>changeit</code>, and that is what worked here. The copy does not follow later updates to Java's list, so make the copy again when you update Java. Run 6 used this combined store and passed, with both the Central download and the cache over HTTPS working. Our combined store held 112 certificates: the 111 that came with Java plus ours.</p>
 
-  <h2>How we made the test certificates</h2>
-  <p>These are the exact commands in the setup script we ran before the six builds. Run them inside a folder named <code>ca</code>, because the keytool commands above read <code>ca/ca.crt</code>. The 30-day lifetime is only for the test; choose your own.</p>
+  <h2>Make test certificates</h2>
+  <p>These commands make a test CA and a server certificate. Run them inside a folder named <code>ca</code>, because the keytool commands above read <code>ca/ca.crt</code>. The 30-day lifetime is only for the test; choose your own.</p>
 <pre tabindex="0"><code>openssl genrsa -out ca.key 2048
 openssl req -x509 -new -key ca.key -sha256 -days 30 -subj "/CN=Test Private CA" -out ca.crt
 openssl genrsa -out server.key 2048
 openssl req -new -key server.key -subj "/CN=cache.test" -out server.csr
 printf "subjectAltName=IP:127.0.0.1,DNS:localhost\nbasicConstraints=CA:FALSE\nextendedKeyUsage=serverAuth\n" &gt; ext.cnf
 openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out server.crt -days 30 -sha256 -extfile ext.cnf</code></pre>
-  <p>The certificate has to name the address your builds use. We did not test a certificate that names a different host, an expired certificate, the Gradle wrapper (<code>./gradlew</code>), or Linux or Windows.</p>
+  <p>The certificate has to name the address your builds use.</p>
 
   <h2>If it still does not work</h2>
-  <p>Work through <a href="/gradle-remote-cache-not-working/">Gradle remote build cache not working</a>. For the server side of HTTPS, see <a href="/build-cache-docker-compose-production/">production Docker Compose with nginx and TLS</a>.</p>
+  <p>Work through <a href="/gradle-remote-cache-not-working/">Gradle remote build cache not working</a>. For the server side of HTTPS, see <a href="/build-cache-docker-compose-production/">production Docker Compose with nginx and TLS</a>, which also covers, from v0.3.0, the server's own certificate (<code>FSCACHE_TLS_CERT</code> and <code>FSCACHE_TLS_KEY</code>).</p>
 
-  <p class="muted-note">Run on Gradle 9.8.0 with FosterStack Cache 0.2.1 behind a test TLS proxy, macOS (arm64), Java 27 (Homebrew), OpenSSL 3.6.5.</p>
-  <p class="muted-note">We repeated the six runs on a GitHub-hosted Linux machine with release 0.2.2, Gradle 9.8.0, Java 27 (Temurin 27+35) and a small TLS proxy written in Python. All six runs matched the table, including run 5, which fails as expected. The combined store there held 121 certificates, including ours: the count depends on which Java build you use. <a href="https://github.com/fosterstack/www/actions/runs/38037262366">The run and its log are public</a>.</p>
+  <p class="muted-note">Tested with FosterStack Cache 0.2.1 behind a test TLS proxy on macOS (arm64, Java 27), and 0.2.2 on a GitHub-hosted Linux machine (Java 27), Gradle 9.8.0. The Linux runs matched the table; the combined store there held 121 certificates, since the count depends on your Java build. <a href="https://github.com/fosterstack/www/actions/runs/38037262366">The run and its log are public</a>.</p>
 </main>
 
 <footer>
