@@ -41,6 +41,8 @@ def load_allowlist(path):
 
 
 def main():
+    if sys.stdin.isatty():
+        fail("reads a diff on standard input, e.g. git diff -U0 origin/main | python3 bin/check-customer-words.py")
     allowed = load_allowlist(os.environ.get("CUSTOMER_WORDS_ALLOW", ".github/policy/customer-words-allow.txt"))
     hits, path, in_header, saw_diff, is_link = [], None, False, False, False
     data = sys.stdin.buffer.read().decode("utf-8")
