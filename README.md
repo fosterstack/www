@@ -30,7 +30,7 @@ the `ALLOW_PATTERNS` array in that script.
 
 ## Pre-positioned page: `bcn-removed/`
 
-Addendum §2 (DECIDED): built ahead of any trigger so FosterStack is in front of
+Built ahead of any trigger so FosterStack is in front of
 panic-searches within hours of Gradle actually removing `gradle/build-cache-node` from
 Docker Hub, not days. REVISED Sep 11, 2026: it used to deploy at an unlisted URL behind
 a `noindex` tag; the Sep 10 review pointed out that noindex is a request, not a gate —
@@ -85,7 +85,7 @@ asking us.
 - The trust pitch (MIT core, one public image, identical bytes free/paid, license-key
   unlock, security patches never withheld from free tier) is project policy, not
   marketing filler. Changes to it are a maintainer decision.
-- No fabricated testimonials, logos, or usage numbers — FTC posture per brief §4.
+- No fabricated testimonials, logos, or usage numbers, in line with FTC rules on endorsements.
 - No calendar commitments. No launch dates, no "beta in <month>", no phase language.
   The dateless roadmap stays (the homepage no longer carries a version or "early" label);
   a schedule we might miss does not go on a public page.
