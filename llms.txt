@@ -16,8 +16,8 @@ Extension's remote HTTP mode. Same server,
 same core.
 
 It is a single static Go binary (`CGO_ENABLED=0`), MIT-licensed, distributed as bare
-binaries and distroless container images. Every release is keylessly signed with
-Sigstore and carries SLSA build provenance, so the exact bytes you deploy are
+binaries and distroless container images. Every release is signed with our
+release key and carries SLSA build provenance, so the exact bytes you deploy are
 verifiable against the CI run that produced them.
 
 ## Guides on this site

@@ -108,7 +108,7 @@ ISSUER=https://token.actions.githubusercontent.com</code></pre>
 cosign verify ghcr.io/fosterstack/cache:${VER}-fips \
   --certificate-identity "${IDENT}/stage-promote.yml@refs/tags/v${VER}" \
   --certificate-oidc-issuer "$ISSUER"</code></pre>
-  <p>This shows that the release stage of our public pipeline, at this release tag, signed these exact images. The signing certificate lasts minutes and is recorded in Rekor, the public transparency log. There is no image-signing key to steal.</p>
+  <p>This shows that the release stage of our public pipeline, at this release tag, signed these exact images. The signature is made with our release key, which is held in a cloud key service and used only by the release job, and it is recorded in Rekor, the public transparency log.</p>
   <h2>2. The file lists are ours, and your files match them</h2>
   <pre tabindex="0"><code>gh release download v${VER} --repo fosterstack/cache \
   -p checksums.txt -p checksums.txt.bundle \
@@ -136,7 +136,7 @@ jq -r '.dsseEnvelope.payload | @base64d | fromjson | .subject[] | .name + " sha2
 # the digest of the production image you pulled (for example from docker images --digests):
 DIGEST=sha256:...
 jq -e --arg d "${DIGEST#sha256:}" '.dsseEnvelope.payload | @base64d | fromjson | any(.subject[]; .name == "image-production" and .digest.sha256 == $d)' provenance.bundle.json</code></pre>
-  <p>The SLSA provenance is signed by a separate job with its own identity, <code>stage-sign.yml</code>. It receives only the list of digests the build made and runs no code from the build. The first <code>jq</code> lists each item it names, with its digest. The second prints <code>true</code> only if the provenance names the production image you pulled; for the <code>-fips</code> image use the name <code>image-fips</code>.</p>
+  <p>The SLSA provenance is signed in a separate job, <code>stage-sign.yml</code>. It takes the list of digests the build made, checks it against the build's signed record and runs no code from the build. The first <code>jq</code> lists each item it names, with its digest. The second prints <code>true</code> only if the provenance names the production image you pulled; for the <code>-fips</code> image use the name <code>image-fips</code>.</p>
   <h2>5. The parts list and what it was assembled from</h2>
   <pre tabindex="0"><code>gh release download v${VER} --repo fosterstack/cache \
   -p production.sbom.json -p production.sbom.json.bundle \

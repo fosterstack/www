@@ -117,7 +117,7 @@
   <h2>What we sign and publish</h2>
   <p>Releases are built only in CI. Each release goes through the steps on <a href="/how-we-build/">how we build</a> and comes with files you can check without an account.</p>
   <ul class="trust">
-    <li>Container images, signed without a stored key (Sigstore), with build provenance.</li>
+    <li>Container images, signed with our release key, held in a cloud key service and recorded in a public transparency log, with build provenance.</li>
     <li><code>checksums.txt</code> with its own signature file.</li>
     <li>A software bill of materials (SBOM) for each binary archive.</li>
     <li>A VEX file saying which known vulnerabilities do and do not affect the release.</li>

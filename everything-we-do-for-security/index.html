@@ -143,8 +143,8 @@
   </ul>
   <h2>Release</h2>
   <ul>
-    <li><strong>Signed images.</strong> Every image is signed keylessly by the promotion workflow, in both registries (<a href="https://github.com/fosterstack/cache/blob/main/docs/verify-images.md">verify-images.md</a>).</li>
-    <li><strong>Signed provenance.</strong> Archives, SBOMs and the checksums file carry build provenance naming the CI run that made them (<a href="https://github.com/fosterstack/cache/blob/main/docs/verify-images.md">verify-images.md</a>).</li>
+    <li><strong>Signed images.</strong> Every image is signed with the release key by the promotion workflow, in both registries (<a href="https://github.com/fosterstack/cache/blob/main/docs/verify-images.md">verify-images.md</a>).</li>
+    <li><strong>Signed provenance.</strong> The build provenance names the images and archives by digest and the CI run that made them; the SBOMs and the checksums file are signed with the release key (<a href="https://github.com/fosterstack/cache/blob/main/docs/verify-images.md">verify-images.md</a>).</li>
     <li><strong>An SBOM for every archive</strong>, published with the release (<a href="https://github.com/fosterstack/cache/blob/main/RELEASING.md">our release process</a>).</li>
     <li><strong>The VEX document ships with every release</strong> as <code>fosterstack-cache.openvex.json</code> (<a href="https://github.com/fosterstack/cache/blob/main/RELEASING.md#vex-statements">our release process</a>).</li>
     <li><strong>One authorization before anything goes public.</strong> A single stage verifies the whole graph, fails closed on anything missing, and signs the approval that promotion requires (<a href="https://github.com/fosterstack/cache/blob/main/.github/workflows/stage-promote.yml">release stage</a>).</li>
