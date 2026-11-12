@@ -104,7 +104,7 @@
   <p>No release file is ever made on a person's laptop, ours included. A release starts when a signed tag is pushed, and there is no manual release path. That is what lets the signatures mean something: a release that our CI workflow did not build does not carry its signature.</p>
 
   <h2>The stages a release goes through</h2>
-  <p>Signed at every stage, verified together at release. Each stage signs a statement about what it did, each stage checks the one before it, and the Release stage verifies them all together.</p>
+  <p>Signed at every stage, verified together at release. Each stage records what it did, the signing jobs sign each record with the release key, each stage checks the one before it, and the Release stage verifies them all together.</p>
   <ol class="steps">
     <li><strong>Build.</strong> The stage first checks that the tag is signed, then builds the binaries and both images, for amd64 and arm64, once. It signs what it built.</li>
     <li><strong>Sign.</strong> A separate stage, with its own identity, receives only the build's digests, records the build and signs it.</li>
@@ -116,7 +116,7 @@
 
   <h2>What you get with each release</h2>
   <ul class="trust">
-    <li>Container images on GitHub's registry, signed with our release key, held in a cloud key service and recorded in a public transparency log, with build provenance.</li>
+    <li>Container images on GitHub's registry, signed with our release key, which is held in a cloud key service, with each signature recorded in a public transparency log, and with build provenance.</li>
     <li>Plain binaries and a <code>checksums.txt</code> with its own signature file.</li>
     <li>A software bill of materials (SBOM) for each binary archive.</li>
     <li>A VEX file saying which known vulnerabilities do and do not affect the release.</li>

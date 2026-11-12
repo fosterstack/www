@@ -105,13 +105,12 @@
 
   <h2>Verify before you cross the gap</h2>
   <p>Do this on the connected side, where the signature check can reach its public log:</p>
-  <pre tabindex="0"><code># 1. Prove the checksums file is ours
-curl -fsSLO "https://raw.githubusercontent.com/fosterstack/cache/vX.Y.Z/build/keys/release.rsa.pub"
+  <pre tabindex="0"><code># 1. Prove the checksums file is ours (release.rsa.pub: see below)
 cosign verify-blob --key release.rsa.pub --bundle checksums.txt.bundle checksums.txt
 
 # 2. Prove your archive matches it
 sha256sum -c &lt;(grep "fscache_X.Y.Z_linux_amd64.tar.gz" checksums.txt | grep -v sbom)</code></pre>
-  <p><code>release.rsa.pub</code> is our release public key, fetched from the release tag. <a href="/verify-a-release/">Verify a release yourself</a> shows how to check that it is the key the release names.</p>
+  <p><code>release.rsa.pub</code> is our release public key. Make it, and check it, with the first step of <a href="/verify-a-release/">verify a release yourself</a>, before you run the commands above.</p>
   <p><code>grep -v sbom</code> drops the SBOM line, because that file is not carried across.</p>
   <p>These steps are for v0.3.0 and later. For v0.2.x, use the <a href="https://github.com/fosterstack/cache/blob/v0.2.2/docs/verify-images.md">image verification guide</a>, but set <code>VER</code> to your version (for example <code>VER=0.2.2</code>) instead of running its first command.</p>
   <p>Both steps matter. The checksum alone only shows the archive matches a file you carried beside it. The signature is what ties that file to us.</p>
