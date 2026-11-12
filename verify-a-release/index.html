@@ -92,32 +92,29 @@
 </header>
 <main>
   <h1>Verify a FosterStack Cache release yourself</h1>
-  <p>You should not have to take our word for what you run. Signed at every stage, verified together at release. These steps check the image signatures, the signed file lists, the digest, how the release was built and its parts list, using only <code>cosign</code>, <code>gh</code>, <code>jq</code> and <code>sha256sum</code>. They are for v0.3.0 and later. For v0.2.x, use the <a href="https://github.com/fosterstack/cache/blob/v0.2.2/docs/verify-images.md">image verification guide</a>, but set <code>VER</code> to your version (for example <code>VER=0.2.2</code>) instead of running its first command.</p>
+  <p>You should not have to take our word for what you run. Signed at every stage, verified together at release. These steps check the image signatures, the signed file lists, the digest, how the release was built and its parts list, using only <code>cosign</code>, <code>gh</code>, <code>curl</code>, <code>jq</code> and <code>sha256sum</code>. They are for v0.3.0 and later. For v0.2.x, use the <a href="https://github.com/fosterstack/cache/blob/v0.2.2/docs/verify-images.md">image verification guide</a>, but set <code>VER</code> to your version (for example <code>VER=0.2.2</code>) instead of running its first command.</p>
   <p>You need no account to pull the images or to run <code>cosign</code>. Downloading release files with <code>gh</code> needs <code>gh auth login</code>; you can also download them from the release page in a browser.</p>
   <h2>Set the version</h2>
   <pre tabindex="0"><code>VER=0.3.0
-echo "$VER"
-IDENT="https://github.com/fosterstack/cache/.github/workflows"
-ISSUER=https://token.actions.githubusercontent.com</code></pre>
+echo "$VER"</code></pre>
   <p>Set VER to the release you run, v0.3.0 or later.</p>
   <p>There are two images, production and <code>-fips</code>.</p>
   <h2 id="verify-container-image-signature-cosign">1. The signature and who signed it</h2>
-  <pre tabindex="0"><code>cosign verify ghcr.io/fosterstack/cache:${VER} \
-  --certificate-identity "${IDENT}/stage-promote.yml@refs/tags/v${VER}" \
-  --certificate-oidc-issuer "$ISSUER"
-cosign verify ghcr.io/fosterstack/cache:${VER}-fips \
-  --certificate-identity "${IDENT}/stage-promote.yml@refs/tags/v${VER}" \
-  --certificate-oidc-issuer "$ISSUER"</code></pre>
-  <p>This shows that the release stage of our public pipeline, at this release tag, signed these exact images. The signature is made with our release key, which is held in a cloud key service and used only by the release job, and it is recorded in Rekor, the public transparency log.</p>
+  <pre tabindex="0"><code>curl -fsSLO "https://raw.githubusercontent.com/fosterstack/cache/v${VER}/build/keys/release.rsa.pub"
+cosign verify --key release.rsa.pub ghcr.io/fosterstack/cache:${VER}
+cosign verify --key release.rsa.pub ghcr.io/fosterstack/cache:${VER}-fips</code></pre>
+  <p>This shows that our release key signed these exact images. The key is held in a cloud key service and used only by the release job; it never leaves the service. Each signature is recorded in Rekor, the public transparency log. The first command downloads the release public key, <code>release.rsa.pub</code>, from the release tag. Every command below uses the same file.</p>
+  <p>To check that this key is the one the release names, fetch <code>.github/policy/release-key-root.pub</code> from the repository at the release tag, and download <code>release-key-manifest.json</code> and <code>release-key-manifest.sig</code> from the release page:</p>
+  <pre tabindex="0"><code>cosign verify-blob --key release-key-root.pub --signature release-key-manifest.sig --insecure-ignore-tlog release-key-manifest.json
+jq -r .public_key release-key-manifest.json &gt; release.rsa.pub</code></pre>
+  <p>Run the second command only if the first prints <code>Verified OK</code>. The first command skips the log because the root key is kept offline, so its signature has no log entry. Check <code>valid_from</code> and <code>valid_to</code> in the manifest against the current time, and stop if the manifest has a <code>revoked_at</code> that is at or before it.</p>
   <h2>2. The file lists are ours, and your files match them</h2>
   <pre tabindex="0"><code>gh release download v${VER} --repo fosterstack/cache \
   -p checksums.txt -p checksums.txt.bundle \
   -p release-files.sha256 -p release-files.sha256.bundle \
   -p release-manifest.json -p "fscache_${VER}_linux_amd64.tar.gz"
 for f in checksums.txt release-files.sha256; do
-  cosign verify-blob "$f" --bundle "$f.bundle" \
-    --certificate-identity "${IDENT}/stage-promote.yml@refs/tags/v${VER}" \
-    --certificate-oidc-issuer "$ISSUER"
+  cosign verify-blob --key release.rsa.pub --bundle "$f.bundle" "$f"
 done
 sha256sum -c &lt;(grep "fscache_${VER}_linux_amd64.tar.gz" checksums.txt | grep -v sbom)
 sha256sum -c &lt;(grep release-manifest.json release-files.sha256)</code></pre>
@@ -128,10 +125,8 @@ sha256sum -c &lt;(grep release-manifest.json release-files.sha256)</code></pre>
   <h2>4. How it was built</h2>
   <pre tabindex="0"><code>gh release download v${VER} --repo fosterstack/cache \
   -p provenance.bundle.json
-cosign verify-blob-attestation --bundle provenance.bundle.json \
-  --type https://slsa.dev/provenance/v1 --check-claims=false \
-  --certificate-identity "${IDENT}/stage-sign.yml@refs/tags/v${VER}" \
-  --certificate-oidc-issuer "$ISSUER"
+cosign verify-blob-attestation --key release.rsa.pub --bundle provenance.bundle.json \
+  --type https://slsa.dev/provenance/v1 --check-claims=false
 jq -r '.dsseEnvelope.payload | @base64d | fromjson | .subject[] | .name + " sha256:" + .digest.sha256' provenance.bundle.json
 # the digest of the production image you pulled (for example from docker images --digests):
 DIGEST=sha256:...
@@ -142,9 +137,7 @@ jq -e --arg d "${DIGEST#sha256:}" '.dsseEnvelope.payload | @base64d | fromjson |
   -p production.sbom.json -p production.sbom.json.bundle \
   -p production.full.lock.json -p production.full.lock.json.bundle
 for f in production.sbom.json production.full.lock.json; do
-  cosign verify-blob "$f" --bundle "$f.bundle" \
-    --certificate-identity "${IDENT}/stage-promote.yml@refs/tags/v${VER}" \
-    --certificate-oidc-issuer "$ISSUER"
+  cosign verify-blob --key release.rsa.pub --bundle "$f.bundle" "$f"
 done</code></pre>
   <p>The SBOM lists what is in the image. The lock file lists every package the image was assembled from, by checksum. Repeat with <code>fips.sbom.json</code> and <code>fips.full.lock.json</code> for the <code>-fips</code> image.</p>
   <h2>What this proves</h2>
