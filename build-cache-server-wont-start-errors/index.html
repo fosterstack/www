@@ -110,7 +110,7 @@
       <tr><td><code>check shutdown marker: stat DIR/.unclean-shutdown: not a directory</code></td><td><code>FSCACHE_DATA_DIR</code> points at a file.</td><td>Point it at a folder.</td></tr>
       <tr><td><code>open metadata store: metadata: open: timeout</code>, after about 5 seconds</td><td>Another server already holds this data folder.</td><td>Stop the other server. See <a href="/build-cache-server-down-what-happens/#run-two-build-cache-servers">can I run two build cache servers</a>.</td></tr>
       <tr><td><code>open metadata store: metadata: open: invalid database</code></td><td>The index file <code>meta.db</code> in the data folder is damaged. We overwrote it with random bytes.</td><td>Restore the folder from a backup, or start with a new, empty folder. See <a href="/upgrade-build-cache-server/#back-up-and-restore-build-cache">back up and restore a build cache</a>.</td></tr>
-      <tr><td><code>open metadata store: metadata: open: open DIR/meta.db: permission denied</code></td><td>The server's user cannot read and write the index file. We had made it read-only.</td><td>Fix the file's owner or mode.</td></tr>
+      <tr><td><code>open metadata store: metadata: open: open DIR/meta.db: permission denied</code></td><td>The server's user cannot read and write the index file. We had made it read-only.</td><td>Fix who owns the file, or its permissions.</td></tr>
       <tr><td><code>FSCACHE_MAX_BYTES="10GB" is not a valid byte count (whole non-negative decimal number)</code></td><td>Sizes are whole numbers of bytes. A unit, a decimal point, an exponent, a space and letters after the number were all refused.</td><td>Write <code>10737418240</code> for 10 GiB, not <code>10GB</code>.</td></tr>
       <tr><td><code>FSCACHE_MAX_BYTES="-1" is negative; a byte count cannot be</code></td><td>A negative size. <code>FSCACHE_MAX_CONCURRENT_UPLOADS="-1"</code> gets the same line.</td><td>Use a whole number, or <code>0</code> for no limit.</td></tr>
       <tr><td><code>FSCACHE_USERNAME and FSCACHE_PASSWORD must both be set or both be empty</code>, and the same line for <code>FSCACHE_RO_USERNAME</code> and <code>FSCACHE_RO_PASSWORD</code></td><td>Only one half of a login pair is set.</td><td>Set both halves, or neither.</td></tr>
@@ -130,7 +130,7 @@
   <h3>Why it happens</h3>
   <p>The server does not run as root. It runs as user 65532, and it keeps its files in a <code>data</code> folder inside <code>/home/nonroot</code>. If that folder already exists and belongs to someone else, the server cannot write to it and stops.</p>
   <p>We reproduced it with a volume that already held data owned by root, which is what you get after restoring a backup as root:</p>
-  <pre tabindex="0"><code>/d       0:0   drwxr-xr-x      (owner:group, mode)
+  <pre tabindex="0"><code>/d       0:0   drwxr-xr-x      (user ID:group ID, permissions)
 /d/data  0:0   drwxr-xr-x</code></pre>
 
   <h3>The fix</h3>
