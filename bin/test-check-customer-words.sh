@@ -222,6 +222,14 @@ printf '[color]\n\tui = always\n' >> .git/config   # written as text: the test r
 cd "$ROOT" || exit 2
 if [ "$rc" -eq 1 ]; then echo "ok:   T9 color.ui=always does not hide a shop word from the step"; pass=$((pass+1)); else echo "FAIL: T9 color.ui=always does not hide a shop word from the step (rc=$rc)"; fail=$((fail+1)); fi
 
+# a terminal on stdin (simulated: isatty answers True) exits 2 with a usage line instead of waiting for input
+out="$(python3 -I -c 'import io, runpy, sys
+class Terminal(io.StringIO):
+    def isatty(self): return True
+sys.stdin = Terminal()
+runpy.run_path(sys.argv[1], run_name="__main__")' "$SCRIPT" 2>&1)"; rc=$?
+if [ "$rc" -eq 2 ] && [ "$(printf '%s\n' "$out" | wc -l)" -eq 1 ] && printf '%s\n' "$out" | grep -q 'git diff .* | python3'; then echo "ok:   T10 a terminal on stdin exits 2 with one usage line"; pass=$((pass+1)); else echo "FAIL: T10 a terminal on stdin exits 2 with one usage line (rc=$rc: $out)"; fail=$((fail+1)); fi
+
 echo "----"
 echo "check-customer-words: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]
