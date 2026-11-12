@@ -107,9 +107,9 @@
       <tr><td>Release</td><td>Verifies every stage's signature together, then publishes the same digests.</td><td>800-204C 4.6 (verify that all required signatures are present); 800-204D 5.1.1 (policy checks that the required attestations are found) and 5.2 (NIST SP 800-204D requirement DEPLOY-REQ-3)</td><td>Partly. The policy is code in the workflow file, not a separate signed policy document as 5.1.1 describes.</td></tr>
     </tbody>
   </table></div>
-  <p>In one line: every stage's record is signed with the release key, and all of them are verified together at release.</p>
+  <p>In one line: the jobs that build sign their records with a throwaway key, a signing job countersigns every record with the release key, and all of them are verified together at release.</p>
   <h2>How we line up with SLSA</h2>
-  <p>SLSA is a public scale for how far you can trust the way software was built. Its Build track runs from Level 0 to Level 3. We designed v0.3.0 to meet Build Level 3. This is our own reading of the requirements: nobody outside FosterStack has assessed it, and the pipeline has not yet completed a release run, so treat it as a design claim until it has.</p>
+  <p>SLSA is a public scale for how far you can trust the way software was built. Its Build track runs from Level 0 to Level 3. We designed v0.3.0 to meet Build Level 3. This is our own reading of the requirements, and nobody outside FosterStack has assessed it, so treat it as a design claim.</p>
   <p>Level 3 asks that the build runs on a hosted platform and that its provenance, the signed record of how the build ran, cannot be forged by the build itself. Here, the Build stage runs on a hosted CI platform and cannot sign the provenance: only the signing jobs can. The Sign stage takes the build's digest list, checks it against the build's record and signs it with the release key. The Release stage accepts a build only if that signature verifies. You can check this yourself: see <a href="/verify-a-release/">verify a release yourself</a>.</p>
   <p class="muted-note">Related: <a href="/verify-a-release/">verify a release yourself</a> and <a href="/how-we-build/">how releases are built and signed</a>.</p>
 </main>

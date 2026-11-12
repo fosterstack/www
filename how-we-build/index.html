@@ -106,10 +106,10 @@
   <h2>The stages a release goes through</h2>
   <p>Signed at every stage, verified together at release. Each stage records what it did, the signing jobs sign each record with the release key, each stage checks the one before it, and the Release stage verifies them all together.</p>
   <ol class="steps">
-    <li><strong>Build.</strong> The stage first checks that the tag is signed, then builds the binaries and both images, for amd64 and arm64, once. It signs what it built.</li>
-    <li><strong>Sign.</strong> A separate stage, with its own identity, receives only the build's digests, records the build and signs it.</li>
-    <li><strong>Rebuild.</strong> The same commit is built again on a fresh machine and every digest is compared with the first build. Any difference stops the release. It signs its result.</li>
-    <li><strong>Check.</strong> The scanners we list (the list is in the repository), the Gradle and Maven tests and the no-phone-home test run against the exact images, and the stage signs its verdict for those digests. A finding blocks the release unless a published VEX statement explains why it does not apply.</li>
+    <li><strong>Build.</strong> The stage first checks that the tag is signed, then builds the binaries and both images, for amd64 and arm64, once. It records what it built and signs the record with a throwaway key that nothing trusts.</li>
+    <li><strong>Sign.</strong> A separate stage, with its own identity, receives the build's records and the files they name. It checks each record against those files and countersigns it with the release key.</li>
+    <li><strong>Rebuild.</strong> The same commit is built again on a fresh machine and every digest is compared with the first build. Any difference stops the release. It records its result, and the Sign stage countersigns the record.</li>
+    <li><strong>Check.</strong> The scanners we list (the list is in the repository), the Gradle and Maven tests and the no-phone-home test run against the exact images, and the stage records its verdict for those digests, which a signing job countersigns. A finding blocks the release unless a published VEX statement explains why it does not apply.</li>
     <li><strong>Release.</strong> The only stage that can publish. It verifies every earlier signature together, then publishes the same digests that were built and judged, with no rebuild.</li>
   </ol>
   <p class="muted-note">The full description is in <a href="https://github.com/fosterstack/cache/blob/main/RELEASING.md">the release process</a>.</p>

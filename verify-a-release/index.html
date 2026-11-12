@@ -100,7 +100,7 @@ echo "$VER"</code></pre>
   <p>Set VER to the release you run, v0.3.0 or later.</p>
   <p>There are two images, production and <code>-fips</code>.</p>
   <h2 id="verify-container-image-signature-cosign">1. The key, then the signature and who signed it</h2>
-  <p>Every release key is signed by one root key. Check the key before you trust a signature made with it. Fetch the root key from the repository at the release tag, and download the key manifest and its signature from the release page:</p>
+  <p id="check-the-release-key">Every release key is signed by one root key. Check the key before you trust a signature made with it. Fetch the root key from the repository at the release tag, and download the key manifest and its signature from the release page:</p>
   <pre tabindex="0"><code>curl -fsSL -o release-key-root.pub "https://raw.githubusercontent.com/fosterstack/cache/v${VER}/.github/policy/release-key-root.pub"
 gh release download v${VER} --repo fosterstack/cache \
   -p release-key-manifest.json -p release-key-manifest.sig
@@ -108,7 +108,13 @@ cosign verify-blob --key release-key-root.pub --signature release-key-manifest.s
 jq -r .public_key release-key-manifest.json &gt; release.rsa.pub</code></pre>
   <p>Run the last command only if the one before it prints <code>Verified OK</code>. It writes the release key, <code>release.rsa.pub</code>, from the manifest. The check skips the log because the root key is kept offline, so its signature has no log entry.</p>
   <p>Check <code>valid_from</code> and <code>valid_to</code> in the manifest against the current time. Stop if the current time is at or after <code>valid_to</code> (<code>valid_to</code> is optional) or before <code>valid_from</code>, whatever the release's publish date.</p>
-  <p>The newest manifest and its signature for the same <code>key_id</code> are among the release assets. Verify them the same way as the first. Stop if the manifest has a <code>revoked_at</code> that is at or before the current time.</p>
+  <p>The newest manifest and its signature for the same <code>key_id</code> are among the assets of the latest release. Fetch them into a separate folder and verify them the same way as the first:</p>
+  <pre tabindex="0"><code>mkdir newest
+gh release download --repo fosterstack/cache --dir newest \
+  -p release-key-manifest.json -p release-key-manifest.sig
+cosign verify-blob --key release-key-root.pub --signature newest/release-key-manifest.sig --insecure-ignore-tlog newest/release-key-manifest.json
+jq '{valid_from, valid_to, revoked_at}' newest/release-key-manifest.json</code></pre>
+  <p>Stop if the manifest has a <code>revoked_at</code> that is at or before the current time.</p>
   <p>Now check the images:</p>
   <pre tabindex="0"><code>cosign verify --key release.rsa.pub ghcr.io/fosterstack/cache:${VER}
 cosign verify --key release.rsa.pub ghcr.io/fosterstack/cache:${VER}-fips</code></pre>
