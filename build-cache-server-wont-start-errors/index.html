@@ -130,7 +130,7 @@
   <h3>Why it happens</h3>
   <p>The server does not run as root. It runs as user 65532, and it keeps its files in a <code>data</code> folder inside <code>/home/nonroot</code>. If that folder already exists and belongs to someone else, the server cannot write to it and stops.</p>
   <p>We reproduced it with a volume that already held data owned by root, which is what you get after restoring a backup as root:</p>
-  <pre tabindex="0"><code>/d       0:0   drwxr-xr-x      (user:group, mode)
+  <pre tabindex="0"><code>/d       0:0   drwxr-xr-x      (user ID:group ID, permissions)
 /d/data  0:0   drwxr-xr-x</code></pre>
 
   <h3>The fix</h3>
