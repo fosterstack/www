@@ -19,6 +19,7 @@ set -euo pipefail
 ALLOW_PATTERNS=(
   '^CONTRIBUTING\.md$'
   '^\.github/PULL_REQUEST_TEMPLATE\.md$'
+  '^\.github/dependabot\.yml$'
   '^index\.html$'
   '^404\.html$'
   '^README\.md$'
@@ -37,6 +38,9 @@ ALLOW_PATTERNS=(
   '^\.githooks/pre-commit$'
   '^bin/check-file-allowlist\.sh$'
   '^bin/test-check-file-allowlist\.sh$'
+  '^bin/check-customer-words\.py$'
+  '^bin/test-check-customer-words\.sh$'
+  '^\.github/policy/customer-words-allow\.txt$'
   '^bin/check-site-rot\.py$'
   '^bin/test-check-site-rot\.sh$'
   '^bin/bench-miss-cost\.sh$'
@@ -78,8 +82,10 @@ ALLOW_PATTERNS=(
 # security.txt is meant to be public.
 DOT_OK=(
   '^\.well-known/security\.txt$'
+  '^\.github/dependabot\.yml$'
   '^\.githooks/pre-commit$'
   '^\.github/PULL_REQUEST_TEMPLATE\.md$'
+  '^\.github/policy/customer-words-allow\.txt$'
   '^\.github/workflows/[A-Za-z0-9_-][A-Za-z0-9._-]*\.ya?ml$'
   '^\.gitignore$'
 )
