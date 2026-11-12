@@ -108,17 +108,17 @@ cosign verify-blob --key release-key-root.pub --signature release-key-manifest.s
 jq -r .public_key release-key-manifest.json &gt; release.rsa.pub</code></pre>
   <p>Run the last command only if the one before it prints <code>Verified OK</code>. It writes the release key, <code>release.rsa.pub</code>, from the manifest. The check skips the log because the root key is kept offline, so its signature has no log entry.</p>
   <p>Check <code>valid_from</code> and <code>valid_to</code> in the manifest against the current time. Stop if the current time is at or after <code>valid_to</code> (<code>valid_to</code> is optional) or before <code>valid_from</code>, whatever the release's publish date.</p>
-  <p>The newest manifest and its signature for the same <code>key_id</code> are among the assets of the latest release. Fetch them into a separate folder and verify them the same way as the first:</p>
-  <pre tabindex="0"><code>mkdir newest
+  <p>The newest manifest and its signature for the same <code>key_id</code> are among the release assets. Download them into a separate folder (with no tag, <code>gh</code> takes the newest release) and verify them the same way as the first, including the dates above:</p>
+  <pre tabindex="0"><code>mkdir -p newest
 gh release download --repo fosterstack/cache --dir newest \
   -p release-key-manifest.json -p release-key-manifest.sig
 cosign verify-blob --key release-key-root.pub --signature newest/release-key-manifest.sig --insecure-ignore-tlog newest/release-key-manifest.json
-jq '{valid_from, valid_to, revoked_at}' newest/release-key-manifest.json</code></pre>
-  <p>Stop if the manifest has a <code>revoked_at</code> that is at or before the current time.</p>
+jq '{key_id, valid_from, valid_to, revoked_at}' release-key-manifest.json newest/release-key-manifest.json</code></pre>
+  <p>Stop if the two <code>key_id</code> values differ. Stop if the newest manifest has a <code>revoked_at</code> that is at or before the current time.</p>
   <p>Now check the images:</p>
   <pre tabindex="0"><code>cosign verify --key release.rsa.pub ghcr.io/fosterstack/cache:${VER}
 cosign verify --key release.rsa.pub ghcr.io/fosterstack/cache:${VER}-fips</code></pre>
-  <p>This shows that our release key signed these exact images. The key is held in a cloud key service and never leaves it; only the signing jobs can use it, and no job that builds can sign. Each signature is recorded in Rekor, the public transparency log. Every command below uses the same <code>release.rsa.pub</code>.</p>
+  <p>This shows that our release key signed these exact images. The key is held in a cloud key service; only the signing jobs can use it, and no job that builds can sign. Each signature is recorded in Rekor, the public transparency log. Every command below uses the same <code>release.rsa.pub</code>.</p>
   <h2>2. The file lists are ours, and your files match them</h2>
   <pre tabindex="0"><code>gh release download v${VER} --repo fosterstack/cache \
   -p checksums.txt -p checksums.txt.bundle \

@@ -104,7 +104,7 @@
   <p>No release file is ever made on a person's laptop, ours included. A release starts when a signed tag is pushed, and there is no manual release path. That is what lets the signatures mean something: a release that our CI workflow did not build does not carry its signature.</p>
 
   <h2>The stages a release goes through</h2>
-  <p>Signed at every stage, verified together at release. Each stage records what it did, the signing jobs sign each record with the release key, each stage checks the one before it, and the Release stage verifies them all together.</p>
+  <p>Signed at every stage, verified together at release. Each stage records what it did, the signing jobs sign each record with the release key, each stage after Build checks Build's record before it uses the files, and the Release stage verifies them all together.</p>
   <ol class="steps">
     <li><strong>Build.</strong> The stage first checks that the tag is signed, then builds the binaries and both images, for amd64 and arm64, once. It records what it built and signs the record with a throwaway key that nothing trusts.</li>
     <li><strong>Sign.</strong> A separate stage, with its own identity, receives the build's records and the files they name. It checks each record against those files and countersigns it with the release key.</li>
