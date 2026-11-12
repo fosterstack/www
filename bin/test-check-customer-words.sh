@@ -146,6 +146,7 @@ printf 'fine\n' > bin/gh-src/PULL_REQUEST_TEMPLATE.md; git add -A && git commit 
 git rm -rq .github; ln -s bin/gh-src .github; printf 'owner\n' >> bin/gh-src/PULL_REQUEST_TEMPLATE.md; git add -A && git commit -qm pr
 check 2 "T5b .github replaced by a link to a folder exits 2" 'symbolic link at a customer file: \.github$'
 lndir .github/other bin/other-src;              check 0 "T5b a link to a folder at .github/other passes"
+lndir .github/workflows bin/wf-src;             check 2 "T5b a link at .github/workflows exits 2" 'symbolic link at a customer file: \.github/workflows$'
 mk docs/a.md $'x\n' docs/a.md $'the owner\n'; git rm -q docs/a.md; git commit -qm rm; check 0 "T5 deleting a page passes"
 mk docs/a.md $'the owner\n' docs/b.md $'fine\n';                       check 0 "T5 a page with owner deleted and a clean one added passes"
 mk docs/a.md $'x\n' docs/b.md $'the owner\n';                          check 1 "T5 deleting one page and adding another with owner fails"
