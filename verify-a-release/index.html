@@ -118,7 +118,7 @@ jq '{key_id, valid_from, valid_to, revoked_at}' release-key-manifest.json newest
   <p>Now check the images:</p>
   <pre tabindex="0"><code>cosign verify --key release.rsa.pub ghcr.io/fosterstack/cache:${VER}
 cosign verify --key release.rsa.pub ghcr.io/fosterstack/cache:${VER}-fips</code></pre>
-  <p>This shows that our release key signed these exact images. The key is held in a cloud key service; only the signing jobs can use it, and no job that builds can sign. Each signature is recorded in Rekor, the public transparency log. Every command below uses the same <code>release.rsa.pub</code>.</p>
+  <p>This shows that our release key signed these exact images. The key is held in a cloud key service; only the signing jobs and the release job can use it, and no job that builds can sign. The release job signs the images; the signing jobs sign the records and the provenance. Each signature is recorded in Rekor, the public transparency log. Every command below uses the same <code>release.rsa.pub</code>.</p>
   <h2>2. The file lists are ours, and your files match them</h2>
   <pre tabindex="0"><code>gh release download v${VER} --repo fosterstack/cache \
   -p checksums.txt -p checksums.txt.bundle \
