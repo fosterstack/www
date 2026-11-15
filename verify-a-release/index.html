@@ -92,8 +92,8 @@
 </header>
 <main>
   <h1>Verify a FosterStack Cache release yourself</h1>
-  <p>You should not have to take our word for what you run. These steps check the image signatures, the signed file lists, the digest, how the release was built and its parts list, using only <code>cosign</code>, <code>gh</code>, <code>curl</code>, <code>jq</code> and <code>sha256sum</code>. They are for v0.3.0 and later. For v0.2.x, use the <a href="https://github.com/fosterstack/cache/blob/v0.2.2/docs/verify-images.md">image verification guide</a>, but set <code>VER</code> to your version (for example <code>VER=0.2.2</code>) instead of running its first command.</p>
-  <p>You need no account to pull the images or to run <code>cosign</code>. Downloading release files with <code>gh</code> needs <code>gh auth login</code>; you can also download them from the release page in a browser.</p>
+  <p>You should not have to take our word for what you run. These steps check five things: the image signatures, the signed file lists, the digest (a hash that identifies one exact image), how the release was built, and its parts list. They use only <code>cosign</code>, <code>gh</code>, <code>curl</code>, <code>jq</code> and <code>sha256sum</code>. They are for v0.3.0 and later. The page is long because each step has its own commands. Do step 1 first, because the later steps use the key it gives you. For v0.2.x, use the <a href="https://github.com/fosterstack/cache/blob/v0.2.2/docs/verify-images.md">image verification guide</a>, but set <code>VER</code> to your version (for example <code>VER=0.2.2</code>) instead of running its first command.</p>
+  <p>You need no account to pull the images or to run <code>cosign</code>. Downloading release files with <code>gh</code> needs <code>gh auth login</code>. You can also download them from the release page in a browser.</p>
   <h2>Set the version</h2>
   <pre tabindex="0"><code>VER=0.3.0
 echo "$VER"</code></pre>
@@ -118,7 +118,7 @@ jq '{key_id, valid_from, valid_to, revoked_at}' release-key-manifest.json newest
   <p>Now check the images:</p>
   <pre tabindex="0"><code>cosign verify --key release.rsa.pub ghcr.io/fosterstack/cache:${VER}
 cosign verify --key release.rsa.pub ghcr.io/fosterstack/cache:${VER}-fips</code></pre>
-  <p>This shows that our release key signed these exact images. The key is held in a cloud key service; only the signing jobs and the release job can use it, and no job that builds can sign. The release job signs the images; the signing jobs sign the records and the provenance. Each signature is recorded in Rekor, the public transparency log. Every command below uses the same <code>release.rsa.pub</code>.</p>
+  <p>This shows that our release key signed these exact images. The key is held in a cloud key service. Only the signing jobs and the release job can use it, and no job that builds can sign. The release job signs the images. The signing jobs sign the records and the provenance. Each signature is recorded in Rekor, the public transparency log. Every command below uses the same <code>release.rsa.pub</code>.</p>
   <h2>2. The file lists are ours, and your files match them</h2>
   <pre tabindex="0"><code>gh release download v${VER} --repo fosterstack/cache \
   -p checksums.txt -p checksums.txt.bundle \
@@ -143,7 +143,7 @@ jq -r '.dsseEnvelope.payload | @base64d | fromjson | .subject[] | .name + " sha2
 # the digest of the production image you pulled (for example from docker images --digests):
 DIGEST=sha256:...
 jq -e --arg d "${DIGEST#sha256:}" '.dsseEnvelope.payload | @base64d | fromjson | any(.subject[]; .name == "image-production" and .digest.sha256 == $d)' provenance.bundle.json</code></pre>
-  <p>The SLSA provenance is signed in a separate job, <code>stage-sign.yml</code>. It takes the list of digests the build made, checks it against the build's signed record and runs no code from the build. The first <code>jq</code> lists each image it names, with its digest. The second prints <code>true</code> only if the provenance names the production image you pulled; for the <code>-fips</code> image use the name <code>image-fips</code>.</p>
+  <p>The SLSA provenance is a signed record of how the images were built. It is signed in a separate job, <code>stage-sign.yml</code>. That job takes the list of digests the build made. It checks the list against the build's signed record, and it runs no code from the build. The first <code>jq</code> lists each image the provenance names, with its digest. The second prints <code>true</code> only if the provenance names the production image you pulled. For the <code>-fips</code> image, use the name <code>image-fips</code>.</p>
   <h2>5. The parts list and what it was assembled from</h2>
   <pre tabindex="0"><code>gh release download v${VER} --repo fosterstack/cache \
   -p production.sbom.json -p production.sbom.json.bundle \
@@ -158,7 +158,7 @@ done</code></pre>
     <li>Provenance proves which workflow, at which tag, produced the digests it names.</li>
     <li>It does not prove the software has no bugs. Scan results and our statements about findings are separate: see <a href="/security/">the security policy</a>.</li>
   </ul>
-  <p>Each stage of the release also writes a record with <a href="https://github.com/in-toto/witness">Witness</a>, an open-source build-record tool. The stages that build sign their record with a throwaway key; a signing job checks each record against the files it names and signs it with the release key. The records are attached to the release.</p>
+  <p>Each stage of the release also writes a record with <a href="https://github.com/in-toto/witness">Witness</a>, an open-source build-record tool. The stages that build sign their record with a throwaway key. A signing job checks each record against the files it names and signs it with the release key. The records are attached to the release.</p>
   <p class="muted-note">Related: <a href="/how-we-build/">how releases are built and signed</a>, <a href="/how-our-pipeline-maps-to-nist-and-slsa/">how the pipeline maps to NIST and SLSA</a>, <a href="/scan-fosterstack-cache-image/">scan the image yourself</a>, <a href="/fips-140-3-build-cache/">the FIPS 140-3 build</a>, <a href="/air-gapped-build-cache-install/">installing without internet access</a> and <a href="/upgrade-build-cache-server/">upgrading</a>.</p>
   <p class="muted-note">Moving off the free Build Cache Node? See <a href="/build-cache-node-end-of-life/">what the end of life means</a> and the <a href="/migrate-build-cache-node/">migration guide</a>.</p>
 </main>
