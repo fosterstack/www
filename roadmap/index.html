@@ -95,13 +95,15 @@
 </header>
 <main>
   <h1>Roadmap honesty</h1>
-  <p>Gradle and Maven both run against the same server today; we maintain the cache
-  server, while the Maven client side is Apache's own Build Cache Extension. A dependency cache —
-  the same server restoring <code>node_modules</code>, <code>~/.m2</code>, and
+  <p>Gradle and Maven both run against the same server today. We maintain the cache
+  server. The Maven client side is Apache's own Build Cache Extension.</p>
+  <p>A dependency cache is next on the list, npm first. It is the same server restoring
+  <code>node_modules</code>, <code>~/.m2</code>, and
   <code>~/.gradle/caches</code> by lockfile key, so ephemeral CI agents stop
-  re-downloading the world — is next on the list, npm first. The Helm chart and the paid tiers on the <a href="/pricing/">pricing page</a> are not built; they are described so you can see the direction. Free
-  is real and complete today. If you need something sooner,
-  <a href="https://github.com/fosterstack/cache/issues">open an issue</a> — that is what
+  re-downloading the world. The Helm chart (a packaged way to install on Kubernetes) and the paid tiers on the <a href="/pricing/">pricing page</a> are not built. They are described so you can see the direction. Free
+  is real and complete today.</p>
+  <p>If you need something sooner,
+  <a href="https://github.com/fosterstack/cache/issues">open an issue</a>. That is what
   moves the roadmap.</p>
 </main>
 <footer>
