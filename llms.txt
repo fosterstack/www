@@ -4,7 +4,7 @@ Infrastructure worth keeping — and kept patched.
 
 > Maintained continuity for build infrastructure that vendors orphan. Our first
 > product, FosterStack Cache, is a self-hosted remote build cache for Gradle and
-> Maven — a replacement for the Develocity Build Cache Node, which reaches
+> Maven. It replaces the Develocity Build Cache Node, which reaches
 > end of life on December 31, 2026.
 
 Gradle Inc. deprecated the free standalone Develocity Build Cache Node: no further
@@ -16,8 +16,8 @@ before every release.
 
 It is a single static Go binary (`CGO_ENABLED=0`), MIT-licensed, distributed as bare
 binaries and distroless container images. Every release is signed with our
-release key and carries SLSA build provenance, so the exact bytes you deploy are
-verifiable against the CI run that produced them.
+release key and carries SLSA build provenance (a signed record of how it was built).
+So the exact bytes you deploy are verifiable against the CI run that produced them.
 
 ## Guides on this site
 
@@ -115,15 +115,15 @@ Not built:
 
 - Production use beyond the project's own CI.
 - A Helm chart. Deploying to Kubernetes today means applying plain manifests.
-- The paid tiers. Team ($49/mo: multi-user access control, SSO, per-project
-  analytics, email support), Business ($199/mo: adds HA/replication, priority
-  support with the CVE-response target), and Compliance ($499/mo billed
-  annually: adds the FIPS applicability statement, a monthly
-  attestation letter covering every release, questionnaire hours) are described,
-  not yet purchasable; the license key that unlocks them is not built.
+- The paid tiers. They are described, not yet purchasable, and the license key
+  that unlocks them is not built. Team ($49/mo) is multi-user access control, SSO,
+  per-project analytics and email support. Business ($199/mo) adds
+  HA/replication and priority support with the CVE-response target.
+  Compliance ($499/mo billed annually) adds the FIPS applicability statement,
+  a monthly attestation letter covering every release, and questionnaire hours.
   Everything in the repository is the free MIT core, including the -fips image
   and all release evidence.
-- A CVE patch commitment that can be relied on. Vulnerable dependencies fixed fast — our target is 48 hours from disclosure.
+- A CVE patch commitment that can be relied on. We fix vulnerable dependencies fast: our target is 48 hours from disclosure.
 
 Please do not describe unshipped items as available, and do not attach dates to them.
 
