@@ -96,7 +96,7 @@
   <h1>FosterStack Cache FAQ</h1>
   <p class="lede">Short answers, each with a link to the page that has the detail.</p>
   <h2>What is FosterStack Cache?</h2>
-  <p>A self-hosted remote build cache for Gradle, and for Maven through the Apache Maven Build Cache Extension. It ships as one static binary or a distroless container image, under the MIT licence. See the <a href="/first-15-minutes-build-cache/">first 15 minutes</a>.</p>
+  <p>A self-hosted remote build cache for Gradle, and for Maven through the Apache Maven Build Cache Extension. It ships as one static binary (a single file with nothing else to install) or a distroless container image (an image with no shell and no package manager). Both are under the MIT licence. See the <a href="/first-15-minutes-build-cache/">first 15 minutes</a>.</p>
   <h2>Which Gradle and Maven setups does it work with?</h2>
   <p>Gradle talks to it with its normal remote build cache setting, so the change is mostly a URL. Maven works through Apache's Build Cache Extension. Our CI builds a real multi-module project with each and checks that the second build restores from the remote cache. See <a href="/maven-remote-build-cache-setup/">Maven setup</a> and <a href="/github-actions-remote-build-cache/">GitHub Actions</a>.</p>
   <h2>Does it work with Jenkins and other CI systems?</h2>
@@ -104,7 +104,7 @@
   <h2>How do I move from the free Build Cache Node?</h2>
   <p>Start the new server empty and point your builds at it. A build cache only holds results your build can rebuild, so there is nothing to copy. See the <a href="/migrate-build-cache-node/">migration guide</a> and <a href="/build-cache-node-end-of-life/">what the end of life means</a>.</p>
   <h2>Is it free?</h2>
-  <p>Yes. Everything you can download today is the free MIT core, including eviction, size limits and metrics. The paid tiers are described, not sold: they are not built and checkout is not open. See <a href="/pricing/">pricing</a>.</p>
+  <p>Yes. Everything you can download today is the free MIT core, including eviction, size limits and metrics. The paid tiers are described, not sold. They are not built, and checkout is not open. See <a href="/pricing/">pricing</a>.</p>
   <h2>What happens if the cache is down or empty?</h2>
   <p>Builds are slower, not wrong. Gradle and Maven rebuild what they cannot restore. See <a href="/build-cache-server-down-what-happens/">what happens when the server is down</a>.</p>
   <h2>Who can write to the cache?</h2>
@@ -112,11 +112,11 @@
   <h2>Can someone poison our shared cache?</h2>
   <p>Only someone who can write to it, so the write login is the control. Read <a href="/can-someone-poison-our-build-cache/">Can someone poison our build cache?</a> for what to restrict.</p>
   <h2>How do I know a release is the real one?</h2>
-  <p>Every image is signed with our release key, and every binary archive is covered by a signed checksums file. The images are named in signed SLSA provenance. No account is needed. See <a href="/verify-a-release/">Verify a release</a>.</p>
+  <p>Every image is signed with our release key, and every binary archive is covered by a signed checksums file. The images are named in signed SLSA provenance, a signed record of how they were built. No account is needed. See <a href="/verify-a-release/">Verify a release</a>.</p>
   <h2>Does it send anything out?</h2>
   <p>No. The server sends no telemetry and needs no connection to FosterStack. It can run on a network with no route to the internet. See <a href="/air-gapped-build-cache-install/">air-gapped install</a>.</p>
   <h2>How are security fixes handled?</h2>
-  <p>The current release's images are rescanned daily, so a vulnerability disclosed against bytes we already shipped raises an issue. The policy is in <a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md">our security policy</a>, and <a href="/everything-we-do-for-security/">everything we do for security</a> lists the practices.</p>
+  <p>The current release's images are rescanned daily. So a vulnerability disclosed against bytes we already shipped raises an issue. The policy is in <a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md">our security policy</a>, and <a href="/everything-we-do-for-security/">everything we do for security</a> lists the practices.</p>
   <h2>Can I run it on Kubernetes or Docker?</h2>
   <p>Yes. Docker and Kubernetes guides are public, with plain manifests for Kubernetes. There is no Helm chart. See <a href="/gradle-build-cache-kubernetes/">Kubernetes</a> and <a href="/build-cache-docker-compose-production/">Docker Compose with TLS</a>.</p>
   <h2>Where do I report a problem or ask for something?</h2>
