@@ -96,25 +96,27 @@
   <h2>Check these before you upgrade</h2>
   <ul class="trust">
     <li><strong>Linux only.</strong> v0.3.0 ships Linux archives (amd64 and arm64) and no macOS archive. On a Mac, run the Linux container image under Docker Desktop.</li>
-    <li><strong>No <code>-debug</code> image.</strong> v0.3.0 ships the <code>production</code> and <code>fips</code> images only. They hold the <code>fscache</code> binary and CA certificates, with no shell, so look inside a running container from outside it with <code>kubectl debug</code> or <code>docker debug</code>; <a href="https://github.com/fosterstack/cache#debugging-a-running-container">the README has a section on it</a>.</li>
-    <li><strong>Inside the data folder.</strong> The data folder path is the same, but temporary files of writes in flight now live in a <code>+tmp</code> folder inside it.</li>
+    <li><strong>No <code>-debug</code> image.</strong> v0.3.0 ships the <code>production</code> and <code>fips</code> images only. They hold the <code>fscache</code> binary and CA certificates, with no shell. To look inside a running container, go in from outside it with <code>kubectl debug</code> or <code>docker debug</code>. <a href="https://github.com/fosterstack/cache#debugging-a-running-container">The README has a section on it</a>.</li>
+    <li><strong>Inside the data folder.</strong> The data folder path is the same. Temporary files for writes in flight now live in a <code>+tmp</code> folder inside it.</li>
   </ul>
   <h2>Fixed in this release</h2>
-  <p>This release is built with Go 1.27.3. It fixes <a href="https://pkg.go.dev/vuln/GO-2026-6809">GO-2026-6809</a> (CVE-2026-111943) in Go's standard library: <code>crypto/x509</code> now distrusts compromised intermediate certificates. The fix ships in this release; there is no separate patch release for it.</p>
+  <p>This release is built with Go 1.27.3 (Go is the language FosterStack Cache is written in). It fixes <a href="https://pkg.go.dev/vuln/GO-2026-6809">GO-2026-6809</a> (CVE-2026-111943) in Go's standard library: <code>crypto/x509</code> now distrusts compromised intermediate certificates. The fix ships in this release; there is no separate patch release for it.</p>
   <h2>What is new for Gradle and Maven users</h2>
   <ul>
     <li><strong>Optional HTTPS.</strong> Set <code>FSCACHE_TLS_CERT</code> and <code>FSCACHE_TLS_KEY</code> (both or neither) and the server serves HTTPS, TLS 1.2 or later.</li>
-    <li><strong>Clearer start-up.</strong> The server opens its listener first, warns about an <code>FSCACHE_*</code> variable it does not know, and reports how many uploads it found.</li>
-    <li><strong>Safer disk handling.</strong> A failed recovery check, or an error while serving or shutting down, keeps the "unclean" marker so the next start checks again. Temporary files no longer share a name space with cache keys, and keys whose last part starts with <code>..</code> are stored in a fixed place.</li>
-    <li><strong>Disk-trouble metrics.</strong> <code>store_writable</code>, <code>store_free_bytes</code> and <code>put_errors_total{reason}</code> are new, and the store gauges are present from start-up.</li>
+    <li><strong>Clearer start-up.</strong> The server opens its listener (the network port it serves on) first. It warns about an <code>FSCACHE_*</code> variable it does not know, and it reports how many uploads it found.</li>
+    <li><strong>Safer disk handling.</strong> A failed recovery check, or an error while serving or shutting down, keeps the "unclean" marker. That way the next start checks again. Temporary files no longer share a name space with cache keys. Keys whose last part starts with <code>..</code> are stored in a fixed place.</li>
+    <li><strong>Disk-trouble metrics.</strong> Three metrics are new: <code>store_writable</code>, <code>store_free_bytes</code> and <code>put_errors_total{reason}</code>. The store gauges (the metrics that show the current state of the store) are present from start-up.</li>
   </ul>
   <h2>What stays the same</h2>
-  <p>The Gradle and Maven protocols stay as they are, and every <code>FSCACHE_*</code> setting you use today keeps its meaning. A request with more than 500 header values has been rejected with 431 (Request Header Fields Too Large) since 0.2.2, because of Go 1.27; Gradle and Maven send far fewer.</p>
+  <p>The Gradle and Maven protocols stay as they are. Every <code>FSCACHE_*</code> setting you use today keeps its meaning.</p>
+  <p>One limit is not new. Since 0.2.2, a request with more than 500 header values is rejected with 431 (Request Header Fields Too Large), because of Go 1.27. Gradle and Maven send far fewer.</p>
   <h2>Kept patched</h2>
   <p>We keep FosterStack Cache patched. The server does not update itself, so watch the repository's releases on GitHub. Our target for vulnerable dependencies is 48 hours from disclosure; <a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md">the scope is in our security policy</a>.</p>
   <h2>How the release is built</h2>
-  <p>Signed at every stage, verified together at release. The image is built from signed packages, with no base image, and each build runs as its own job on a fresh GitHub-hosted machine that is then discarded. The build signs its packages with a key that is not secret. The release job re-signs them with the release key and signs the images with it; the key is held in a cloud key service, and that job is handed no package or image from the independent rebuild, only its records and the comparison result. Signing jobs sign the records and the provenance with the same key. A job with no secrets and no permission to publish compares the build and the rebuild.</p>
-  <p>This is designed against the build-isolation asks of SLSA and NIST SP 800-204D. You can check the release yourself: see <a href="/verify-a-release/">verify a release yourself</a> and <a href="/how-we-build/">how we build</a>.</p>
+  <p>This section is for your security reviewer. It describes how the release is built and signed, step by step. In short: every stage is signed, and everything is verified together at release.</p>
+  <p>The image is built from signed packages, with no base image. Each build runs as its own job on a fresh GitHub-hosted machine, which is then discarded. The build signs its packages with a key that is not secret. The release job re-signs them with the release key and signs the images with it. The release key is held in a cloud key service. The release job is handed no package or image from the independent rebuild, only its records and the comparison result. Signing jobs sign the records and the provenance with the same key. A separate job, with no secrets and no permission to publish, compares the build and the rebuild.</p>
+  <p>This is designed against the build-isolation asks of SLSA (a supply-chain security framework) and NIST SP 800-204D (US government guidance on securing build pipelines). You can check the release yourself: see <a href="/verify-a-release/">verify a release yourself</a> and <a href="/how-we-build/">how we build</a>.</p>
   <h2>What this release does not do</h2>
   <ul>
     <li>The jobs are separated at the level of a virtual machine, not on separate physical hardware.</li>
