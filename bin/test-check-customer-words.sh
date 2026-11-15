@@ -146,6 +146,7 @@ printf 'fine\n' > bin/gh-src/PULL_REQUEST_TEMPLATE.md; git add -A && git commit 
 git rm -rq .github; ln -s bin/gh-src .github; printf 'owner\n' >> bin/gh-src/PULL_REQUEST_TEMPLATE.md; git add -A && git commit -qm pr
 check 2 "T5b .github replaced by a link to a folder exits 2" 'symbolic link at a customer file: \.github$'
 lndir .github/other bin/other-src;              check 0 "T5b a link to a folder at .github/other passes"
+lndir .github/workflows bin/wf-src;             check 2 "T5b a link at .github/workflows exits 2" 'symbolic link at a customer file: \.github/workflows$'
 mk docs/a.md $'x\n' docs/a.md $'the owner\n'; git rm -q docs/a.md; git commit -qm rm; check 0 "T5 deleting a page passes"
 mk docs/a.md $'the owner\n' docs/b.md $'fine\n';                       check 0 "T5 a page with owner deleted and a clean one added passes"
 mk docs/a.md $'x\n' docs/b.md $'the owner\n';                          check 1 "T5 deleting one page and adding another with owner fails"
@@ -221,6 +222,14 @@ printf '[color]\n\tui = always\n' >> .git/config   # written as text: the test r
 "${step_shell[@]}" "${lint_run//bin\/check-customer-words.py/$SCRIPT}" >/dev/null 2>&1; rc=$?
 cd "$ROOT" || exit 2
 if [ "$rc" -eq 1 ]; then echo "ok:   T9 color.ui=always does not hide a shop word from the step"; pass=$((pass+1)); else echo "FAIL: T9 color.ui=always does not hide a shop word from the step (rc=$rc)"; fail=$((fail+1)); fi
+
+# a terminal on stdin (simulated: isatty answers True) exits 2 with a usage line instead of waiting for input
+out="$(python3 -I -c 'import io, runpy, sys
+class Terminal(io.StringIO):
+    def isatty(self): return True
+sys.stdin = Terminal()
+runpy.run_path(sys.argv[1], run_name="__main__")' "$SCRIPT" 2>&1)"; rc=$?
+if [ "$rc" -eq 2 ] && [ "$(printf '%s\n' "$out" | wc -l)" -eq 1 ] && printf '%s\n' "$out" | grep -q 'git diff .* | python3'; then echo "ok:   T10 a terminal on stdin exits 2 with one usage line"; pass=$((pass+1)); else echo "FAIL: T10 a terminal on stdin exits 2 with one usage line (rc=$rc: $out)"; fail=$((fail+1)); fi
 
 echo "----"
 echo "check-customer-words: $pass passed, $fail failed"
