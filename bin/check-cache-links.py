@@ -78,7 +78,7 @@ def main():
         status, body = fetch(args.github + path_query)
         if status != 200:
             problems.append("%s links github.com%s, which answered %s" % (page, path_query, status or "nothing"))
-        elif fragment and 'id="user-content-%s"' % unquote(fragment) not in body:
+        elif fragment and ('"' in unquote(fragment) or 'id="user-content-%s"' % unquote(fragment) not in body):
             problems.append("%s links github.com%s#%s, but that heading is not on the page" % (page, path, fragment))
     for line in problems:
         print("FAIL " + line)

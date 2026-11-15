@@ -13,9 +13,9 @@ import http.server, sys
 class GitHub(http.server.BaseHTTPRequestHandler):
     def log_message(self, *a): pass
     def do_GET(self):
-        if "/dead" in self.path or "x=dead" in self.path:   # a dead path, or a dead query on a live path
+        if "/dead" in self.path or "x=dead" in self.path:
             self.send_response(404); self.end_headers(); return
-        self.send_response(200); self.end_headers(); self.wfile.write(b'<h2 id="user-content-install">Install</h2>')
+        self.send_response(200); self.end_headers(); self.wfile.write(b'<h2 id="user-content-install" class="anchor">Install</h2>')
 server = http.server.HTTPServer(("127.0.0.1", 0), GitHub)
 open(sys.argv[1], "w").write(str(server.server_address[1]))
 server.serve_forever()
@@ -46,13 +46,11 @@ check "a dead cache doc link" "https://github.com/fosterstack/cache/blob/main/do
 check "a heading missing from a cache doc" "https://github.com/fosterstack/cache/blob/main/docs/install.md#nope" "#nope, but that heading is not on the page"
 check "a dead absolute link to the site" "https://fosterstack.com/new-page/" "https://fosterstack.com/new-page/, which is not a page"
 
-# A percent-encoded fragment is decoded before it is matched against the heading ids.
 check "an encoded heading that is on the page" "https://github.com/fosterstack/cache/blob/main/docs/install.md#%69nstall" pass
 check "an encoded heading missing from the page" "https://github.com/fosterstack/cache/blob/main/docs/install.md#%6eope" "but that heading is not on the page"
-# The query stays in the fetched URL, and in what counts as the same link.
+check "an encoded fragment that spans two attributes" "https://github.com/fosterstack/cache/blob/main/docs/install.md#install%22%20class=%22anchor" "but that heading is not on the page"
 check "a dead query on a live path" "https://github.com/fosterstack/cache/blob/main/docs/install.md?x=dead" "which answered 404"
 check "links that differ only by query are both checked" "https://github.com/fosterstack/cache/blob/main/docs/install.md" "which answered 404" "https://github.com/fosterstack/cache/blob/main/docs/install.md?x=dead"
-# http:// and protocol-relative links to the two hosts are checked like https://; other hosts are not.
 check "a live http cache doc link" "http://github.com/fosterstack/cache/blob/main/docs/install.md" pass
 check "a dead http cache doc link" "http://github.com/fosterstack/cache/blob/main/docs/dead.md" "docs/dead.md, which answered 404"
 check "a dead protocol-relative cache doc link" "//github.com/fosterstack/cache/blob/main/docs/dead.md" "docs/dead.md, which answered 404"
