@@ -136,7 +136,7 @@
   <p>No. A build cache only holds results your build can always rebuild. Start the new server empty and your first builds fill it. If the cache is down or empty, builds are slower, not wrong.</p>
 
   <h3>Does it work with Gradle?</h3>
-  <p>Yes. Gradle talks to it with its normal remote build cache setting, so moving from the old node is mostly a URL change. Our CI builds a real multi-module Gradle project against it on every change and checks that a second build gets real cache hits. See the <a href="/migrate-build-cache-node/">setup page</a>.</p>
+  <p>Yes. Gradle talks to it with its normal remote build cache setting, so moving from the old node is mostly a URL change. Our acceptance tests build a real multi-module Gradle project against it and check that a second build gets real cache hits. Acceptance tests run before every release. See the <a href="/migrate-build-cache-node/">setup page</a>.</p>
 
   <h3>Does it work with Maven?</h3>
   <p>Yes, through the Apache Maven Build Cache Extension. The Maven client is Apache's Build Cache Extension, not ours.</p>
