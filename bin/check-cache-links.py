@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Check, on every pull request, the links a page makes that check-site-rot.py does not read. Standard library only.
 
-  1. a link to https://fosterstack.com/<path> must name a page or file in this checkout
-  2. a link to https://github.com/fosterstack/cache... must answer 200 (the private-advisory form may redirect to a login),
+  1. a link to fosterstack.com/<path> (https://, http:// or //) must name a page or file in this checkout
+  2. a link to github.com/fosterstack/cache... (https://, http:// or //) must answer 200 (the private-advisory form may redirect to a login),
      and when it has a #fragment, the page it answers with must carry that heading id
 Links to any other site are not checked: they flake.
 
@@ -64,18 +64,21 @@ def main():
                 parser.feed(f.read())
             for href in parser.found:
                 parts = urlsplit(href)
-                if parts.scheme == "https" and parts.hostname == SITE:
+                if parts.scheme not in ("", "http", "https"):
+                    continue
+                if parts.hostname == SITE:
                     target = os.path.join(args.root, unquote(parts.path).strip("/"))
                     if not (os.path.isfile(os.path.join(target, "index.html")) or os.path.isfile(target)):
                         problems.append("%s links %s, which is not a page or file here" % (page, href))
-                elif parts.scheme == "https" and parts.hostname == "github.com" and (
+                elif parts.hostname == "github.com" and (
                         parts.path == CACHE or parts.path.startswith(CACHE + "/")):
-                    cache_links.setdefault((parts.path, parts.fragment), page)
-    for (path, fragment), page in sorted(cache_links.items()):
-        status, body = fetch(args.github + path)
+                    cache_links.setdefault((parts.path, parts.query, parts.fragment), page)
+    for (path, query, fragment), page in sorted(cache_links.items()):
+        path_query = path + ("?" + query if query else "")
+        status, body = fetch(args.github + path_query)
         if status != 200:
-            problems.append("%s links github.com%s, which answered %s" % (page, path, status or "nothing"))
-        elif fragment and 'id="user-content-%s"' % fragment not in body:
+            problems.append("%s links github.com%s, which answered %s" % (page, path_query, status or "nothing"))
+        elif fragment and 'id="user-content-%s"' % unquote(fragment) not in body:
             problems.append("%s links github.com%s#%s, but that heading is not on the page" % (page, path, fragment))
     for line in problems:
         print("FAIL " + line)

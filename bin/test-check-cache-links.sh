@@ -13,7 +13,7 @@ import http.server, sys
 class GitHub(http.server.BaseHTTPRequestHandler):
     def log_message(self, *a): pass
     def do_GET(self):
-        if "/dead" in self.path:
+        if "/dead" in self.path or "x=dead" in self.path:   # a dead path, or a dead query on a live path
             self.send_response(404); self.end_headers(); return
         self.send_response(200); self.end_headers(); self.wfile.write(b'<h2 id="user-content-install">Install</h2>')
 server = http.server.HTTPServer(("127.0.0.1", 0), GitHub)
@@ -24,13 +24,14 @@ server=$!
 for _ in $(seq 20); do [ -s "$tmp/port" ] && break; sleep 0.3; done
 github="http://127.0.0.1:$(cat "$tmp/port")"
 
-page() {   # page LINK: a site with one other page, and a home page holding the one link under test
+page() {   # page LINK [LINK2]: a site with one other page, and a home page holding the link(s) under test
   rm -rf "$tmp/site"; mkdir -p "$tmp/site/other"
   echo '<p>other</p>' >"$tmp/site/other/index.html"
   echo "<a href=\"$1\">link</a>" >"$tmp/site/index.html"
+  [ -n "${2:-}" ] && echo "<a href=\"$2\">link</a>" >>"$tmp/site/index.html"
 }
-check() {   # check NAME LINK EXPECTED: EXPECTED is "pass" or the text of the FAIL line
-  page "$2"
+check() {   # check NAME LINK EXPECTED [LINK2]: EXPECTED is "pass" or the text of the FAIL line
+  page "$2" "${4:-}"
   out=$(CACHE_LINKS_RETRY_WAIT=0 python3 "$here/bin/check-cache-links.py" --root "$tmp/site" --github "$github" 2>&1); code=$?
   if [ "$3" = pass ] && [ $code -eq 0 ]; then echo "ok   $1"
   elif [ "$3" != pass ] && [ $code -ne 0 ] && grep -q "$3" <<<"$out"; then echo "ok   $1"
@@ -44,6 +45,22 @@ check "a link to another site is not checked" "https://example.com/dead" pass
 check "a dead cache doc link" "https://github.com/fosterstack/cache/blob/main/docs/dead.md" "docs/dead.md, which answered 404"
 check "a heading missing from a cache doc" "https://github.com/fosterstack/cache/blob/main/docs/install.md#nope" "#nope, but that heading is not on the page"
 check "a dead absolute link to the site" "https://fosterstack.com/new-page/" "https://fosterstack.com/new-page/, which is not a page"
+
+# A percent-encoded fragment is decoded before it is matched against the heading ids.
+check "an encoded heading that is on the page" "https://github.com/fosterstack/cache/blob/main/docs/install.md#%69nstall" pass
+check "an encoded heading missing from the page" "https://github.com/fosterstack/cache/blob/main/docs/install.md#%6eope" "but that heading is not on the page"
+# The query stays in the fetched URL, and in what counts as the same link.
+check "a dead query on a live path" "https://github.com/fosterstack/cache/blob/main/docs/install.md?x=dead" "which answered 404"
+check "links that differ only by query are both checked" "https://github.com/fosterstack/cache/blob/main/docs/install.md" "which answered 404" "https://github.com/fosterstack/cache/blob/main/docs/install.md?x=dead"
+# http:// and protocol-relative links to the two hosts are checked like https://; other hosts are not.
+check "a live http cache doc link" "http://github.com/fosterstack/cache/blob/main/docs/install.md" pass
+check "a dead http cache doc link" "http://github.com/fosterstack/cache/blob/main/docs/dead.md" "docs/dead.md, which answered 404"
+check "a dead protocol-relative cache doc link" "//github.com/fosterstack/cache/blob/main/docs/dead.md" "docs/dead.md, which answered 404"
+check "a live http link to the site" "http://fosterstack.com/other/" pass
+check "a dead http link to the site" "http://fosterstack.com/new-page/" "//fosterstack.com/new-page/, which is not a page"
+check "a dead protocol-relative link to the site" "//fosterstack.com/new-page/" "//fosterstack.com/new-page/, which is not a page"
+check "an http link to another site is not checked" "http://example.com/dead" pass
+check "a protocol-relative link to another site is not checked" "//example.com/dead" pass
 
 [ $fail -eq 0 ] && echo "cache-links self-test: all passed"
 exit $fail
