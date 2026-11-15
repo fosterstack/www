@@ -101,22 +101,22 @@
   <p>We started with a build cache, and we secure our own release pipeline before we ask you to run it.</p>
 
   <h2>Releases are built only in CI</h2>
-  <p>No release file is ever made on a person's laptop, ours included. A release starts when a signed tag is pushed, and there is no manual release path. That is what lets the signatures mean something: a release that our CI workflow did not build does not carry its signature.</p>
+  <p>CI is our automated build system. No release file is ever made on a person's laptop, ours included. A release starts when a signed tag is pushed. There is no manual release path. That is what lets the signatures mean something: a release that our CI workflow did not build does not carry its signature.</p>
 
   <h2>The stages a release goes through</h2>
-  <p>Signed at every stage, verified together at release. Each stage records what it did, the signing jobs sign each record with the release key, each stage after Build checks Build's record before it uses the files, and the Release stage verifies them all together.</p>
+  <p>In short: every stage is signed, and everything is verified together at release. Each stage records what it did. The signing jobs sign each record with the release key. Each stage after Build checks Build's record before it uses the files. The Release stage then verifies all the records together.</p>
   <ol class="steps">
-    <li><strong>Build.</strong> The stage first checks that the tag is signed, then builds the binaries and both images, for amd64 and arm64, once. It records what it built and signs the record with a throwaway key that nothing trusts.</li>
+    <li><strong>Build.</strong> The stage first checks that the tag is signed. Then it builds the binaries and both images once, for two processor types, amd64 and arm64. It records what it built and signs the record with a throwaway key that nothing trusts.</li>
     <li><strong>Sign.</strong> A separate stage, with its own identity, receives the build's records and the files they name. It checks each record against those files and countersigns it with the release key.</li>
-    <li><strong>Rebuild.</strong> The same commit is built again on a fresh machine and every digest is compared with the first build. Any difference stops the release. It records its result, and the Sign stage countersigns the record.</li>
-    <li><strong>Check.</strong> The scanners we list (the list is in the repository), the Gradle and Maven tests and the no-phone-home test run against the exact images, and the stage records its verdict for those digests, which a signing job countersigns. A finding blocks the release unless a published VEX statement explains why it does not apply.</li>
+    <li><strong>Rebuild.</strong> The same commit is built again on a fresh machine. Every digest (a hash of the exact file) is compared with the first build. Any difference stops the release. The stage records its result, and the Sign stage countersigns the record.</li>
+    <li><strong>Check.</strong> The scanners we list (the list is in the repository), the Gradle and Maven tests, and the no-phone-home test (a test that the server makes no outbound connections) run against the exact images. The stage records its verdict for those digests, and a signing job countersigns it. A finding blocks the release unless a published VEX statement (our note on whether a finding applies) explains why it does not apply.</li>
     <li><strong>Release.</strong> The only stage that can publish. It verifies every earlier signature together, then publishes the same digests that were built and judged, with no rebuild.</li>
   </ol>
   <p class="muted-note">The full description is in <a href="https://github.com/fosterstack/cache/blob/main/RELEASING.md">the release process</a>.</p>
 
   <h2>What you get with each release</h2>
   <ul class="trust">
-    <li>Container images on GitHub's registry, signed with our release key, which is held in a cloud key service, with each signature recorded in a public transparency log, and with build provenance.</li>
+    <li>Container images on GitHub's registry, each signed with our release key, which is held in a cloud key service. Each signature is recorded in a public transparency log. Each image also comes with build provenance, a record of how it was built.</li>
     <li>Plain binaries and a <code>checksums.txt</code> with its own signature file.</li>
     <li>A software bill of materials (SBOM) for each binary archive.</li>
     <li>A VEX file saying which known vulnerabilities do and do not affect the release.</li>
@@ -125,7 +125,7 @@
   <p>All of it is public. You do not need an account or a purchase to check any of it. The commands are on <a href="/verify-a-release/">verify a release yourself</a>.</p>
 
   <h2>Kept patched</h2>
-  <p>The current release's images are scanned again every day, so a vulnerability disclosed against something we already shipped raises an issue without anyone having to remember to look. We keep it patched. Our target for vulnerable dependencies is 48 hours from disclosure (the scope is in <a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md">our security policy</a>); more on the <a href="/security/">security page</a>.</p>
+  <p>The current release's images are scanned again every day. So a vulnerability disclosed against something we already shipped raises an issue without anyone having to remember to look. We keep it patched. Our target for vulnerable dependencies is 48 hours from disclosure (the scope is in <a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md">our security policy</a>); more on the <a href="/security/">security page</a>.</p>
 
   <h2>What we do not claim</h2>
   <ul class="trust">
