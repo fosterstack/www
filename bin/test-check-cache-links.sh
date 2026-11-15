@@ -23,7 +23,7 @@ server=$!
 for _ in $(seq 20); do [ -s "$tmp/port" ] && break; sleep 0.3; done
 github="http://127.0.0.1:$(cat "$tmp/port")"
 
-markup() {   # markup LINK: a link becomes an <a>; an argument that starts with "<" is a whole tag, kept as given
+markup() {
   case "$1" in "<"*) echo "$1" ;; *) echo "<a href=\"$1\">link</a>" ;; esac
 }
 page() {   # page LINK [LINK2]: a site with one other page, and a home page holding the link(s) under test
