@@ -28,8 +28,7 @@ class Hrefs(HTMLParser):
         self.found = []
 
     def handle_starttag(self, tag, attrs):
-        if tag == "a":
-            self.found += [v for k, v in attrs if k == "href" and v]
+        self.found += [v for k, v in attrs if k == "href" and v]
 
 
 def fetch(url):
@@ -69,9 +68,9 @@ def main():
                 if parts.hostname == SITE:
                     target = os.path.join(args.root, unquote(parts.path).strip("/"))
                     if not (os.path.isfile(os.path.join(target, "index.html")) or os.path.isfile(target)):
-                        problems.append("%s links %s, which is not a page or file here" % (page, href))
+                        problems.append("%s links %s, which is not a page or file here" % (page, parts.geturl()))
                 elif parts.hostname == "github.com" and (
-                        parts.path == CACHE or parts.path.startswith(CACHE + "/")):
+                        parts.path.lower() == CACHE or parts.path.lower().startswith(CACHE + "/")):
                     cache_links.setdefault((parts.path, parts.query, parts.fragment), page)
     for (path, query, fragment), page in sorted(cache_links.items()):
         path_query = path + ("?" + query if query else "")
