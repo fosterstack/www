@@ -116,7 +116,7 @@
     <tbody>
       <tr>
         <td>Source admission</td>
-        <td>The tag must be annotated, signed and strictly named: signed by the owner's key or, for an automatic patch tag only, by the release workflow's own keyless identity. The commit must be signed (by the owner's key, or GitHub's own key for merges made on github.com) and be on <code>main</code>. Every required check must pass on that exact commit or, for the checks that run only on pull requests, on the pull request that produced it. An owner-approved requirements list must exist for the version. The lists of allowed signers and required checks are read from <code>main</code>, not from the tagged commit. Signs.</td>
+        <td>The tag must be annotated, signed and strictly named: signed by the maintainer's signing key or, for an automatic patch tag only, by the release workflow's own keyless identity. The commit must be signed (by the maintainer's signing key, or GitHub's own key for merges made on github.com) and be on <code>main</code>. Every required check must pass on that exact commit or, for the checks that run only on pull requests, on the pull request that produced it. A requirements list approved by the maintainer must exist for the version. The lists of allowed signers and required checks are read from <code>main</code>, not from the tagged commit. Signs.</td>
         <td>800-204D 5.1.4 "Secure Code Commits" (commit-signing enforcement, COMMIT-REQ-2); 5.1.2 "Secure Pull-Push Operations on Repositories" (automated checks before code is trusted)</td>
         <td>Partly. There is one maintainer, so no second person reviews or approves a change.</td>
       </tr>
@@ -152,7 +152,7 @@
       </tr>
       <tr>
         <td>Release authorization</td>
-        <td>Verifies every earlier statement: signed by the expected stage, naming this commit and these digests, scan verdicts pass, acceptance results complete. Anything missing stops the release. It also stops the release if a VEX statement says a flaw affects us and no owner acceptance of that risk is recorded. Records each statement's transparency-log entry. Signs the approval.</td>
+        <td>Verifies every earlier statement: signed by the expected stage, naming this commit and these digests, scan verdicts pass, acceptance results complete. Anything missing stops the release. It also stops the release if a VEX statement says a flaw affects us and we have not recorded that we accept that risk. Records each statement's transparency-log entry. Signs the approval.</td>
         <td>800-204C 4.6: "verify that all required signatures … are present to ensure that no one bypasses the pipeline"; 800-204D 5.1.1 (policy checks that the required attestations are found)</td>
         <td>Partly. The policy is code in the workflow file, not a separate signed policy document as 5.1.1 describes.</td>
       </tr>
@@ -180,7 +180,7 @@
   <h2>What changed from v0.2.1 to v0.2.2</h2>
   <p>The v0.2.2 tag changed 31 workflow files. The build stage and the scan stage did not change. These did:</p>
   <ul>
-    <li><strong>Admission.</strong> A tag can be signed two ways: with the owner's key, as before, or, for an automatic patch tag only, with the release workflow's own keyless signature, whose certificate must name <code>release.yml</code> on <code>main</code> of this repository for the tagged commit. For such a patch tag the approved requirements list must be byte for byte the one from the line's latest owner-signed tag.</li>
+    <li><strong>Admission.</strong> A tag can be signed two ways: with the maintainer's signing key, as before, or, for an automatic patch tag only, with the release workflow's own keyless signature, whose certificate must name <code>release.yml</code> on <code>main</code> of this repository for the tagged commit. For such a patch tag the approved requirements list must be byte for byte the one from the line's latest tag signed with the maintainer's signing key.</li>
     <li><strong>Image assembly and reproducibility.</strong> The BuildKit image is pinned by digest.</li>
     <li><strong>Authorization.</strong> It reads the requirements list that admission chose, and it has the new VEX risk-acceptance check described in the table.</li>
     <li><strong>Promotion.</strong> It publishes the VEX statements in three forms, takes the release notes of an automatic patch release from the tag message, and records the requirements list it used in the manifest.</li>
@@ -191,7 +191,7 @@
   <h2>Which SLSA Build level do we assess v0.2.2 at?</h2>
   <p>We assess v0.2.2 at <strong>SLSA Build Level 2</strong>, against the <a href="https://slsa.dev/spec/v1.0/requirements">SLSA v1.0 requirements</a> and <a href="https://slsa.dev/spec/v1.0/levels">levels</a>. We do not claim Build Level 3.</p>
   <ul class="trust">
-    <li><strong>Consistent build process (L1).</strong> Met, by our reading. One workflow builds every v0.2 release. Only a tag push starts the build job, and the first stage stops any tag not signed by the owner's key or, for an automatic patch tag, the release workflow's own identity.</li>
+    <li><strong>Consistent build process (L1).</strong> Met, by our reading. One workflow builds every v0.2 release. Only a tag push starts the build job, and the first stage stops any tag not signed by the maintainer's signing key or, for an automatic patch tag, the release workflow's own identity.</li>
     <li><strong>Provenance exists (L1).</strong> Met, by our reading. SLSA v1 provenance covers the binary archives, their SBOMs, <code>checksums.txt</code>, and the three container images, naming each digest, the source commit and the workflow run.</li>
     <li><strong>Distribute provenance (L1).</strong> Met, by our reading. It is in GitHub's attestation store, and <code>gh attestation verify</code> returns it.</li>
     <li><strong>Hosted build platform (L2).</strong> Met, by our reading. The build and image jobs ran on GitHub-hosted <code>ubuntu-latest</code> machines, never on a workstation. The build job's log shows image ubuntu-24.04, version 20261004.327.1.</li>
