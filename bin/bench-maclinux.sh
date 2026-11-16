@@ -69,19 +69,19 @@ export JAVA_HOME="$W/tools/jdk/${JDK_HOME_SUB}"
 [ -x "$JAVA_HOME/bin/java" ] || { echo "no usable Java at $JAVA_HOME" >&2; exit 1; }
 export PATH="$W/tools/bin:$JAVA_HOME/bin:$PATH"
 command -v sha256sum >/dev/null 2>&1 || { printf '#!/bin/sh\nexec shasum -a 256 "$@"\n' > bin/sha256sum; chmod +x bin/sha256sum; }
-unset GH_TOKEN GITHUB_TOKEN; export GH_CONFIG_DIR="$W/gh-empty-config"; mkdir -p "$GH_CONFIG_DIR"   # gh runs with no login, here and on the runners
+unset GH_TOKEN GITHUB_TOKEN; export GH_CONFIG_DIR="$W/gh-empty-config"; mkdir -p "$GH_CONFIG_DIR"   # no gh login; the release download alone sends BENCH_GH_TOKEN (the job's read-only token) when the workflow sets it, for the shared Mac runners' API rate limit
 for t in gh cosign gradle curl python3 tar; do command -v "$t" >/dev/null || { echo "missing tool: $t" >&2; exit 1; }; done
 
 echo "== DISCLOSURE"
 echo "role: ${ROLE}; machine: $(uname -sm) $(uname -r) (${OSNAME}); runner image: ${ImageOS:-?} ${ImageVersion:-?}"
 echo "java: $("$JAVA_HOME/bin/java" -version 2>&1 | head -1) (Temurin, downloaded and checksum-checked; the same build on both operating systems)"
 echo "gradle: $(gradle --version 2>/dev/null | grep -E '^Gradle ' | head -1)   maven: $("$MVN_HOME/bin/mvn" --version 2>/dev/null | head -1)   cosign: $(cosign version 2>/dev/null | grep -i GitVersion | head -1)"
-echo "release under test: FosterStack Cache ${VER} (${PLATFORM}), downloaded with no login and verified (cosign + sha256) before it runs"
+echo "release under test: FosterStack Cache ${VER} (${PLATFORM}), downloaded and verified (cosign + sha256) before it runs"
 echo "NOT pinned: the Maven build-cache extension ${EXT_VER}, the Maven plugins (all versions pinned in the pom but fetched from Maven Central) and JUnit"
 echo "invented here: the Gradle project (rootProject.name, build.gradle.kts, App.java), the Maven pom with two tests, test passwords; the server listens on 127.0.0.1:${PORT} only"
 echo "Gradle's own local cache is off (local { isEnabled = false }), the Gradle home and ~/.m2 are new and empty, so a hit can only come from the server"
 echo "differences from the page's own runs (said again on the page): ONE Gradle module here (the page's run had four); a login is set (the page's runs had none); both systems here are GitHub-hosted VMs (Linux amd64, macOS arm64), not a Linux container on the Mac; the cache server runs on the machine that restores, on a data folder carried over from the machine that stored; the same Java build on both sides (the page's Maven run had 21.0.12.1 on the Mac and 21.0.7 on Linux)"
-echo "gh runs with no login (the release downloads without one); gh $(gh --version | head -1 | cut -d' ' -f3), python3 $(python3 --version 2>&1 | cut -d' ' -f2), curl $(curl --version | head -1 | cut -d' ' -f2) are the runner's own, not pinned"
+echo "gh has no login of its own (the release download sends the job's read-only token when the workflow gives one, else none); gh $(gh --version | head -1 | cut -d' ' -f3), python3 $(python3 --version 2>&1 | cut -d' ' -f2), curl $(curl --version | head -1 | cut -d' ' -f2) are the runner's own, not pinned"
 echo "what crosses between the two jobs: only the cache server's data folder, packed from a server that was stopped first; it holds the made-up projects' build results and nothing else"
 
 # ---------- helpers ----------
@@ -97,7 +97,7 @@ REL="$W/rel"; mkdir -p "$REL"
 run release-download-verify "$REL" <<EOF
 VER=${VER}
 PLATFORM=${PLATFORM}
-gh release download v\${VER} --repo fosterstack/cache \\
+GH_TOKEN="\${BENCH_GH_TOKEN:-}" gh release download v\${VER} --repo fosterstack/cache \\
   -p checksums.txt -p checksums.txt.bundle -p "fscache_\${VER}_\${PLATFORM}.tar.gz"
 cosign verify-blob --bundle checksums.txt.bundle \\
   --certificate-identity-regexp='^https://github.com/fosterstack/cache/' \\
