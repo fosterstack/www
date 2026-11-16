@@ -11,8 +11,8 @@
 #
 # Same Java build on both sides (Temurin 21.0.12.1, as the page says), Gradle 9.8.0, Maven 3.9.9 with every plugin version pinned and
 # the build-cache extension 1.2.3; all downloads are checked against pinned checksums except the extension, the Maven plugins and the
-# test library, which come from Maven Central at run time (said again in the output). No token and no secret: the release downloads
-# without a login and the passwords are made up. A step that fails or prints something else is RECORDED and fails the job at the end.
+# test library, which come from Maven Central at run time (said again in the output). No secret: the passwords are made up, and on the Mac
+# jobs the release download alone uses the job's read-only token. A step that fails or prints something else is RECORDED and fails the job at the end.
 set -uo pipefail
 
 ROLE="${1:-}"; case "$ROLE" in store|restore) ;; *) echo "usage: $0 store|restore" >&2; exit 2;; esac
@@ -26,6 +26,7 @@ COSIGN_VER=3.1.3
 EXT_VER=1.2.3
 USER_NAME=bench; PASS='maclinux-test-secret-not-real'
 PORT=8085
+gh_tok="${BENCH_GH_TOKEN:-}"; unset BENCH_GH_TOKEN   # kept unexported, before any child starts: only the release download is given it
 
 case "$(uname -s)-$(uname -m)" in
   Linux-x86_64)
@@ -94,7 +95,7 @@ wait_up() { local i; for i in $(seq 1 400); do curl -sf --max-time 5 "localhost:
 
 # the release: downloaded and verified (first-15 step 2, word for word), then unpacked
 REL="$W/rel"; mkdir -p "$REL"
-run release-download-verify "$REL" <<EOF
+BENCH_GH_TOKEN="$gh_tok" run release-download-verify "$REL" <<EOF
 VER=${VER}
 PLATFORM=${PLATFORM}
 GH_TOKEN="\${BENCH_GH_TOKEN:-}" gh release download v\${VER} --repo fosterstack/cache \\
