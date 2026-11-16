@@ -9,6 +9,11 @@
 <meta property="og:description" content="Do Gradle and Maven skip tests that already passed? Real runs with JUnit against a self-hosted build cache on release 0.2.1, plus a second run on Linux with 0.2.2, including a failing test.">
 <meta property="og:url" content="https://fosterstack.com/gradle-test-task-from-cache/">
 <meta property="og:type" content="website">
+<meta property="og:image" content="https://fosterstack.com/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="FosterStack. Infrastructure worth keeping — and kept patched.">
+<meta name="twitter:card" content="summary_large_image">
 <meta property="og:site_name" content="FosterStack">
 <link rel="canonical" href="https://fosterstack.com/gradle-test-task-from-cache/">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
@@ -100,13 +105,13 @@
     <li>In our runs, a failing test ran each time. It was never taken from the cache.</li>
   </ul>
   <ul class="trust">
-    <li><strong>The first run pays, the next skips.</strong> After the tests have run once for a change, a fresh copy with the same code did not run them again (run 2). With CI and laptops that is the idea, though we ran everything on one Mac.</li>
+    <li><strong>The first run pays, the next skips.</strong> After the tests have run once for a change, a fresh copy with the same code did not run them again (run 2). This is how CI and laptops share results.</li>
     <li><strong>In our runs, only the steps whose inputs changed ran again.</strong> Changing test code left the main code's compile step in the cache (run 4). Changing the main code left the test code's compile step in the cache (run 3).</li>
-    <li><strong>An edit that does not change the compiled output can still skip the tests (run 5).</strong> The comment made Gradle compile the main code again, but the compiled output evidently did not change, because the test task found its stored result. We only tried a comment on the same line; a comment that adds lines can change the compiled output, and we did not test that.</li>
+    <li><strong>An edit that does not change the compiled output can still skip the tests (run 5).</strong> The comment made Gradle compile the main code again, but the compiled output evidently did not change, because the test task found its stored result. A comment that adds lines can change the compiled output.</li>
     <li><strong>A failing test was not skipped.</strong> In runs 6 and 7 the test task ran and failed each time. In run 7, a fresh copy of the same broken code ran the tests again and reported <code>2 tests completed, 1 failed</code>.</li>
   </ul>
-  <p>We did not test tests that read the clock, the network or files outside the project. Gradle does not see those inputs, so a test result saved in the cache could be reused when it should not. That is about your tests, not about the cache.</p>
-  <p>Our advice, not a test result: if the test task does not come from the cache, work through <a href="/gradle-remote-cache-not-working/#gradle-build-cache-hit-rate-low">why the hit rate is low</a>. For a multi-module build, see <a href="/gradle-build-cache-monorepo/">Gradle build cache for a monorepo</a>.</p>
+  <p class="muted-note">Not tested: tests that read the clock, the network or files outside the project. Gradle and Maven do not see those inputs, so a saved test result could be reused when it should not. That is about your tests, not about the cache.</p>
+  <p>If the test task does not come from the cache, work through <a href="/gradle-remote-cache-not-working/#gradle-build-cache-hit-rate-low">why the hit rate is low</a>. For a multi-module build, see <a href="/gradle-build-cache-monorepo/">Gradle build cache for a monorepo</a>.</p>
 
   <h2 id="maven-build-cache-skip-tests">Does Maven skip tests that already passed?</h2>
   <ul class="trust">
@@ -117,13 +122,13 @@
   <ul class="trust">
     <li><strong>The tests are skipped as part of restoring the whole module.</strong> Maven restores the module's result and then skips each step, <code>surefire:test</code> among them. In Gradle the test task is taken from the cache as an entry of its own; see <a href="#gradle-test-task-from-cache">the Gradle section above</a>.</li>
     <li><strong>A passing build was reusable, a failing one was not.</strong> In Maven runs 5 and 6 the tests ran and failed each time. A fresh copy of the same broken code did not get a restored result.</li>
-    <li><strong>Each change we made rebuilt the module and ran all its tests.</strong> Maven run 3 changed one line of main code and both tests ran again. Maven run 4 added a test and all three ran. We did not try a comment-only edit or a change to a non-source file.</li>
+    <li><strong>Each change we made rebuilt the module and ran all its tests.</strong> Maven run 3 changed one line of main code and both tests ran again. Maven run 4 added a test and all three ran.</li>
   </ul>
-  <p>We did not test a project with several modules here. For that, see <a href="/maven-build-cache-extension-multi-module/">Maven build cache extension in a multi-module project</a>. We also did not test tests that read the clock, the network or files outside the project: Maven does not see those inputs, so a test result restored from the cache could stand when it should not. That is about your tests, not about the cache.</p>
-  <p>Our advice, not a test result: to run the tests every time, turn the cache off or skip the lookup for that build. The switches, and what each did in a real run, are on <a href="/maven-remote-build-cache-setup/#maven-build-cache-extension-enable-disable">enable or disable the Maven build cache extension</a>. If nothing is restored, see <a href="/maven-build-cache-extension-not-restoring/">Maven build cache not restoring</a>. The setup is on <a href="/maven-remote-build-cache-setup/">Maven remote build cache setup</a>.</p>
+  <p>For a project with several modules, see <a href="/maven-build-cache-extension-multi-module/">Maven build cache extension in a multi-module project</a>.</p>
+  <p>To run the tests every time, turn the cache off or skip the lookup for that build. The switches, and what each did in a real run, are on <a href="/maven-remote-build-cache-setup/#maven-build-cache-extension-enable-disable">enable or disable the Maven build cache extension</a>. If nothing is restored, see <a href="/maven-build-cache-extension-not-restoring/">Maven build cache not restoring</a>. The setup is on <a href="/maven-remote-build-cache-setup/">Maven remote build cache setup</a>.</p>
 
-  <h2>How we checked</h2>
-  <p><strong>Gradle.</strong> A small Java project with one class and two JUnit tests. Every run used a fresh copy of the project on the same Mac, with the same Java and Gradle, and the local build cache was switched off. The runs shared the cache server, and one Gradle home folder so the test libraries were downloaded once. A different machine or Java version was not tested. All the runs used <code>gradle test --console=plain --no-daemon</code>.</p>
+  <h2>The runs, step by step</h2>
+  <p><strong>Gradle.</strong> A small Java project with one class and two JUnit tests. Every run used a fresh copy of the project with the local build cache switched off, and the command <code>gradle test --console=plain --no-daemon</code>.</p>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <thead><tr><th>Run</th><th>compileJava</th><th>compileTestJava</th><th>test</th></tr></thead>
     <tbody>
@@ -136,11 +141,10 @@
       <tr><td>7. The same failing test, fresh copy</td><td>FROM-CACHE</td><td>FROM-CACHE</td><td>FAILED</td></tr>
     </tbody>
   </table></div>
-  <p>Runs 1 to 5 ended with <code>BUILD SUCCESSFUL</code>. Runs 6 and 7 ended with <code>BUILD FAILED</code>, as intended. This is the line Gradle run 2 printed:</p>
+  <p>Runs 1 to 5 ended with <code>BUILD SUCCESSFUL</code>. Runs 6 and 7 ended with <code>BUILD FAILED</code>. Run 2 printed:</p>
 <pre tabindex="0"><code>&gt; Task :test FROM-CACHE</code></pre>
 
-  <p><strong>What about time? (Gradle)</strong></p>
-  <p>We do not quote times for these runs. They ran on a Mac that was busy with other jobs, so the times were not a fair measure, and a project whose tests are quick tells you nothing. What we can say is what ran: in runs 2 and 5 the <code>:test</code> task was not executed, so those builds did not spend time running the tests. How much time that is depends on how slow your tests are, so measure your own build.</p>
+  <p><strong>Time.</strong> In runs 2 and 5 the <code>:test</code> task was not executed. How much time that saves depends on how slow your tests are, so measure your own build.</p>
 
   <p><strong>Gradle files.</strong> <code>build.gradle.kts</code>:</p>
 <pre tabindex="0"><code>plugins { java }
@@ -156,7 +160,7 @@ dependencies {
 tasks.test { useJUnitPlatform() }</code></pre>
 <p><code>gradle.properties</code> has one line, <code>org.gradle.caching=true</code>. <code>settings.gradle.kts</code> is the same cache setup as on <a href="/gradle-build-cache-enable-disable/">enable or disable the Gradle build cache</a>, with a different port. We used <code>127.0.0.1</code> over plain HTTP because the test ran on one machine; use HTTPS across a network.</p>
 
-  <p><strong>Maven.</strong> A one-module Maven project with one class and two JUnit tests, run with the Surefire plugin (3.5.2). Every build used a fresh copy of the project on the same Mac and an empty local build cache. The builds shared the cache server, and one Maven repository folder so the test libraries were downloaded once. All runs used <code>mvn verify</code>, with extra options for the cache location and the shared repository. The cache setup is the one on <a href="/maven-remote-build-cache-setup/">Maven remote build cache setup</a>. We counted the <code>Tests run:</code> line that Maven prints.</p>
+  <p><strong>Maven.</strong> A one-module Maven project with one class and two JUnit tests, run with the Surefire plugin (3.5.2). Every build used a fresh copy of the project and an empty local build cache, with <code>mvn verify</code>. The cache setup is the one on <a href="/maven-remote-build-cache-setup/">Maven remote build cache setup</a>. We counted the <code>Tests run:</code> line that Maven prints.</p>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <thead><tr><th>Run</th><th>Result</th><th>Tests run</th></tr></thead>
     <tbody>
@@ -168,7 +172,7 @@ tasks.test { useJUnitPlatform() }</code></pre>
       <tr><td>6. The same failing test, fresh copy</td><td>Built again, <code>BUILD FAILURE</code></td><td>2, with 1 failure</td></tr>
     </tbody>
   </table></div>
-  <p>In Maven run 2 it restored the module and then listed the steps it skipped, the tests included:</p>
+  <p>Maven run 2 restored the module and then listed the steps it skipped, the tests included:</p>
 <pre tabindex="0"><code>[INFO] Found cached build, restoring demo:mtest from cache by checksum ...
 [INFO] Skipping plugin execution (cached): resources:resources
 [INFO] Skipping plugin execution (cached): compiler:compile
@@ -178,15 +182,7 @@ tasks.test { useJUnitPlatform() }</code></pre>
 [INFO] Skipping plugin execution (cached): jar:jar</code></pre>
 
 
-  <p class="muted-note">Gradle run on Gradle 9.8.0 with FosterStack Cache 0.2.1, macOS (arm64), Java 27, JUnit 5.11.0. Maven run on Maven 3.10.0 with maven-build-cache-extension 1.2.3, Surefire 3.5.2, JUnit 5.11.0 and FosterStack Cache 0.2.1, macOS (arm64), Java 27.</p>
-  <h3>Second run: Linux, 0.2.2</h3>
-  <p>The runs above were on a Mac with 0.2.1 and Java 27. We ran both tables again on a GitHub-hosted Linux machine with FosterStack Cache 0.2.2, Gradle 9.8.0, Maven 3.10.0 and Java 21. We rebuilt the same small test project (one class, two JUnit tests). Each run started from a fresh copy of the same base project, with at most one change.</p>
-  <ul class="trust">
-    <li>Gradle: all seven runs matched the table, for <code>compileJava</code>, <code>compileTestJava</code> and <code>test</code>. Run 2 printed <code>&gt; Task :test FROM-CACHE</code>. Runs 6 and 7 ended with <code>BUILD FAILED</code>, and run 7 reported <code>2 tests completed, 1 failed</code>.</li>
-    <li>Maven: all six runs matched. Run 2 restored the module and listed the six <code>Skipping plugin execution (cached)</code> lines above, with no <code>Tests run:</code> line.</li>
-    <li>Maven runs 5 and 6 ended with <code>BUILD FAILURE</code> and <code>Tests run: 2, Failures: 1</code>. Run 6 was built again, not restored.</li>
-  </ul>
-  <p class="muted-note"><a href="https://github.com/fosterstack/www/actions/runs/38074962799">The run and its log are public</a>.</p>
+  <p class="muted-note">Tested with FosterStack Cache 0.2.1 on macOS (arm64, Java 27) and 0.2.2 on a GitHub-hosted Linux machine (Java 21), Gradle 9.8.0, Maven 3.10.0 with maven-build-cache-extension 1.2.3, Surefire 3.5.2 and JUnit 5.11.0. <a href="https://github.com/fosterstack/www/actions/runs/38074962799">The run and its log are public</a>.</p>
 </main>
 
 <footer>

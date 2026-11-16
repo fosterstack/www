@@ -30,29 +30,29 @@ the `ALLOW_PATTERNS` array in that script.
 
 ## Pre-positioned page: `bcn-removed/`
 
-Addendum §2 (DECIDED): built ahead of any trigger so FosterStack is in front of
+We built it ahead of any trigger so FosterStack is in front of
 panic-searches within hours of Gradle actually removing `gradle/build-cache-node` from
-Docker Hub, not days. REVISED Sep 11, 2026: it used to deploy at an unlisted URL behind
-a `noindex` tag; the Sep 10 review pointed out that noindex is a request, not a gate —
+Docker Hub, not days. It used to deploy at an unlisted URL behind
+a `noindex` tag, but noindex is a request, not a gate, and
 the page claimed a removal that had not happened, at a live URL. It was then moved to
 `.drafts/`, on the belief that dot-prefixed paths are excluded from the Pages upload.
 CORRECTED Oct 9, 2026: they are NOT; Cloudflare Pages served `/.drafts/bcn-removed/`
 until that folder was removed from the repository. The draft is now kept privately,
-outside this repository (the ops handoffs outbox), `/bcn-removed/*` 302s to the homepage in the meantime, and
+outside this repository, `/bcn-removed/*` 302s to the homepage in the meantime, and
 `bin/check-file-allowlist.sh` refuses any dot-prefixed path that is not on its short
 list. Nothing private can be kept in this repository: it is public and all of it is served.
 
 The trigger source is `fosterstack/ops`'s daily Docker Hub watcher
 (`bin/docker-hub-watch.sh`, private repo) — it files a tracking issue when it detects the
-repo being deleted or its tag count dropping. **Publishing this page for real is an owner
-action, not automatic**: verify the finding directly at
+repo being deleted or its tag count dropping. **Publishing this page for real is a manual
+step for whoever publishes the site, not automatic**: verify the finding directly at
 [hub.docker.com/r/gradle/build-cache-node](https://hub.docker.com/r/gradle/build-cache-node)
 first (the watcher is tuned to alert fast, which means it can also alert on a transient API
 hiccup), then remove the `noindex` tag and add a prominent, dated link from `index.html`.
 Full instructions are in an HTML comment at the top of the draft page, which is kept
-privately outside this repository (the ops handoffs outbox).
+privately outside this repository.
 
-## Deploy checklist (owner, ~15 min, one-time)
+## Deploy checklist (about 15 minutes, one-time)
 
 1. Create the GitHub repo `fosterstack/www` (public is fine — nothing secret here).
    Tier 1 credentials cannot create repos; do this in the web UI or with Tier 0.
@@ -82,12 +82,10 @@ asking us.
 
 - Trademark hygiene: "Gradle"/"Develocity" appear only for compatibility identification;
   the footer disclaimer stays. No Gradle code claims, no affiliation implications.
-- The trust pitch (MIT core, one public image, identical bytes free/paid, license-key
-  unlock, security patches never withheld from free tier) is brief §0.2 policy, not
-  marketing filler. Changes to it are an owner decision.
-- No fabricated testimonials, logos, or usage numbers — FTC posture per brief §4.
+- Keep the home page's promises about licensing and security patches (MIT core, one public image, identical bytes
+  free and paid, patches never withheld from the free tier) as they are; changing them needs a maintainer's approval.
+- No fabricated testimonials, logos, or usage numbers — FTC posture.
 - No calendar commitments. No launch dates, no "beta in <month>", no phase language.
-  The dateless roadmap stays (the homepage no longer carries a version or "early" label,
-  owner, Oct 10); a schedule
+  The dateless roadmap stays (the homepage no longer carries a version or "early" label); a schedule
   we might miss does not go on a public page.
 - No email capture, ever. See "No data collection" above.

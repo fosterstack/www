@@ -9,6 +9,11 @@
 <meta property="og:description" content="Stop rebuilding on your laptop what CI already built. CI stores results in one shared Gradle or Maven build cache and your laptop restores them. FosterStack Cache.">
 <meta property="og:url" content="https://fosterstack.com/laptop-builds-reuse-ci-build-cache/">
 <meta property="og:type" content="website">
+<meta property="og:image" content="https://fosterstack.com/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="FosterStack. Infrastructure worth keeping — and kept patched.">
+<meta name="twitter:card" content="summary_large_image">
 <meta property="og:site_name" content="FosterStack">
 <link rel="canonical" href="https://fosterstack.com/laptop-builds-reuse-ci-build-cache/">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
@@ -99,7 +104,7 @@
   <p>It works with Gradle and with Maven. You can let only CI write to the cache and give laptops read-only access. For Gradle see <a href="/gradle-build-cache-ci-writes-developers-read/">let CI write, developers only read</a>; for Maven see <a href="/maven-remote-build-cache-setup/">Maven remote build cache setup</a>.</p>
 
   <h2>Does it work from a Mac laptop with Linux?</h2>
-  <p>Yes, in our checks. A result stored in a Linux container was restored on a Mac, and a result stored on a Mac was restored in a Linux container. We checked this with Gradle and with Maven.</p>
+  <p>Yes, in our checks. A result stored in a Linux container was restored on a Mac, and a result stored on a Mac was restored in a Linux container. We checked this with Gradle and with Maven. We did not test Windows.</p>
 
   <h2>What has to match</h2>
   <p>Your laptop only reuses a result when its build inputs match CI's. In our tests these changed the cache key:</p>
@@ -109,7 +114,11 @@
   </ul>
   <p>Keep those the same on laptops and CI. For what to expect after an upgrade, see <a href="/gradle-remote-cache-not-working/#build-cache-cold-after-gradle-or-maven-upgrade">we upgraded Gradle or Maven and builds got slow</a>. If your laptop still rebuilds, see <a href="/gradle-remote-cache-not-working/#gradle-build-cache-hit-rate-low">why the Gradle hit rate is low</a> or <a href="/maven-build-cache-extension-not-restoring/">why the Maven cache is not restoring</a>. To set it up, see <a href="/maven-remote-build-cache-setup/">Maven remote build cache setup</a> and the Gradle setup in the <a href="/gradle-build-cache-ci-writes-developers-read/">CI-writes page</a>.</p>
 
-  <h2>How we checked</h2>
+  <h2>Can we trust the cache server?</h2>
+  <p>From v0.3.0, releases are signed at every stage and verified together at release, and you can <a href="/verify-a-release/">verify it yourself</a>. Our target for fixing vulnerable dependencies is 48 hours from disclosure; <a href="https://github.com/fosterstack/cache/blob/main/SECURITY.md">the scope is in our security policy</a>.</p>
+  <p>v0.3.0 ships for Linux only; a Mac laptop is a client either way.</p>
+
+  <h2>What we saw</h2>
   <div class="table-scroll" role="region" aria-label="Which platform stored and which restored" tabindex="0"><table>
     <thead><tr><th>Stored on</th><th>Restored on</th><th>Gradle</th><th>Maven</th></tr></thead>
     <tbody>
@@ -117,13 +126,8 @@
       <tr><td>Mac</td><td>Linux</td><td>from cache</td><td>restored</td></tr>
     </tbody>
   </table></div>
-  <p class="muted-note">One small project per tool, one build per cell. Each series started on a new empty cache server, every build used a fresh project copy, and no login was set.</p>
-  <p class="muted-note">Gradle: four modules, Gradle 9.8.0, Java 21.0.12.1 on both sides, tested on Linux arm64 and on emulated amd64 with the same result. The runs covered the compile tasks only.</p>
-  <p class="muted-note">Maven: one module, Maven 3.9.9, all plugin versions pinned, Java 21.0.12.1 on the Mac and 21.0.7 on Linux.</p>
-  <p class="muted-note">In the runs above, the Linux side was a container on the same Mac as the cache server, and the cache was FosterStack Cache 0.2.1.</p>
-  <p class="muted-note">We also ran the table on two GitHub-hosted machines with release 0.2.2: Linux on amd64 and a Mac on arm64. Both used the same Java 21.0.12.1 build (unlike the Maven run above, which had 21.0.7 on Linux), Gradle 9.8.0, and Maven 3.9.9 with every plugin version pinned. First, one machine built the projects against a new cache server. We copied that server's stored files to the other machine and started a server on them. The second machine then built with an empty Gradle home and an empty <code>~/.m2</code>. We did this both ways, Linux to Mac and Mac to Linux. Each time, Gradle printed <code>&gt; Task :compileJava FROM-CACHE</code> and Maven printed <code>Found cached build, restoring</code>, and no compile task ran. This run differs from the ones above in two ways: one Gradle module instead of four, and a login was set. <a href="https://github.com/fosterstack/www/actions/runs/38035540558">The run and its logs are public</a>.</p>
-  <p class="muted-note">We repeated the two version checks on a GitHub-hosted Linux machine with release 0.2.2, Gradle 9.8.0 and Maven 3.10.0 and 3.9.9. Gradle with Java 27 did not restore what Java 21 stored. With unpinned plugin versions, Maven 3.10.0 did not restore what 3.9.9 stored. With every plugin version pinned, it did. <a href="https://github.com/fosterstack/www/actions/runs/38034105775">The run and its log are public</a>.</p>
-  <p class="muted-note">Not tested: Windows, and your own CI system (the hosted runs are GitHub's machines).</p>
+  <p>Gradle printed <code>&gt; Task :compileJava FROM-CACHE</code> and Maven printed <code>Found cached build, restoring</code>, and no compile task ran. The version checks were repeated on a hosted Linux machine: Gradle with Java 27 did not restore what Java 21 stored. With unpinned plugin versions, Maven 3.10.0 did not restore what 3.9.9 stored; with every plugin version pinned, it did.</p>
+  <p class="muted-note">Tested with FosterStack Cache 0.2.1 on a Mac with a Linux container (Gradle 9.8.0, Java 21.0.12.1; Maven 3.9.9 with every plugin version pinned) and 0.2.2 on GitHub-hosted Linux (amd64) and Mac (arm64) machines (Java 21.0.12.1, Gradle 9.8.0, Maven 3.9.9, and Maven 3.10.0 for the version check). The runs and their logs are public: <a href="https://github.com/fosterstack/www/actions/runs/38035540558">platform check</a> and <a href="https://github.com/fosterstack/www/actions/runs/38034105775">version check</a>.</p>
 </main>
 <footer>
   <div>

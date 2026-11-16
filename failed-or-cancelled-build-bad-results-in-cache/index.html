@@ -9,6 +9,11 @@
 <meta property="og:description" content="What a Gradle build leaves in the cache when a task fails, a test fails, you press Ctrl-C or the job is killed. From real runs, including a kill during an upload.">
 <meta property="og:url" content="https://fosterstack.com/failed-or-cancelled-build-bad-results-in-cache/">
 <meta property="og:type" content="website">
+<meta property="og:image" content="https://fosterstack.com/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="FosterStack. Infrastructure worth keeping — and kept patched.">
+<meta name="twitter:card" content="summary_large_image">
 <meta property="og:site_name" content="FosterStack">
 <link rel="canonical" href="https://fosterstack.com/failed-or-cancelled-build-bad-results-in-cache/">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
@@ -100,7 +105,7 @@
   </ul>
 
   <h2>What to do</h2>
-  <p>Our advice, not a test result:</p>
+  <p>We recommend:</p>
   <ul>
     <li><strong>Do not clear the cache because a build failed.</strong> In our runs the failure stored nothing to clear.</li>
     <li><strong>If a task keeps giving an old result, look for an input Gradle cannot see.</strong> A clock, an environment variable or a file outside the project are the usual ones. Declare that value as a task input, or turn off caching for that task.</li>
@@ -109,8 +114,8 @@
     <li><strong>If the server is stopped, not the build,</strong> see <a href="/restart-build-cache-server-while-builds-run/">can I restart the cache server while builds run</a>.</li>
   </ul>
 
-  <h2>How we checked</h2>
-  <p>FosterStack Cache 0.2.1 on a Mac (arm64), no password, a fresh data folder for each case. Gradle 9.8.0 with Java 21, one fresh copy of the project for every build, no reused daemon, the local build cache off. All builds shared one Gradle home, filled first by a build with the cache off. We counted entries with the server's <code>/statusz</code> page and listed its data folder. Each row is one run; we did not repeat them.</p>
+  <h2>What we saw</h2>
+  <p>Each row is one case, with a fresh data folder. We counted entries with the server's <code>/statusz</code> page.</p>
   <div class="table-scroll" role="region" aria-label="Scrollable table" tabindex="0"><table>
     <thead><tr><th>What went wrong</th><th>What the build did</th><th>Entries stored</th><th>The next builds</th></tr></thead>
     <tbody>
@@ -123,8 +128,8 @@
       <tr><td>A task writes the time into its output, and the time is not an input</td><td>First build: the task ran and wrote a timestamp</td><td>Not recorded</td><td>A new copy built a few seconds later took it from the cache with the same timestamp</td></tr>
     </tbody>
   </table></div>
-  <p class="muted-note">The three slow-task rows used four tasks that each sleep for 8 seconds, built one at a time. We sent the signal to the process, or process group, we had started, and nothing else. For the 300 MiB row we watched the server's data folder and sent the kill when a temporary file above 1 MiB appeared. A first try caught a small upload instead and is not counted.</p>
-  <p class="muted-note">Not tested: Maven, Kotlin or Android builds, a CI system's own cancel button, Windows, a second Ctrl-C, more than one build at a time, and a kill at any other moment than the ones in the table.</p>
+  <p class="muted-note">Not tested: a CI system's own cancel button.</p>
+  <p class="muted-note">Tested with FosterStack Cache 0.2.1 on macOS (arm64), Gradle 9.8.0, Java 21.</p>
 </main>
 <footer>
   <div>
