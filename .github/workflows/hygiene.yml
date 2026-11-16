@@ -758,6 +758,8 @@ jobs:
           path: ${{ runner.temp }}/maclinux-in
 
       - name: start a server on the Linux data folder, build on the Mac with empty local caches
+        env:
+          BENCH_GH_TOKEN: ${{ github.token }}   # read-only (contents: read); GitHub's API limit for a shared Mac address is too low without it
         run: bash bin/bench-maclinux.sh restore
 
   bench-maclinux-mac-store:
