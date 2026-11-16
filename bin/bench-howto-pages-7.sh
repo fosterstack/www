@@ -319,8 +319,10 @@ want=['version','revision','fips140','fips140_note','uptime_seconds','uptime','s
 missing=[k for k in want if k not in d]
 print('statusz keys: ' + ('all 14 of the page are there' if not missing else 'MISSING ' + ','.join(missing)))
 " | sed 's/^/OBS V /' | tee "$W/v/statusz-keys.txt"; grep -q MISSING "$W/v/statusz-keys.txt" && fail "V /statusz is missing a key the page shows"
+  # the latency histogram has no series until a request has been served (v0.2.2 registers it at start): one request, then one read of /metrics
+  curl -s -o /dev/null "http://127.0.0.1:$P/"; metrics_text="$(curl -s --max-time 10 "http://127.0.0.1:$P/metrics")"
   for n in fscache_cache_hits_total fscache_cache_misses_total fscache_store_bytes fscache_store_entries fscache_evicted_entries_total fscache_http_requests_total fscache_http_request_duration_seconds fscache_bytes_read_total fscache_bytes_written_total process_start_time_seconds; do
-    curl -s "http://127.0.0.1:$P/metrics" | grep -q "^$n" || fail "V /metrics has no '$n', which the page lists"
+    grep -q "^$n" <<<"$metrics_text" || fail "V /metrics has no '$n', which the page lists"
   done
   echo "OBS V /metrics holds every metric name the page lists (and process_start_time_seconds)"
   # --- the other URLs the page says are not health URLs
