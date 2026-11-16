@@ -42,6 +42,8 @@ ALLOW_PATTERNS=(
   '^\.github/policy/customer-words-allow\.txt$'
   '^bin/check-site-rot\.py$'
   '^bin/test-check-site-rot\.sh$'
+  '^bin/check-cache-links\.py$'
+  '^bin/test-check-cache-links\.sh$'
   '^bin/bench-miss-cost\.sh$'
   '^bin/bench-server-down\.sh$'
   '^bin/bench-android\.sh$'
