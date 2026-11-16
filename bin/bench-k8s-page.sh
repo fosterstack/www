@@ -83,7 +83,7 @@ if [ "$LOCAL" = 1 ]; then echo "tools: LOCAL tools in use, nothing checked (a de
   echo "tools: kind ${KIND_VER}, kubectl ${KUBECTL_VER}, cosign ${COSIGN_VER} and Gradle ${GR_VER} are downloaded and checked against pinned sha256 values before use; the runner's own Docker and Java 21"; fi
 echo "node image (pinned by digest): ${NODE_IMAGE}"
 echo "manifests: the Secret, PVC, Deployment and Service blocks of docs/kubernetes.md at the v${VER} tag of fosterstack/cache (${GUIDE_NOTE}), applied as written with two replacements: the image tag X.Y.Z becomes ${VER}, and the password CHANGE-ME becomes a test value; they are applied in the namespace ${NS} (the guide's in-cluster example uses it), which enforces the Pod Security 'restricted' profile"
-echo "FosterStack Cache ${VER} image: pulled, compared with the digest the release manifest names (${IMG_REL}), verified with cosign by digest, then loaded into the cluster with 'kind load docker-image' (the cluster itself pulls nothing from the internet at run time except kind's node image, pulled by the runner's Docker)"
+echo "FosterStack Cache ${VER} image: pulled, compared with the digest the release manifest names (${IMG_REL}), verified with cosign by digest, then its linux/amd64 manifest is loaded into the cluster with 'kind load docker-image' (the cluster itself pulls nothing from the internet at run time except kind's node image, pulled by the runner's Docker)"
 echo "invented by this script (the guide shows none): the Gradle project (rootProject.name, build.gradle.kts, App.java) and the build from outside through the guide's own port-forward; the variant Deployment without FSCACHE_DATA_DIR used to test the guide's warning"
 echo "limits of this cluster: kind is ONE node with the default local-path StorageClass, so a second pod can mount the same ReadWriteOnce volume (on a multi-node cluster the failure would be a Multi-Attach error instead); the replica test uses 'kubectl scale'; the user ids are read from the pod spec, not from the running process; the fsGroup requirement ('without it the pod crash-loops') is NOT tested, and kind's volumes may be writable anyway"
 echo "NOT tested here: a real cloud cluster, a StorageClass other than kind's default, the LoadBalancer Service, Gateway API and Ingress examples, in-cluster runners and the in-cluster DNS name, node sizing, the Kyverno policy, upgrades (Recreate rollouts)"
@@ -143,6 +143,10 @@ EOF
 expect k-cluster "Set kubectl context to \"kind-${CLUSTER}\""
 [ "$RC" = 0 ] || { echo "FAILURES $FAILS"; exit 1; }
 kubectl config use-context "kind-${CLUSTER}" >/dev/null
+# kind loads every platform an image index names (kind issue 3795), and the runner holds only the amd64 layers: load the amd64
+# manifest, which the signed index names, under the release tag.
+IMG_AMD64="$(docker manifest inspect "${IMG}@${IMG_REL}" | python3 -c 'import sys,json; print([m["digest"] for m in json.load(sys.stdin)["manifests"] if m["platform"]["os"]=="linux" and m["platform"]["architecture"]=="amd64"][0])')"
+pull "${IMG}@${IMG_AMD64}" && docker tag "${IMG}@${IMG_AMD64}" "${IMG}:${VER}" || { fail "could not pull the amd64 image ${IMG_AMD64}"; echo "FAILURES $FAILS"; exit 1; }
 run k-load "$W" <<EOF
 kind load docker-image ${IMG}:${VER} --name ${CLUSTER} || { docker save ${IMG}:${VER} -o ${W}/cache-image.tar && kind load image-archive ${W}/cache-image.tar --name ${CLUSTER}; }
 EOF

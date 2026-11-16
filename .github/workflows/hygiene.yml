@@ -716,7 +716,7 @@ jobs:
   # dispatch only, chosen with the "which" input (compared in each `if` only). Two chains of two jobs: a Linux job builds against a
   # fresh cache server and hands the server's data folder (nothing else; made-up projects) to a Mac job through the artifact store,
   # which starts a server on it and builds with an empty Gradle home and an empty ~/.m2; and the same the other way. The artifact is
-  # kept one day. No token and no secret in any job; the two artifact actions are pinned by commit SHA; the downloads inside the
+  # kept one day. No secret in any job, and the Mac jobs' release download uses the job's read-only token; the two artifact actions are pinned by commit SHA; the downloads inside the
   # script are checked against pinned checksums (the Maven extension, plugins and JUnit come from Maven Central, said in the output).
   bench-maclinux-linux-store:
     needs: proof-watch
@@ -758,6 +758,8 @@ jobs:
           path: ${{ runner.temp }}/maclinux-in
 
       - name: start a server on the Linux data folder, build on the Mac with empty local caches
+        env:
+          BENCH_GH_TOKEN: ${{ github.token }}   # read-only (contents: read); GitHub's API limit for a shared Mac address is too low without it
         run: bash bin/bench-maclinux.sh restore
 
   bench-maclinux-mac-store:
@@ -773,6 +775,8 @@ jobs:
           persist-credentials: false
 
       - name: build on the Mac against a fresh cache server, pack the server's data folder
+        env:
+          BENCH_GH_TOKEN: ${{ github.token }}   # read-only (contents: read); GitHub's API limit for a shared Mac address is too low without it
         run: bash bin/bench-maclinux.sh store
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
