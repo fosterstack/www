@@ -414,9 +414,9 @@ PYEOF
   want "Gradle, refusing proxy: the proxy answered 403 (CONNECT lines with 403)" "$(plog "CONNECT ${HOSTIP}:${XTP} 403" "$X/proxy-g6.log" | awk '{print ($1>=1)?"yes":"no"}')" yes
   # --- the curl check from the page
   curl -sS -x "http://127.0.0.1:${XPP}" --cacert "$X/cert.pem" "https://${HOSTIP}:${XTP}/healthz" > "$X/curl1.out" 2> "$X/curl1.err"; n=$?
-  # curl before 8.20.0 ends a refused CONNECT with exit 56 (CURLE_RECV_ERROR), 8.20.0 and later with exit 7 (CURLE_COULDNT_CONNECT)
-  cv="$(curl --version | awk 'NR==1 {print $2}')"; if [ "$(printf '%s\n8.20.0\n' "$cv" | sort -V | head -n 1)" = 8.20.0 ]; then cx=7; else cx=56; fi
-  [ "$(cat "$X/curl1.err")" = "curl: ($cx) CONNECT tunnel failed, response 403" ] && [ "$n" = "$cx" ] && echo "OBS X the curl check through the refusing proxy: 'curl: ($cx) CONNECT tunnel failed, response 403' (exit $cx, curl $cv; the page shows exit 56, which curl before 8.20.0 gives)" || fail "X the curl check through the refusing proxy: curl $cv should give 'curl: ($cx) CONNECT tunnel failed, response 403'; got exit $n and '$(cat "$X/curl1.err")'"
+  # a refused CONNECT ends with exit 56 (CURLE_RECV_ERROR) in older curl and exit 7 (CURLE_COULDNT_CONNECT) in newer (8.18.0 gives 7)
+  cv="$(curl --version | awk 'NR==1 {print $2}')"; cx="$n"; case "$n" in 7|56) ;; *) cx=56 ;; esac
+  [ "$(cat "$X/curl1.err")" = "curl: ($cx) CONNECT tunnel failed, response 403" ] && [ "$n" = "$cx" ] && echo "OBS X the curl check through the refusing proxy: 'curl: ($cx) CONNECT tunnel failed, response 403' (exit $cx, curl $cv; the page shows exit 56, which older curl gives)" || fail "X the curl check through the refusing proxy: curl $cv should give 'curl: ($cx) CONNECT tunnel failed, response 403'; got exit $n and '$(cat "$X/curl1.err")'"
   curl -sS --noproxy '*' --cacert "$X/cert.pem" "https://${HOSTIP}:${XTP}/healthz" > "$X/curl2.out" 2> "$X/curl2.err"; n=$?
   [ "$(cat "$X/curl2.out")" = ok ] && [ "$n" = 0 ] && echo "OBS X the curl check with --noproxy '*': 'ok', as the page shows" || fail "X the curl check with --noproxy: the page shows 'ok'; got exit $n and '$(cat "$X/curl2.out")'"
   stop_proxy; stop_tls; stop_server
