@@ -130,7 +130,7 @@
       <tr><td>The cache password, as a string in <code>settings.gradle.kts</code></td><td>In no entry, not in the server's index file and not in the server log</td></tr>
       <tr><td>The project folder, the home folder and the user name</td><td>In no entry</td></tr>
       <tr><td>The host name of the build machine</td><td>In the test entry, in the <code>hostname</code> attribute of the XML report. In no other entry</td></tr>
-      <tr><td>The entry files on disk</td><td>Gzip-compressed tar archives, not encrypted. A 32-character hex key names each one, in a folder named for its first two characters. On this Mac the files were readable only by their owner (<code>0600</code>), which the server's code asks for</td></tr>
+      <tr><td>The entry files on disk</td><td>Gzip-compressed tar archives, not encrypted. A 32-character hex key names each one, in a folder named for its first two characters. On this Mac the files were readable only by the user running the server (<code>0600</code>), which the server's code asks for</td></tr>
       <tr><td>The metadata file in each entry</td><td>Build id, creation time, execution time, Gradle version, task name and type. Nothing else</td></tr>
       <tr><td>Read-only login, <code>GET</code> of a stored key</td><td><code>200</code>, 1,982 bytes. <code>HEAD</code> gave <code>200</code>, <code>PUT</code> gave <code>403</code>, an unknown key gave <code>404</code></td></tr>
       <tr><td>No login, and a wrong password, <code>GET</code> of a stored key</td><td><code>401</code> both times</td></tr>
