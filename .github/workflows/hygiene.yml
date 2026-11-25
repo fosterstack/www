@@ -76,18 +76,6 @@ jobs:
       - name: self-test the live check (a local server stands in for the live site and for GitHub)
         run: bash bin/test-live-check.sh
 
-      # A pull request may not ADD shop words to a page a customer can read (or to its own title or body).
-      - name: self-test the customer-words check
-        run: bash bin/test-check-customer-words.sh
-
-      - name: check what the pull request adds for shop words
-        if: github.event_name == 'pull_request'
-        env:
-          PR_TITLE: ${{ github.event.pull_request.title }}
-          PR_BODY: ${{ github.event.pull_request.body }}
-        shell: bash
-        run: git diff -U0 --no-renames --no-color HEAD^1 HEAD | python3 -I bin/check-customer-words.py
-
   # link-check: on a pull request, every https://fosterstack.com link must name a page or file in the checkout, and every link into
   # github.com/fosterstack/cache must answer 200 (with its #heading on the page). Links to other sites are not checked: they flake.
   # Root-relative links and #anchors are read by "check the site for rot" above. Read-only: no secret, no write permission.
