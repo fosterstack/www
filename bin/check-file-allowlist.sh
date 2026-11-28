@@ -32,6 +32,7 @@ ALLOW_PATTERNS=(
   '^favicon\.(ico|svg)$'
   '^favicon-(16|32)\.png$'
   '^apple-touch-icon\.png$'
+  '^og-image\.png$'
   '^\.gitignore$'
   '^\.well-known/security\.txt$'
   '^\.githooks/pre-commit$'
