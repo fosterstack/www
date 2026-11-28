@@ -76,17 +76,25 @@ jobs:
       - name: self-test the live check (a local server stands in for the live site and for GitHub)
         run: bash bin/test-live-check.sh
 
-      # A pull request may not ADD shop words to a page a customer can read (or to its own title or body).
-      - name: self-test the customer-words check
-        run: bash bin/test-check-customer-words.sh
+  # link-check: on a pull request, every https://fosterstack.com link must name a page or file in the checkout, and every link into
+  # github.com/fosterstack/cache must answer 200 (with its #heading on the page). Links to other sites are not checked: they flake.
+  # Root-relative links and #anchors are read by "check the site for rot" above. Read-only: no secret, no write permission.
+  link-check:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
-      - name: check what the pull request adds for shop words
-        if: github.event_name == 'pull_request'
-        env:
-          PR_TITLE: ${{ github.event.pull_request.title }}
-          PR_BODY: ${{ github.event.pull_request.body }}
-        shell: bash
-        run: git diff -U0 --no-renames --no-color HEAD^1 HEAD | python3 -I bin/check-customer-words.py
+      - name: self-test the cache-links check (a local server stands in for GitHub)
+        run: bash bin/test-check-cache-links.sh
+
+      - name: check the links to this site and to the cache repository
+        run: python3 bin/check-cache-links.py
 
   # proof-watch: on the daily schedule it decides whether today's run proves every bench job below (a new release tag of
   # fosterstack/cache, or Monday for the weekly run). It reads only the releases of fosterstack/cache and only tags matching
@@ -696,7 +704,7 @@ jobs:
   # dispatch only, chosen with the "which" input (compared in each `if` only). Two chains of two jobs: a Linux job builds against a
   # fresh cache server and hands the server's data folder (nothing else; made-up projects) to a Mac job through the artifact store,
   # which starts a server on it and builds with an empty Gradle home and an empty ~/.m2; and the same the other way. The artifact is
-  # kept one day. No token and no secret in any job; the two artifact actions are pinned by commit SHA; the downloads inside the
+  # kept one day. No secret in any job, and the Mac jobs' release download uses the job's read-only token; the two artifact actions are pinned by commit SHA; the downloads inside the
   # script are checked against pinned checksums (the Maven extension, plugins and JUnit come from Maven Central, said in the output).
   bench-maclinux-linux-store:
     needs: proof-watch
@@ -738,6 +746,8 @@ jobs:
           path: ${{ runner.temp }}/maclinux-in
 
       - name: start a server on the Linux data folder, build on the Mac with empty local caches
+        env:
+          BENCH_GH_TOKEN: ${{ github.token }}   # read-only (contents: read); GitHub's API limit for a shared Mac address is too low without it
         run: bash bin/bench-maclinux.sh restore
 
   bench-maclinux-mac-store:
@@ -753,6 +763,8 @@ jobs:
           persist-credentials: false
 
       - name: build on the Mac against a fresh cache server, pack the server's data folder
+        env:
+          BENCH_GH_TOKEN: ${{ github.token }}   # read-only (contents: read); GitHub's API limit for a shared Mac address is too low without it
         run: bash bin/bench-maclinux.sh store
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

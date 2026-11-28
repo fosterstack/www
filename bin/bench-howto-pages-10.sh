@@ -24,6 +24,9 @@ JDK27_URL="https://github.com/adoptium/temurin27-binaries/releases/download/jdk-
 JDK27_SHA=1cf69a4848ffb728b3b260dfd45206a51566ab571a02a30092271d4c580bccbc
 MVN399_URL="https://archive.apache.org/dist/maven/maven-3/3.9.9/binaries/apache-maven-3.9.9-bin.tar.gz"
 MVN399_SHA512=a555254d6b53d267965a3404ecb14e53c3827c09c3b94b5678835887ab404556bfaf78dcfe03ba76fa2508649dca8531c74bca4d5846513522404d48e8c4ac8b
+MVN_VER=3.10.0   # the Maven of the pages; the runner image's own Maven is older. Checksum: https://archive.apache.org/dist/maven/maven-3/3.10.0/binaries/apache-maven-3.10.0-bin.tar.gz.sha512
+MVN_URL="https://archive.apache.org/dist/maven/maven-3/${MVN_VER}/binaries/apache-maven-${MVN_VER}-bin.tar.gz"
+MVN_SHA512=908b1501bfb420bf7c8affb855534a9c407fd6099367bfb9f2f2dcb8e9799102bffb84518cde74c679bd76870247c6528683abdd620581bffa90f95d92d175aa
 COSIGN_VER=3.1.3
 COSIGN_SHA=4629c757b7618056f8ddd7e2625ae9fdd94c0372a65049520bc7d9df9efc7f71
 
@@ -69,6 +72,7 @@ else
   unset GH_TOKEN GITHUB_TOKEN; export GH_CONFIG_DIR="$W/gh-empty-config"; mkdir -p "$GH_CONFIG_DIR"
   curl -fsSL -o cosign "https://github.com/sigstore/cosign/releases/download/v${COSIGN_VER}/cosign-linux-amd64"; sha_check cosign "$COSIGN_SHA"; install -m 0755 cosign bin/cosign
   curl -fsSL -o gr.zip "$GR_URL"; sha_check gr.zip "$GR_SHA"; unzip -q gr.zip; ln -s "$W/tools/gradle-${GR_VER}/bin/gradle" bin/gradle
+  curl -fsSL -o mvn.tgz "$MVN_URL"; sha512_check mvn.tgz "$MVN_SHA512"; tar -xzf mvn.tgz; ln -s "$W/tools/apache-maven-${MVN_VER}/bin/mvn" bin/mvn
   JDK21_HOME="${BENCH_JAVA_HOME:-${JAVA_HOME_21_X64:-${JAVA_HOME:-}}}"
   export PATH="$W/tools/bin:$PATH"
 fi
@@ -84,11 +88,11 @@ echo "== DISCLOSURE"
 echo "runner: $(uname -sr); cpus: $(nproc 2>/dev/null || sysctl -n hw.ncpu); image: ${ImageOS:-?} ${ImageVersion:-?}"
 echo "java: $("$JDK21_HOME/bin/java" -version 2>&1 | head -1)   gradle: $(gradle --version 2>/dev/null | grep -E '^Gradle ' | head -1)   cosign: $(cosign version 2>/dev/null | grep -i GitVersion | head -1)   docker: $(docker --version)"
 if [ "$LOCAL" = 1 ]; then echo "tools: LOCAL tools in use, nothing checked (a developer's dry run: do not quote these times)"; else
-  echo "tools: Gradle ${GR_VER} and cosign ${COSIGN_VER} are downloaded and checked against pinned checksums before use; Java 21 and Docker are the runner's own"; fi
+  echo "tools: Gradle ${GR_VER}, cosign ${COSIGN_VER} and Maven ${MVN_VER} are downloaded and checked against pinned checksums before use; Java 21 and Docker are the runner's own"; fi
 echo "release under test: FosterStack Cache ${VER}, downloaded with no login and verified (cosign + sha256) before it runs; every server listens on 127.0.0.1 only"
-echo "NOT checksum-pinned: the Maven build-cache extension 1.2.3 and the Maven plugin jars (their eight versions are pinned in the pom, the files come from Maven Central); the runner's own Maven (version printed) is used except for one 3.9.9 build, whose archive is checked"
+echo "NOT checksum-pinned: the Maven build-cache extension 1.2.3 and the Maven plugin jars (their eight versions are pinned in the pom, the files come from Maven Central); Maven ${MVN_VER} (checked against its pinned checksum) is used except for one 3.9.9 build, whose archive is checked"
 echo "invented by this script (the pages show their configuration, not their projects): the Java classes of the one-module and three-module projects, made-up passwords and keys"
-echo "differences from the pages' own runs: Linux amd64 (the pages: macOS arm64), release ${VER} (the pages: 0.2.1), Maven 3.10.0 on the runner as on the pages; the page's Java 27 is Temurin 27+35 here (the page: OpenJDK 27 from Homebrew); builds run offline-capable only after the first build has filled the shared Maven repository (the pages: an already-filled local repository)"
+echo "differences from the pages' own runs: Linux amd64 (the pages: macOS arm64), release ${VER} (the pages: 0.2.1), Maven 3.10.0 downloaded and checked, as on the pages; the page's Java 27 is Temurin 27+35 here (the page: OpenJDK 27 from Homebrew); builds run offline-capable only after the first build has filled the shared Maven repository (the pages: an already-filled local repository)"
 echo "Gradle builds use a new empty Gradle home and a fresh project copy each, no daemon, Gradle's own local cache switched off; Maven builds use an emptied ~/.m2/build-cache"
 echo "differences from the what-stores page: the Maven half here runs on Java 21 (the page's Maven numbers came from a Mac run; its Java is not the point of that half)"
 echo "differences from the not-restoring page: the page ran its symptom runs against a server with a password; here only the 401 symptom uses one (the others use a server without a login); the builds are not offline"

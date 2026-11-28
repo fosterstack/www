@@ -21,6 +21,9 @@ GR_URL="https://services.gradle.org/distributions/gradle-${GR_VER}-all.zip"
 GR_SHA=46ac66d47f30f3dacfdf306e0b714a91a34fb94a22ba0a744b280933f47bc0cf
 EXT_VER=1.2.3
 IMG=ghcr.io/fosterstack/cache
+MVN_VER=3.10.0   # the Maven of the pages; the runner image's own Maven is older. Checksum: https://archive.apache.org/dist/maven/maven-3/3.10.0/binaries/apache-maven-3.10.0-bin.tar.gz.sha512
+MVN_URL="https://archive.apache.org/dist/maven/maven-3/${MVN_VER}/binaries/apache-maven-${MVN_VER}-bin.tar.gz"
+MVN_SHA512=908b1501bfb420bf7c8affb855534a9c407fd6099367bfb9f2f2dcb8e9799102bffb84518cde74c679bd76870247c6528683abdd620581bffa90f95d92d175aa
 COSIGN_VER=3.1.3
 COSIGN_SHA=4629c757b7618056f8ddd7e2625ae9fdd94c0372a65049520bc7d9df9efc7f71
 
@@ -66,6 +69,7 @@ else
   unset GH_TOKEN GITHUB_TOKEN; export GH_CONFIG_DIR="$W/gh-empty-config"; mkdir -p "$GH_CONFIG_DIR"
   curl -fsSL -o cosign "https://github.com/sigstore/cosign/releases/download/v${COSIGN_VER}/cosign-linux-amd64"; sha_check cosign "$COSIGN_SHA"; install -m 0755 cosign bin/cosign
   curl -fsSL -o gr.zip "$GR_URL"; sha_check gr.zip "$GR_SHA"; unzip -q gr.zip; ln -s "$W/tools/gradle-${GR_VER}/bin/gradle" bin/gradle
+  curl -fsSL -o mvn.tgz "$MVN_URL"; sha512_check mvn.tgz "$MVN_SHA512"; tar -xzf mvn.tgz; ln -s "$W/tools/apache-maven-${MVN_VER}/bin/mvn" bin/mvn
   JDK21_HOME="${BENCH_JAVA_HOME:-${JAVA_HOME_21_X64:-${JAVA_HOME:-}}}"
   export PATH="$W/tools/bin:$PATH"
 fi
@@ -78,9 +82,9 @@ echo "== DISCLOSURE"
 echo "runner: $(uname -sr); cpus: $(nproc 2>/dev/null || sysctl -n hw.ncpu); image: ${ImageOS:-?} ${ImageVersion:-?}"
 echo "java: $("$JDK21_HOME/bin/java" -version 2>&1 | head -1)   gradle: $(gradle --version 2>/dev/null | grep -E '^Gradle ' | head -1)   cosign: $(cosign version 2>/dev/null | grep -i GitVersion | head -1)   docker: $(docker --version)"
 if [ "$LOCAL" = 1 ]; then echo "tools: LOCAL tools in use, nothing checked (a developer's dry run: do not quote these times)"; else
-  echo "tools: Gradle ${GR_VER} and cosign ${COSIGN_VER} are downloaded and checked against pinned checksums before use; Java 21 and Docker are the runner's own"; fi
+  echo "tools: Gradle ${GR_VER} and cosign ${COSIGN_VER} and Maven ${MVN_VER} are downloaded and checked against pinned checksums before use; Java 21 and Docker are the runner's own"; fi
 echo "release under test: FosterStack Cache ${VER}, downloaded with no login and verified (cosign + sha256) before it runs; the cache servers listen on all interfaces of the runner (the page needs a non-loopback address), the test proxy on 127.0.0.1 only"
-echo "NOT checksum-pinned: the Maven build-cache extension 1.2.3 and the Maven plugin jars (their eight versions are pinned in the pom, the files come from Maven Central); the Maven on the runner is its own (version printed)"
+echo "NOT checksum-pinned: the Maven build-cache extension 1.2.3 and the Maven plugin jars (their eight versions are pinned in the pom, the files come from Maven Central); Maven ${MVN_VER} is checked against its pinned checksum"
 echo "invented by this script (the page shows its settings, not its files): the Gradle and Maven projects (one class), made-up passwords, the test proxy bin/bench-proxy.py, a TLS front and a self-signed certificate for the HTTPS rows, the keystore that makes Java trust it"
 echo "differences from the page's own runs: Linux amd64 (the page: macOS arm64), release ${VER} (the page: 0.2.1), Java 21; the proxy and the HTTPS front are ours, as the page says ('we wrote a small proxy'); the page used nginx for HTTPS, this script a TLS front written in Python; the proxy host is 127.0.0.1:18131 (the page: proxy.example.com:3128); the Maven nonProxyHosts line is the page's, except in the row that puts the cache's address in it"
 echo "Gradle builds use a new empty Gradle home and a fresh project copy each, no daemon, Gradle's own local cache switched off; Maven builds use an emptied ~/.m2/build-cache"
@@ -410,7 +414,9 @@ PYEOF
   want "Gradle, refusing proxy: the proxy answered 403 (CONNECT lines with 403)" "$(plog "CONNECT ${HOSTIP}:${XTP} 403" "$X/proxy-g6.log" | awk '{print ($1>=1)?"yes":"no"}')" yes
   # --- the curl check from the page
   curl -sS -x "http://127.0.0.1:${XPP}" --cacert "$X/cert.pem" "https://${HOSTIP}:${XTP}/healthz" > "$X/curl1.out" 2> "$X/curl1.err"; n=$?
-  [ "$(cat "$X/curl1.err")" = "curl: (56) CONNECT tunnel failed, response 403" ] && [ "$n" = 56 ] && echo "OBS X the curl check through the refusing proxy: 'curl: (56) CONNECT tunnel failed, response 403' (exit 56), as the page shows" || fail "X the curl check through the refusing proxy: the page shows 'curl: (56) CONNECT tunnel failed, response 403'; got exit $n and '$(cat "$X/curl1.err")'"
+  # a refused CONNECT ends with exit 56 (CURLE_RECV_ERROR) in older curl and exit 7 (CURLE_COULDNT_CONNECT) in newer (8.18.0 gives 7)
+  cv="$(curl --version | awk 'NR==1 {print $2}')"; cx="$n"; case "$n" in 7|56) ;; *) cx=56 ;; esac
+  [ "$(cat "$X/curl1.err")" = "curl: ($cx) CONNECT tunnel failed, response 403" ] && [ "$n" = "$cx" ] && echo "OBS X the curl check through the refusing proxy: 'curl: ($cx) CONNECT tunnel failed, response 403' (exit $cx, curl $cv; the page shows exit 56, which older curl gives)" || fail "X the curl check through the refusing proxy: curl $cv should give 'curl: ($cx) CONNECT tunnel failed, response 403'; got exit $n and '$(cat "$X/curl1.err")'"
   curl -sS --noproxy '*' --cacert "$X/cert.pem" "https://${HOSTIP}:${XTP}/healthz" > "$X/curl2.out" 2> "$X/curl2.err"; n=$?
   [ "$(cat "$X/curl2.out")" = ok ] && [ "$n" = 0 ] && echo "OBS X the curl check with --noproxy '*': 'ok', as the page shows" || fail "X the curl check with --noproxy: the page shows 'ok'; got exit $n and '$(cat "$X/curl2.out")'"
   stop_proxy; stop_tls; stop_server

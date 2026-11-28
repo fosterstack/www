@@ -50,8 +50,10 @@ setup)
   curl -fsSL -o cosign "https://github.com/sigstore/cosign/releases/download/v${COSIGN_VER}/${COSIGN_ASSET}"; sha_check cosign "$COSIGN_SHA"; chmod 0755 cosign
   curl -fsSL -o gr.zip "$GR_URL"; sha_check gr.zip "$GR_SHA"; unzip -q gr.zip
   mkdir -p rel && cd rel
-  unset GH_TOKEN GITHUB_TOKEN
-  gh release download "v${VER}" --repo fosterstack/cache -p checksums.txt -p checksums.txt.bundle -p "fscache_${VER}_${PLAT}.tar.gz" || { echo "release download failed" >&2; exit 1; }
+  # the public download URLs, with no login: the API behind "gh release download" is rate limited per runner address
+  for f in checksums.txt checksums.txt.bundle "fscache_${VER}_${PLAT}.tar.gz"; do
+    curl -fsSL -O "https://github.com/fosterstack/cache/releases/download/v${VER}/${f}" || { echo "release download failed" >&2; exit 1; }
+  done
   "$T/cosign" verify-blob --bundle checksums.txt.bundle --certificate-identity-regexp='^https://github.com/fosterstack/cache/' --certificate-oidc-issuer='https://token.actions.githubusercontent.com' checksums.txt 2>&1 | grep -q "Verified OK" || { echo "the release did not verify" >&2; exit 1; }
   sha256c -c <(grep "fscache_${VER}_${PLAT}.tar.gz" checksums.txt | grep -v sbom) || { echo "the release checksum failed" >&2; exit 1; }
   tar xzf "fscache_${VER}_${PLAT}.tar.gz"
